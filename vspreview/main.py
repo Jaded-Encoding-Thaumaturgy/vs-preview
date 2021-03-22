@@ -487,8 +487,7 @@ class MainWindow(AbstractMainWindow):
             + ' QGraphicsView { border: 0px; padding: 0px; }' \
             + ' QToolButton { padding: 0px; }'
 
-    def load_script(self, script_path: Path, external_args: str = '', reloading = False) -> None:
-        import shlex
+    def load_script(self, script_path: Path, external_args: List[tuple[str, str]] = None, reloading = False) -> None:
         from traceback import FrameSummary, TracebackException
 
         self.toolbars.playback.stop()
@@ -499,18 +498,14 @@ class MainWindow(AbstractMainWindow):
 
         # Rewrite args so external args will be forwarded correctly
         if external_args:
-            self.external_args = shlex.split(external_args)
-        try:
-            argv_orig = sys.argv
-            sys.argv = [script_path.name] + self.external_args
-        except AttributeError:
-            pass
+            self.external_args = external_args
+        argv_orig = sys.argv
+        sys.argv = [script_path.name]
 
         try:
             # pylint: disable=exec-used
-            exec(self.script_path.read_text(encoding='utf-8'), {
-                '__file__': sys.argv[0]
-            })
+            exec(self.script_path.read_text(encoding='utf-8'),
+                dict([('__file__', sys.argv[0])] + self.external_args))
         except Exception as e:  # pylint: disable=broad-except
             self.script_exec_failed = True
             logging.error(e)
@@ -829,8 +824,8 @@ def main() -> None:
     parser = ArgumentParser()
     parser.add_argument('script_path', help='Path to Vapoursynth script',
                         type=Path, nargs='?')
-    parser.add_argument('-a', '--external-args', type=str,
-                        help='Arguments that will be passed to scripts')
+    parser.add_argument('-a', '--arg', type=str, action='append', metavar='key=value',
+                        help='Argument to pass to the script environment')
     args = parser.parse_args()
 
     if args.script_path is None:
@@ -845,7 +840,8 @@ def main() -> None:
     os.chdir(script_path.parent)
     app = Qt.QApplication(sys.argv)
     main_window = MainWindow()
-    main_window.load_script(script_path, external_args=args.external_args)
+    ext_args = [ tuple(a.split('=', maxsplit=1)) for a in args.arg or [] ]
+    main_window.load_script(script_path, external_args=ext_args)
     main_window.show()
 
     try:

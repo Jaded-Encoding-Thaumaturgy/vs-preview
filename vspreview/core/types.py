@@ -532,12 +532,12 @@ class Output(YAMLObject):
     yaml_tag = '!Output'
 
     class Resizer:
-        Bilinear = vs.core.resize.Bilinear
-        Bicubic  = vs.core.resize.Bicubic
-        Point    = vs.core.resize.Point
-        Lanczos  = vs.core.resize.Lanczos
-        Spline16 = vs.core.resize.Spline16
-        Spline36 = vs.core.resize.Spline36
+        Bilinear = lambda *args,**kwargs: vs.core.resize.Bilinear(*args, **kwargs)
+        Bicubic  = lambda *args,**kwargs: vs.core.resize.Bicubic(*args, **kwargs)
+        Point    = lambda *args,**kwargs: vs.core.resize.Point(*args, **kwargs)
+        Lanczos  = lambda *args,**kwargs: vs.core.resize.Lanczos(*args, **kwargs)
+        Spline16 = lambda *args,**kwargs: vs.core.resize.Spline16(*args, **kwargs)
+        Spline36 = lambda *args,**kwargs: vs.core.resize.Spline36(*args, **kwargs)
 
     class Matrix:
         values = {

@@ -531,13 +531,14 @@ class Scene(YAMLObject):
 class Output(YAMLObject):
     yaml_tag = '!Output'
 
-    class Resizer:
-        Bilinear = lambda *args,**kwargs: vs.core.resize.Bilinear(*args, **kwargs)
-        Bicubic  = lambda *args,**kwargs: vs.core.resize.Bicubic(*args, **kwargs)
-        Point    = lambda *args,**kwargs: vs.core.resize.Point(*args, **kwargs)
-        Lanczos  = lambda *args,**kwargs: vs.core.resize.Lanczos(*args, **kwargs)
-        Spline16 = lambda *args,**kwargs: vs.core.resize.Spline16(*args, **kwargs)
-        Spline36 = lambda *args,**kwargs: vs.core.resize.Spline36(*args, **kwargs)
+    class _Resizer:
+        Bilinear = lambda self, *args,**kwargs: vs.core.resize.Bilinear(*args, **kwargs)
+        Bicubic  = lambda self, *args,**kwargs: vs.core.resize.Bicubic(*args, **kwargs)
+        Point    = lambda self, *args,**kwargs: vs.core.resize.Point(*args, **kwargs)
+        Lanczos  = lambda self, *args,**kwargs: vs.core.resize.Lanczos(*args, **kwargs)
+        Spline16 = lambda self, *args,**kwargs: vs.core.resize.Spline16(*args, **kwargs)
+        Spline36 = lambda self, *args,**kwargs: vs.core.resize.Spline36(*args, **kwargs)
+    Resizer = _Resizer()
 
     class Matrix:
         values = {

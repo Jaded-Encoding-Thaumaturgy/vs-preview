@@ -166,6 +166,7 @@ class MainToolbar(AbstractToolbar):
 
         self.sync_outputs_checkbox = Qt.QCheckBox(self)
         self.sync_outputs_checkbox.setText('Sync Outputs')
+        self.sync_outputs_checkbox.setChecked(self.main.SYNC_OUTPUTS)
         layout.addWidget(self.sync_outputs_checkbox)
 
         self.zoom_combobox = ComboBox[float](self)
@@ -251,11 +252,12 @@ class MainToolbar(AbstractToolbar):
             sync_outputs = state['sync_outputs']
             if not isinstance(sync_outputs, bool):
                 raise TypeError
-            if sync_outputs:
-                self.sync_outputs_checkbox.click()
         except (KeyError, TypeError):
             logging.warning(
                 'Storage loading: Main toolbar: failed to parse sync outputs.')
+            sync_outputs = self.main.SYNC_OUTPUTS
+
+        self.sync_outputs_checkbox.setChecked(sync_outputs)
 
 
 class Toolbars(AbstractToolbars):
@@ -327,6 +329,7 @@ class MainWindow(AbstractMainWindow):
     SEEK_STEP                 =     1  # frames
     STATUSBAR_MESSAGE_TIMEOUT =     3 * 1000  # s
     STORAGE_BACKUPS_COUNT     =     2
+    SYNC_OUTPUTS              = False
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE             = 'frame'

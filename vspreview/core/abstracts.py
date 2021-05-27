@@ -103,6 +103,8 @@ class AbstractToolbar(Qt.QWidget, QABC):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
 
+    def on_script_loaded(self) -> None:
+        pass
 
     def get_notches(self) -> Notches:
         from vspreview.widgets import Notches

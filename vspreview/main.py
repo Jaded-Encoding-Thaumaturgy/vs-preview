@@ -306,7 +306,6 @@ class Toolbars(AbstractToolbars):
 class MainWindow(AbstractMainWindow):
     # those are defaults that can be overriden at runtime or used as fallbacks
     ALWAYS_SHOW_SCENE_MARKS   = False
-    AUTOSAVE_ENABLED          =  True
     AUTOSAVE_INTERVAL         =    60 * 1000  # s
     BASE_PPI                  =    96  # PPI
     BENCHMARK_CLEAR_CACHE     = False
@@ -532,6 +531,8 @@ class MainWindow(AbstractMainWindow):
 
         self.toolbars.main.rescan_outputs()
         # self.init_outputs()
+        for toolbar in self.toolbars:
+            toolbar.on_script_loaded()
         self.switch_output(self.OUTPUT_INDEX)
 
         self.load_storage()
@@ -578,7 +579,7 @@ class MainWindow(AbstractMainWindow):
             output.graphics_scene_item = frame_item
 
     def reload_script(self) -> None:
-        if self.toolbars.misc.autosave_enabled and not self.script_exec_failed:
+        if not self.script_exec_failed:
             self.toolbars.misc.save()
 
         self.reload_signal.emit()
@@ -736,8 +737,7 @@ class MainWindow(AbstractMainWindow):
             Qt.QSizePolicy(Qt.QSizePolicy.Expanding, Qt.QSizePolicy.Expanding))
 
     def closeEvent(self, event: Qt.QCloseEvent) -> None:
-        if (self.toolbars.misc.autosave_enabled
-                and self.save_on_exit):
+        if self.save_on_exit:
             self.toolbars.misc.save()
 
     def __getstate__(self) -> Mapping[str, Any]:

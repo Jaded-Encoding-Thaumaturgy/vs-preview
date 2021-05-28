@@ -96,6 +96,9 @@ class MiscToolbar(AbstractToolbar):
         self.show_debug_checkbox.setText('Show Debug Toolbar')
         layout.addWidget(self.show_debug_checkbox)
 
+    def on_script_unloaded(self) -> None:
+        self.autosave_timer.stop()
+
     def on_script_loaded(self) -> None:
         self.autosave_timer.start(self.main.AUTOSAVE_INTERVAL)
 
@@ -106,7 +109,10 @@ class MiscToolbar(AbstractToolbar):
 
     @fire_and_forget
     @set_status_label(label='Saving')
-    def save(self, path: Optional[Path] = None, manually: bool = False) -> None:
+    def save(self, path: Optional[Path] = None) -> None:
+        self.save_sync(path)
+
+    def save_sync(self, path: Optional[Path] = None) -> None:
         import yaml
 
         yaml.Dumper.ignore_aliases = lambda *args: True

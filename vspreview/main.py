@@ -587,15 +587,14 @@ class MainWindow(AbstractMainWindow):
         import gc
 
         if not self.script_exec_failed:
-            self.toolbars.misc.save()
-
-        self.reload_signal.emit()
+            self.toolbars.misc.save_sync()
+        for toolbar in self.toolbars:
+            toolbar.on_script_unloaded()
+            
         vs.clear_outputs()
 
         self.graphics_scene.clear()
         self.outputs.clear()
-        for toolbar in self.toolbars:
-            toolbar.on_script_unloaded()
         # make sure old filter graph is freed
         gc.collect()
 

@@ -374,10 +374,6 @@ class MainWindow(AbstractMainWindow):
 
         # logging
 
-        logging.basicConfig(format='{asctime}: {levelname}: {message}',
-                            style='{', level=self.LOG_LEVEL)
-        logging.Formatter.default_msec_format = '%s.%03d'
-
         # ???
 
         self.app = Qt.QApplication.instance()
@@ -807,6 +803,10 @@ class MainWindow(AbstractMainWindow):
 def main() -> None:
     from argparse import ArgumentParser
 
+    logging.basicConfig(format='{asctime}: {levelname}: {message}',
+                        style='{', level=MainWindow.LOG_LEVEL)
+    logging.Formatter.default_msec_format = '%s.%03d'
+
     check_versions()
 
     parser = ArgumentParser()
@@ -843,19 +843,19 @@ def check_versions() -> bool:
 
     failed = False
 
-    if sys.version_info < (3, 8, 0, 'final', 0):
-        print('VSPreview is not tested on Python versions prior to 3.8, but you have {} {}. Use at your own risk.'
-              .format(python_version(), sys.version_info.releaselevel))
+    if sys.version_info < (3, 10, 0, 'final', 0):
+        logging.warning('VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
+                        .format(python_version(), sys.version_info.releaselevel))
         failed = True
 
-    if get_distribution('PyQt5').version < '5.14':
-        print('VSPreview is not tested on PyQt5 versions prior to 5.14, but you have {}. Use at your own risk.'
-              .format(get_distribution('PyQt5').version))
+    if get_distribution('PyQt5').version < '5.15':
+        logging.warning('VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'
+                        .format(get_distribution('PyQt5').version))
         failed = True
 
-    if vs.core.version_number() < 49:
-        print('VSPreview is not tested on VapourSynth versions prior to 49, but you have {}. Use at your own risk.'
-              .format(vs.core.version_number()))
+    if vs.core.version_number() < 53:
+        logging.warning('VSPreview is not tested on VapourSynth versions prior to 53, but you have {}. Use at your own risk.'
+                        .format(vs.core.version_number()))
         failed = True
 
     return not failed

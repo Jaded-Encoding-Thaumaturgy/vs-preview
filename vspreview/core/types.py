@@ -681,7 +681,7 @@ class Output(YAMLObject):
         'format', 'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'has_alpha', 'vs_alpha',
         'format_alpha', 'props', 'source_vs_output', 'source_vs_alpha',
-        'main', 'checkerboard',
+        'main', 'checkerboard', "__weakref__"
     )
 
     def clear(self):

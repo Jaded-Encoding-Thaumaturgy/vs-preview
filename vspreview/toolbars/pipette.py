@@ -1,6 +1,7 @@
 import ctypes
 import logging
 from typing import cast, Dict, List, TypeVar, Union
+from weakref import WeakKeyDictionary
 
 from PyQt5 import Qt
 import vapoursynth as vs
@@ -45,7 +46,7 @@ class PipetteToolbar(AbstractToolbar):
         self.src_max_val: Union[int, float] = 2**8 - 1
         self.src_dec_fmt = '{:3d}'
         self.src_norm_fmt = '{:0.5f}'
-        self.outputs: Dict[Output, vs.VideoNode] = {}
+        self.outputs = WeakKeyDictionary[Output, vs.VideoNode]()
         self.tracking = False
 
         main.reload_signal.connect(self.clear_outputs)

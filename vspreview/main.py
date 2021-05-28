@@ -588,6 +588,8 @@ class MainWindow(AbstractMainWindow):
             output.graphics_scene_item = frame_item
 
     def reload_script(self) -> None:
+        import gc
+
         if not self.script_exec_failed:
             self.toolbars.misc.save()
 
@@ -595,6 +597,12 @@ class MainWindow(AbstractMainWindow):
         vs.clear_outputs()
 
         self.graphics_scene.clear()
+        self.outputs.clear()
+        for toolbar in self.toolbars:
+            toolbar.on_script_unloaded()
+        # make sure old filter graph is freed
+        gc.collect()
+
         self.load_script(self.script_path, reloading=True)
 
         self.show_message('Reloaded successfully')

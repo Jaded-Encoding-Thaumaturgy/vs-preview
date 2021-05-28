@@ -489,7 +489,7 @@ class MainWindow(AbstractMainWindow):
             + ' QGraphicsView { border: 0px; padding: 0px; }' \
             + ' QToolButton { padding: 0px; }'
 
-    def load_script(self, script_path: Path, external_args: str = '') -> None:
+    def load_script(self, script_path: Path, external_args: str = '', reloading = False) -> None:
         from traceback import print_exc
         import shlex
 
@@ -532,13 +532,19 @@ class MainWindow(AbstractMainWindow):
             self.handle_script_error('Script has no outputs set.')
             return
 
-        self.toolbars.main.rescan_outputs()
-        # self.init_outputs()
-        for toolbar in self.toolbars:
-            toolbar.on_script_loaded()
-        self.switch_output(self.OUTPUT_INDEX)
+        if not reloading :
+            self.toolbars.main.rescan_outputs()
+            for toolbar in self.toolbars:
+                toolbar.on_script_loaded()
+            self.switch_output(self.OUTPUT_INDEX)
 
-        self.load_storage()
+            self.load_storage()
+        else:
+            self.load_storage()
+
+            for toolbar in self.toolbars:
+                toolbar.on_script_loaded()
+            self.switch_output(self.OUTPUT_INDEX)
 
     def load_storage(self) -> None:
         import yaml
@@ -589,7 +595,7 @@ class MainWindow(AbstractMainWindow):
         vs.clear_outputs()
 
         self.graphics_scene.clear()
-        self.load_script(self.script_path)
+        self.load_script(self.script_path, reloading=True)
 
         self.show_message('Reloaded successfully')
 

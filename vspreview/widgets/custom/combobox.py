@@ -56,9 +56,9 @@ class ComboBox(Qt.QComboBox, Generic[T]):
 class _ComboBox_Output(ComboBox):
     ty = Output
     if TYPE_CHECKING:
-        valueChanged = Qt.pyqtSignal(ty, Optional[ty])
+        valueChanged = Qt.pyqtSignal(Optional[ty], Optional[ty])
     else:
-        valueChanged = Qt.pyqtSignal(ty, object)
+        valueChanged = Qt.pyqtSignal(object, object)
 
 
 class _ComboBox_SceningList(ComboBox):

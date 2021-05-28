@@ -843,7 +843,7 @@ def check_versions() -> bool:
 
     failed = False
 
-    if sys.version_info < (3, 10, 0, 'final', 0):
+    if sys.version_info < (3, 9, 0, 'final', 0):
         logging.warning('VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
                         .format(python_version(), sys.version_info.releaselevel))
         failed = True

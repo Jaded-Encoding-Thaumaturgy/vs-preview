@@ -537,10 +537,8 @@ class MainWindow(AbstractMainWindow):
             self.load_storage()
         else:
             self.load_storage()
-
             for toolbar in self.toolbars:
                 toolbar.on_script_loaded()
-            self.switch_output(self.OUTPUT_INDEX)
 
     def load_storage(self) -> None:
         import yaml

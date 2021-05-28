@@ -103,6 +103,9 @@ class AbstractToolbar(Qt.QWidget, QABC):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
 
+    def on_script_unloaded(self) -> None:
+        pass
+
     def on_script_loaded(self) -> None:
         pass
 

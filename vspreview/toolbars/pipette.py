@@ -112,7 +112,7 @@ class PipetteToolbar(AbstractToolbar):
 
         layout.addStretch()
 
-    def on_script_loaded(self) -> None:
+    def on_script_unloaded(self) -> None:
         self.outputs.clear()
 
     def mouse_moved(self, event: Qt.QMouseEvent) -> None:

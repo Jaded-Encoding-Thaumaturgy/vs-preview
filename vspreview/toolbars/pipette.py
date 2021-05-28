@@ -111,6 +111,9 @@ class PipetteToolbar(AbstractToolbar):
 
         layout.addStretch()
 
+    def on_script_loaded(self) -> None:
+        self.outputs.clear()
+
     def mouse_moved(self, event: Qt.QMouseEvent) -> None:
         if self.tracking and not event.buttons():
             self.update_labels(event.pos())

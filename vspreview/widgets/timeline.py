@@ -349,6 +349,10 @@ class Timeline(Qt.QWidget):
         TimeInterval(seconds= 900),
         TimeInterval(seconds=1200),
         TimeInterval(seconds=1800),
+        TimeInterval(seconds=2700),
+        TimeInterval(seconds=3600),
+        TimeInterval(seconds=5400),
+        TimeInterval(seconds=7200),
     )
 
     def calculate_notch_interval_t(self, target_interval_x: int) -> TimeInterval:
@@ -380,6 +384,10 @@ class Timeline(Qt.QWidget):
         FrameInterval( 5000),
         FrameInterval( 7500),
         FrameInterval(10000),
+        FrameInterval(20000),
+        FrameInterval(25000),
+        FrameInterval(50000),
+        FrameInterval(75000),
     )
 
     def calculate_notch_interval_f(self, target_interval_x: int) -> FrameInterval:

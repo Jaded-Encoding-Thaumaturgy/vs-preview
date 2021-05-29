@@ -114,7 +114,7 @@
         //     "name": "Python: All debug Options",
         //     "type": "python",
         //     "request": "launch",
-        //     "pythonPath": "${config:python.interpreterPath}",
+        //     "python": "${command:python.interpreterPath}",
         //     "program": "${file}",
         //     "module": "module.name",
         //     "env": {

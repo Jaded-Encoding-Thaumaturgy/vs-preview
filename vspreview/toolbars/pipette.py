@@ -37,9 +37,6 @@ class PipetteToolbar(AbstractToolbar):
         super().__init__(main, 'Pipette')
 
         self.setup_ui()
-        self.main.graphics_view.mouseMoved   .connect(self.mouse_moved)
-        self.main.graphics_view.mousePressed .connect(self.mouse_pressed)
-        self.main.graphics_view.mouseReleased.connect(self.mouse_released)
 
         self.pos_fmt = '{},{}'
         self.src_hex_fmt = '{:2X}'
@@ -111,6 +108,16 @@ class PipetteToolbar(AbstractToolbar):
         layout.addWidget(self.src_norm)
 
         layout.addStretch()
+
+    def subscribe_on_mouse_events(self) -> None:
+        self.main.graphics_view.mouseMoved   .connect(self.mouse_moved)
+        self.main.graphics_view.mousePressed .connect(self.mouse_pressed)
+        self.main.graphics_view.mouseReleased.connect(self.mouse_released)
+
+    def unsubscribe_from_mouse_events(self) -> None:
+        self.main.graphics_view.mouseMoved   .disconnect(self.mouse_moved)
+        self.main.graphics_view.mousePressed .disconnect(self.mouse_pressed)
+        self.main.graphics_view.mouseReleased.disconnect(self.mouse_released)
 
     def on_script_unloaded(self) -> None:
         self.outputs.clear()
@@ -249,8 +256,10 @@ class PipetteToolbar(AbstractToolbar):
         super().on_toggle(new_state)
         self.main.graphics_view.setMouseTracking(new_state)
         if new_state is True:
+            self.subscribe_on_mouse_events()
             self.main.graphics_view.setDragMode(Qt.QGraphicsView.NoDrag)
         else:
+            self.unsubscribe_from_mouse_events()
             self.main.graphics_view.setDragMode(
                 Qt.QGraphicsView.ScrollHandDrag)
         self.tracking = new_state

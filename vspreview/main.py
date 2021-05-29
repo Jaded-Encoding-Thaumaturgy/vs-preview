@@ -174,7 +174,7 @@ class MainToolbar(AbstractToolbar):
         layout.addWidget(self.zoom_combobox)
 
         self.switch_timeline_mode_button = Qt.QPushButton(self)
-        self.switch_timeline_mode_button.setText('Switch Timeline Mode')
+        self.switch_timeline_mode_button.setText('Timeline: Time')
         layout.addWidget(self.switch_timeline_mode_button)
 
         layout.addStretch()
@@ -213,8 +213,10 @@ class MainToolbar(AbstractToolbar):
     def on_switch_timeline_mode_clicked(self, checked: Optional[bool] = None) -> None:
         if self.main.timeline.mode == self.main.timeline.Mode.TIME:
             self.main.timeline.mode = self.main.timeline.Mode.FRAME
+            self.switch_timeline_mode_button.setText('Timeline: Frame')
         elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
             self.main.timeline.mode = self.main.timeline.Mode.TIME
+            self.switch_timeline_mode_button.setText('Timeline: Time')
 
     def on_zoom_changed(self, text: Optional[str] = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())

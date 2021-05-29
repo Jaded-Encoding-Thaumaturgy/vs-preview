@@ -486,8 +486,8 @@ class MainWindow(AbstractMainWindow):
             + ' QToolButton { padding: 0px; }'
 
     def load_script(self, script_path: Path, external_args: str = '', reloading = False) -> None:
-        from traceback import print_exc
         import shlex
+        from traceback import FrameSummary, TracebackException
 
         self.toolbars.playback.stop()
 
@@ -509,13 +509,27 @@ class MainWindow(AbstractMainWindow):
             exec(self.script_path.read_text(encoding='utf-8'), {
                 '__file__': sys.argv[0]
             })
-        except Exception:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             self.script_exec_failed = True
-            logging.error(
-                'Script contains error(s). Check following lines for details.')
+            logging.error(e.value)
+
+            te = TracebackException.from_exception(e)
+            # remove the first stack frame, which contains our exec() invocation
+            del te.stack[0]
+
+            # replace <string> with script path only for the first stack frames
+            # in order to keep intact exec() invocations down the stack
+            # that we're not concerned with
+            for i, frame in enumerate(te.stack):
+                if frame.filename == '<string>':
+                    te.stack[i] = FrameSummary(str(self.script_path),
+                                               frame.lineno, frame.name)
+                else:
+                    break
+            print(''.join(te.format()))
+
             self.handle_script_error(
                 'Script contains error(s). See console output for details.')
-            print_exc()
             return
         finally:
             sys.argv = argv_orig

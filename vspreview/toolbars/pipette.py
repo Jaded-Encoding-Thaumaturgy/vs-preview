@@ -219,9 +219,7 @@ class PipetteToolbar(AbstractToolbar):
         else:
             self.src_label.setText(src_label_text.format(' + Alpha'))
 
-        self.pos_fmt = '{{:{}d}},{{:{}d}}'.format(
-            ceil(log(self.main.current_output.width, 10)),
-            ceil(log(self.main.current_output.height, 10)))
+        self.pos_fmt = '{:4d},{:4d}'
 
         if self.main.current_output not in self.outputs:
             self.outputs[self.main.current_output] = self.prepare_vs_output(

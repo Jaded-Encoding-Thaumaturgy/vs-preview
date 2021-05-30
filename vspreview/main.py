@@ -120,7 +120,7 @@ class MainToolbar(AbstractToolbar):
 
         self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
         self.frame_control          .valueChanged.connect(self.main.switch_frame)
-        self.time_control           .valueChanged.connect(lambda t: self.main.switch_frame(time=t))
+        self.time_control           .valueChanged.connect(self.main.switch_frame)
         self.frame_control       .editingFinished.connect(self.frame_control.clearFocus)  # type: ignore
         self.time_control        .editingFinished.connect(self.time_control.clearFocus)  # type: ignore
         self.sync_outputs_checkbox  .stateChanged.connect(self.on_sync_outputs_changed)
@@ -621,13 +621,15 @@ class MainWindow(AbstractMainWindow):
     def render_frame(self, frame: Frame, output: Optional[Output] = None) -> Qt.QImage:
         return self.current_output.render_frame(frame)
 
-    def switch_frame(self, frame: Optional[Frame] = None, time: Optional[Time] = None, *, render_frame: bool = True) -> None:
-        if frame is not None:
+    def switch_frame(self, pos: Union[Frame, Time], *, render_frame: bool = True) -> None:
+        if isinstance(pos, Frame):
+            frame = pos
             time = Time(frame)
-        elif time is not None:
-            frame = Frame(time)
+        elif isinstance(pos, Time):
+            frame = Frame(pos)
+            time = pos
         else:
-            logging.debug('switch_frame(): both frame and time is None')
+            logging.debug('switch_frame(): position is neither Frame nor Time')
             return
         if frame > self.current_output.end_frame:
             return
@@ -699,7 +701,7 @@ class MainWindow(AbstractMainWindow):
 
     @current_time.setter
     def current_time(self, value: Time) -> None:
-        self.switch_frame(time=value)
+        self.switch_frame(value)
 
     @property
     def outputs(self) -> Outputs:  # type: ignore

@@ -513,7 +513,7 @@ class MainWindow(AbstractMainWindow):
             })
         except Exception as e:  # pylint: disable=broad-except
             self.script_exec_failed = True
-            logging.error(e.value)
+            logging.error(e)
 
             te = TracebackException.from_exception(e)
             # remove the first stack frame, which contains our exec() invocation

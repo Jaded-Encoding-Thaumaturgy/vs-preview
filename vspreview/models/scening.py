@@ -278,7 +278,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
             name = state['name']
             if not isinstance(name, str):
                 raise TypeError(
-                    '\'name\' of a SceningList is not a Frame. It\'s most probably corrupted.')
+                    '\'name\' of a SceningList is not a string. It\'s most probably corrupted.')
 
             items = state['items']
             if not isinstance(items, list):

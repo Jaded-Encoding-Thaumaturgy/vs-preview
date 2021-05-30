@@ -734,8 +734,7 @@ class MainWindow(AbstractMainWindow):
             '{} frames'.format(output.total_frames))
         self.statusbar.duration_label.setText(
             # Display duration without -1 offset to match other video tools
-            '{}'.format(self.current_output.to_time_interval(
-                self.current_output.total_frames)))
+            '{}'.format(TimeInterval(self.current_output.total_frames)))
         self.statusbar.resolution_label.setText(
             '{}x{}'.format(output.width, output.height))
         if not output.has_alpha:

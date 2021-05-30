@@ -988,10 +988,8 @@ class SceningToolbar(AbstractToolbar):
             interval = TimeInterval(seconds=float(match[1]))
             fps = float(match[2]) if match.lastindex >= 2 else default_fps
 
-            scening_list.add(
-                self.main.current_output.to_frame(pos),
-                self.main.current_output.to_frame(pos + interval),
-                '{:.3f} fps'.format(fps))
+            scening_list.add(Frame(pos), Frame(pos + interval),
+                             '{:.3f} fps'.format(fps))
 
             pos += interval
 

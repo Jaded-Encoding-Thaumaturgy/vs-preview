@@ -709,7 +709,10 @@ class SceningToolbar(AbstractToolbar):
         '''
 
         for line in path.read_text().splitlines():
-            scening_list.add(Frame(int(line)))
+            try:
+                scening_list.add(Frame(int(line)))
+            except ValueError:
+                out_of_range_count += 1
 
     def import_cue(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
@@ -897,7 +900,10 @@ class SceningToolbar(AbstractToolbar):
             return
 
         for bookmark in session['bookmarks']:
-            scening_list.add(Frame(bookmark[0]))
+            try:
+                scening_list.add(Frame(bookmark[0]))
+            except ValueError:
+                out_of_range_count += 1
 
     def import_matroska_timestamps_v1(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
@@ -988,8 +994,11 @@ class SceningToolbar(AbstractToolbar):
             interval = TimeInterval(seconds=float(match[1]))
             fps = float(match[2]) if match.lastindex >= 2 else default_fps
 
-            scening_list.add(Frame(pos), Frame(pos + interval),
-                             '{:.3f} fps'.format(fps))
+            try:
+                scening_list.add(Frame(pos), Frame(pos + interval),
+                                 '{:.3f} fps'.format(fps))
+            except ValueError:
+                out_of_range_count += 1
 
             pos += interval
 
@@ -1046,7 +1055,10 @@ class SceningToolbar(AbstractToolbar):
         '''
 
         for bookmark in path.read_text().split(', '):
-            scening_list.add(Frame(int(bookmark)))
+            try:
+                scening_list.add(Frame(int(bookmark)))
+            except ValueError:
+                out_of_range_count += 1
 
     def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''

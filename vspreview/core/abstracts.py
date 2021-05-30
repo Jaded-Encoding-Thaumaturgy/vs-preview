@@ -24,7 +24,7 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     __slots__ = ()
 
     @abstractmethod
-    def load_script(self, script_path: Path, external_args: str = "") -> None:
+    def load_script(self, script_path: Path, external_args: str = '', reloading = False) -> None:
         raise NotImplementedError
 
     @abstractmethod

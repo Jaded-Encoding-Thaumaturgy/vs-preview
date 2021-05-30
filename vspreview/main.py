@@ -531,7 +531,9 @@ class MainWindow(AbstractMainWindow):
             print(''.join(te.format()))
 
             self.handle_script_error(
-                'Script contains error(s). See console output for details.')
+                f'''An error occured while evaluating script:
+                \n{str(e)}
+                \nSee console output for details.''')
             return
         finally:
             sys.argv = argv_orig

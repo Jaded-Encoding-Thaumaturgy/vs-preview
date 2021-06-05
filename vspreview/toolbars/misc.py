@@ -87,7 +87,8 @@ class MiscToolbar(AbstractToolbar):
         self.save_template_lineedit = Qt.QLineEdit(self)
         self.save_template_lineedit.setToolTip(
             r'Available placeholders: {format}, {fps_den}, {fps_num}, {frame},'
-            r' {height}, {index}, {script_name}, {total_frames}, {width}.')
+            r' {height}, {index}, {script_name}, {total_frames}, {width}.'
+            r' Other placeholders will be treated as frameprops, same as in VS')
         layout.addWidget(self.save_template_lineedit)
 
         layout.addStretch()
@@ -149,7 +150,7 @@ class MiscToolbar(AbstractToolbar):
         filter_str = filter_str[0:-2]
 
         template = self.main.toolbars.misc.save_template_lineedit.text()
-        substitutions = {
+        builtin_substitutions = {
             'format'       : self.main.current_output.format.name,
             'fps_den'      : self.main.current_output.fps_den,
             'fps_num'      : self.main.current_output.fps_num,
@@ -160,6 +161,9 @@ class MiscToolbar(AbstractToolbar):
             'total_frames' : self.main.current_output.total_frames,
             'width'        : self.main.current_output.width,
         }
+        substitutions = dict(self.main.current_output.vs_output.get_frame(
+                                 self.main.current_frame).props)
+        substitutions.update(builtin_substitutions)
         try:
             suggested_path_str = template.format(**substitutions)
         except ValueError:

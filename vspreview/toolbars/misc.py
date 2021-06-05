@@ -86,7 +86,8 @@ class MiscToolbar(AbstractToolbar):
 
         self.save_template_lineedit = Qt.QLineEdit(self)
         self.save_template_lineedit.setToolTip(
-            r'Use {script_name} and {frame} as placeholders.')
+            r'Available placeholders: {format}, {fps_den}, {fps_num}, {frame},'
+            r' {height}, {index}, {script_name}, {total_frames}, {width}.')
         layout.addWidget(self.save_template_lineedit)
 
         layout.addStretch()
@@ -148,14 +149,21 @@ class MiscToolbar(AbstractToolbar):
         filter_str = filter_str[0:-2]
 
         template = self.main.toolbars.misc.save_template_lineedit.text()
+        substitutions = {
+            'format'       : self.main.current_output.format.name,
+            'fps_den'      : self.main.current_output.fps_den,
+            'fps_num'      : self.main.current_output.fps_num,
+            'frame'        : self.main.current_frame,
+            'height'       : self.main.current_output.height,
+            'index'        : self.main.current_output.index,
+            'script_name'  : self.main.script_path.stem,
+            'total_frames' : self.main.current_output.total_frames,
+            'width'        : self.main.current_output.width,
+        }
         try:
-            suggested_path_str = template.format(
-                script_name=self.main.script_path.with_suffix(''),
-                frame=self.main.current_frame)
+            suggested_path_str = template.format(**substitutions)
         except ValueError:
-            suggested_path_str = self.main.SAVE_TEMPLATE.format(
-                script_name=self.main.script_path.with_suffix(''),
-                frame=self.main.current_frame)
+            suggested_path_str = self.main.SAVE_TEMPLATE.format(**substitutions)
             self.main.show_message('Save name template is invalid')
 
         save_path_str, file_type = Qt.QFileDialog.getSaveFileName(

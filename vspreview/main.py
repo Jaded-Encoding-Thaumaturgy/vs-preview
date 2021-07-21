@@ -331,7 +331,7 @@ class MainWindow(AbstractMainWindow):
     SEEK_STEP                 =     1  # frames
     STATUSBAR_MESSAGE_TIMEOUT =     3 * 1000  # s
     STORAGE_BACKUPS_COUNT     =     2
-    SYNC_OUTPUTS              = False
+    SYNC_OUTPUTS              = True
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE             = 'frame'

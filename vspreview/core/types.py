@@ -754,7 +754,7 @@ class Output(YAMLObject):
         resizer = self.main.VS_OUTPUT_RESIZER
         akarin = 'API R4.' in vs.core.version()
         resizer_kwargs = {
-            'format'        : vs.RGB24 if akarin else 9000000+10, #vs.COMPATBGR32,
+            'format'        : vs.RGB24 if akarin else vs.COMPATBGR32,
             'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s' : self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,

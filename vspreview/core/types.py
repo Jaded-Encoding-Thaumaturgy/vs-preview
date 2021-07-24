@@ -682,7 +682,8 @@ class Output(YAMLObject):
         'format', 'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'has_alpha', 'vs_alpha',
         'format_alpha', 'props', 'source_vs_output', 'source_vs_alpha',
-        'main', 'checkerboard', "__weakref__"
+        'main', 'checkerboard', "__weakref__",
+        "cur_frame" # hack to keep the reference to the current frame
     )
 
     def __init__(self, vs_output: Union[vs.VideoNode, vs.AlphaOutputTuple], index: int) -> None:
@@ -795,6 +796,7 @@ class Output(YAMLObject):
                 self.vs_alpha.get_frame(int(frame)))
 
     def render_raw_videoframe(self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None) -> Qt.QImage:
+        self.cur_frame = (vs_frame, vs_frame_alpha) # keep a reference to the current frame
         # powerful spell. do not touch
         frame_data_pointer = ctypes.cast(
             vs_frame.get_read_ptr(0),

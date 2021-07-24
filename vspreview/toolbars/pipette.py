@@ -261,12 +261,13 @@ class PipetteToolbar(AbstractToolbar):
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
-        def non_subsampled_format(fmt: vs.Format) -> vs.Format:
-            if fmt.id == vs.COMPATBGR32.value:
-                return vs.RGB24  # type: ignore
-            elif fmt.id == vs.COMPATYUY2.value:
-                return vs.YUV444P8  # type: ignore
-            else:
+        def non_subsampled_format(fmt):
+            #if fmt.id == vs.COMPATBGR32.value:
+            #    return vs.RGB24  # type: ignore
+            #elif fmt.id == vs.COMPATYUY2.value:
+            #    return vs.YUV444P8  # type: ignore
+            #else:
+            if True:
                 return vs.core.register_format(
                     color_family=fmt.color_family,
                     sample_type=fmt.sample_type,

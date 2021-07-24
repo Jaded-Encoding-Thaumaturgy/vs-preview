@@ -744,8 +744,9 @@ class Output(YAMLObject):
 
     def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
         resizer = self.main.VS_OUTPUT_RESIZER
+        akarin = True
         resizer_kwargs = {
-            'format'        : vs.COMPATBGR32,
+            'format'        : vs.RGB24 if akarin else 9000000+10, #vs.COMPATBGR32,
             'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s' : self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
@@ -754,11 +755,8 @@ class Output(YAMLObject):
             'prefer_props'  : self.main.VS_OUTPUT_PREFER_PROPS,
         }
 
-        if not alpha:
+        if not alpha and not akarin:
             vs_output = vs.core.std.FlipVertical(vs_output)
-
-        if vs_output.format == vs.COMPATBGR32:  # type: ignore
-            return vs_output
 
         is_subsampled = (vs_output.format.subsampling_w != 0
                          or vs_output.format.subsampling_h != 0)
@@ -775,6 +773,15 @@ class Output(YAMLObject):
 
         vs_output = resizer(vs_output, **resizer_kwargs,
                             **self.main.VS_OUTPUT_RESIZER_KWARGS)
+        if alpha: return vs_output
+        elif akarin:
+            try:
+                regfmt = vs.core.query_video_format
+            except AttributeError:
+                regfmt = vs.core.register_format
+            fmt = regfmt(vs.GRAY, vs.INTEGER, 32, 0, 0)
+            # convert vs.RGB24 to non-planar vs.COMPATBGR32.
+            return vs.core.akarin.Expr([ vs.core.std.ShufflePlanes(vs_output, i, vs.GRAY) for i in range(3) ], 'x 256 * 256 * y 256 * + z +', fmt, opt=1)
 
         return vs_output
 

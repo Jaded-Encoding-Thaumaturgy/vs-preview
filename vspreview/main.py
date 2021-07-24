@@ -345,7 +345,9 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_RANGE           = Output.Range.LIMITED
     VS_OUTPUT_CHROMALOC       = Output.ChromaLoc.LEFT
     VS_OUTPUT_PREFER_PROPS    = True
-    VS_OUTPUT_RESIZER_KWARGS  = {}  # type: Mapping[str, str]
+    VS_OUTPUT_RESIZER_KWARGS  = {  # type: Mapping[str, str]
+        'dither_type': 'error_diffusion',
+    }
 
     BENCHMARK_FRAME_DATA_SHARING_FIX  =  True
     DEBUG_PLAY_FPS                    = False

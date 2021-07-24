@@ -752,7 +752,7 @@ class Output(YAMLObject):
 
     def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
         resizer = self.main.VS_OUTPUT_RESIZER
-        akarin = True
+        akarin = 'API R4.' in vs.core.version()
         resizer_kwargs = {
             'format'        : vs.RGB24 if akarin else 9000000+10, #vs.COMPATBGR32,
             'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,

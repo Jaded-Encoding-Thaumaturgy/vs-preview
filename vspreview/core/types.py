@@ -789,7 +789,7 @@ class Output(YAMLObject):
                 regfmt = vs.core.register_format
             fmt = regfmt(vs.GRAY, vs.INTEGER, 32, 0, 0)
             # convert vs.RGB24 to non-planar vs.COMPATBGR32.
-            return vs.core.akarin.Expr([ vs.core.std.ShufflePlanes(vs_output, i, vs.GRAY) for i in range(3) ], f'x {0x10000} * y {0x100} * + z + {0xff} {0x1000000} * +', fmt, opt=1)
+            return vs.core.akarin.Expr([ vs.core.std.ShufflePlanes(vs_output, i, vs.GRAY) for i in range(3) ], 'x 0x10000 * y 0x100 * + z + 0xff000000 +', fmt, opt=1)
 
         return vs_output
 

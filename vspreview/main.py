@@ -569,7 +569,8 @@ class MainWindow(AbstractMainWindow):
 
         if storage_path.exists():
             try:
-                yaml.load(storage_path.open(), Loader=yaml.Loader)
+                with storage_path.open() as storage_file: 
+                    yaml.load(storage_file, Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
                     logging.warning(

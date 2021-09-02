@@ -695,14 +695,17 @@ class Output(YAMLObject):
 
         # runtime attributes
 
-        if isinstance(vs_output, vs.AlphaOutputTuple):
-            self.has_alpha = True
+        if hasattr(vs, 'AlphaOutputTuple') and isinstance(vs_output, vs.AlphaOutputTuple) or \
+           hasattr(vs, 'VideoOutputTuple') and isinstance(vs_output, vs.VideoOutputTuple):
             self.source_vs_output = vs_output.clip
             self.source_vs_alpha  = vs_output.alpha
 
-            self.vs_alpha = self.prepare_vs_output(self.source_vs_alpha,
-                                                   alpha=True)
-            self.format_alpha = self.source_vs_alpha.format
+            self.has_alpha = False
+            if self.source_vs_alpha:
+                self.has_alpha = True
+                self.vs_alpha = self.prepare_vs_output(self.source_vs_alpha,
+                                                       alpha=True)
+                self.format_alpha = self.source_vs_alpha.format
         else:
             self.has_alpha = False
             self.source_vs_output = vs_output

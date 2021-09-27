@@ -826,6 +826,8 @@ def main() -> None:
     parser = ArgumentParser()
     parser.add_argument('script_path', help='Path to Vapoursynth script',
                         type=Path, nargs='?')
+    parser.add_argument('-c', '--preserve-cwd', action='store_true',
+                        help='do not chdir to script parent directory')
     parser.add_argument('-a', '--arg', type=str, action='append', metavar='key=value',
                         help='Argument to pass to the script environment')
     args = parser.parse_args()
@@ -839,7 +841,8 @@ def main() -> None:
         print('Script path is invalid.')
         sys.exit(1)
 
-    os.chdir(script_path.parent)
+    if not args.preserve_cwd:
+        os.chdir(script_path.parent)
     app = Qt.QApplication(sys.argv)
     main_window = MainWindow()
     ext_args = [ tuple(a.split('=', maxsplit=1)) for a in args.arg or [] ]

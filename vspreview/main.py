@@ -493,6 +493,7 @@ class MainWindow(AbstractMainWindow):
         from traceback import FrameSummary, TracebackException
 
         self.toolbars.playback.stop()
+        self.setWindowTitle('VSPreview: %s %s' % (script_path, external_args))
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path

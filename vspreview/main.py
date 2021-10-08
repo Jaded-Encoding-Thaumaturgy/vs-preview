@@ -113,8 +113,8 @@ class MainToolbar(AbstractToolbar):
         self.outputs_combobox.setModel(self.outputs)
 
         self.zoom_levels = ZoomLevels([
-            #0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0, 8.0, 16.0
-            0.5, 1.0, 2.0, 4.0, 8.0, 16.0
+            0.25, 0.5, 0.68, 0.75, 0.85, 1.0, 1.5, 2.0,
+            4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 32.0
         ])
         self.zoom_combobox.setModel(self.zoom_levels)
         self.zoom_combobox.setCurrentIndex(1)
@@ -323,20 +323,20 @@ class MainWindow(AbstractMainWindow):
     FPS_AVERAGING_WINDOW_SIZE = FrameInterval(100)
     FPS_REFRESH_INTERVAL      =   150  # ms
     LOG_LEVEL         = logging.DEBUG
-    OPENGL_RENDERING          = False
-    ORDERED_OUTPUTS           = False
+    OPENGL_RENDERING          = True
+    ORDERED_OUTPUTS           = True
     OUTPUT_INDEX              =     0
     PLAY_BUFFER_SIZE = FrameInterval(get_usable_cpus_count())
     PNG_COMPRESSION_LEVEL     =     0  # 0 - 100
     SAVE_TEMPLATE = '{script_name}_{frame}'
     SEEK_STEP                 =     1  # frames
-    STATUSBAR_MESSAGE_TIMEOUT =     3 * 1000  # s
+    STATUSBAR_MESSAGE_TIMEOUT =     1500  # s
     STORAGE_BACKUPS_COUNT     =     2
     SYNC_OUTPUTS              = True
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE             = 'frame'
-    TOGGLE_TOOLBAR           = False
+    TOGGLE_TOOLBAR           = True
     VSP_DIR_NAME              = '.vspreview'
     # used for formats with subsampling
     VS_OUTPUT_RESIZER         = Output.Resizer.Bicubic
@@ -389,7 +389,8 @@ class MainWindow(AbstractMainWindow):
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.BASE_PPI
         self.setWindowTitle('VSPreview')
-        self.move(400, 0)
+        self.move(50, 50)
+        self.resize(1280, 720)
         self.setup_ui()
 
         # global

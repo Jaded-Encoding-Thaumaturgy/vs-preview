@@ -17,6 +17,7 @@ class GraphicsView(Qt.QGraphicsView):
     mousePressed = Qt.pyqtSignal(Qt.QMouseEvent)
     mouseReleased = Qt.pyqtSignal(Qt.QMouseEvent)
     wheelScrolled = Qt.pyqtSignal(int)
+    drag_mode: Qt.DragMode
 
     def __init__(self, parent: Optional[Qt.QWidget] = None) -> None:
         super().__init__(parent)
@@ -43,7 +44,9 @@ class GraphicsView(Qt.QGraphicsView):
 
     def wheelEvent(self, event: Qt.QWheelEvent) -> None:
         modifiers = self.app.keyboardModifiers()
-        if modifiers == Qt.Qt.ControlModifier:
+        mouse = event.buttons()
+
+        if modifiers == Qt.Qt.ControlModifier or mouse == Qt.Qt.RightButton or mouse == Qt.Qt.MiddleButton:
             angleDelta = event.angleDelta().y()
 
             # check if wheel wasn't rotated the other way since last rotation

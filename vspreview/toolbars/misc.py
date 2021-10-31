@@ -45,8 +45,8 @@ class MiscToolbar(AbstractToolbar):
         self. show_debug_checkbox.stateChanged.connect(        self.on_show_debug_changed)
 
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_script_button.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_S, self.         save_button.click)
-        add_shortcut(Qt.Qt.ALT  + Qt.Qt.Key_S, self.   copy_frame_button.click)
+        add_shortcut(Qt.Qt.ALT + Qt.Qt.Key_S, self.         save_button.click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_S, self.   copy_frame_button.click)
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_S,
                      self.save_frame_as_button.click)
 

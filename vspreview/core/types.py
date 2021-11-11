@@ -748,9 +748,9 @@ class Output(YAMLObject):
 
     def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
         resizer = self.main.VS_OUTPUT_RESIZER
-        akarin = 'API R4.' in vs.core.version()
+        akarin = vs.__api_version__.api_major >= 4
         resizer_kwargs = {
-            'format'        : vs.RGB24 if akarin else vs.COMPATBGR32,
+            'format'        : vs.RGB30 if akarin else vs.COMPATBGR32,
             'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s' : self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
@@ -783,9 +783,10 @@ class Output(YAMLObject):
                 regfmt = vs.core.query_video_format
             except AttributeError:
                 regfmt = vs.core.register_format
+            #return vs.core.libp2p.Pack(vs_output)
             fmt = regfmt(vs.GRAY, vs.INTEGER, 32, 0, 0)
-            # convert vs.RGB24 to non-planar vs.COMPATBGR32.
-            return vs.core.akarin.Expr([ vs.core.std.ShufflePlanes(vs_output, i, vs.GRAY) for i in range(3) ], 'x 0x10000 * y 0x100 * + z + 0xff000000 +', fmt, opt=1)
+            # convert vs.RGB30 to non-planar Qt RGB30.
+            return vs.core.akarin.Expr([ vs.core.std.ShufflePlanes(vs_output, i, vs.GRAY) for i in range(3) ], 'x 0x100000 * y 0x400 * + z + 0xc0000000 +', fmt, opt=1)
 
         return vs_output
 
@@ -809,7 +810,7 @@ class Output(YAMLObject):
         )
         frame_image = Qt.QImage(
             frame_data_pointer.contents, vs_frame.width, vs_frame.height,
-            vs_frame.get_stride(0), Qt.QImage.Format_RGB32)
+            vs_frame.get_stride(0), Qt.QImage.Format_RGB30 if vs.__api_version__.api_major >= 4 else Qt.QImage.Format_RGB32)
 
         if vs_frame_alpha is None:
             return frame_image

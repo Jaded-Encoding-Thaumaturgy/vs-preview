@@ -100,7 +100,7 @@ class GraphicsImageItem:
 
     def setImage(self, value: Qt.QImage) -> None:
         self._image = value
-        self._graphics_item.setPixmap(Qt.QPixmap.fromImage(self._image))
+        self._graphics_item.setPixmap(Qt.QPixmap.fromImage(self._image, Qt.Qt.NoFormatConversion))
 
     def show(self) -> None:
         self._graphics_item.show()

@@ -121,7 +121,7 @@ class MiscToolbar(AbstractToolbar):
         yaml.Dumper.ignore_aliases = lambda *args: True
 
         if path is None:
-            vsp_dir = self.main.script_path.parent / self.main.VSP_DIR_NAME
+            vsp_dir = self.main.config_dir
             vsp_dir.mkdir(exist_ok=True)
             path = vsp_dir / (self.main.script_path.stem + '.yml')
 

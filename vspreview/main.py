@@ -368,7 +368,7 @@ class MainWindow(AbstractMainWindow):
         'script_exec_failed'
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, config_dir: Path) -> None:
         from qdarkstyle import load_stylesheet_pyqt5
 
         super().__init__()
@@ -376,6 +376,8 @@ class MainWindow(AbstractMainWindow):
         # logging
 
         # ???
+
+        self.config_dir = config_dir / self.VSP_DIR_NAME
 
         self.app = Qt.QApplication.instance()
         if self.DARK_THEME:
@@ -556,7 +558,7 @@ class MainWindow(AbstractMainWindow):
     def load_storage(self) -> None:
         import yaml
 
-        vsp_dir = self.script_path.parent / self.VSP_DIR_NAME
+        vsp_dir = self.config_dir
         storage_path = vsp_dir / (self.script_path.stem + '.yml')
 
         if not storage_path.exists():
@@ -841,7 +843,7 @@ def main() -> None:
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
     app = Qt.QApplication(sys.argv)
-    main_window = MainWindow()
+    main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     ext_args = [ tuple(a.split('=', maxsplit=1)) for a in args.arg or [] ]
     main_window.load_script(script_path, external_args=ext_args)
     main_window.show()

@@ -3,14 +3,14 @@ from __future__ import annotations
 import logging
 from typing import cast, Optional
 
-from PyQt5 import Qt
+from PyQt5 import Qt, QtCore
 
 
 class GraphicsView(Qt.QGraphicsView):
     WHEEL_STEP = 15 * 8  # degrees
 
     __slots__ = (
-        'app', 'angleRemainder',
+        'app', 'angleRemainder', 'zoomValue',
     )
 
     mouseMoved = Qt.pyqtSignal(Qt.QMouseEvent)
@@ -23,11 +23,23 @@ class GraphicsView(Qt.QGraphicsView):
 
         self.app = Qt.QApplication.instance()
         self.angleRemainder = 0
+        self.zoomValue = 0
 
     def setZoom(self, value: int) -> None:
         transform = Qt.QTransform()
         transform.scale(value, value)
         self.setTransform(transform)
+
+    def event(self, event: Qt.QEvent) -> bool:
+        if isinstance(event, Qt.QNativeGestureEvent):
+            typ = event.gestureType()
+            if typ == QtCore.Qt.BeginNativeGesture:
+                self.zoomValue = 0
+            elif typ == QtCore.Qt.ZoomNativeGesture:
+                self.zoomValue += event.value()
+            if typ == QtCore.Qt.EndNativeGesture:
+                self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
+        return super().event(event)
 
     def wheelEvent(self, event: Qt.QWheelEvent) -> None:
         modifiers = self.app.keyboardModifiers()

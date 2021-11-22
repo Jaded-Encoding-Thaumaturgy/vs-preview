@@ -349,6 +349,8 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_RESIZER_KWARGS  = {  # type: Mapping[str, str]
         'dither_type': 'error_diffusion',
     }
+    # status bar
+    STATUS_FRAME_PROP = lambda prop: 'Type: %s' % (prop['_PictType'].decode('utf-8'))
 
     BENCHMARK_FRAME_DATA_SHARING_FIX  =  True
     DEBUG_PLAY_FPS                    = False
@@ -473,6 +475,10 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.fps_label = Qt.QLabel(self.central_widget)
         self.statusbar.fps_label.setObjectName('MainWindow.statusbar.fps_label')
         self.statusbar.addWidget(self.statusbar.fps_label)
+
+        self.statusbar.frame_props_label = Qt.QLabel(self.central_widget)
+        self.statusbar.frame_props_label.setObjectName('MainWindow.statusbar.frame_props_label')
+        self.statusbar.addWidget(self.statusbar.frame_props_label)
 
         self.statusbar.label = Qt.QLabel(self.central_widget)
         self.statusbar.label.setObjectName('MainWindow.statusbar.label')
@@ -642,6 +648,8 @@ class MainWindow(AbstractMainWindow):
 
         if render_frame:
             self.current_output.graphics_scene_item.setImage(self.render_frame(frame))
+
+        self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 
     def switch_output(self, value: Union[int, Output]) -> None:
         if len(self.outputs) == 0:

@@ -742,6 +742,8 @@ class Output(YAMLObject):
         self.graphics_scene_item: GraphicsImageItem
 
         # storable attributes
+        if 'Name' in self.props:
+            self.name = 'Output %d: %s' % (index, self.props['Name'].decode('utf-8'))
 
         if not hasattr(self, 'name'):
             self.name = 'Output ' + str(self.index)

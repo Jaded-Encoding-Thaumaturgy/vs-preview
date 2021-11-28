@@ -350,7 +350,7 @@ class MainWindow(AbstractMainWindow):
         'dither_type': 'error_diffusion',
     }
     # status bar
-    STATUS_FRAME_PROP = lambda prop: 'Type: %s' % (prop['_PictType'].decode('utf-8'))
+    STATUS_FRAME_PROP = lambda prop: 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
     BENCHMARK_FRAME_DATA_SHARING_FIX  =  True
     DEBUG_PLAY_FPS                    = False

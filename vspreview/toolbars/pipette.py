@@ -273,13 +273,7 @@ class PipetteToolbar(AbstractToolbar):
             #    return vs.YUV444P8  # type: ignore
             #else:
             if True:
-                return vs.core.register_format(
-                    color_family=fmt.color_family,
-                    sample_type=fmt.sample_type,
-                    bits_per_sample=fmt.bits_per_sample,
-                    subsampling_w=0,
-                    subsampling_h=0
-                )
+                return vs.core.query_video_format(fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0)
 
         return vs.core.resize.Bicubic(
             vs_output,

@@ -345,7 +345,6 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_PRIMARIES       = Output.Primaries.BT709
     VS_OUTPUT_RANGE           = Output.Range.LIMITED
     VS_OUTPUT_CHROMALOC       = Output.ChromaLoc.LEFT
-    VS_OUTPUT_PREFER_PROPS    = True
     VS_OUTPUT_RESIZER_KWARGS  = {  # type: Mapping[str, str]
         'dither_type': 'error_diffusion',
     }

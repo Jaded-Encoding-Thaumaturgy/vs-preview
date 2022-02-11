@@ -758,7 +758,6 @@ class Output(YAMLObject):
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
             'range_in_s'    : self.main.VS_OUTPUT_RANGE,
             'chromaloc_in_s': self.main.VS_OUTPUT_CHROMALOC,
-            'prefer_props'  : self.main.VS_OUTPUT_PREFER_PROPS,
         }
 
         if not alpha and not akarin:

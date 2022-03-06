@@ -303,6 +303,7 @@ class SceningToolbar(AbstractToolbar):
             'x264/x265 2 Pass Log (*.log)'  : self.import_x264_2pass_log,
             'x264/x265 QP File (*.qp *.txt)': self.import_qp,
             'XviD Log (*.txt)'              : self.import_xvid,
+            'Simple Mappings (*.txt)'       : self.import_simple,
         }
 
         self.add_list_button               .clicked.connect(self.on_add_list_clicked)
@@ -686,6 +687,17 @@ class SceningToolbar(AbstractToolbar):
             self.lists.remove(scening_list_index)
         else:
             self.current_list_index = scening_list_index
+
+    def import_simple(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Import simple frame mappings [Start End]
+        '''
+        for line in path.read_text().splitlines():
+            try:
+                fnumbers = [int(n) for n in line.split()]
+                scening_list.add(Frame(fnumbers[0]), Frame(fnumbers[1]))
+            except ValueError:
+                out_of_range_count += 1
 
     def import_ass(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''

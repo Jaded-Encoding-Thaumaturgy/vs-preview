@@ -2,6 +2,7 @@ from typing import Iterator
 
 # pylint: skip-file
 
+
 class SSAEvent:
     start: int
     end: int

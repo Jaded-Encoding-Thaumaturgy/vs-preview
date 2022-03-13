@@ -3,7 +3,7 @@ from __future__ import annotations
 from PyQt5 import Qt
 from pathlib import Path
 from abc import abstractmethod
-from typing import Any, cast, Mapping, Optional, Union, Iterator, TYPE_CHECKING
+from typing import Any, cast, Mapping, Optional, Union, Iterator, TYPE_CHECKING, Tuple, List
 
 from .types import Frame, Output, Time
 from .better_abc import abstract_attribute
@@ -18,7 +18,9 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     __slots__ = ()
 
     @abstractmethod
-    def load_script(self, script_path: Path, external_args: str = '', reloading: bool = False) -> None:
+    def load_script(
+        self, script_path: Path, external_args: List[Tuple[str, str]] | str = [], reloading: bool = False
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

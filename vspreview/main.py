@@ -1,26 +1,22 @@
 from __future__ import annotations
 
+import os
+import sys
 import shlex
 import logging
-import os
-from pathlib import Path
-import sys
-from typing import Any, cast, List, Mapping, Optional, Union
-
 from PyQt5 import Qt
 import vapoursynth as vs
+from pathlib import Path
+from platform import python_version
+from pkg_resources import get_distribution
+from typing import Any, cast, List, Mapping, Optional, Union, Tuple
 
-from vspreview.core import (
+from .models import Outputs
+from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit
+from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names, try_load
+from .core import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
     Frame, FrameInterval, Output, Time, TimeInterval, QYAMLObjectSingleton,
-)
-from vspreview.models import Outputs
-from vspreview.utils import (
-    add_shortcut, debug, get_usable_cpus_count, qt_silent_call,
-    set_qobject_names, try_load,
-)
-from vspreview.widgets import (
-    ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit,
 )
 
 
@@ -42,9 +38,7 @@ from vspreview.widgets import (
 
 
 class ScriptErrorDialog(Qt.QDialog):
-    __slots__ = (
-        'main', 'label', 'reload_button', 'exit_button'
-    )
+    __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
         super().__init__(main_window, Qt.Qt.Dialog)
@@ -55,8 +49,8 @@ class ScriptErrorDialog(Qt.QDialog):
 
         self.setup_ui()
 
-        self.reload_button.clicked.connect(self.on_reload_clicked)
-        self.exit_button  .clicked.connect(self.on_exit_clicked)
+        self.reload_button.clicked.connect(self.on_reload_clicked)  # type: ignore
+        self.exit_button.clicked.connect(self.on_exit_clicked)  # type: ignore
 
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_button.click, self)
 
@@ -137,7 +131,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs(main_window)
+        self.outputs = Outputs()
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -147,14 +141,14 @@ class MainToolbar(AbstractToolbar):
         self.zoom_combobox.setModel(self.zoom_levels)
         self.zoom_combobox.setCurrentIndex(3)
 
-        self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
-        self.frame_control          .valueChanged.connect(self.main.switch_frame)
-        self.time_control           .valueChanged.connect(lambda t: self.main.switch_frame(time=t))
-        self.copy_frame_button           .clicked.connect(self.on_copy_frame_button_clicked)
-        self.copy_timestamp_button       .clicked.connect(self.on_copy_timestamp_button_clicked)
-        self.zoom_combobox    .currentTextChanged.connect(self.on_zoom_changed)
-        self.switch_timeline_mode_button .clicked.connect(self.on_switch_timeline_mode_clicked)
-        self.settings_button             .clicked.connect(self.main.app_settings.show)
+        self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)  # type: ignore
+        self.frame_control.valueChanged.connect(self.main.switch_frame)  # type: ignore
+        self.time_control.valueChanged.connect(self.main.switch_frame)
+        self.copy_frame_button.clicked.connect(self.on_copy_frame_button_clicked)  # type: ignore
+        self.copy_timestamp_button.clicked.connect(self.on_copy_timestamp_button_clicked)  # type: ignore
+        self.zoom_combobox.currentTextChanged.connect(self.on_zoom_changed)  # type: ignore
+        self.switch_timeline_mode_button.clicked.connect(self.on_switch_timeline_mode_clicked)  # type: ignore
+        self.settings_button.clicked.connect(self.main.app_settings.show)  # type: ignore
 
         add_shortcut(Qt.Qt.Key_1, lambda: self.main.switch_output(0))
         add_shortcut(Qt.Qt.Key_2, lambda: self.main.switch_output(1))
@@ -166,10 +160,15 @@ class MainToolbar(AbstractToolbar):
         add_shortcut(Qt.Qt.Key_8, lambda: self.main.switch_output(7))
         add_shortcut(Qt.Qt.Key_9, lambda: self.main.switch_output(8))
         add_shortcut(Qt.Qt.Key_0, lambda: self.main.switch_output(9))
-        add_shortcut(Qt.Qt.Key_S,         self.sync_outputs_checkbox.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Tab, lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1))
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_Tab,
-                     lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1))
+        add_shortcut(Qt.Qt.Key_S, self.sync_outputs_checkbox.click)
+        add_shortcut(
+            Qt.Qt.CTRL + Qt.Qt.Key_Tab,
+            lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1)
+        )
+        add_shortcut(
+            Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_Tab,
+            lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
+        )
 
         set_qobject_names(self)
 
@@ -222,7 +221,7 @@ class MainToolbar(AbstractToolbar):
 
     def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
-        qt_silent_call(self. time_control.setValue,  time)
+        qt_silent_call(self. time_control.setValue, time)
 
         if self.sync_outputs_checkbox.isChecked():
             for output in self.main.outputs:
@@ -234,7 +233,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.    time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs(self.main)
+        self.outputs = Outputs()
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
@@ -582,7 +581,6 @@ class MainWindow(AbstractMainWindow):
     FPS_REFRESH_INTERVAL = 150  # ms
     LOG_LEVEL = logging.DEBUG
     OPENGL_RENDERING = True
-    ORDERED_OUTPUTS = True
     OUTPUT_INDEX = 0
     PLAY_BUFFER_SIZE = FrameInterval(get_usable_cpus_count())
     PNG_COMPRESSION_LEVEL = 0  # 0 - 100
@@ -604,11 +602,13 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_RANGE = Output.Range.LIMITED
     VS_OUTPUT_CHROMALOC = Output.ChromaLoc.LEFT
     VS_OUTPUT_PREFER_PROPS = True
-    VS_OUTPUT_RESIZER_KWARGS = {  # type: Mapping[str, str]
+    VS_OUTPUT_RESIZER_KWARGS = {
         'dither_type': 'error_diffusion',
     }
+
     # status bar
-    def STATUS_FRAME_PROP(prop): return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
+    def STATUS_FRAME_PROP(prop: Any) -> str:
+        return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
     BENCHMARK_FRAME_DATA_SHARING_FIX = True
     DEBUG_PLAY_FPS = False
@@ -660,7 +660,7 @@ class MainWindow(AbstractMainWindow):
         # global
 
         self.clipboard = self.app.clipboard()
-        self.external_args: List[str] = []
+        self.external_args: List[Tuple[str, str]] = []
         self.script_path = Path()
         self.save_on_exit = True
         self.script_exec_failed = False
@@ -677,14 +677,13 @@ class MainWindow(AbstractMainWindow):
         self.graphics_view.wheelScrolled.connect(self.on_wheel_scrolled)
 
         # timeline
-
         self.timeline.clicked.connect(self.switch_frame)
 
         # init toolbars and outputs
-
         self.app_settings = SettingsDialog(self)
         self.toolbars = Toolbars(self)
         self.main_layout.addWidget(self.toolbars.main)
+
         for toolbar in self.toolbars:
             self.main_layout.addWidget(toolbar)
             self.toolbars.main.layout().addWidget(toolbar.toggle_button)
@@ -694,8 +693,6 @@ class MainWindow(AbstractMainWindow):
 
     def setup_ui(self) -> None:
         from vspreview.widgets import GraphicsView
-
-        # mainWindow.resize(1300, 808)
 
         self.central_widget = Qt.QWidget(self)
         self.main_layout = Qt.QVBoxLayout(self.central_widget)
@@ -752,7 +749,8 @@ class MainWindow(AbstractMainWindow):
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
     def load_script(
-            self, script_path: Path, external_args: List[tuple[str, str]] = None, reloading: bool = False) -> None:
+        self, script_path: Path, external_args: List[Tuple[str, str]] | str = [], reloading: bool = False
+    ) -> None:
         from traceback import FrameSummary, TracebackException
 
         self.toolbars.playback.stop()
@@ -763,18 +761,19 @@ class MainWindow(AbstractMainWindow):
         sys.path.append(str(self.script_path.parent))
 
         # Rewrite args so external args will be forwarded correctly
-        if external_args:
-            self.external_args = shlex.split(external_args)
+        if isinstance(external_args, str):
+            self.external_args = shlex.split(external_args)  # type: ignore
         try:
             argv_orig = sys.argv
-            sys.argv = [script_path.name] + self.external_args
+            sys.argv = [script_path.name] + self.external_args  # type: ignore
         except AttributeError:
             pass
 
         try:
             # pylint: disable=exec-used
-            exec(self.script_path.read_text(encoding='utf-8'),
-                 dict([('__file__', sys.argv[0])] + self.external_args))
+            exec(
+                self.script_path.read_text(encoding='utf-8'), dict([('__file__', sys.argv[0])] + self.external_args)
+            )
         except Exception as e:  # pylint: disable=broad-except
             self.script_exec_failed = True
             logging.error(e)
@@ -831,8 +830,10 @@ class MainWindow(AbstractMainWindow):
                 yaml.load(storage_path.open(), Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
-                    logging.warning('Storage parsing failed on line {} column {}. Using defaults.' .format(
-                        exc.problem_mark.line + 1, exc.problem_mark.column + 1))  # pylint: disable=no-member
+                    logging.warning(
+                        'Storage parsing failed on line {} column {}. Using defaults.'
+                        .format(exc.problem_mark.line + 1, exc.problem_mark.column + 1)
+                    )
                 else:
                     logging.warning('Storage parsing failed. Using defaults.')
         else:
@@ -859,7 +860,8 @@ class MainWindow(AbstractMainWindow):
         if not self.script_exec_failed:
             self.toolbars.misc.save_sync()
         for toolbar in self.toolbars:
-            toolbar.on_script_unloaded()
+            if hasattr(toolbar, 'on_script_unloaded'):
+                toolbar.on_script_unloaded()
 
         vs.clear_outputs()
 
@@ -882,7 +884,7 @@ class MainWindow(AbstractMainWindow):
         if output is None:
             output = self.current_output
 
-        return self.render_raw_videoframe(output.vs_output.get_frame(int(frame)))
+        return self.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
 
     def render_raw_videoframe(self, vs_frame: vs.VideoFrame) -> Qt.QImage:
         import ctypes
@@ -917,7 +919,8 @@ class MainWindow(AbstractMainWindow):
         self.timeline.set_position(frame)
         self.toolbars.main.on_current_frame_changed(frame, time)
         for toolbar in self.toolbars:
-            toolbar.on_current_frame_changed(frame, time)
+            if hasattr(toolbar, 'on_current_frame_changed'):
+                toolbar.on_current_frame_changed(frame, time)
 
         if render_frame:
             self.current_output.graphics_scene_item.setImage(self.render_frame(frame))
@@ -954,11 +957,12 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene.setSceneRect(Qt.QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
         self.timeline.update_notches()
         for toolbar in self.toolbars:
-            toolbar.on_current_output_changed(index, prev_index)
+            if hasattr(toolbar, 'on_current_output_changed'):
+                toolbar.on_current_output_changed(index, prev_index)
         self.update_statusbar_output_info()
 
-    @property  # type: ignore
-    def current_output(self) -> Output:  # type: ignore
+    @property
+    def current_output(self) -> Output:
         output = cast(Output, self.toolbars.main.outputs_combobox.currentData())
         return output
 
@@ -966,16 +970,16 @@ class MainWindow(AbstractMainWindow):
     def current_output(self, value: Output) -> None:
         self.switch_output(self.outputs.index_of(value))
 
-    @property  # type: ignore
-    def current_frame(self) -> Frame:  # type: ignore
+    @property
+    def current_frame(self) -> Frame:
         return self.current_output.last_showed_frame
 
     @current_frame.setter
     def current_frame(self, value: Frame) -> None:
         self.switch_frame(value)
 
-    @property  # type: ignore
-    def current_time(self) -> Time:  # type: ignore
+    @property
+    def current_time(self) -> Time:
         return Time(self.current_output.last_showed_frame)
 
     @current_time.setter
@@ -983,7 +987,7 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def outputs(self) -> Outputs:  # type: ignore
+    def outputs(self) -> Outputs:
         return cast(Outputs, self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:
@@ -1009,10 +1013,13 @@ class MainWindow(AbstractMainWindow):
         if output is None:
             output = self.current_output
 
+        fmt = output.source.clip.format
+        assert fmt
+
         self.statusbar.total_frames_label.setText('{} frames '.format(output.total_frames))
         self.    statusbar.duration_label.setText('{} '       .format(output.total_time))
         self.  statusbar.resolution_label.setText('{}x{} '    .format(output.width, output.height))
-        self.statusbar.pixel_format_label.setText('{} '       .format(output.format.name))
+        self.statusbar.pixel_format_label.setText('{} '       .format(fmt.name))
         if output.fps_den != 0:
             self.statusbar.fps_label.setText('{}/{} = {:.3f} fps '.format(output.fps_num,
                                              output.fps_den, output.fps_num / output.fps_den))
@@ -1051,34 +1058,23 @@ class MainWindow(AbstractMainWindow):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         # toolbars is singleton, so it initialize itself right in its __setstate__()
-        try:
-            timeline_mode = state['timeline_mode']
-            if not isinstance(timeline_mode, str) or not Timeline.Mode.is_valid(timeline_mode):
-                raise TypeError
-        except (KeyError, TypeError):
-            logging.warning('Storage loading: failed to parse timeline mode. Using default.')
-            timeline_mode = self.TIMELINE_MODE
-        self.timeline.mode = timeline_mode
 
-        try:
-            window_geometry = state['window_geometry']
-            if not isinstance(window_geometry, bytes):
-                raise TypeError
-            self.restoreGeometry(window_geometry)
-        except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: failed to parse window geometry.'
-                ' Using default.')
+        self.timeline.mode = self.TIMELINE_MODE
 
-        try:
-            window_state = state['window_state']
-            if not isinstance(window_state, bytes):
-                raise TypeError
-            self.restoreState(window_state)
-        except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: failed to parse window state.'
-                ' Using default.')
+        try_load(
+            state, 'timeline_mode', str, self.timeline.mode,
+            'Storage loading: failed to parse timeline mode. Using default.'
+        )
+
+        try_load(
+            state, 'window_geometry', bytes, self.restoreGeometry,
+            'Storage loading: failed to parse window geometry. Using default.'
+        )
+
+        try_load(
+            state, 'window_state', bytes, self.restoreState,
+            'Storage loading: failed to parse window state. Using default.'
+        )
 
 
 class Application(Qt.QApplication):
@@ -1127,8 +1123,9 @@ def main() -> None:
         os.chdir(script_path.parent)
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
-    ext_args = [tuple(a.split('=', maxsplit=1)) for a in args.arg or []]
-    main_window.load_script(script_path, ext_args, False)
+    main_window.load_script(script_path, [
+        tuple(a.split('=', maxsplit=1)) for a in args.arg or []
+    ], False)
     main_window.show()
 
     try:
@@ -1138,28 +1135,27 @@ def main() -> None:
 
 
 def check_versions() -> bool:
-    from pkg_resources import get_distribution
-    from platform import python_version
-
-    failed = False
-
     if sys.version_info < (3, 9, 0, 'final', 0):
-        logging.warning('VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
-                        .format(python_version(), sys.version_info.releaselevel))
-        failed = True
+        logging.warning(
+            'VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
+            .format(python_version(), sys.version_info.releaselevel)
+        )
+        return False
 
     if get_distribution('PyQt5').version < '5.15':
         logging.warning(
-            'VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'.format(
-                get_distribution('PyQt5').version))
-        failed = True
+            'VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'
+            .format(get_distribution('PyQt5').version))
+        return False
 
     if vs.core.version_number() < 53:
-        logging.warning('VSPreview is not tested on VapourSynth versions prior to 53, but you have {}. Use at your own risk.'
-                        .format(vs.core.version_number()))
-        failed = True
+        logging.warning(
+            'VSPreview is not tested on VapourSynth versions prior to 53, but you have {}. Use at your own risk.'
+            .format(vs.core.version_number())
+        )
+        return False
 
-    return not failed
+    return True
 
 
 if __name__ == '__main__':

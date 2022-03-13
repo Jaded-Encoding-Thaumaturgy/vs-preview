@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from   typing  import Any, cast, Iterator, List, Mapping, Optional
+from   typing  import Any, cast, Iterator, List, Mapping, Optional, OrderedDict
 
 from   PyQt5       import Qt
 import vapoursynth as     vs
@@ -20,18 +20,21 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
         'items',
     )
 
-    def __init__(self, local_storage: Optional[Mapping[str, Output]] = None) -> None:
+    def __init__(self, main_window, local_storage: Optional[Mapping[str, Output]] = None) -> None:
+        from vspreview.main import MainWindow
         super().__init__()
         self.items: List[Output] = []
 
+        main_window = main_window or MainWindow()
+
         local_storage = local_storage if local_storage is not None else {}
 
-        if main_window().ORDERED_OUTPUTS:
+        if main_window.ORDERED_OUTPUTS:
             outputs = OrderedDict(sorted(vs.get_outputs().items()))
         else:
             outputs = vs.get_outputs()
 
-        main_window().reload_signal.connect(self.clear_outputs)
+        main_window.reload_signal.connect(self.clear_outputs)
 
         for i, vs_output in outputs.items():
             try:
@@ -92,7 +95,6 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
             return 0
 
     def flags(self, index: Qt.QModelIndex) -> Qt.Qt.ItemFlags:
-        # debug.print_func_name()
         if not index.isValid():
             return cast(Qt.Qt.ItemFlags, Qt.Qt.ItemIsEnabled)
 
@@ -111,7 +113,6 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
         return True
 
     def __getstate__(self) -> Mapping[str, Any]:
-        # print(self.items)
         return dict(zip([
             str(output.index) for output in self.items],
             [   output        for output in self.items]

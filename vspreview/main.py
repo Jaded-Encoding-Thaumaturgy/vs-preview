@@ -126,7 +126,7 @@ class SettingsDialog(AbstractAppSettings):
 
 class MainToolbar(AbstractToolbar):
     __slots__ = (
-        'outputs', 'save_file_types', 'zoom_levels',
+        'outputs', 'zoom_levels',
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button',
@@ -138,7 +138,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs()
+        self.outputs = Outputs(main_window)
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -195,15 +195,14 @@ class MainToolbar(AbstractToolbar):
         self.time_control = TimeEdit[Time](self)
         layout.addWidget(self.time_control)
 
+        self.copy_timestamp_button = Qt.QPushButton(self)
+        self.copy_timestamp_button.setText('⎘')
+        layout.addWidget(self.copy_timestamp_button)
+
         self.sync_outputs_checkbox = Qt.QCheckBox(self)
         self.sync_outputs_checkbox.setText('Sync Outputs')
         self.sync_outputs_checkbox.setChecked(self.main.SYNC_OUTPUTS)
         layout.addWidget(self.sync_outputs_checkbox)
-
-
-        self.copy_timestamp_button = Qt.QPushButton(self)
-        self.copy_timestamp_button.setText('⎘')
-        layout.addWidget(self.copy_timestamp_button)
 
         self.zoom_combobox = ComboBox[float](self)
         self.zoom_combobox.setMinimumContentsLength(4)
@@ -234,9 +233,8 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.   frame_control.setMaximum, self.main.current_output.end_frame)
         qt_silent_call(self.    time_control.setMaximum, self.main.current_output.end_time)
 
-
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs()
+        self.outputs = Outputs(self.main)
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
@@ -631,15 +629,14 @@ class MainWindow(AbstractMainWindow):
     yaml_tag = '!MainWindow'
 
     storable_attrs = [
-        'toolbars',
+        'settings', 'toolbars',
     ]
     __slots__ = storable_attrs + [
         'app', 'display_scale', 'clipboard',
         'script_path', 'save_on_exit', 'timeline', 'main_layout',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar',
-        'opengl_widget', 'external_args',
-        'script_exec_failed'
+        'opengl_widget',
     ]
 
     # emit when about to reload a script: clear all existing references to existing clips.
@@ -650,21 +647,25 @@ class MainWindow(AbstractMainWindow):
 
         super().__init__()
 
+        self.settings = MainSettings()
+
         # logging
+
+        logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.LOG_LEVEL)
+        logging.Formatter.default_msec_format = '%s.%03d'
 
         # ???
 
         self.config_dir = config_dir / self.VSP_DIR_NAME
 
         self.app = Qt.QApplication.instance()
-        if self.DARK_THEME:
+        if self.settings.dark_theme_enabled:
             self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
             self.ensurePolished()
 
-        self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.BASE_PPI
+        self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')
-        self.move(50, 50)
-        self.resize(1280, 720)
+        self.move(400, 0)
         self.setup_ui()
 
         # global
@@ -680,7 +681,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene = Qt.QGraphicsScene(self)
         self.graphics_view.setScene(self.graphics_scene)
         self.opengl_widget = None
-        if self.OPENGL_RENDERING:
+        if self.settings.opengl_rendering_enabled:
             self.opengl_widget = Qt.QOpenGLWidget()
             self.graphics_view.setViewport(self.opengl_widget)
 
@@ -692,6 +693,7 @@ class MainWindow(AbstractMainWindow):
 
         # init toolbars and outputs
 
+        self.app_settings = SettingsDialog(self)
         self.toolbars = Toolbars(self)
         self.main_layout.addWidget(self.toolbars.main)
         for toolbar in self.toolbars:
@@ -711,13 +713,9 @@ class MainWindow(AbstractMainWindow):
         self.setCentralWidget(self.central_widget)
 
         self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(
-            self.palette().brush(Qt.QPalette.Window))
-        self.graphics_view.setSizePolicy(Qt.QSizePolicy.Fixed,
-                                         Qt.QSizePolicy.Fixed)
+        self.graphics_view.setBackgroundBrush(self.palette().brush(Qt.QPalette.Window))
+        self.graphics_view.setSizePolicy(Qt.QSizePolicy.Fixed, Qt.QSizePolicy.Fixed)
         self.graphics_view.setDragMode(Qt.QGraphicsView.ScrollHandDrag)
-        self.graphics_view.setTransformationAnchor(
-            GraphicsView.AnchorUnderMouse)
         self.main_layout.addWidget(self.graphics_view)
 
         self.timeline = Timeline(self.central_widget)
@@ -728,23 +726,19 @@ class MainWindow(AbstractMainWindow):
         self.statusbar = StatusBar(self.central_widget)
 
         self.statusbar.total_frames_label = Qt.QLabel(self.central_widget)
-        self.statusbar.total_frames_label.setObjectName(
-            'MainWindow.statusbar.total_frames_label')
+        self.statusbar.total_frames_label.setObjectName('MainWindow.statusbar.total_frames_label')
         self.statusbar.addWidget(self.statusbar.total_frames_label)
 
         self.statusbar.duration_label = Qt.QLabel(self.central_widget)
-        self.statusbar.duration_label.setObjectName(
-            'MainWindow.statusbar.duration_label')
+        self.statusbar.duration_label.setObjectName('MainWindow.statusbar.duration_label')
         self.statusbar.addWidget(self.statusbar.duration_label)
 
         self.statusbar.resolution_label = Qt.QLabel(self.central_widget)
-        self.statusbar.resolution_label.setObjectName(
-            'MainWindow.statusbar.resolution_label')
+        self.statusbar.resolution_label.setObjectName('MainWindow.statusbar.resolution_label')
         self.statusbar.addWidget(self.statusbar.resolution_label)
 
         self.statusbar.pixel_format_label = Qt.QLabel(self.central_widget)
-        self.statusbar.pixel_format_label.setObjectName(
-            'MainWindow.statusbar.pixel_format_label')
+        self.statusbar.pixel_format_label.setObjectName('MainWindow.statusbar.pixel_format_label')
         self.statusbar.addWidget(self.statusbar.pixel_format_label)
 
         self.statusbar.fps_label = Qt.QLabel(self.central_widget)
@@ -765,12 +759,11 @@ class MainWindow(AbstractMainWindow):
 
         self.script_error_dialog = ScriptErrorDialog(self)
 
-    def patch_dark_stylesheet(self, stylesheet: str) -> str:
-        return stylesheet \
-            + ' QGraphicsView { border: 0px; padding: 0px; }' \
-            + ' QToolButton { padding: 0px; }'
 
-    def load_script(self, script_path: Path, external_args: List[tuple[str, str]] = None, reloading = False) -> None:
+    def patch_dark_stylesheet(self, stylesheet: str) -> str:
+        return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
+
+    def load_script(self, script_path: Path, external_args: List[tuple[str, str]] = None, reloading: bool = False) -> None:
         from traceback import FrameSummary, TracebackException
 
         self.toolbars.playback.stop()
@@ -830,15 +823,11 @@ class MainWindow(AbstractMainWindow):
 
         if not reloading :
             self.toolbars.main.rescan_outputs()
-            for toolbar in self.toolbars:
-                toolbar.on_script_loaded()
             self.switch_output(self.OUTPUT_INDEX)
 
             self.load_storage()
         else:
             self.load_storage()
-            for toolbar in self.toolbars:
-                toolbar.on_script_loaded()
 
     def load_storage(self) -> None:
         import yaml
@@ -848,20 +837,13 @@ class MainWindow(AbstractMainWindow):
 
         if not storage_path.exists():
             storage_path = self.script_path.with_suffix('.yml')
-
         if storage_path.exists():
             try:
-                with storage_path.open() as storage_file: 
-                    yaml.load(storage_file, Loader=yaml.Loader)
+                yaml.load(storage_path.open(), Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
-                    logging.warning(
-                        'Storage parsing failed at line {}:{} ({} {}).'
-                        'Using defaults.'
-                        .format(exc.problem_mark.line + 1,
-                                exc.problem_mark.column + 1,
-                                exc.problem,
-                                exc.context))  # pylint: disable=no-member
+                    logging.warning('Storage parsing failed on line {} column {}. Using defaults.'
+                                    .format(exc.problem_mark.line + 1, exc.problem_mark.column + 1))  # pylint: disable=no-member
                 else:
                     logging.warning('Storage parsing failed. Using defaults.')
         else:
@@ -889,30 +871,53 @@ class MainWindow(AbstractMainWindow):
             self.toolbars.misc.save_sync()
         for toolbar in self.toolbars:
             toolbar.on_script_unloaded()
-            
+
         vs.clear_outputs()
 
+        if self.settings.autosave_control.value() != TimeInterval(seconds=0):
+            self.toolbars.misc.save()
+
         self.graphics_scene.clear()
+
         self.outputs.clear()
         # make sure old filter graph is freed
         gc.collect()
 
+        vs.clear_outputs()
+        self.graphics_scene.clear()
         self.load_script(self.script_path, reloading=True)
 
         self.show_message('Reloaded successfully')
 
     def render_frame(self, frame: Frame, output: Optional[Output] = None) -> Qt.QImage:
-        return self.current_output.render_frame(frame)
+        if output is None:
+            output = self.current_output
 
-    def switch_frame(self, pos: Union[Frame, Time], *, render_frame: bool = True) -> None:
-        if isinstance(pos, Frame):
-            frame = pos
+        return self.render_raw_videoframe(output.vs_output.get_frame(int(frame)))
+
+    def render_raw_videoframe(self, vs_frame: vs.VideoFrame) -> Qt.QImage:
+        import ctypes
+
+        frame_pointer  = vs_frame.get_read_ptr(0)
+        frame_stride   = vs_frame.get_stride(0)
+        frame_itemsize = vs_frame.format.bytes_per_sample
+
+        # powerful spell. do not touch
+        data_pointer = ctypes.cast(
+            frame_pointer,
+            ctypes.POINTER(ctypes.c_char * (frame_itemsize * vs_frame.width * vs_frame.height))
+        )[0]
+        frame_image  = Qt.QImage(data_pointer, vs_frame.width, vs_frame.height, frame_stride, Qt.QImage.Format_RGB32)
+
+        return frame_image
+
+    def switch_frame(self, frame: Optional[Frame] = None, time: Optional[Time] = None, *, render_frame: bool = True) -> None:
+        if frame is not None:
             time = Time(frame)
-        elif isinstance(pos, Time):
-            frame = Frame(pos)
-            time = pos
+        elif time is not None:
+            frame = Frame(time)
         else:
-            logging.debug('switch_frame(): position is neither Frame nor Time')
+            logging.debug('switch_frame(): both frame and time is None')
             return
         if frame > self.current_output.end_frame:
             return
@@ -931,6 +936,7 @@ class MainWindow(AbstractMainWindow):
 
     def switch_output(self, value: Union[int, Output]) -> None:
         if len(self.outputs) == 0:
+            # TODO: consider returning False
             return
         if isinstance(value, Output):
             index = self.outputs.index_of(value)
@@ -955,17 +961,16 @@ class MainWindow(AbstractMainWindow):
         for output in self.outputs:
             output.graphics_scene_item.hide()
         self.current_output.graphics_scene_item.show()
-        self.graphics_scene.setSceneRect(
-            Qt.QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
+        self.graphics_scene.setSceneRect(Qt.QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
         self.timeline.update_notches()
         for toolbar in self.toolbars:
             toolbar.on_current_output_changed(index, prev_index)
         self.update_statusbar_output_info()
 
+
     @property  # type: ignore
     def current_output(self) -> Output:  # type: ignore
-        output = cast(Output,
-                      self.toolbars.main.outputs_combobox.currentData())
+        output = cast(Output, self.toolbars.main.outputs_combobox.currentData())
         return output
 
     @current_output.setter
@@ -1006,36 +1011,24 @@ class MainWindow(AbstractMainWindow):
             new_index = len(self.toolbars.main.zoom_levels) - 1
         self.toolbars.main.zoom_combobox.setCurrentIndex(new_index)
 
-    def show_message(self, message: str, timeout: Optional[int] = None) -> None:
-        if timeout is None:
-            timeout = self.STATUSBAR_MESSAGE_TIMEOUT
-        self.statusbar.showMessage(message, timeout)
+    def show_message(self, message: str) -> None:
+        self.statusbar.showMessage(
+            message,
+            round(float(self.settings.statusbar_message_timeout) * 1000)
+        )
 
     def update_statusbar_output_info(self, output: Optional[Output] = None) -> None:
         if output is None:
             output = self.current_output
 
-        self.statusbar.total_frames_label.setText(
-            '{} frames'.format(output.total_frames))
-        self.statusbar.duration_label.setText(
-            # Display duration without -1 offset to match other video tools
-            '{}'.format(TimeInterval(self.current_output.total_frames)))
-        self.statusbar.resolution_label.setText(
-            '{}x{}'.format(output.width, output.height))
-        if not output.has_alpha:
-            self.statusbar.pixel_format_label.setText(
-                '{}'.format(output.format.name))
-        else:
-            self.statusbar.pixel_format_label.setText(
-                'Clip: {}, Alpha: {}'.format(output.format.name,
-                                             output.format_alpha.name))
+        self.statusbar.total_frames_label.setText('{} frames '.format(output.total_frames))
+        self.    statusbar.duration_label.setText('{} '       .format(output.total_time))
+        self.  statusbar.resolution_label.setText('{}x{} '    .format(output.width, output.height))
+        self.statusbar.pixel_format_label.setText('{} '       .format(output.format.name))
         if output.fps_den != 0:
-            self.statusbar.fps_label.setText(
-                '{}/{} = {:.3f} fps'.format(output.fps_num, output.fps_den,
-                                            output.fps_num / output.fps_den))
+            self.statusbar.fps_label.setText('{}/{} = {:.3f} fps '.format(output.fps_num, output.fps_den, output.fps_num / output.fps_den))
         else:
-            self.statusbar.fps_label.setText(
-                '{}/{} fps'.format(output.fps_num, output.fps_den))
+            self.statusbar.fps_label.setText('{}/{} fps '         .format(output.fps_num, output.fps_den))
 
     def event(self, event: Qt.QEvent) -> bool:
         if event.type() == Qt.QEvent.LayoutRequest:
@@ -1047,11 +1040,10 @@ class MainWindow(AbstractMainWindow):
 
     def showEvent(self, event: Qt.QShowEvent) -> None:
         super().showEvent(event)
-        self.graphics_view.setSizePolicy(
-            Qt.QSizePolicy(Qt.QSizePolicy.Expanding, Qt.QSizePolicy.Expanding))
+        self.graphics_view.setSizePolicy(Qt.QSizePolicy(Qt.QSizePolicy.Expanding, Qt.QSizePolicy.Expanding))
 
     def closeEvent(self, event: Qt.QCloseEvent) -> None:
-        if self.save_on_exit:
+        if self.settings.autosave_control.value() != TimeInterval(seconds=0) and self.save_on_exit:
             self.toolbars.misc.save()
 
         self.reload_signal.emit()
@@ -1069,17 +1061,13 @@ class MainWindow(AbstractMainWindow):
         return state
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        # toolbars is singleton,
-        # so it initialize itself right in its __setstate__()
-
+        # toolbars is singleton, so it initialize itself right in its __setstate__()
         try:
             timeline_mode = state['timeline_mode']
-            if not Timeline.Mode.is_valid(timeline_mode):
+            if not isinstance(timeline_mode, str) or not Timeline.Mode.is_valid(timeline_mode):
                 raise TypeError
         except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: failed to parse timeline mode.'
-                ' Using default.')
+            logging.warning('Storage loading: failed to parse timeline mode. Using default.')
             timeline_mode = self.TIMELINE_MODE
         self.timeline.mode = timeline_mode
 
@@ -1151,7 +1139,7 @@ def main() -> None:
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     ext_args = [ tuple(a.split('=', maxsplit=1)) for a in args.arg or [] ]
-    main_window.load_script(script_path, external_args=ext_args)
+    main_window.load_script(script_path, ext_args, False)
     main_window.show()
 
     try:

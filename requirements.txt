@@ -1,7 +1,5 @@
-cueparser
-psutil
-pyqt5
-pysubs2
-pyyaml
-qdarkstyle
-vapoursynth
+psutil==5.9.0
+PyQt5==5.15.4
+PyQt5-Qt5==5.15.2
+QDarkStyle==3.0.3
+VapourSynth==57

@@ -11,13 +11,13 @@ from   PyQt5       import Qt
 import vapoursynth as     vs
 
 from vspreview.core import (
-    AbstractMainWindow, AbstractToolbar, AbstractToolbars,
-    Frame, FrameInterval, Output, Time, TimeInterval,
+    AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
+    Frame, FrameInterval, Output, Time, TimeInterval, QYAMLObjectSingleton,
 )
 from vspreview.models import Outputs
 from vspreview.utils import (
     add_shortcut, debug, get_usable_cpus_count, qt_silent_call,
-    set_qobject_names,
+    set_qobject_names, try_load,
 )
 from vspreview.widgets import (
     ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit,
@@ -36,12 +36,14 @@ from vspreview.widgets import (
 # TODO: utilize Qt's signals
 # TODO: save window position
 # TODO: make use of alpha channel of outputs
+# TODO: respect cursor position when zooming in and out
 # TODO: properly mark protected members with underscore
+# TODO: respond to changed settings immediately
 
 
 class ScriptErrorDialog(Qt.QDialog):
     __slots__ = (
-        'main', 'label', 'reload_button', 'exit_button',
+        'main', 'label', 'reload_button', 'exit_button'
     )
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
@@ -68,11 +70,9 @@ class ScriptErrorDialog(Qt.QDialog):
         main_layout.addWidget(self.label)
 
         buttons_widget = Qt.QWidget(self)
-        buttons_widget.setObjectName(
-            'ScriptErrorDialog.setup_ui.buttons_widget')
+        buttons_widget.setObjectName('ScriptErrorDialog.setup_ui.buttons_widget')
         buttons_layout = Qt.QHBoxLayout(buttons_widget)
-        buttons_layout.setObjectName(
-            'ScriptErrorDialog.setup_uibuttons_layout')
+        buttons_layout.setObjectName('ScriptErrorDialog.setup_uibuttons_layout')
 
         self.reload_button = Qt.QPushButton(self)
         self.reload_button.setText('Reload')
@@ -95,6 +95,33 @@ class ScriptErrorDialog(Qt.QDialog):
 
     def closeEvent(self, event: Qt.QCloseEvent) -> None:
         self.on_exit_clicked()
+
+
+class SettingsDialog(AbstractAppSettings):
+    __slots__ = (
+        'main', 'tab_widget',
+    )
+
+    def __init__(self, main_window: AbstractMainWindow) -> None:
+        super().__init__(main_window)
+
+        self.main = main_window
+        self.setWindowTitle('Settings')
+
+        self.setup_ui()
+
+        set_qobject_names(self)
+
+    def setup_ui(self) -> None:
+        layout = Qt.QVBoxLayout(self)
+        layout.setObjectName('SettingsDialog.setup_ui.layout')
+
+        self.tab_widget = Qt.QTabWidget(self)
+        layout.addWidget(self.tab_widget)
+
+
+    def addTab(self, widget: Qt.QWidget, label: str) -> int:
+        return self.tab_widget.addTab(widget, label)
 
 
 class MainToolbar(AbstractToolbar):
@@ -270,7 +297,7 @@ class Toolbars(AbstractToolbars):
     def __init__(self, main_window: AbstractMainWindow) -> None:
         from vspreview.toolbars import (
             DebugToolbar, MiscToolbar, PlaybackToolbar, SceningToolbar,
-            BenchmarkToolbar, PipetteToolbar,
+            BenchmarkToolbar, PipetteToolbar
         )
 
         self.main      =      MainToolbar(main_window)
@@ -305,8 +332,248 @@ class Toolbars(AbstractToolbars):
                     raise TypeError
                 getattr(self, toolbar_name).__setstate__(storage)
             except (KeyError, TypeError):
-                logging.warning(
-                    f'Storage loading: failed to parse storage of {toolbar_name}.')
+                logging.warning(f'Storage loading: failed to parse storage of {toolbar_name}.')
+
+
+class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
+    yaml_tag = '!MainSettings'
+
+    __slots__ = (
+        'autosave_control', 'base_ppi_spinbox', 'dark_theme_checkbox',
+        'opengl_rendering_checkbox', 'output_index_spinbox',
+        'png_compressing_spinbox', 'statusbar_timeout_control',
+        'timeline_notches_margin_spinbox',
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setup_ui()
+
+        self.set_defaults()
+
+        set_qobject_names(self)
+
+    def setup_ui(self) -> None:
+        layout = Qt.QVBoxLayout(self)
+        layout.setObjectName('MainSettings.setup_ui.layout')
+
+
+        autosave_layout = Qt.QHBoxLayout()
+        autosave_layout.setObjectName('MainSettings.setup_ui.autosave_layout')
+        layout.addLayout(autosave_layout)
+
+        autosave_label = Qt.QLabel(self)
+        autosave_label.setObjectName('MainSettings.setup_ui.autosave_label')
+        autosave_label.setText('Autosave interval (0 - disable)')
+        autosave_layout.addWidget(autosave_label)
+
+        self.autosave_control = TimeEdit[TimeInterval](self)
+        autosave_layout.addWidget(self.autosave_control)
+
+        base_ppi_layout = Qt.QHBoxLayout()
+        base_ppi_layout.setObjectName('MainSettings.setup_ui.base_ppi_layout')
+        layout.addLayout(base_ppi_layout)
+
+        base_ppi_label = Qt.QLabel(self)
+        base_ppi_label.setObjectName('MainSettings.setup_ui.base_ppi_label')
+        base_ppi_label.setText('Base PPI')
+        base_ppi_layout.addWidget(base_ppi_label)
+
+        self.base_ppi_spinbox = Qt.QSpinBox(self)
+        self.base_ppi_spinbox.setMinimum(1)
+        self.base_ppi_spinbox.setMaximum(9999)
+        self.base_ppi_spinbox.setEnabled(False)
+        base_ppi_layout.addWidget(self.base_ppi_spinbox)
+
+
+        self.dark_theme_checkbox = Qt.QCheckBox(self)
+        self.dark_theme_checkbox.setText('Dark theme')
+        self.dark_theme_checkbox.setEnabled(False)
+        layout.addWidget(self.dark_theme_checkbox)
+
+
+        self.opengl_rendering_checkbox = Qt.QCheckBox(self)
+        self.opengl_rendering_checkbox.setText('OpenGL rendering')
+        self.opengl_rendering_checkbox.setEnabled(False)
+        layout.addWidget(self.opengl_rendering_checkbox)
+
+
+        output_index_layout = Qt.QHBoxLayout()
+        output_index_layout.setObjectName(
+            'MainSettings.setup_ui.output_index_layout'
+        )
+        layout.addLayout(output_index_layout)
+
+        output_index_label = Qt.QLabel(self)
+        output_index_label.setObjectName(
+            'MainSettings.setup_ui.output_index_label'
+        )
+        output_index_label.setText('Default output index')
+        output_index_layout.addWidget(output_index_label)
+
+        self.output_index_spinbox = Qt.QSpinBox(self)
+        self.output_index_spinbox.setMinimum(0)
+        self.output_index_spinbox.setMaximum(65535)
+        output_index_layout.addWidget(self.output_index_spinbox)
+
+
+        png_compression_layout = Qt.QHBoxLayout()
+        png_compression_layout.setObjectName(
+            'MainSettings.setup_ui.png_compression_layout'
+        )
+        layout.addLayout(png_compression_layout)
+
+        png_compression_label = Qt.QLabel(self)
+        png_compression_label.setObjectName(
+            'MainSettings.setup_ui.png_compression_label'
+        )
+        png_compression_label.setText('PNG compression level (0 - max)')
+        png_compression_layout.addWidget(png_compression_label)
+
+        self.png_compressing_spinbox = Qt.QSpinBox(self)
+        self.png_compressing_spinbox.setMinimum(0)
+        self.png_compressing_spinbox.setMaximum(100)
+        png_compression_layout.addWidget(self.png_compressing_spinbox)
+
+
+        statusbar_timeout_layout = Qt.QHBoxLayout()
+        statusbar_timeout_layout.setObjectName(
+            'MainSettings.setup_ui.statusbar_timeout_layout'
+        )
+        layout.addLayout(statusbar_timeout_layout)
+
+        statusbar_timeout_label = Qt.QLabel(self)
+        statusbar_timeout_label.setObjectName(
+            'MainSettings.setup_ui.statusbar_timeout_label'
+        )
+        statusbar_timeout_label.setText('Status bar message timeout')
+        statusbar_timeout_layout.addWidget(statusbar_timeout_label)
+
+        self.statusbar_timeout_control = TimeEdit[TimeInterval](self)
+        statusbar_timeout_layout.addWidget(self.statusbar_timeout_control)
+
+
+        timeline_notches_margin_layout = Qt.QHBoxLayout()
+        timeline_notches_margin_layout.setObjectName(
+            'MainSettings.setup_ui.timeline_notches_margin_layout'
+        )
+        layout.addLayout(timeline_notches_margin_layout)
+
+        timeline_notches_margin_label = Qt.QLabel(self)
+        timeline_notches_margin_label.setObjectName(
+            'MainSettings.setup_ui.timeline_notches_margin_label'
+        )
+        timeline_notches_margin_label.setText('Timeline label notches margin')
+        timeline_notches_margin_layout.addWidget(timeline_notches_margin_label)
+
+        self.timeline_notches_margin_spinbox = Qt.QSpinBox(self)
+        self.timeline_notches_margin_spinbox.setMinimum(1)
+        self.timeline_notches_margin_spinbox.setMaximum(9999)
+        self.timeline_notches_margin_spinbox.setSuffix('%')
+        timeline_notches_margin_layout.addWidget(
+            self.timeline_notches_margin_spinbox
+        )
+
+
+    def set_defaults(self) -> None:
+        self.autosave_control.setValue(TimeInterval(seconds=30))
+        self.base_ppi_spinbox.setValue(96)
+        self.dark_theme_checkbox.setChecked(True)
+        self.opengl_rendering_checkbox.setChecked(False)
+        self.output_index_spinbox.setValue(0)
+        self.png_compressing_spinbox.setValue(0)
+        self.statusbar_timeout_control.setValue(TimeInterval(seconds=30))
+        self.timeline_notches_margin_spinbox.setValue(20)
+
+
+    @property
+    def autosave_interval(self) -> TimeInterval:
+        return self.autosave_control.value()
+
+    @property
+    def base_ppi(self) -> int:
+        return self.base_ppi_spinbox.value()
+
+    @property
+    def dark_theme_enabled(self) -> bool:
+        return self.dark_theme_checkbox.isChecked()
+
+    @property
+    def opengl_rendering_enabled(self) -> bool:
+        return self.opengl_rendering_checkbox.isChecked()
+
+    @property
+    def output_index(self) -> int:
+        return self.output_index_spinbox.value()
+
+    @property
+    def png_compression_level(self) -> int:
+        return self.png_compressing_spinbox.value()
+
+    @property
+    def statusbar_message_timeout(self) -> TimeInterval:
+        return self.statusbar_timeout_control.value()
+
+    @property
+    def timeline_label_notches_margin(self) -> int:
+        return self.timeline_notches_margin_spinbox.value()
+
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {
+            'autosave_interval': self.autosave_interval,
+            'base_ppi'         : self.base_ppi,
+            'dark_theme'       : self.dark_theme_enabled,
+            'opengl_rendering' : self.opengl_rendering_enabled,
+            'output_index'     : self.output_index,
+            'png_compression'  : self.png_compression_level,
+            'statusbar_message_timeout': self.statusbar_message_timeout,
+            'timeline_label_notches_margin':
+            self.timeline_label_notches_margin,
+        }
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(
+            state, 'autosave_interval', TimeInterval,
+            self.autosave_control.setValue,
+            ''
+        )
+        try_load(
+            state, 'base_ppi', int,
+            self.base_ppi_spinbox.setValue,
+            ''
+        )
+        try_load(
+            state, 'dark_theme', bool,
+            self.dark_theme_checkbox.setChecked,
+            ''
+        )
+        try_load(
+            state, 'opengl_rendering', bool,
+            self.opengl_rendering_checkbox.setChecked,
+            ''
+        )
+        try_load(
+            state, 'output_index', int,
+            self.output_index_spinbox.setValue,
+            ''
+        )
+        try_load(
+            state, 'png_compression', int,
+            self.png_compressing_spinbox.setValue,
+            ''
+        )
+        try_load(
+            state, 'statusbar_message_timeout', TimeInterval,
+            self.statusbar_timeout_control.setValue,
+            ''
+        )
+        try_load(
+            state, 'timeline_label_notches_margin', int,
+            self.timeline_notches_margin_spinbox.setValue,
+            ''
+        )
 
 
 class MainWindow(AbstractMainWindow):

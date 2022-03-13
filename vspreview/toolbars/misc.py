@@ -2,23 +2,26 @@ from __future__ import annotations
 
 import logging
 from   pathlib  import Path
-from   typing   import Any, Mapping, Optional
+from   typing   import Any, List, Mapping, Optional
 
 from PyQt5 import Qt
 
 from vspreview.core  import (
-    AbstractMainWindow, AbstractToolbar, Frame, Output,
+    AbstractMainWindow, AbstractToolbar, Frame, TimeInterval
 )
 from vspreview.utils import (
     add_shortcut, debug, fire_and_forget, set_qobject_names, set_status_label,
+    try_load,
 )
 
 
 class MiscToolbar(AbstractToolbar):
-    storable_attrs : Sequence[str] = []
+    storable_attrs: List[str] = [
+        # 'autosave_enabled',
+    ]
     __slots__ = storable_attrs + [
         'autosave_timer', 'reload_script_button',
-        'save_button',
+        'save_button', 'autosave_checkbox',
         'keep_on_top_checkbox', 'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
         'toggle_button', 'save_file_types', 'copy_frame_button',
@@ -27,6 +30,7 @@ class MiscToolbar(AbstractToolbar):
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, 'Misc')
         self.setup_ui()
+        self.settings = self.main.settings
 
         self.save_template_lineedit.setText(self.main.SAVE_TEMPLATE)
 
@@ -43,6 +47,7 @@ class MiscToolbar(AbstractToolbar):
         self.   copy_frame_button.     clicked.connect(        self.copy_frame_to_clipboard)
         self.save_frame_as_button.     clicked.connect(        self.on_save_frame_as_clicked)
         self. show_debug_checkbox.stateChanged.connect(        self.on_show_debug_changed)
+        self.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_script_button.click)
         add_shortcut(Qt.Qt.ALT + Qt.Qt.Key_S, self.         save_button.click)
@@ -64,6 +69,10 @@ class MiscToolbar(AbstractToolbar):
         self.save_button = Qt.QPushButton(self)
         self.save_button.setText('Save')
         layout.addWidget(self.save_button)
+
+        self.autosave_checkbox = Qt.QCheckBox(self)
+        self.autosave_checkbox.setText('Autosave')
+        layout.addWidget(self.autosave_checkbox)
 
         self.keep_on_top_checkbox = Qt.QCheckBox(self)
         self.keep_on_top_checkbox.setText('Keep on Top')
@@ -136,6 +145,19 @@ class MiscToolbar(AbstractToolbar):
         with path.open(mode='w', newline='\n') as f:
             f.write(f'# VSPreview storage for {self.main.script_path}\n')
             yaml.dump(self.main, f, indent=4, default_flow_style=False)
+        if manually:
+            # timeout triggers QTimer creation, so we need this to be invoked in GUI thread
+            # TODO: check if invokeMethod is still necessary
+            Qt.QMetaObject.invokeMethod(
+                self.main, 'show_message',  Qt.Qt.QueuedConnection,
+                Qt.Q_ARG(str, 'Saved successfully')
+            )
+
+    def on_autosave_interval_changed(self, new_value: TimeInterval) -> None:
+        if new_value == TimeInterval(seconds=0):
+            self.autosave_timer.stop()
+        else:
+            self.autosave_timer.start(round(float(new_value) * 1000))
 
     def on_keep_on_top_changed(self, state: Qt.Qt.CheckState) -> None:
         if   state == Qt.Qt.Checked:
@@ -220,8 +242,7 @@ class MiscToolbar(AbstractToolbar):
             if not isinstance(show_debug, bool):
                 raise TypeError
         except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: failed to parse show debug flag.')
+            logging.warning('Storage loading: failed to parse show debug flag.')
             show_debug = self.main.DEBUG_TOOLBAR
 
         self.show_debug_checkbox.setChecked(show_debug)

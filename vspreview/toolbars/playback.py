@@ -9,12 +9,15 @@ from PyQt5 import Qt
 
 from vspreview.core import (
     AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time,
-    TimeInterval,
+    TimeInterval, QYAMLObjectSingleton
 )
 from vspreview.utils import (
-    add_shortcut, debug, qt_silent_call, set_qobject_names,
+    add_shortcut, debug, qt_silent_call, set_qobject_names, try_load,
 )
 from vspreview.widgets import FrameEdit, TimeEdit
+
+
+# TODO: check if DEBUG_PLAY_FPS mode is still necessary
 
 
 class PlaybackToolbar(AbstractToolbar):
@@ -41,13 +44,11 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_timer.setTimerType(Qt.Qt.PreciseTimer)
         self.play_timer.timeout.connect(self._show_next_frame)
 
-        self.fps_history: Deque[int] = deque(
-            [], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
+        self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
         self.fps_timer = Qt.QTimer()
         self.fps_timer.setTimerType(Qt.Qt.PreciseTimer)
-        self.fps_timer.timeout.connect(
-            lambda: self.fps_spinbox.setValue(self.current_fps))
+        self.fps_timer.timeout.connect(lambda: self.fps_spinbox.setValue(self.current_fps))
 
         self.play_start_time: Optional[int] = None
         self.play_start_frame = Frame(0)
@@ -59,8 +60,6 @@ class PlaybackToolbar(AbstractToolbar):
         self.seek_to_next_button        .clicked.connect(self.seek_to_next)
         self.seek_n_frames_b_button     .clicked.connect(self.seek_n_frames_b)
         self.seek_n_frames_f_button     .clicked.connect(self.seek_n_frames_f)
-        self.seek_to_start_button       .clicked.connect(self.seek_to_start)
-        self.seek_to_end_button         .clicked.connect(self.seek_to_end)
         self.seek_frame_control    .valueChanged.connect(self.on_seek_frame_changed)
         self.seek_time_control     .valueChanged.connect(self.on_seek_time_changed)
         self.fps_spinbox           .valueChanged.connect(self.on_fps_changed)
@@ -72,8 +71,6 @@ class PlaybackToolbar(AbstractToolbar):
         add_shortcut(              Qt.Qt.Key_Right, self.seek_to_next_button   .click)
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Left , self.seek_n_frames_b_button.click)
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Right, self.seek_n_frames_f_button.click)
-        add_shortcut(              Qt.Qt.Key_Home,  self.seek_to_start_button  .click)
-        add_shortcut(              Qt.Qt.Key_End,   self.seek_to_end_button    .click)
 
         set_qobject_names(self)
 
@@ -82,45 +79,34 @@ class PlaybackToolbar(AbstractToolbar):
         layout.setObjectName('PlaybackToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.seek_to_start_button = Qt.QToolButton(self)
-        self.seek_to_start_button.setText('⏮')
-        self.seek_to_start_button.setToolTip('Seek to First Frame')
-        layout.addWidget(self.seek_to_start_button)
-
-        self.seek_n_frames_b_button = Qt.QToolButton(self)
-        self.seek_n_frames_b_button.setText('⏪')
+        self.seek_n_frames_b_button = Qt.QPushButton(self)
+        self.seek_n_frames_b_button.setText('⏮')
         self.seek_n_frames_b_button.setToolTip('Seek N Frames Backwards')
         layout.addWidget(self.seek_n_frames_b_button)
 
-        self.seek_to_prev_button = Qt.QToolButton(self)
-        self.seek_to_prev_button.setText('◂')
+        self.seek_to_prev_button = Qt.QPushButton(self)
+        self.seek_to_prev_button.setText('⏪')
         self.seek_to_prev_button.setToolTip('Seek 1 Frame Backwards')
         layout.addWidget(self.seek_to_prev_button)
 
-        self.play_pause_button = Qt.QToolButton(self)
+        self.play_pause_button = Qt.QPushButton(self)
         self.play_pause_button.setText('⏯')
         self.play_pause_button.setToolTip('Play/Pause')
         self.play_pause_button.setCheckable(True)
         layout.addWidget(self.play_pause_button)
 
-        self.seek_to_next_button = Qt.QToolButton(self)
-        self.seek_to_next_button.setText('▸')
+        self.seek_to_next_button = Qt.QPushButton(self)
+        self.seek_to_next_button.setText('⏩')
         self.seek_to_next_button.setToolTip('Seek 1 Frame Forward')
         layout.addWidget(self.seek_to_next_button)
 
-        self.seek_n_frames_f_button = Qt.QToolButton(self)
-        self.seek_n_frames_f_button.setText('⏩')
+        self.seek_n_frames_f_button = Qt.QPushButton(self)
+        self.seek_n_frames_f_button.setText('⏭')
         self.seek_n_frames_f_button.setToolTip('Seek N Frames Forward')
         layout.addWidget(self.seek_n_frames_f_button)
 
-        self.seek_to_end_button = Qt.QToolButton(self)
-        self.seek_to_end_button.setText('⏭')
-        self.seek_to_end_button.setToolTip('Seek to Last Frame')
-        layout.addWidget(self.seek_to_end_button)
-
         self.seek_frame_control = FrameEdit[FrameInterval](self)
         self.seek_frame_control.setMinimum(FrameInterval(1))
-        self.seek_frame_control.setValue(10)
         self.seek_frame_control.setToolTip('Seek N Frames Step')
         layout.addWidget(self.seek_frame_control)
 
@@ -157,35 +143,14 @@ class PlaybackToolbar(AbstractToolbar):
         if self.main.statusbar.label.text() == 'Ready':
             self.main.statusbar.label.setText('Playing')
 
-        if not self.main.current_output.has_alpha:
-            play_buffer_size = int(min(
-                self.main.PLAY_BUFFER_SIZE,
-                self.main.current_output.end_frame - self.main.current_frame
-            ))
-            self.play_buffer = deque([], play_buffer_size)
-            for i in range(cast(int, self.play_buffer.maxlen)):
-                future = self.main.current_output.vs_output.get_frame_async(
-                    int(self.main.current_frame + FrameInterval(i)
-                        + FrameInterval(1)))
-                self.play_buffer.appendleft(future)
-        else:
-            play_buffer_size = int(min(
-                self.main.PLAY_BUFFER_SIZE,
-                (self.main.current_output.end_frame - self.main.current_frame) * 2
-            ))
-            # buffer size needs to be even in case alpha is present
-            play_buffer_size -= play_buffer_size % 2
-            self.play_buffer = deque([], play_buffer_size)
-
-            for i in range(cast(int, self.play_buffer.maxlen) // 2):
-                frame = (self.main.current_frame + FrameInterval(i)
-                         + FrameInterval(1))
-                future = self.main.current_output.vs_output.get_frame_async(
-                    int(frame))
-                self.play_buffer.appendleft(future)
-                future = self.main.current_output.vs_alpha.get_frame_async(
-                    int(frame))
-                self.play_buffer.appendleft(future)
+        play_buffer_size = int(min(
+            self.main.PLAY_BUFFER_SIZE,
+            self.main.current_output.end_frame - self.main.current_frame
+        ))
+        self.play_buffer = deque([], play_buffer_size)
+        for i in range(cast(int, self.play_buffer.maxlen)):
+            future = self.main.current_output.vs_output.get_frame_async(int(self.main.current_frame + FrameInterval(i) + FrameInterval(1)))
+            self.play_buffer.appendleft(future)
 
         if self.fps_unlimited_checkbox.isChecked() or self.main.DEBUG_PLAY_FPS:
             self.play_timer.start(0)
@@ -195,52 +160,22 @@ class PlaybackToolbar(AbstractToolbar):
             else:
                 self.fps_timer.start(self.main.FPS_REFRESH_INTERVAL)
         else:
-            self.play_timer.start(
-                round(1000 / self.main.current_output.play_fps))
+            self.play_timer.start(round(1000 / self.main.current_output.play_fps))
 
     def _show_next_frame(self) -> None:
-        if not self.main.current_output.has_alpha:
-            try:
-                frame_future = self.play_buffer.pop()
-            except IndexError:
-                self.play_pause_button.click()
-                return
+        try:
+            frame_future = self.play_buffer.pop()
+        except IndexError:
+            self.play_pause_button.click()
+            return
 
-            next_frame_for_buffer = (self.main.current_frame
-                                     + self.main.PLAY_BUFFER_SIZE)
-            if next_frame_for_buffer <= self.main.current_output.end_frame:
-                self.play_buffer.appendleft(
-                    self.main.current_output.vs_output.get_frame_async(
-                        next_frame_for_buffer))
+        next_frame_for_buffer = self.main.current_frame + self.main.PLAY_BUFFER_SIZE
+        if next_frame_for_buffer <= self.main.current_output.end_frame:
+            self.play_buffer.appendleft(self.main.current_output.vs_output.get_frame_async(next_frame_for_buffer))
 
-            self.main.switch_frame(
-                self.main.current_frame + FrameInterval(1), render_frame=False)
-            image = self.main.current_output.render_raw_videoframe(
-                frame_future.result())
-        else:
-            try:
-                frame_future = self.play_buffer.pop()
-                alpha_future = self.play_buffer.pop()
-            except IndexError:
-                self.play_pause_button.click()
-                return
-
-            next_frame_for_buffer = (self.main.current_frame
-                                     + self.main.PLAY_BUFFER_SIZE // 2)
-            if next_frame_for_buffer <= self.main.current_output.end_frame:
-                self.play_buffer.appendleft(
-                    self.main.current_output.vs_output.get_frame_async(
-                        next_frame_for_buffer))
-                self.play_buffer.appendleft(
-                    self.main.current_output.vs_alpha.get_frame_async(
-                        next_frame_for_buffer))
-
-            self.main.switch_frame(
-                self.main.current_frame + FrameInterval(1), render_frame=False)
-            image = self.main.current_output.render_raw_videoframe(
-                frame_future.result(), alpha_future.result())
-
-        self.main.current_output.graphics_scene_item.setImage(image)
+        self.main.switch_frame(self.main.current_frame + FrameInterval(1), render_frame=False)
+        pixmap = self.main.render_raw_videoframe(frame_future.result())
+        self.main.current_output.graphics_scene_item.setPixmap(pixmap)
 
         if not self.main.DEBUG_PLAY_FPS:
             self.update_fps_counter()
@@ -261,20 +196,10 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_timer.stop()
 
         if self.main.DEBUG_PLAY_FPS and self.play_start_time is not None:
-            time_interval  = ((self.play_end_time - self.play_start_time)
-                              / 1_000_000_000)
+            time_interval  = (self.play_end_time - self.play_start_time) / 1_000_000_000
             frame_interval = self.play_end_frame - self.play_start_frame
-            logging.debug(
-                f'{time_interval:.3f} s, {frame_interval} frames, {int(frame_interval) / time_interval:.3f} fps')
+            logging.debug(f'{time_interval:.3f} s, {frame_interval} frames, {int(frame_interval) / time_interval:.3f} fps')
             self.play_start_time = None
-
-    def seek_to_start(self, checked: Optional[bool] = None) -> None:
-        self.stop()
-        self.main.current_frame = Frame(0)
-
-    def seek_to_end(self, checked: Optional[bool] = None) -> None:
-        self.stop()
-        self.main.current_frame = self.main.current_output.end_frame
 
     def seek_to_prev(self, checked: Optional[bool] = None) -> None:
         try:
@@ -293,16 +218,14 @@ class PlaybackToolbar(AbstractToolbar):
 
     def seek_n_frames_b(self, checked: Optional[bool] = None) -> None:
         try:
-            new_pos = (self.main.current_frame
-                       - FrameInterval(self.seek_frame_control.value()))
+            new_pos = self.main.current_frame - FrameInterval(self.seek_frame_control.value())
         except ValueError:
             return
         self.stop()
         self.main.current_frame = new_pos
 
     def seek_n_frames_f(self, checked: Optional[bool] = None) -> None:
-        new_pos = (self.main.current_frame
-                   + FrameInterval(self.seek_frame_control.value()))
+        new_pos = self.main.current_frame + FrameInterval(self.seek_frame_control.value())
         if new_pos > self.main.current_output.end_frame:
             return
         self.stop()
@@ -330,8 +253,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.play()
 
     def reset_fps(self, checked: Optional[bool] = None) -> None:
-        self.fps_spinbox.setValue(self.main.current_output.fps_num
-                                  / self.main.current_output.fps_den)
+        self.fps_spinbox.setValue(self.main.current_output.fps_num / self.main.current_output.fps_den)
 
     def on_fps_unlimited_changed(self, state: int) -> None:
         if state == Qt.Qt.Checked:
@@ -358,24 +280,16 @@ class PlaybackToolbar(AbstractToolbar):
         for i in range(len(self.fps_history) - 1):
             elapsed_total += self.fps_history[i + 1] - self.fps_history[i]
 
-        self.current_fps = (1_000_000_000
-                            / (elapsed_total / len(self.fps_history)))
+        self.current_fps = 1_000_000_000 / (elapsed_total / len(self.fps_history))
 
     def __getstate__(self) -> Mapping[str, Any]:
-        state = {
+        return {
             'seek_interval_frame': self.seek_frame_control.value()
         }
-        state.update(super().__getstate__())
-        return state
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try:
-            seek_interval_frame = state['seek_interval_frame']
-            if not isinstance(seek_interval_frame, FrameInterval):
-                raise TypeError
-            self.seek_frame_control.setValue(seek_interval_frame)
-        except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: PlaybackToolbar: failed to parse seek_interval_frame')
-
-        super().__setstate__(state)
+        try_load(
+            state, 'seek_interval_frame', FrameInterval,
+            self.seek_frame_control.setValue,
+            'Storage loading: PlaybackToolbar: failed to parse seek_interval_frame'
+        )

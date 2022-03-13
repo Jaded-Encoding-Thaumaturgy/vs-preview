@@ -11,7 +11,8 @@ class DebugToolbar(AbstractToolbar):
         'test_button',
         'exec_lineedit', 'exec_button',
         'test_button',
-        'toggle_button',
+        # 'filter',
+        'toggle_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -20,7 +21,6 @@ class DebugToolbar(AbstractToolbar):
         self.setup_ui()
 
         self.  test_button.clicked.connect(self.test_button_clicked)
-        self. break_button.clicked.connect(self.break_button_clicked)
         self.  exec_button.clicked.connect(self.exec_button_clicked)
         self.exec_lineedit.editingFinished.connect(self.exec_button_clicked)
 
@@ -47,7 +47,8 @@ class DebugToolbar(AbstractToolbar):
 
         self.exec_lineedit = Qt.QLineEdit(self)
         self.exec_lineedit.setPlaceholderText(
-            'Python statement in context of DebugToolbar.exec_button_clicked()')
+            'Python statement in context of DebugToolbar.exec_button_clicked()'
+        )
         layout.addWidget(self.exec_lineedit)
 
         self.exec_button = Qt.QPushButton(self)
@@ -60,7 +61,8 @@ class DebugToolbar(AbstractToolbar):
 
 
     def test_button_clicked(self, checked: Optional[bool] = None) -> None:
-        pass
+        from vspreview.utils import vs_clear_cache
+        # vs_clear_cache()
 
     def exec_button_clicked(self, checked: Optional[bool] = None) -> None:
         try:

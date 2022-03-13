@@ -190,5 +190,10 @@ def try_load(state: Mapping[str, Any], name: str, ty: Type[T], receiver: Union[T
     else:
         if isinstance(receiver, ty):
             receiver = value
-        if callable(receiver):
+        elif callable(receiver):
             receiver(value)
+        elif hasattr(receiver, name) and isinstance(getattr(receiver, name), ty):
+            try:
+                receiver.__setattr__(name, value)
+            except AttributeError:
+                logging.warning(error_msg)

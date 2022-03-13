@@ -833,6 +833,22 @@ class MainWindow(AbstractMainWindow):
                 'Storage loading: failed to parse window state.'
                 ' Using default.')
 
+
+class Application(Qt.QApplication):
+    def notify(self, obj: Qt.QObject, event: Qt.QEvent) -> bool:
+        isex = False
+        try:
+            return Qt.QApplication.notify(self, obj, event)
+        except Exception:  # pylint: disable=broad-except
+            isex = True
+            logging.error('Application: unexpected error')
+            print(*sys.exc_info())
+            return False
+        finally:
+            if isex:
+                self.quit()
+
+
 def main() -> None:
     from argparse import ArgumentParser
 
@@ -862,7 +878,7 @@ def main() -> None:
 
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
-    app = Qt.QApplication(sys.argv)
+    app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     ext_args = [ tuple(a.split('=', maxsplit=1)) for a in args.arg or [] ]
     main_window.load_script(script_path, external_args=ext_args)

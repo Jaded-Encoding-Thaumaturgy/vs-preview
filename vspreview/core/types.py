@@ -872,7 +872,7 @@ class Output(YAMLObject):
         return round(seconds * self.fps)
 
     def _calculate_seconds(self, frame_num: int) -> float:
-        return frame_num / self.fps
+        return frame_num / (self.fps or 1)
 
     def to_frame(self, time: Time) -> Frame:
         return Frame(self._calculate_frame(float(time)))

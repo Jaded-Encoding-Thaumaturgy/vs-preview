@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, cast, Iterator, List, Mapping, Optional, OrderedDict
-
 from PyQt5 import Qt
 import vapoursynth as vs
+from typing import Any, cast, Iterator, List, Mapping, Optional, OrderedDict
+
 
 from vspreview.core import Output, QYAMLObjectSingleton
-from vspreview.utils import debug
 
 
 # TODO: support non-YUV outputs
@@ -16,36 +14,29 @@ from vspreview.utils import debug
 class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
     yaml_tag = '!Outputs'
 
-    __slots__ = (
-        'items',
-    )
+    __slots__ = ('items',)
 
-    def __init__(self, main_window, local_storage: Optional[Mapping[str, Output]] = None) -> None:
-        from vspreview.main import MainWindow
+    def __init__(self, main_window: Any, local_storage: Optional[Mapping[str, Output]] = None) -> None:
         super().__init__()
         self.items: List[Output] = []
 
-        main_window = main_window or MainWindow()
-
         local_storage = local_storage if local_storage is not None else {}
 
-        if main_window.ORDERED_OUTPUTS:
-            outputs = OrderedDict(sorted(vs.get_outputs().items()))
-        else:
-            outputs = vs.get_outputs()
+        outputs = OrderedDict(sorted(vs.get_outputs().items()))
 
-        main_window.reload_signal.connect(self.clear_outputs)
+        if main_window:
+            main_window.reload_signal.connect(self.clear_outputs)
 
-        for i, vs_output in outputs.items():
+        for i, vs_output in enumerate([x for x in outputs if isinstance(x, vs.VideoOutputTuple)]):
             try:
                 output = local_storage[str(i)]
                 output.__init__(vs_output, i)  # type: ignore
             except KeyError:
-                output = Output(vs_output, i)
+                output = Output(vs_output, i)  # type: ignore
 
             self.items.append(output)
 
-    def clear_outputs(self):
+    def clear_outputs(self) -> None:
         for o in self.items:
             o.clear()
 
@@ -89,10 +80,7 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
         return None
 
     def rowCount(self, parent: Qt.QModelIndex = Qt.QModelIndex()) -> int:
-        if self.items is not None:
-            return len(self.items)
-        else:
-            return 0
+        return len(self.items)
 
     def flags(self, index: Qt.QModelIndex) -> Qt.Qt.ItemFlags:
         if not index.isValid():
@@ -109,7 +97,7 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
             return False
 
         self.items[index.row()].name = value
-        self.dataChanged.emit(index, index, [role])
+        self.dataChanged.emit(index, index, [role])  # type: ignore
         return True
 
     def __getstate__(self) -> Mapping[str, Any]:

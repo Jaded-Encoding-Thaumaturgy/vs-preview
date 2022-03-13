@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-from bisect import bisect_left, bisect_right
-import logging
-from typing import (
-    Any, Callable, cast, Dict, Iterator, List, Mapping, Optional, Set, Tuple,
-    Union
-)
-
 from PyQt5 import Qt
+from bisect import bisect_right
+from typing import Any, cast, Iterator, List, Mapping, Optional, Tuple, Union
 
-from vspreview.core import (
+
+from ..utils import main_window
+from ..core import (
     Frame, FrameInterval, QYAMLObject,
-    Scene, Time, TimeInterval
-)
-from vspreview.utils import (
-    debug, main_window
+    Scene, Time
 )
 
 
@@ -168,10 +162,10 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
                 self.endMoveRows()
             else:
                 self.items[index.row()] = scene
-                self.dataChanged.emit(index, index)
+                self.dataChanged.emit(index, index)  # type: ignore
         else:
             self.items[index.row()] = scene
-            self.dataChanged.emit(index, index)
+            self.dataChanged.emit(index, index)  # type: ignore
         return True
 
     def __len__(self) -> int:
@@ -185,10 +179,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
             raise IndexError
 
         self.items[i] = value
-        self.dataChanged.emit(
-            self.createIndex(i, 0),
-            self.createIndex(i, self.COLUMN_COUNT - 1)
-        )
+        self.dataChanged.emit(self.createIndex(i, 0), self.createIndex(i, self.COLUMN_COUNT - 1))  # type: ignore
 
     def __contains__(self, item: Union[Scene, Frame]) -> bool:
         if isinstance(item, Scene):
@@ -287,9 +278,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
 class SceningLists(Qt.QAbstractListModel, QYAMLObject):
     yaml_tag = '!SceningLists'
 
-    __slots__ = (
-        'items',
-    )
+    __slots__ = ('items',)
 
     def __init__(self, items: Optional[List[SceningList]] = None) -> None:
         super().__init__()
@@ -342,7 +331,7 @@ class SceningLists(Qt.QAbstractListModel, QYAMLObject):
             return False
 
         self.items[index.row()].name = value
-        self.dataChanged.emit(index, index)
+        self.dataChanged.emit(index, index)  # type: ignore
         return True
 
     def insertRow(self, i: int, parent: Qt.QModelIndex = Qt.QModelIndex()) -> bool:
@@ -357,7 +346,9 @@ class SceningLists(Qt.QAbstractListModel, QYAMLObject):
 
         return True
 
-    def add(self, name: Optional[str] = None, max_value: Optional[Frame] = None, i: Optional[int] = None) -> Tuple[SceningList, int]:
+    def add(
+        self, name: Optional[str] = None, max_value: Optional[Frame] = None, i: Optional[int] = None
+    ) -> Tuple[SceningList, int]:
         if max_value is None:
             max_value = self.main.current_output.end_frame
         if i is None:

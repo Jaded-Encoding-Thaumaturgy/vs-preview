@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import logging
+from PyQt5 import Qt
 from pathlib import Path
 from typing import Any, List, Mapping, Optional
 
-from PyQt5 import Qt
 
-from vspreview.core import (
-    AbstractMainWindow, AbstractToolbar, Frame, TimeInterval
-)
-from vspreview.utils import (
-    add_shortcut, debug, fire_and_forget, set_qobject_names, set_status_label,
-    try_load,
-)
+from vspreview.core import AbstractMainWindow, AbstractToolbar, TimeInterval
+from vspreview.utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
 
 
 class MiscToolbar(AbstractToolbar):
@@ -35,26 +30,22 @@ class MiscToolbar(AbstractToolbar):
         self.save_template_lineedit.setText(self.main.SAVE_TEMPLATE)
 
         self.autosave_timer = Qt.QTimer()
-        self.autosave_timer.timeout.connect(self.save)
+        self.autosave_timer.timeout.connect(self.save)  # type: ignore
 
-        self.save_file_types = {
-            'Single Image (*.png)': self.save_as_png,
-        }
+        self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
-        self.reload_script_button.     clicked.connect(
-            lambda: self.main.reload_script())  # pylint: disable=unnecessary-lambda
-        self.         save_button.     clicked.connect(lambda: self.save(manually=True))
-        self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)
-        self.   copy_frame_button.     clicked.connect(self.copy_frame_to_clipboard)
-        self.save_frame_as_button.     clicked.connect(self.on_save_frame_as_clicked)
-        self. show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)
+        self.reload_script_button.clicked.connect(lambda: self.main.reload_script())  # type: ignore
+        self.save_button.clicked.connect(lambda: self.save(manually=True))  # type: ignore
+        self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)  # type: ignore
+        self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)  # type: ignore
+        self.save_frame_as_button.clicked.connect(self.on_save_frame_as_clicked)  # type: ignore
+        self.show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)  # type: ignore
         self.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_script_button.click)
-        add_shortcut(Qt.Qt.ALT + Qt.Qt.Key_S, self.         save_button.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_S, self.   copy_frame_button.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_S,
-                     self.save_frame_as_button.click)
+        add_shortcut(Qt.Qt.ALT + Qt.Qt.Key_S, self.save_button.click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_S, self.copy_frame_button.click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_S, self.save_frame_as_button.click)
 
         set_qobject_names(self)
 
@@ -125,7 +116,7 @@ class MiscToolbar(AbstractToolbar):
     def save(self, path: Optional[Path] = None) -> None:
         self.save_sync(path)
 
-    def save_sync(self, path: Optional[Path] = None) -> None:
+    def save_sync(self, path: Optional[Path] = None, manually: bool = False) -> None:
         import yaml
 
         yaml.Dumper.ignore_aliases = lambda *args: True
@@ -147,12 +138,7 @@ class MiscToolbar(AbstractToolbar):
             f.write(f'# VSPreview storage for {self.main.script_path}\n')
             yaml.dump(self.main, f, indent=4, default_flow_style=False)
         if manually:
-            # timeout triggers QTimer creation, so we need this to be invoked in GUI thread
-            # TODO: check if invokeMethod is still necessary
-            Qt.QMetaObject.invokeMethod(
-                self.main, 'show_message',  Qt.Qt.QueuedConnection,
-                Qt.Q_ARG(str, 'Saved successfully')
-            )
+            self.main.show_message('Saved successfully')
 
     def on_autosave_interval_changed(self, new_value: TimeInterval) -> None:
         if new_value == TimeInterval(seconds=0):
@@ -169,30 +155,33 @@ class MiscToolbar(AbstractToolbar):
             self.main.setWindowFlag(Qt.Qt.WindowStaysOnTopHint, False)
 
     def on_save_frame_as_clicked(self, checked: Optional[bool] = None) -> None:
+        from vspreview.core.types import Output
+
+        fmt = self.main.current_output.source.clip.format
+        assert fmt
+
         filter_str = ''.join(
             [file_type + ';;' for file_type in self.save_file_types.keys()])
         filter_str = filter_str[0:-2]
 
         template = self.main.toolbars.misc.save_template_lineedit.text()
-        frame_props = self.main.current_output.vs_output.get_frame(
-            self.main.current_frame).props
-        builtin_substitutions = {
-            'format': self.main.current_output.format.name,
+        frame_props = self.main.current_output.prepared.clip.get_frame(self.main.current_frame.value).props
+        substitutions = {
+            **frame_props,
+            'format': fmt.name,
             'fps_den': self.main.current_output.fps_den,
             'fps_num': self.main.current_output.fps_num,
             'frame': self.main.current_frame,
             'height': self.main.current_output.height,
             'index': self.main.current_output.index,
-            'matrix': Output.Matrix.values[frame_props['_Matrix']],
-            'primaries': Output.Primaries.values[frame_props['_Primaries']],
-            'range': Output.Range.values[frame_props['_ColorRange']],
+            'matrix': Output.Matrix.values[int(str(frame_props['_Matrix']))],
+            'primaries': Output.Primaries.values[int(str(frame_props['_Primaries']))],
+            'range': Output.Range.values[int(str(frame_props['_ColorRange']))],
             'script_name': self.main.script_path.stem,
             'total_frames': self.main.current_output.total_frames,
-            'transfer': Output.Transfer.values[frame_props['_Transfer']],
+            'transfer': Output.Transfer.values[int(str(frame_props['_Transfer']))],
             'width': self.main.current_output.width,
         }
-        substitutions = dict(frame_props)
-        substitutions.update(builtin_substitutions)
         try:
             suggested_path_str = template.format(**substitutions)
         except ValueError:

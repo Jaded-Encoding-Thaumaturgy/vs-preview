@@ -1,22 +1,16 @@
 from __future__ import annotations
 
-from enum import auto, Enum
-import logging
-from typing import (
-    Any, cast, Dict, Iterator, List, Optional, Tuple, Type, Union,
-)
-
 from PyQt5 import Qt
 from yaml import YAMLObject
+from typing import cast, Dict, Iterator, List, Optional, Type, Union
 
-from vspreview.core import (
+
+from ..utils import strfdelta
+from ..core import (
     AbstractToolbar, Frame, FrameInterval, Scene, Time, TimeInterval,
     TimeType, FrameType,
 )
-from vspreview.utils import debug
 
-
-# pylint: disable=attribute-defined-outside-init
 
 # TODO: store cursor pos as frame
 # TODO: consider moving from ints to floats
@@ -154,52 +148,40 @@ class Timeline(Qt.QWidget):
     def drawWidget(self, painter: Qt.QPainter) -> None:
         from copy import deepcopy
 
-        from vspreview.utils import strfdelta
-
-        # calculations
-
         if self.need_full_repaint:
             labels_notches = Notches()
-            label_notch_bottom = (self.rect_f.top() + self.font_height
-                                  + self.notch_label_interval
-                                  + self.notch_height + 5)
+            label_notch_bottom = (
+                self.rect_f.top() + self.font_height + self.notch_label_interval + self.notch_height + 5
+            )
             label_notch_top = label_notch_bottom - self.notch_height
             label_notch_x = self.rect_f.left()
 
             if self.mode == self.Mode.TIME:
-                notch_interval_t = self.calculate_notch_interval_t(
-                    self.notch_interval_target_x)
-                label_format = self.generate_label_format(notch_interval_t,
-                                                          self.end_t)
+                notch_interval_t = self.calculate_notch_interval_t(self.notch_interval_target_x)
+                label_format = self.generate_label_format(notch_interval_t, self.end_t)
                 label_notch_t = Time()
 
-                while (label_notch_x < self.rect_f.right()
-                        and label_notch_t <= self.end_t):
-                    line = Qt.QLineF(label_notch_x, label_notch_bottom,
-                                     label_notch_x, label_notch_top)
-                    labels_notches.add(Notch(deepcopy(label_notch_t),
-                                             line=line))
+                while (label_notch_x < self.rect_f.right() and label_notch_t <= self.end_t):
+                    line = Qt.QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
+                    labels_notches.add(Notch(deepcopy(label_notch_t), line=line))
                     label_notch_t += notch_interval_t
                     label_notch_x = self.t_to_x(label_notch_t)
 
             elif self.mode == self.Mode.FRAME:
-                notch_interval_f = self.calculate_notch_interval_f(
-                    self.notch_interval_target_x)
+                notch_interval_f = self.calculate_notch_interval_f(self.notch_interval_target_x)
                 label_notch_f = Frame(0)
 
-                while (label_notch_x < self.rect_f.right()
-                        and label_notch_f <= self.end_f):
-                    line = Qt.QLineF(label_notch_x, label_notch_bottom,
-                                     label_notch_x, label_notch_top)
-                    labels_notches.add(Notch(deepcopy(label_notch_f),
-                                             line=line))
+                while (label_notch_x < self.rect_f.right() and label_notch_f <= self.end_f):
+                    line = Qt.QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
+                    labels_notches.add(Notch(deepcopy(label_notch_f), line=line))
                     label_notch_f += notch_interval_f
                     label_notch_x = self.f_to_x(label_notch_f)
 
             self.scroll_rect = Qt.QRectF(
                 self.rect_f.left(),
                 label_notch_bottom + self.notch_scroll_interval,
-                self.rect_f.width(), self.scroll_height)
+                self.rect_f.width(), self.scroll_height
+            )
 
             for toolbar, notches in self.toolbars_notches.items():
                 if not toolbar.is_notches_visible():
@@ -211,8 +193,7 @@ class Timeline(Qt.QWidget):
                     elif isinstance(notch.data, Time):
                         x = self.t_to_x(notch.data)
                     y = self.scroll_rect.top()
-                    notch.line = Qt.QLineF(
-                        x, y, x, y + self.scroll_rect.height() - 1)
+                    notch.line = Qt.QLineF(x, y, x, y + self.scroll_rect.height() - 1)
 
         cursor_line = Qt.QLineF(
             self.cursor_x, self.scroll_rect.top(), self.cursor_x,
@@ -221,15 +202,13 @@ class Timeline(Qt.QWidget):
         # drawing
 
         if self.need_full_repaint:
-            painter.fillRect(self.rect_f,
-                             self.palette().color(Qt.QPalette.Window))
+            painter.fillRect(self.rect_f, self.palette().color(Qt.QPalette.Window))
 
-            painter.setPen(
-                Qt.QPen(self.palette().color(Qt.QPalette.WindowText)))
+            painter.setPen(Qt.QPen(self.palette().color(Qt.QPalette.WindowText)))
             painter.setRenderHint(Qt.QPainter.Antialiasing, False)
             painter.drawLines([notch.line for notch in labels_notches])
-
             painter.setRenderHint(Qt.QPainter.Antialiasing)
+
             for i, notch in enumerate(labels_notches):
                 line = notch.line
                 anchor_rect = Qt.QRectF(
@@ -317,7 +296,7 @@ class Timeline(Qt.QWidget):
 
         return super().event(event)
 
-    def update_notches(self, toolbar: Optional[AbstractToolbar] = None) -> None:
+    def update_notches(self, toolbar: AbstractToolbar | None = None) -> None:
         if toolbar is not None:
             self.toolbars_notches[toolbar] = toolbar.get_notches()
         if toolbar is None:
@@ -405,7 +384,7 @@ class Timeline(Qt.QWidget):
                 return interval
         raise RuntimeError
 
-    def generate_label_format(self, notch_interval_t: TimeInterval, end_time: TimeInterval) -> str:
+    def generate_label_format(self, notch_interval_t: TimeInterval, end_time: Time | TimeInterval) -> str:
         if end_time >= TimeInterval(hours=1):
             return '%h:%M:00'
         elif notch_interval_t >= TimeInterval(minutes=1):

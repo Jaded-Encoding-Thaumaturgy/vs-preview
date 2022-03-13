@@ -18,9 +18,9 @@ T = TypeVar('T')
 
 
 def print_var(var: Any) -> None:
-    frame = inspect.currentframe().f_back  # type: ignore
+    frame = inspect.currentframe().f_back
     s = inspect.getframeinfo(frame).code_context[0]
-    r = re.search(r"\((.*)\)", s).group(1)  # type: ignore
+    r = re.search(r"\((.*)\)", s).group(1)
     logging.debug(f'{r}: {var}')
 
 
@@ -69,19 +69,19 @@ class EventFilter(Qt.QObject):
         total_async = 0
         for i in range(start_frame_async, start_frame_async + N):
             s1 = perf_counter_ns()
-            f1 = self.main.current_output.vs_output.get_frame_async(i)
+            f1 = self.main.current_output.prepared.clip.get_frame_async(i)
             f1.result()
             s2 = perf_counter_ns()
             logging.debug(f'async test time: {s2 - s1} ns')
             if i != start_frame_async:
                 total_async += s2 - s1
-        # logging.debug('')
 
         start_frame_sync = 2000
         total_sync = 0
+
         for i in range(start_frame_sync, start_frame_sync + N):
             s1 = perf_counter_ns()
-            f2 = self.main.current_output.vs_output.get_frame(i)  # pylint: disable=unused-variable
+            f2 = self.main.current_output.prepared.clip.get_frame(i)  # pylint: disable=unused-variable
             s2 = perf_counter_ns()
             # logging.debug(f'sync test time: {s2 - s1} ns')
             if i != start_frame_sync:
@@ -104,7 +104,7 @@ def measure_exec_time_ms(func: Callable[..., T],
         if print_exec_time:
             logging.debug(f'{exec_time:7.3f} ms: {func.__name__}()')
         if return_exec_time:
-            return ret, exec_time  # type: ignore
+            return ret, exec_time
         return ret
     return decorator
 
@@ -120,7 +120,7 @@ def profile_cpu(func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
     def decorator(*args: Any, **kwargs: Any) -> T:
         from cProfile import Profile
-        from pstats import Stats, SortKey  # type: ignore
+        from pstats import Stats, SortKey
 
         p = Profile(perf_counter_ns, 0.000_000_001, True, False)
         ret = p.runcall(func, *args, **kwargs)
@@ -144,7 +144,7 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
     ))
 
 
-class DebugMeta(sip.wrappertype):  # type: ignore
+class DebugMeta(sip.wrappertype):
     def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
         from functools import partialmethod
 

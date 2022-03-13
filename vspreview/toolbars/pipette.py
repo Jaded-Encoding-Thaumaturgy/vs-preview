@@ -1,7 +1,6 @@
 import ctypes
-import logging
-from typing import cast, Dict, List, TypeVar, Union
 from weakref import WeakKeyDictionary
+from typing import cast, TypeVar, Union
 
 from PyQt5 import Qt
 import vapoursynth as vs
@@ -50,7 +49,7 @@ class PipetteToolbar(AbstractToolbar):
 
         set_qobject_names(self)
 
-    def clear_outputs(self):
+    def clear_outputs(self) -> None:
         self.outputs.clear()
 
     def setup_ui(self) -> None:
@@ -136,7 +135,7 @@ class PipetteToolbar(AbstractToolbar):
         self.update_labels(event.pos())
 
     def update_labels(self, local_pos: Qt.QPoint) -> None:
-        from math import floor, trunc
+        from math import floor
         from struct import unpack
 
         pos_f = self.main.graphics_view.mapToScene(local_pos)
@@ -167,7 +166,7 @@ class PipetteToolbar(AbstractToolbar):
                 ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
                     ctypes.c_char * (stride * vs_frame.height)))
                 offset = pos.y() * stride + pos.x() * 2
-                val = unpack('e', ptr.contents[offset:(offset + 2)])[0]  # type: ignore
+                val = unpack('e', ptr.contents[offset:(offset + 2)])[0]
                 return cast(float, val)
             else:
                 ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
@@ -175,17 +174,15 @@ class PipetteToolbar(AbstractToolbar):
                         stride * vs_frame.height)))
                 logical_stride = stride // fmt.bytes_per_sample
                 idx = pos.y() * logical_stride + pos.x()
-                return ptr.contents[idx]  # type: ignore
+                return ptr.contents[idx]
 
         vs_frame = self.outputs[self.main.current_output].get_frame(
             int(self.main.current_frame))
         fmt = vs_frame.format
 
-        src_vals = [extract_value(vs_frame, i, pos)
-                    for i in range(fmt.num_planes)]
-        if self.main.current_output.has_alpha:
-            vs_alpha = self.main.current_output.source_vs_alpha.get_frame(
-                int(self.main.current_frame))
+        src_vals = [extract_value(vs_frame, i, pos) for i in range(fmt.num_planes)]
+        if self.main.current_output.source.alpha:
+            vs_alpha = self.main.current_output.source.alpha.get_frame(int(self.main.current_frame))
             src_vals.append(extract_value(vs_alpha, 0, pos))
 
         self.src_dec.setText(self.src_dec_fmt.format(*src_vals))
@@ -205,7 +202,9 @@ class PipetteToolbar(AbstractToolbar):
 
         super().on_current_output_changed(index, prev_index)
 
-        fmt = self.main.current_output.format
+        fmt = self.main.current_output.source.clip.format
+        assert fmt
+
         src_label_text = ''
         if fmt.color_family == vs.RGB:
             src_label_text = 'Raw (RGB{}):'
@@ -213,24 +212,15 @@ class PipetteToolbar(AbstractToolbar):
             src_label_text = 'Raw (YUV{}):'
         elif fmt.color_family == vs.GRAY:
             src_label_text = 'Raw (Gray{}):'
-        elif fmt.color_family == vs.YCOCG:
-            src_label_text = 'Raw (YCoCg{}):'
-        elif fmt.id == vs.COMPATBGR32.value:
-            src_label_text = 'Raw (RGB{}):'
-        elif fmt.id == vs.COMPATYUY2.value:
-            src_label_text = 'Raw (YUV{}):'
 
-        has_alpha = self.main.current_output.has_alpha
-        if not has_alpha:
-            self.src_label.setText(src_label_text.format(''))
-        else:
-            self.src_label.setText(src_label_text.format(' + Alpha'))
+        self.src_label.setText(src_label_text.format(' + Alpha'if self.main.current_output.source.alpha else ''))
 
         self.pos_fmt = '{:4d},{:4d}'
 
         if self.main.current_output not in self.outputs:
             self.outputs[self.main.current_output] = self.prepare_vs_output(
-                self.main.current_output.source_vs_output)
+                self.main.current_output.source.clip
+            )
         src_fmt = self.outputs[self.main.current_output].format
 
         if src_fmt.sample_type == vs.INTEGER:
@@ -239,7 +229,7 @@ class PipetteToolbar(AbstractToolbar):
             self.src_hex.setVisible(False)
             self.src_max_val = 1.0
 
-        src_num_planes = src_fmt.num_planes + int(has_alpha)
+        src_num_planes = src_fmt.num_planes + int(bool(self.main.current_output.source.alpha))
         self.src_hex_fmt = ','.join(('{{:{w}X}}',) * src_num_planes) \
                            .format(w=ceil(log(self.src_max_val, 16)))
         if src_fmt.sample_type == vs.INTEGER:
@@ -266,12 +256,12 @@ class PipetteToolbar(AbstractToolbar):
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
+        assert vs_output.format
+
         def non_subsampled_format(fmt: vs.VideoFormat) -> vs.VideoFormat:
             return vs.core.query_video_format(fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0)
 
-        return vs.core.resize.Bicubic(
-            vs_output,
-            format=non_subsampled_format(vs_output.format).id)
+        return vs.core.resize.Bicubic(vs_output, format=non_subsampled_format(vs_output.format).id)
 
     @staticmethod
     def clip(value: Number, lower_bound: Number, upper_bound: Number) -> Number:

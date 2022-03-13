@@ -273,8 +273,7 @@ class TimeInterval(YAMLObjectWrapper):
         elif isinstance(init_value, TimeInterval):
             self.value = init_value.value
         elif isinstance(init_value, FrameInterval):
-            self.value = main_window().current_output.to_time_interval(
-                init_value).value
+            self.value = main_window().current_output.to_time_interval(init_value).value
         elif any(kwargs):
             self.value = timedelta(**kwargs)
         elif init_value is None:

@@ -1,18 +1,15 @@
 from typing import Optional
 
 from PyQt5 import Qt
-
-from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame
 from vspreview.utils import debug, set_qobject_names
+from vspreview.core import AbstractMainWindow, AbstractToolbar
 
 
 class DebugToolbar(AbstractToolbar):
     __slots__ = (
         'test_button',
         'exec_lineedit', 'exec_button',
-        'test_button',
-        # 'filter',
-        'toggle_button'
+        'test_button', 'toggle_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -20,9 +17,9 @@ class DebugToolbar(AbstractToolbar):
 
         self.setup_ui()
 
-        self.  test_button.clicked.connect(self.test_button_clicked)
-        self.  exec_button.clicked.connect(self.exec_button_clicked)
-        self.exec_lineedit.editingFinished.connect(self.exec_button_clicked)
+        self.test_button.clicked.connect(self.test_button_clicked)  # type: ignore
+        self.exec_button.clicked.connect(self.exec_button_clicked)  # type: ignore
+        self.exec_lineedit.editingFinished.connect(self.exec_button_clicked)  # type: ignore
 
         if self.main.DEBUG_TOOLBAR_BUTTONS_PRINT_STATE:
             self.filter = debug.EventFilter(self)
@@ -61,12 +58,12 @@ class DebugToolbar(AbstractToolbar):
 
     def test_button_clicked(self, checked: Optional[bool] = None) -> None:
         from vspreview.utils import vs_clear_cache
-        # vs_clear_cache()
+        vs_clear_cache()
 
     def exec_button_clicked(self, checked: Optional[bool] = None) -> None:
         try:
-            exec(self.exec_lineedit.text())  # pylint: disable=exec-used
-        except Exception as e:  # pylint: disable=broad-except
+            exec(self.exec_lineedit.text())
+        except Exception as e:
             print(e)
 
     def break_button_clicked(self, checked: Optional[bool] = None) -> None:

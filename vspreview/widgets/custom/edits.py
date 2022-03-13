@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import cast, Dict, Generic, Optional, Type
 
 from PyQt5 import Qt
@@ -39,22 +38,22 @@ class FrameEdit(Qt.QSpinBox, Generic[FrameType]):
     def _valueChanged(self, newValue: int) -> None:
         self.valueChanged.emit(self.value(), self.oldValue)
 
-    def value(self) -> FrameType:  # type: ignore
+    def value(self) -> FrameType:
         return self.ty(super().value())
 
-    def setValue(self, newValue: FrameType) -> None:  # type: ignore
+    def setValue(self, newValue: FrameType) -> None:
         super().setValue(int(newValue))
 
-    def minimum(self) -> FrameType:  # type: ignore
+    def minimum(self) -> FrameType:
         return self.ty(super().minimum())
 
-    def setMinimum(self, newValue: FrameType) -> None:  # type: ignore
+    def setMinimum(self, newValue: FrameType) -> None:
         super().setMinimum(int(newValue))
 
-    def maximum(self) -> FrameType:  # type: ignore
+    def maximum(self) -> FrameType:
         return self.ty(super().maximum())
 
-    def setMaximum(self, newValue: FrameType) -> None:  # type: ignore
+    def setMaximum(self, newValue: FrameType) -> None:
         super().setMaximum(int(newValue))
 
 

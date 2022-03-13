@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import cast, Dict, Generic, Optional, Type, TYPE_CHECKING, TypeVar
 
 from PyQt5 import Qt

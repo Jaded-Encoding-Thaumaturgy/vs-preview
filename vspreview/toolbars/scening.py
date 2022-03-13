@@ -1,25 +1,19 @@
 from __future__ import annotations
 
-import logging
-from pathlib import Path
 import re
-from typing import (
-    Any, Callable, cast, Dict, Iterator, List, Mapping, Optional, Set, Tuple,
-    Union
-)
-
+import logging
 from PyQt5 import Qt
+from pathlib import Path
+from typing import Any, Callable, cast, List, Mapping, Optional, Set, Union
 
-from vspreview.core import (
-    AbstractMainWindow, AbstractToolbar, Frame, FrameInterval,
-    Scene, Time, TimeInterval,
-)
+
 from vspreview.models import SceningList, SceningLists
+from vspreview.widgets import ComboBox, Notches, TimeEdit, FrameEdit
 from vspreview.utils import (
-    add_shortcut, debug, main_window, fire_and_forget, qt_silent_call,
+    add_shortcut, fire_and_forget, qt_silent_call,
     set_qobject_names, set_status_label, try_load
 )
-from vspreview.widgets import ComboBox, Notches, TimeEdit, FrameEdit
+from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval
 
 
 # TODO: import all lwi video streams as separate scening lists
@@ -43,13 +37,13 @@ class SceningListDialog(Qt.QDialog):
         self.setWindowTitle('Scening List View')
         self.setup_ui()
 
-        self.end_frame_control  .valueChanged.connect(self.on_end_frame_changed)
+        self.end_frame_control  .valueChanged.connect(self.on_end_frame_changed)  # type: ignore
         self.end_time_control   .valueChanged.connect(self.on_end_time_changed)
-        self.label_lineedit      .textChanged.connect(self.on_label_changed)
-        self.name_lineedit       .textChanged.connect(self.on_name_changed)
-        self.start_frame_control.valueChanged.connect(self.on_start_frame_changed)
+        self.label_lineedit      .textChanged.connect(self.on_label_changed)  # type: ignore
+        self.name_lineedit       .textChanged.connect(self.on_name_changed)  # type: ignore
+        self.start_frame_control.valueChanged.connect(self.on_start_frame_changed)  # type: ignore
         self.start_time_control .valueChanged.connect(self.on_start_time_changed)
-        self.tableview         .doubleClicked.connect(self.on_tableview_clicked)
+        self.tableview         .doubleClicked.connect(self.on_tableview_clicked)  # type: ignore
 
         set_qobject_names(self)
 
@@ -106,7 +100,7 @@ class SceningListDialog(Qt.QDialog):
                 selection.select(index, index)
         self.tableview.selectionModel().select(
             selection,
-            Qt.QItemSelectionModel.SelectionFlags(  # type: ignore
+            Qt.QItemSelectionModel.SelectionFlags(
                 Qt.QItemSelectionModel.Rows + Qt.QItemSelectionModel.ClearAndSelect))
 
     def on_current_list_changed(self, scening_list: Optional[SceningList] = None) -> None:
@@ -125,9 +119,9 @@ class SceningListDialog(Qt.QDialog):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         self.start_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.  end_frame_control.setMaximum(self.main.current_output.end_frame)
-        self. start_time_control.setMaximum(self.main.current_output.end_time)
-        self.   end_time_control.setMaximum(self.main.current_output.end_time)
+        self.end_frame_control.setMaximum(self.main.current_output.end_frame)
+        self.start_time_control.setMaximum(self.main.current_output.end_time)
+        self.end_time_control.setMaximum(self.main.current_output.end_time)
 
     def on_end_frame_changed(self, value: Union[Frame, int]) -> None:
         frame = Frame(value)
@@ -182,19 +176,20 @@ class SceningListDialog(Qt.QDialog):
         self.scening_list.setData(index, time, Qt.Qt.UserRole)
 
     def on_tableview_clicked(self, index: Qt.QModelIndex) -> None:
-        if index.column() in (SceningList.START_FRAME_COLUMN,
-                              SceningList.END_FRAME_COLUMN):
+        if index.column() in (SceningList.START_FRAME_COLUMN, SceningList.END_FRAME_COLUMN):
             self.main.current_frame = self.scening_list.data(index)
         if index.column() == SceningList.START_TIME_COLUMN:
             self.main.current_frame = self.scening_list.data(index.siblingAtColumn(SceningList.START_FRAME_COLUMN))
         if index.column() == SceningList.END_TIME_COLUMN:
             self.main.current_frame = self.scening_list.data(index.siblingAtColumn(SceningList.END_FRAME_COLUMN))
 
-    def on_tableview_rows_moved(self, parent_index: Qt.QModelIndex, start_i: int, end_i: int, dest_index: Qt.QModelIndex, dest_i: int) -> None:
+    def on_tableview_rows_moved(
+        self, parent_index: Qt.QModelIndex, start_i: int, end_i: int, dest_index: Qt.QModelIndex, dest_i: int
+    ) -> None:
         index = self.scening_list.index(dest_i, 0)
         self.tableview.selectionModel().select(
             index,
-            Qt.QItemSelectionModel.SelectionFlags(  # type: ignore
+            Qt.QItemSelectionModel.SelectionFlags(
                 Qt.QItemSelectionModel.Rows + Qt.QItemSelectionModel.ClearAndSelect))
 
     def on_tableview_selection_changed(self, selected: Qt.QItemSelection, deselected: Qt.QItemSelection) -> None:
@@ -202,11 +197,11 @@ class SceningListDialog(Qt.QDialog):
             return
         index = selected.indexes()[0]
         scene = self.scening_list[index.row()]
-        qt_silent_call(self.start_frame_control.setValue,     scene.start)
-        qt_silent_call(self.  end_frame_control.setValue,     scene.end)
-        qt_silent_call(self. start_time_control.setValue, Time(scene.start))
-        qt_silent_call(self.   end_time_control.setValue, Time(scene.end))
-        qt_silent_call(self.     label_lineedit.setText,      scene.label)
+        qt_silent_call(self.start_frame_control.setValue, scene.start)
+        qt_silent_call(self.end_frame_control.setValue, scene.end)
+        qt_silent_call(self.start_time_control.setValue, Time(scene.start))
+        qt_silent_call(self.end_time_control.setValue, Time(scene.end))
+        qt_silent_call(self.label_lineedit.setText, scene.label)
 
 
 class SceningToolbar(AbstractToolbar):
@@ -236,35 +231,35 @@ class SceningToolbar(AbstractToolbar):
         self.scening_list_dialog = SceningListDialog(self.main)
 
         self.supported_file_types = {
+            'Matroska XML Chapters (*.xml)': self.import_matroska_xml_chapters,
             'Aegisub Project (*.ass)': self.import_ass,
             'CUE Sheet (*.cue)': self.import_cue,
             'DGIndex Project (*.dgi)': self.import_dgi,
             'L-SMASH Works Index (*.lwi)': self.import_lwi,
             'Matroska Timestamps v1 (*.txt)': self.import_matroska_timestamps_v1,
             'Matroska Timestamps v2 (*.txt)': self.import_matroska_timestamps_v2,
-            'Matroska XML Chapters (*.xml)': self.import_matroska_xml_chapters,
             'OGM Chapters (*.txt)': self.import_ogm_chapters,
             'TFM Log (*.txt)': self.import_tfm,
             'x264/x265 QP File (*.qp)': self.import_qp,
             'XviD Log (*.txt)': self.import_xvid,
         }
 
-        self.add_list_button               .clicked.connect(self.on_add_list_clicked)
-        self.add_single_frame_button       .clicked.connect(self.on_add_single_frame_clicked)
-        self.add_to_list_button            .clicked.connect(self.on_add_to_list_clicked)
-        self.export_multiline_button       .clicked.connect(self.export_multiline)
-        self.export_single_line_button     .clicked.connect(self.export_single_line)
-        self.export_template_lineedit  .textChanged.connect(self.check_remove_export_possibility)
-        self.import_file_button            .clicked.connect(self.on_import_file_clicked)
-        self.items_combobox           .valueChanged.connect(self.on_current_list_changed)
+        self.add_list_button.clicked.connect(self.on_add_list_clicked)  # type: ignore
+        self.add_single_frame_button.clicked.connect(self.on_add_single_frame_clicked)  # type: ignore
+        self.add_to_list_button.clicked.connect(self.on_add_to_list_clicked)  # type: ignore
+        self.export_multiline_button.clicked.connect(self.export_multiline)  # type: ignore
+        self.export_single_line_button.clicked.connect(self.export_single_line)  # type: ignore
+        self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)  # type: ignore
+        self.import_file_button.clicked.connect(self.on_import_file_clicked)  # type: ignore
+        self.items_combobox.valueChanged.connect(self.on_current_list_changed)
         self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
-        self.remove_last_from_list_button  .clicked.connect(self.on_remove_last_from_list_clicked)
-        self.remove_list_button            .clicked.connect(self.on_remove_list_clicked)
-        self.seek_to_next_button           .clicked.connect(self.on_seek_to_next_clicked)
-        self.seek_to_prev_button           .clicked.connect(self.on_seek_to_prev_clicked)
-        self.toggle_first_frame_button     .clicked.connect(self.on_first_frame_clicked)
-        self.toggle_second_frame_button    .clicked.connect(self.on_second_frame_clicked)
-        self.view_list_button              .clicked.connect(self.on_view_list_clicked)
+        self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)  # type: ignore
+        self.remove_list_button.clicked.connect(self.on_remove_list_clicked)  # type: ignore
+        self.seek_to_next_button.clicked.connect(self.on_seek_to_next_clicked)  # type: ignore
+        self.seek_to_prev_button.clicked.connect(self.on_seek_to_prev_clicked)  # type: ignore
+        self.toggle_first_frame_button.clicked.connect(self.on_first_frame_clicked)  # type: ignore
+        self.toggle_second_frame_button.clicked.connect(self.on_second_frame_clicked)  # type: ignore
+        self.view_list_button.clicked.connect(self.on_view_list_clicked)  # type: ignore
 
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_1, lambda: self.switch_list(0))
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_2, lambda: self.switch_list(1))
@@ -277,12 +272,12 @@ class SceningToolbar(AbstractToolbar):
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_9, lambda: self.switch_list(8))
 
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Space, self.on_toggle_single_frame)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Left,  self.seek_to_next_button         .click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Right, self.seek_to_prev_button         .click)
-        add_shortcut(Qt.Qt.Key_Q,     self.toggle_first_frame_button   .click)
-        add_shortcut(Qt.Qt.Key_W,     self.toggle_second_frame_button  .click)
-        add_shortcut(Qt.Qt.Key_E,     self.add_to_list_button          .click)
-        add_shortcut(Qt.Qt.Key_R,     self.remove_last_from_list_button.click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Left, self.seek_to_next_button.click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Right, self.seek_to_prev_button.click)
+        add_shortcut(Qt.Qt.Key_Q, self.toggle_first_frame_button.click)
+        add_shortcut(Qt.Qt.Key_W, self.toggle_second_frame_button.click)
+        add_shortcut(Qt.Qt.Key_E, self.add_to_list_button.click)
+        add_shortcut(Qt.Qt.Key_R, self.remove_last_from_list_button.click)
 
         # FIXME: get rid of workaround
         self._on_list_items_changed = lambda * arg: self.on_list_items_changed(
@@ -394,7 +389,6 @@ class SceningToolbar(AbstractToolbar):
         layout_line_2.addWidget(separator_line_2)
 
         self.export_template_lineedit = Qt.QLineEdit(self)
-        # self.export_template_scene_lineedit.setSizePolicy(Qt.QSizePolicy(Qt.QSizePolicy.Policy.Expanding, Qt.QSizePolicy.Policy.Fixed))
         self.export_template_lineedit.setToolTip(
             r'Use {start} and {end} as placeholders.'
             r'Both are valid for single frame scenes. '
@@ -487,8 +481,8 @@ class SceningToolbar(AbstractToolbar):
         if new_value is not None:
             self.remove_list_button.setEnabled(True)
             self.  view_list_button.setEnabled(True)
-            new_value.rowsInserted.connect(self._on_list_items_changed)  # type: ignore
-            new_value.rowsRemoved .connect(self._on_list_items_changed)  # type: ignore
+            new_value.rowsInserted.connect(self._on_list_items_changed)
+            new_value.rowsRemoved .connect(self._on_list_items_changed)
             self.scening_list_dialog.on_current_list_changed(new_value)
         else:
             self.remove_list_button.setEnabled(False)
@@ -496,8 +490,8 @@ class SceningToolbar(AbstractToolbar):
 
         if old_value is not None:
             try:
-                old_value.rowsInserted.disconnect(self._on_list_items_changed)  # type: ignore
-                old_value.rowsRemoved .disconnect(self._on_list_items_changed)  # type: ignore
+                old_value.rowsInserted.disconnect(self._on_list_items_changed)
+                old_value.rowsRemoved .disconnect(self._on_list_items_changed)
             except (IndexError, TypeError):
                 pass
 
@@ -549,7 +543,7 @@ class SceningToolbar(AbstractToolbar):
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: Optional[bool] = None) -> None:
-        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())  # type: ignore
+        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())
 
         if self.toggle_first_frame_button.isChecked():
             self.toggle_first_frame_button.click()
@@ -576,8 +570,7 @@ class SceningToolbar(AbstractToolbar):
             return
 
         for scene in self.current_list:
-            if (scene.start == self.main.current_frame
-                    or scene.end == self.main.current_frame):
+            if (scene.start == self.main.current_frame or scene.end == self.main.current_frame):
                 self.current_list.remove(scene)
 
         self.remove_at_current_frame_button.clearFocus()
@@ -989,9 +982,7 @@ class SceningToolbar(AbstractToolbar):
     def check_add_to_list_possibility(self) -> None:
         self.add_to_list_button.setEnabled(False)
 
-        if not (self.current_list_index != -1
-                and (self   .first_frame is not None
-                     or self.second_frame is not None)):
+        if not (self.current_list_index != -1 and (self.first_frame is not None or self.second_frame is not None)):
             return
 
         self.add_to_list_button.setEnabled(True)

@@ -5,13 +5,12 @@ import logging
 from string import Template
 from typing import (
     Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING,
-    TypeVar, Union,
+    TypeVar, Union, Dict
 )
 
 from PyQt5 import Qt
 
-from vspreview.core import Time, TimeInterval, TimeType
-from vspreview.utils import debug
+from vspreview.core import TimeType
 
 
 T = TypeVar('T')
@@ -32,7 +31,7 @@ def from_qtime(qtime: Qt.QTime, t: Type[TimeType]) -> TimeType:
 # it is a BuiltinMethodType at the same time
 def qt_silent_call(qt_method: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     # https://github.com/python/typing/issues/213
-    qobject = qt_method.__self__  # type: ignore
+    qobject = qt_method.__self__
     block = Qt.QSignalBlocker(qobject)
     ret = qt_method(*args, **kwargs)
     del(block)
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
 
 @lru_cache()
 def main_window() -> AbstractMainWindow:
-    from vspreview.core import AbstractMainWindow  # pylint: disable=redefined-outer-name
+    from vspreview.core import AbstractMainWindow
 
     app = Qt.QApplication.instance()
     if app is not None:
@@ -84,7 +83,7 @@ def main_window() -> AbstractMainWindow:
 def add_shortcut(key: int, handler: Callable[[], None], widget: Optional[Qt.QWidget] = None) -> None:
     if widget is None:
         widget = main_window()
-    Qt.QShortcut(Qt.QKeySequence(key), widget).activated.connect(handler)  # type: ignore
+    Qt.QShortcut(Qt.QKeySequence(key), widget).activated.connect(handler)
 
 
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
@@ -107,15 +106,11 @@ def set_status_label(label: str) -> Callable[..., T]:
             main = main_window()
 
             if main.statusbar.label.text() == 'Ready':
-                # Qt.QMetaObject.invokeMethod(main.statusbar.label, 'setText', Qt.Qt.QueuedConnection,
-                #                             Qt.Q_ARG(str, label))
                 main.statusbar.label.setText(label)
 
             ret = func(*args, **kwargs)
 
             if main.statusbar.label.text() == label:
-                # Qt.QMetaObject.invokeMethod(main.statusbar.label, 'setText', Qt.Qt.QueuedConnection,
-                #                             Qt.Q_ARG(str, 'Ready'))
                 main.statusbar.label.setText('Ready')
 
             return ret
@@ -134,7 +129,7 @@ def method_dispatch(func: Callable[..., T]) -> Callable[..., T]:
     def wrapper(*args: Any, **kwargs: Any) -> T:
         return dispatcher.dispatch(args[1].__class__)(*args, **kwargs)
 
-    wrapper.register = dispatcher.register  # type: ignore
+    wrapper.register = dispatcher.register
     update_wrapper(wrapper, dispatcher)
     return wrapper
 
@@ -174,17 +169,15 @@ def vs_clear_cache() -> None:
     cache_size = vs.core.max_cache_size
     vs.core.max_cache_size = 1
     output = list(vs.get_outputs().values())[0]
-    if isinstance(output, vs.AlphaOutputTuple):
-        output = output.clip
-    output.get_frame(0)
+    if isinstance(output, vs.VideoOutputTuple):
+        output.clip.get_frame(0)
     vs.core.max_cache_size = cache_size
 
 
 def try_load(
         state: Mapping[str, Any],
         name: str, ty: Type[T],
-        receiver: Union[T, Callable[[T],
-                                    Any]],
+        receiver: Union[T, Callable[[T], Any], Callable[[str, T], Any]],
         error_msg: str) -> None:
     try:
         value = state[name]
@@ -196,7 +189,10 @@ def try_load(
         if isinstance(receiver, ty):
             receiver = value
         elif callable(receiver):
-            receiver(value)
+            try:
+                receiver(name, value)
+            except Exception:
+                receiver(value)
         elif hasattr(receiver, name) and isinstance(getattr(receiver, name), ty):
             try:
                 receiver.__setattr__(name, value)

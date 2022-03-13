@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, Iterator, Sequence
-
 from PyQt5 import Qt
-
-from vspreview.utils import debug
+from typing import Any, Iterator, Sequence
 
 
 class ZoomLevels(Qt.QAbstractListModel):
@@ -40,6 +36,4 @@ class ZoomLevels(Qt.QAbstractListModel):
         return None
 
     def rowCount(self, parent: Qt.QModelIndex = Qt.QModelIndex()) -> int:
-        if self.levels is not None:
-            return len(self.levels)
-        return 0
+        return len(self.levels)

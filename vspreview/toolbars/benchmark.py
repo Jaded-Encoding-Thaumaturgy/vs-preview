@@ -3,9 +3,8 @@ from __future__ import annotations
 from vspreview.utils import strfdelta
 from collections import deque
 from concurrent.futures import Future
-import logging
 from time import perf_counter
-from typing import Any, Deque, Mapping, Optional, Union
+from typing import Any, Deque, Mapping, Optional
 
 from PyQt5 import Qt
 
@@ -14,7 +13,7 @@ from vspreview.core import (
     TimeInterval, QYAMLObjectSingleton,
 )
 from vspreview.utils import (
-    debug, get_usable_cpus_count, qt_silent_call, set_qobject_names,
+    get_usable_cpus_count, qt_silent_call, set_qobject_names,
     vs_clear_cache, try_load,
 )
 from vspreview.widgets import FrameEdit, TimeEdit
@@ -149,16 +148,20 @@ class BenchmarkToolbar(AbstractToolbar):
         self.update_info_timer = Qt.QTimer()
         self.update_info_timer.setTimerType(Qt.Qt.PreciseTimer)
 
-        self. start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))
-        self.  start_time_control.valueChanged.connect(lambda value: self.update_controls(start=Frame(value)))
-        self.   end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))
-        self.    end_time_control.valueChanged.connect(lambda value: self.update_controls(end=Frame(value)))
-        self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
-        self.  total_time_control.valueChanged.connect(lambda value: self.update_controls(total=FrameInterval(value)))
-        self.   prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
-        self.    run_abort_button.     clicked.connect(self.on_run_abort_pressed)
-        self.     sequenced_timer.     timeout.connect(self._request_next_frame_sequenced)
-        self.   update_info_timer.     timeout.connect(self.update_info)
+        self.start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))  # type: ignore
+        self.start_time_control.valueChanged.connect(
+            lambda value: self.update_controls(start=Frame(value))
+        )
+        self.end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))  # type: ignore
+        self.end_time_control.valueChanged.connect(lambda value: self.update_controls(end=Frame(value)))
+        self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))  # type: ignore
+        self.total_time_control.valueChanged.connect(
+            lambda value: self.update_controls(total=FrameInterval(value))
+        )
+        self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)  # type: ignore
+        self.run_abort_button.clicked.connect(self.on_run_abort_pressed)  # type: ignore
+        self.sequenced_timer.timeout.connect(self._request_next_frame_sequenced)  # type: ignore
+        self.update_info_timer.timeout.connect(self.update_info)  # type: ignore
 
         set_qobject_names(self)
 
@@ -231,21 +234,20 @@ class BenchmarkToolbar(AbstractToolbar):
         layout.addStretch()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        self. start_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.  start_time_control.setMaximum(self.main.current_output.end_time)
-        self.   end_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.    end_time_control.setMaximum(self.main.current_output.end_time)
+        self.start_frame_control.setMaximum(self.main.current_output.end_frame)
+        self.start_time_control.setMaximum(self.main.current_output.end_time)
+        self.end_frame_control.setMaximum(self.main.current_output.end_frame)
+        self.end_time_control.setMaximum(self.main.current_output.end_time)
         self.total_frames_control.setMaximum(self.main.current_output.total_frames)
-        self.  total_time_control.setMaximum(self.main.current_output.total_time)
-        self.  total_time_control.setMaximum(TimeInterval(FrameInterval(1)))
+        self.total_time_control.setMaximum(self.main.current_output.total_time)
+        self.total_time_control.setMaximum(TimeInterval(FrameInterval(1)))
 
     def run(self) -> None:
         from copy import deepcopy
 
-        from vapoursynth import VideoFrame
-
         if self.settings.clear_cache_enabled:
             vs_clear_cache()
+
         if self.settings.frame_data_sharing_fix_enabled:
             self.main.current_output.graphics_scene_item.setImage(
                 self.main.current_output.graphics_scene_item.image().copy()
@@ -273,8 +275,8 @@ class BenchmarkToolbar(AbstractToolbar):
                 self._request_next_frame_unsequenced()
             else:
                 frame = self.start_frame + FrameInterval(offset)
-                future = self.main.current_output.vs_output.get_frame_async(int(frame))
-                self.buffer.appendleft(future)
+                future = self.main.current_output.prepared.clip.get_frame_async(int(frame))
+                self.buffer.appendleft(future)  # type: ignore
 
         self.update_info_timer.setInterval(
             round(float(self.settings.refresh_interval) * 1000)
@@ -300,10 +302,10 @@ class BenchmarkToolbar(AbstractToolbar):
 
         next_frame = self.end_frame + FrameInterval(1) - self.frames_left
         if next_frame <= self.end_frame:
-            new_future = self.main.current_output.vs_output.get_frame_async(
+            new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
-            self.buffer.appendleft(new_future)
+            self.buffer.appendleft(new_future)  # type: ignore
 
         self.frames_left -= FrameInterval(1)
 
@@ -314,7 +316,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         if self.running:
             next_frame = self.end_frame + FrameInterval(1) - self.frames_left
-            new_future = self.main.current_output.vs_output.get_frame_async(
+            new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
             new_future.add_done_callback(self._request_next_frame_unsequenced)
@@ -349,7 +351,8 @@ class BenchmarkToolbar(AbstractToolbar):
         self. unsequenced_checkbox.setEnabled(new_state)
 
     def update_controls(
-            self, start: Optional[Frame] = None, end: Optional[Frame] = None, total: Optional[FrameInterval] = None) -> None:
+        self, start: Optional[Frame] = None, end: Optional[Frame] = None, total: Optional[FrameInterval] = None
+    ) -> None:
         if start is not None:
             end = self.   end_frame_control.value()
             total = self.total_frames_control.value()

@@ -4,23 +4,25 @@ from   bisect   import bisect_left, bisect_right
 import logging
 from   typing   import (
     Any, Callable, cast, Dict, Iterator, List, Mapping, Optional, Set, Tuple,
-    Union,
+    Union
 )
 
 from PyQt5 import Qt
 
 from vspreview.core import (
     Frame, FrameInterval, QYAMLObject,
-    Scene, Time, TimeInterval,
+    Scene, Time, TimeInterval
 )
-from vspreview.utils import debug, main_window
+from vspreview.utils import (
+    debug, main_window
+)
 
 
 class SceningList(Qt.QAbstractTableModel, QYAMLObject):
     yaml_tag = '!SceningList'
 
     __slots__ = (
-        'name', 'items',
+        'name', 'items', 'max_value'
     )
 
     START_FRAME_COLUMN = 0
@@ -30,9 +32,10 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
     LABEL_COLUMN       = 4
     COLUMN_COUNT       = 5
 
-    def __init__(self, name: str = '', items: Optional[List[Scene]] = None) -> None:
+    def __init__(self, name: str = '', max_value: Optional[Frame] = None, items: Optional[List[Scene]] = None) -> None:
         super().__init__()
         self.name      = name
+        self.max_value = max_value if max_value is not None else Frame(2**31)
         self.items     =     items if     items is not None else []
 
         self.main = main_window()
@@ -121,48 +124,32 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
         if column == self.START_FRAME_COLUMN:
             if not isinstance(value, Frame):
                 raise TypeError
-            if scene.start != scene.end:
-                if value > scene.end:
-                    return False
-                scene.start = value
-            else:
-                scene.start = value
-                scene.end   = value
+            if value > scene.end:
+                return False
+            scene.start = value
             proper_update = True
         elif column == self.END_FRAME_COLUMN:
             if not isinstance(value, Frame):
                 raise TypeError
-            if scene.start != scene.end:
-                if value < scene.start:
-                    return False
-                scene.end = value
-            else:
-                scene.start = value
-                scene.end   = value
+            if value < scene.start:
+                return False
+            scene.end = value
             proper_update = True
-        elif column == self.START_TIME_COLUMN:
+        if column == self.START_TIME_COLUMN:
             if not isinstance(value, Time):
                 raise TypeError
             frame = Frame(value)
-            if scene.start != scene.end:
-                if frame > scene.end:
-                    return False
-                scene.start = frame
-            else:
-                scene.start = frame
-                scene.end   = frame
+            if frame > scene.end:
+                return False
+            scene.start = frame
             proper_update = True
-        elif column == self.END_TIME_COLUMN:
+        if column == self.END_TIME_COLUMN:
             if not isinstance(value, Time):
                 raise TypeError
             frame = Frame(value)
-            if scene.start != scene.end:
-                if frame < scene.start:
-                    return False
-                scene.end = frame
-            else:
-                scene.start = frame
-                scene.end   = frame
+            if frame < scene.start:
+                return False
+            scene.end = frame
             proper_update = True
         elif column == self.LABEL_COLUMN:
             if not isinstance(value, str):
@@ -172,11 +159,10 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
 
         if proper_update is True:
             i = bisect_right(self.items, scene)
-            if i > row:
+            if i >= row:
                 i -= 1
             if i != row:
-                self.beginMoveRows(self.createIndex(row, 0), row, row,
-                                   self.createIndex(i, 0), i)
+                self.beginMoveRows(self.createIndex(row, 0), row, row, self.createIndex(i, 0), i)
                 del self.items[row]
                 self.items.insert(i, scene)
                 self.endMoveRows()
@@ -201,7 +187,8 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
         self.items[i] = value
         self.dataChanged.emit(
             self.createIndex(i, 0),
-            self.createIndex(i, self.COLUMN_COUNT - 1))
+            self.createIndex(i, self.COLUMN_COUNT - 1)
+        )
 
     def __contains__(self, item: Union[Scene, Frame]) -> bool:
         if isinstance(item, Scene):
@@ -222,7 +209,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
         if scene in self.items:
             return scene
 
-        if scene.end > self.main.current_output.end_frame:
+        if scene.end > self.max_value:
             raise ValueError('New Scene is out of bounds of output')
 
         index = bisect_right(self.items, scene)
@@ -245,7 +232,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
 
     def get_next_frame(self, initial: Frame) -> Optional[Frame]:
         result       = None
-        result_delta = FrameInterval(int(self.main.current_output.end_frame))
+        result_delta = FrameInterval(int(self.max_value))
         for scene in self.items:
             if FrameInterval(0) < scene.start - initial < result_delta:
                 result = scene.start
@@ -258,14 +245,14 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
 
     def get_prev_frame(self, initial: Frame) -> Optional[Frame]:
         result       = None
-        result_delta = FrameInterval(int(self.main.current_output.end_frame))
+        result_delta = FrameInterval(int(self.max_value))
         for scene in self.items:
             if FrameInterval(0) < initial - scene.start < result_delta:
                 result = scene.start
-                result_delta = initial - scene.start
+                result_delta = scene.start - initial
             if FrameInterval(0) < initial - scene.end < result_delta:
                 result = scene.end
-                result_delta = initial - scene.end
+                result_delta = scene.end - initial
 
         return result
 
@@ -275,25 +262,24 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try:
+            max_value = state['max_value']
+            if not isinstance(max_value, Frame):
+                raise TypeError('\'max_value\' of a SceningList is not a Frame. It\'s most probably corrupted.')
+
             name = state['name']
             if not isinstance(name, str):
-                raise TypeError(
-                    '\'name\' of a SceningList is not a string. It\'s most probably corrupted.')
+                raise TypeError('\'name\' of a SceningList is not a Frame. It\'s most probably corrupted.')
 
             items = state['items']
             if not isinstance(items, list):
-                raise TypeError(
-                    '\'items\' of a SceningList is not a List. It\'s most probably corrupted.')
+                raise TypeError('\'items\' of a SceningList is not a List. It\'s most probably corrupted.')
             for item in items:
                 if not isinstance(item, Scene):
-                    raise TypeError(
-                        'One of the items of SceningList is not a Scene. It\'s most probably corrupted.')
+                    raise TypeError('One of the items of SceningList is not a Scene. It\'s most probably corrupted.')
         except KeyError:
-            raise KeyError(
-                'SceningList lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'
-                .format(', '.join(self.__slots__)))
+            raise KeyError('SceningList lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(', '.join(self.__slots__)))
 
-        self.__init__(name, items)  # type: ignore
+        self.__init__(name, max_value, items)  # type: ignore
 
 
 class SceningLists(Qt.QAbstractListModel, QYAMLObject):
@@ -342,8 +328,7 @@ class SceningLists(Qt.QAbstractListModel, QYAMLObject):
         if not index.isValid():
             return cast(Qt.Qt.ItemFlags, Qt.Qt.ItemIsEnabled)
 
-        return cast(Qt.Qt.ItemFlags,
-                    super().flags(index) | Qt.Qt.ItemIsEditable)
+        return cast(Qt.Qt.ItemFlags, super().flags(index) | Qt.Qt.ItemIsEditable)
 
     def setData(self, index: Qt.QModelIndex, value: Any, role: int = Qt.Qt.EditRole) -> bool:
         if not index.isValid():
@@ -370,25 +355,19 @@ class SceningLists(Qt.QAbstractListModel, QYAMLObject):
 
         return True
 
-    def add(self, name: Optional[str] = None, i: Optional[int] = None) -> Tuple[SceningList, int]:
+    def add(self, name: Optional[str] = None, max_value: Optional[Frame] = None, i: Optional[int] = None) -> Tuple[SceningList, int]:
+        if max_value is None:
+            max_value = self.main.current_output.end_frame
         if i is None:
             i = len(self.items)
 
         self.beginInsertRows(Qt.QModelIndex(), i, i)
         if name is None:
-            self.items.insert(i, SceningList('List {}'
-                                             .format(len(self.items) + 1)))
+            self.items.insert(i, SceningList('List {}'.format(len(self.items) + 1), max_value))
         else:
-            self.items.insert(i, SceningList(name))
+            self.items.insert(i, SceningList(name, max_value))
         self.endInsertRows()
         return self.items[i], i
-
-    def add_list(self, scening_list: SceningList) -> int:
-        i = len(self.items)
-        self.beginInsertRows(Qt.QModelIndex(), i, i)
-        self.items.insert(i, scening_list)
-        self.endInsertRows()
-        return i
 
     def remove(self, item: Union[int, SceningList]) -> None:
         i = item
@@ -412,15 +391,11 @@ class SceningLists(Qt.QAbstractListModel, QYAMLObject):
         try:
             items = state['items']
             if not isinstance(items, list):
-                raise TypeError(
-                    '\'items\' of a SceningLists is not a List. It\'s most probably corrupted.')
+                raise TypeError('\'items\' of a SceningLists is not a List. It\'s most probably corrupted.')
             for item in items:
                 if not isinstance(item, SceningList):
-                    raise TypeError(
-                        'One of the items of a SceningLists is not a SceningList. It\'s most probably corrupted.')
+                    raise TypeError('One of the items of a SceningLists is not a SceningList. It\'s most probably corrupted.')
         except KeyError:
-            raise KeyError(
-                'SceningLists lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'
-                .format(', '.join(self.__slots__)))
+            raise KeyError('SceningLists lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(', '.join(self.__slots__)))
 
         self.__init__(items)  # type: ignore

@@ -43,3 +43,4 @@ class ZoomLevels(Qt.QAbstractListModel):
     def rowCount(self, parent: Qt.QModelIndex = Qt.QModelIndex()) -> int:
         if self.levels is not None:
             return len(self.levels)
+        return 0

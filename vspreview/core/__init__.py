@@ -1,5 +1,6 @@
 from .abstracts import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars,
+    AbstractAppSettings,
 )
 from .bases import (
     AbstractYAMLObject, AbstractYAMLObjectSingleton,
@@ -10,5 +11,5 @@ from .bases import (
 from .types import (
     Frame, FrameInterval, FrameType,
     Time, TimeInterval, TimeType,
-    Scene, Output,
+    Scene, Output
 )

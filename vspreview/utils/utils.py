@@ -88,15 +88,15 @@ def add_shortcut(key: int, handler: Callable[[], None], widget: Optional[Qt.QWid
 
 
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
-    from asyncio import get_event_loop
+    from asyncio import get_running_loop, get_event_loop_policy
 
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
-        loop = get_event_loop()
-        if callable(f):
-            return loop.run_in_executor(None, partial(f, *args, **kwargs))
-        else:
-            raise TypeError('fire_and_forget(): Task must be a callable')
+        try:
+            loop = get_running_loop()
+        except RuntimeError:
+            loop = get_event_loop_policy().get_event_loop()
+        return loop.run_in_executor(None, partial(f, *args, **kwargs))
     return wrapped
 
 

@@ -126,35 +126,36 @@ class SettingsDialog(AbstractAppSettings):
 
 class MainToolbar(AbstractToolbar):
     __slots__ = (
-        'outputs', 'zoom_levels',
-        'outputs_combobox', 'frame_control', 'time_control',
-        'zoom_combobox', 'switch_timeline_mode_button',
+        'outputs', 'save_file_types', 'zoom_levels',
+        'outputs_combobox', 'frame_control', 'copy_frame_button',
+        'time_control', 'copy_timestamp_button', 'zoom_combobox',
+        'switch_timeline_mode_button',
     )
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
         from vspreview.models import ZoomLevels
 
-        super().__init__(main_window, 'Main')
+        super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
         self.outputs = Outputs()
-        self.outputs_combobox.setModel(self.outputs)
 
+        self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
             0.25, 0.5, 0.68, 0.75, 0.85, 1.0, 1.5, 2.0,
             4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 32.0
         ])
         self.zoom_combobox.setModel(self.zoom_levels)
-        self.zoom_combobox.setCurrentIndex(1)
+        self.zoom_combobox.setCurrentIndex(3)
 
         self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
         self.frame_control          .valueChanged.connect(self.main.switch_frame)
-        self.time_control           .valueChanged.connect(self.main.switch_frame)
-        self.frame_control       .editingFinished.connect(self.frame_control.clearFocus)  # type: ignore
-        self.time_control        .editingFinished.connect(self.time_control.clearFocus)  # type: ignore
-        self.sync_outputs_checkbox  .stateChanged.connect(self.on_sync_outputs_changed)
+        self.time_control           .valueChanged.connect(lambda t: self.main.switch_frame(time=t))
+        self.copy_frame_button           .clicked.connect(self.on_copy_frame_button_clicked)
+        self.copy_timestamp_button       .clicked.connect(self.on_copy_timestamp_button_clicked)
         self.zoom_combobox    .currentTextChanged.connect(self.on_zoom_changed)
         self.switch_timeline_mode_button .clicked.connect(self.on_switch_timeline_mode_clicked)
+        self.settings_button             .clicked.connect(self.main.app_settings.show)
 
         add_shortcut(Qt.Qt.Key_1, lambda: self.main.switch_output(0))
         add_shortcut(Qt.Qt.Key_2, lambda: self.main.switch_output(1))
@@ -181,16 +182,17 @@ class MainToolbar(AbstractToolbar):
         self.outputs_combobox.setEditable(True)
         self.outputs_combobox.setInsertPolicy(Qt.QComboBox.InsertAtCurrent)
         self.outputs_combobox.setDuplicatesEnabled(True)
-        self.outputs_combobox.setSizeAdjustPolicy(
-            Qt.QComboBox.AdjustToContents)
+        self.outputs_combobox.setSizeAdjustPolicy(Qt.QComboBox.AdjustToContents)
         layout.addWidget(self.outputs_combobox)
 
         self.frame_control = FrameEdit[Frame](self)
-        self.frame_control.setKeyboardTracking(False)
         layout.addWidget(self.frame_control)
 
+        self.copy_frame_button = Qt.QPushButton(self)
+        self.copy_frame_button.setText('⎘')
+        layout.addWidget(self.copy_frame_button)
+
         self.time_control = TimeEdit[Time](self)
-        self.time_control.setKeyboardTracking(False)
         layout.addWidget(self.time_control)
 
         self.sync_outputs_checkbox = Qt.QCheckBox(self)
@@ -198,13 +200,22 @@ class MainToolbar(AbstractToolbar):
         self.sync_outputs_checkbox.setChecked(self.main.SYNC_OUTPUTS)
         layout.addWidget(self.sync_outputs_checkbox)
 
+
+        self.copy_timestamp_button = Qt.QPushButton(self)
+        self.copy_timestamp_button.setText('⎘')
+        layout.addWidget(self.copy_timestamp_button)
+
         self.zoom_combobox = ComboBox[float](self)
         self.zoom_combobox.setMinimumContentsLength(4)
         layout.addWidget(self.zoom_combobox)
 
         self.switch_timeline_mode_button = Qt.QPushButton(self)
-        self.switch_timeline_mode_button.setText('Timeline: Time')
+        self.switch_timeline_mode_button.setText('Switch Timeline Mode')
         layout.addWidget(self.switch_timeline_mode_button)
+
+        self.settings_button = Qt.QPushButton(self)
+        self.settings_button.setText('Settings')
+        layout.addWidget(self.settings_button)
 
         layout.addStretch()
 
@@ -220,16 +231,28 @@ class MainToolbar(AbstractToolbar):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
-        qt_silent_call(self.frame_control.setMaximum,
-                       self.main.current_output.end_frame)
-        qt_silent_call(self. time_control.setMaximum,
-                       self.main.current_output.end_time)
+        qt_silent_call(self.   frame_control.setMaximum, self.main.current_output.end_frame)
+        qt_silent_call(self.    time_control.setMaximum, self.main.current_output.end_time)
 
 
     def rescan_outputs(self) -> None:
         self.outputs = Outputs()
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
+
+    def on_copy_frame_button_clicked(self, checked: Optional[bool] = None) -> None:
+        self.main.clipboard.setText(str(self.main.current_frame))
+        self.main.show_message('Current frame number copied to clipboard')
+
+    def on_copy_timestamp_button_clicked(self, checked: Optional[bool] = None) -> None:
+        self.main.clipboard.setText(self.time_control.text())
+        self.main.show_message('Current timestamp copied to clipboard')
+
+    def on_switch_timeline_mode_clicked(self, checked: Optional[bool] = None) -> None:
+        if self.main.timeline.mode == self.main.timeline.Mode.TIME:
+            self.main.timeline.mode = self.main.timeline.Mode.FRAME
+        elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
+            self.main.timeline.mode = self.main.timeline.Mode.TIME
 
     def on_sync_outputs_changed(self, state: Qt.Qt.CheckState) -> None:
         if state == Qt.Qt.Checked:
@@ -238,14 +261,6 @@ class MainToolbar(AbstractToolbar):
         if state == Qt.Qt.Unchecked:
             for output in self.main.outputs:
                 output.frame_to_show = None
-
-    def on_switch_timeline_mode_clicked(self, checked: Optional[bool] = None) -> None:
-        if self.main.timeline.mode == self.main.timeline.Mode.TIME:
-            self.main.timeline.mode = self.main.timeline.Mode.FRAME
-            self.switch_timeline_mode_button.setText('Timeline: Frame')
-        elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
-            self.main.timeline.mode = self.main.timeline.Mode.TIME
-            self.switch_timeline_mode_button.setText('Timeline: Time')
 
     def on_zoom_changed(self, text: Optional[str] = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())
@@ -259,36 +274,24 @@ class MainToolbar(AbstractToolbar):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try:
-            self.outputs = state['outputs']
+            outputs = state['outputs']
+            if not isinstance(outputs, Outputs):
+                raise TypeError
+            self.outputs = outputs
             self.main.init_outputs()
             self.outputs_combobox.setModel(self.outputs)
-        except KeyError:
-            logging.warning(
-                'Storage loading: Main toolbar: failed to parse outputs.')
-
-        try:
-            self.main.switch_output(state['current_output_index'])
-            if self.outputs_combobox.currentIndex() == -1:
-                raise ValueError
         except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: Main toolbar: failed to parse output index.')
-            self.main.switch_output(self.main.OUTPUT_INDEX)
-        except ValueError:
-            logging.warning(
-                'Storage loading: Main toolbar: stored output index is not valid.')
-            self.main.switch_output(self.main.OUTPUT_INDEX)
+            logging.warning('Storage loading: Main toolbar: failed to parse outputs.')
 
-        try:
-            sync_outputs = state['sync_outputs']
-            if not isinstance(sync_outputs, bool):
-                raise TypeError
-        except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: Main toolbar: failed to parse sync outputs.')
-            sync_outputs = self.main.SYNC_OUTPUTS
+        try_load(
+            state, 'current_output_index', int, self.main.switch_output,
+            'Storage loading: Main toolbar: failed to parse output index.'
+        )
 
-        self.sync_outputs_checkbox.setChecked(sync_outputs)
+        try_load(
+            state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked,
+            'Storage loading: Main toolbar: failed to parse sync outputs.'
+        )
 
 
 class Toolbars(AbstractToolbars):

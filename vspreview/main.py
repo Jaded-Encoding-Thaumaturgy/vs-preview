@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import logging
 import os
 from   pathlib  import Path
@@ -511,9 +512,12 @@ class MainWindow(AbstractMainWindow):
 
         # Rewrite args so external args will be forwarded correctly
         if external_args:
-            self.external_args = external_args
-        argv_orig = sys.argv
-        sys.argv = [script_path.name]
+            self.external_args = shlex.split(external_args)
+        try:
+            argv_orig = sys.argv
+            sys.argv = [script_path.name] + self.external_args
+        except AttributeError:
+            pass
 
         try:
             # pylint: disable=exec-used

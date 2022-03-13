@@ -652,7 +652,7 @@ class Output(YAMLObject):
         'format', 'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'has_alpha', 'vs_alpha',
         'format_alpha', 'props', 'source_vs_output', 'source_vs_alpha',
-        'main', 'checkerboard', "__weakref__",
+        'main', 'checkerboard', "__weakref__",'qt_output',
         "cur_frame" # hack to keep the reference to the current frame
     )
 
@@ -664,7 +664,7 @@ class Output(YAMLObject):
         self.format    = None
         self.props     = None
 
-    def __init__(self, vs_output: Union[vs.VideoNode, vs.VideoOutputTuple], index: int) -> None:
+    def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
         from vspreview.models  import SceningLists
         from vspreview.utils   import main_window
         from vspreview.widgets import GraphicsImageItem
@@ -673,20 +673,24 @@ class Output(YAMLObject):
 
         # runtime attributes
 
-        if isinstance(vs_output, vs.VideoOutputTuple):
-            self.source_vs_output = vs_output.clip
-            self.source_vs_alpha  = vs_output.alpha
+        self.has_alpha = False
+        self.source_vs_output = vs_output.clip
 
-            self.has_alpha = False
-            if self.source_vs_alpha:
-                self.has_alpha = True
-                self.vs_alpha = self.prepare_vs_output(self.source_vs_alpha, alpha=True)
-                self.format_alpha = self.source_vs_alpha.format
-        else:
-            self.has_alpha = False
-            self.source_vs_output = vs_output
+        if vs_output.alpha is not None:
+            self.has_alpha = True
+            self.source_vs_alpha = vs_output.alpha
+
+            self.vs_alpha        = self.prepare_vs_output(self.source_vs_alpha, alpha=True)
+            self.format_alpha    = self.source_vs_alpha.format
 
         self.index        = index
+        self.qt_output    = Qt.QImage.Format_RGB30
+        if not hasattr(vs.core, 'libp2p'):
+            print(Warning(
+                "LibP2P is missing, it is reccomended to prepare output clips correctly!\n"
+                "You can get it here: https://github.com/DJATOM/LibP2P-Vapoursynth"
+                ))
+                
         self.vs_output    = self.prepare_vs_output(self.source_vs_output)
         self.width        = self.vs_output.width
         self.height       = self.vs_output.height
@@ -726,9 +730,8 @@ class Output(YAMLObject):
 
     def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
         resizer = self.main.VS_OUTPUT_RESIZER
-        akarin = vs.__api_version__.api_major >= 4
         resizer_kwargs = {
-            'format'        : vs.RGB30 if akarin else vs.COMPATBGR32,
+            'format'        : vs.RGB30,
             'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s' : self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
@@ -736,11 +739,8 @@ class Output(YAMLObject):
             'chromaloc_in_s': self.main.VS_OUTPUT_CHROMALOC,
         }
 
-        if not alpha and not akarin:
-            vs_output = vs.core.std.FlipVertical(vs_output)
+        is_subsampled = (vs_output.format.subsampling_w != 0 or vs_output.format.subsampling_h != 0)
 
-        is_subsampled = (vs_output.format.subsampling_w != 0
-                         or vs_output.format.subsampling_h != 0)
         if not is_subsampled:
             resizer = self.Resizer.Point
 
@@ -752,19 +752,14 @@ class Output(YAMLObject):
                 return vs_output
             resizer_kwargs['format'] = vs.GRAY8
 
-        vs_output = resizer(vs_output, **resizer_kwargs,
-                            **self.main.VS_OUTPUT_RESIZER_KWARGS)
-        if alpha: return vs_output
-        elif akarin:
-            try:
-                regfmt = vs.core.query_video_format
-            except AttributeError:
-                regfmt = vs.core.register_format
-            #return vs.core.libp2p.Pack(vs_output)
-            fmt = regfmt(vs.GRAY, vs.INTEGER, 32, 0, 0)
-            # convert vs.RGB30 to non-planar Qt RGB30.
-            return vs.core.akarin.Expr([ vs.core.std.ShufflePlanes(vs_output, i, vs.GRAY) for i in range(3) ], 'x 0x100000 * y 0x400 * + z + 0xc0000000 +', fmt, opt=1)
+        vs_output = resizer(vs_output, **resizer_kwargs, **self.main.VS_OUTPUT_RESIZER_KWARGS)
 
+        if not alpha:
+            if hasattr(vs.core, 'libp2p'):
+                vs_output = vs.core.libp2p.Pack(vs_output)
+            else:
+                vs_output = vs.core.akarin.Expr(vs.core.std.SplitPlanes(vs_output), 'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1)
+                
         return vs_output
 
     def render_frame(self, frame: Frame) -> Qt.QImage:
@@ -787,7 +782,8 @@ class Output(YAMLObject):
         )
         frame_image = Qt.QImage(
             frame_data_pointer.contents, vs_frame.width, vs_frame.height,
-            vs_frame.get_stride(0), Qt.QImage.Format_RGB30 if vs.__api_version__.api_major >= 4 else Qt.QImage.Format_RGB32)
+            vs_frame.get_stride(0), self.qt_output
+        )
 
         if vs_frame_alpha is None:
             return frame_image
@@ -865,16 +861,20 @@ class Output(YAMLObject):
         from vspreview.models import SceningLists
         from vspreview.utils  import try_load
 
+        print(state)
+        print(self)
+
         self.name = ''
         try_load(
-            state, 'name', str, self.name,
+            state, 'name', str, self,
             'Storage loading: Output: failed to parse name.'
         )
+        print(self.name)
 
         self.last_showed_frame = Frame(0)
         try:
             try_load(
-                state, 'last_showed_frame', Frame, self.last_showed_frame,
+                state, 'last_showed_frame', Frame, self,
                 'Storage loading: Output: failed to parse last showed frame.'
             )
         except IndexError:
@@ -882,7 +882,7 @@ class Output(YAMLObject):
 
         self.scening_lists = SceningLists()
         try_load(
-            state, 'scening_lists', SceningLists, self.scening_lists,
+            state, 'scening_lists', SceningLists, self,
             'Storage loading: Output: scening lists weren\'t parsed successfully.'
         )
 

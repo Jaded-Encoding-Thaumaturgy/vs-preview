@@ -266,18 +266,12 @@ class PipetteToolbar(AbstractToolbar):
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
-        def non_subsampled_format(fmt):
-            #if fmt.id == vs.COMPATBGR32.value:
-            #    return vs.RGB24  # type: ignore
-            #elif fmt.id == vs.COMPATYUY2.value:
-            #    return vs.YUV444P8  # type: ignore
-            #else:
-            if True:
-                return vs.core.query_video_format(fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0)
+        def non_subsampled_format(fmt: vs.VideoFormat) -> vs.VideoFormat:
+            return vs.core.query_video_format(fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0)
 
         return vs.core.resize.Bicubic(
             vs_output,
-            format=non_subsampled_format(vs_output.format))
+            format=non_subsampled_format(vs_output.format).id)
 
     @staticmethod
     def clip(value: Number, lower_bound: Number, upper_bound: Number) -> Number:

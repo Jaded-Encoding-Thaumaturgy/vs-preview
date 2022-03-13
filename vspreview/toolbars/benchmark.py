@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from vspreview.utils import strfdelta
 from   collections import deque
 from   concurrent.futures import Future
 import logging
@@ -252,8 +253,8 @@ class BenchmarkToolbar(AbstractToolbar):
         if self.settings.clear_cache_enabled:
             vs_clear_cache()
         if self.settings.frame_data_sharing_fix_enabled:
-            self.main.current_output.graphics_scene_item.setPixmap(
-                self.main.current_output.graphics_scene_item.pixmap().copy()
+            self.main.current_output.graphics_scene_item.setImage(
+                self.main.current_output.graphics_scene_item.image().copy()
             )
 
         self.start_frame  = self.start_frame_control .value()

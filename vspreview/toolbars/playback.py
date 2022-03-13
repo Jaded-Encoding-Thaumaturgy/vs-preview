@@ -175,7 +175,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.main.switch_frame(self.main.current_frame + FrameInterval(1), render_frame=False)
         pixmap = self.main.render_raw_videoframe(frame_future.result())
-        self.main.current_output.graphics_scene_item.setPixmap(pixmap)
+        self.main.current_output.graphics_scene_item.setImage(pixmap)
 
         if not self.main.DEBUG_PLAY_FPS:
             self.update_fps_counter()

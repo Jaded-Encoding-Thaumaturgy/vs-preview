@@ -1,30 +1,72 @@
 from __future__ import annotations
 
 import ctypes
-from datetime import timedelta
 import logging
-from typing import (
-    Any, Mapping, Optional,
-    overload, TypeVar, Union,
-)
-
 from PyQt5 import Qt
-from yaml import YAMLObject
 import vapoursynth as vs
+from yaml import YAMLObject
+from datetime import timedelta
+from dataclasses import dataclass
+from typing import Any, Mapping, Optional, overload, TypeVar, Union, cast
 
 
-# pylint: disable=function-redefined
+core = vs.core
+
 
 # TODO: consider making FrameInterval non-negative
 # TODO: consider storing assosiated Output in Frame and others
 
 
-class Frame(YAMLObject):
+@dataclass
+class VideoOutputNode():
+    clip: vs.VideoNode
+    alpha: vs.VideoNode | None
+
+
+class YAMLObjectWrapper(YAMLObject):
+    value: Any
+
+    def __int__(self) -> int:
+        return int(self.value)
+
+    def __float__(self) -> float:
+        return float(self.value)
+
+    def __index__(self) -> int:
+        return int(self)
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __eq__(self, other: YAMLObjectWrapper) -> bool:  # type: ignore
+        return self.value == other.value  # type: ignore
+
+    def __gt__(self, other: YAMLObjectWrapper) -> bool:
+        return self.value > other.value  # type: ignore
+
+    def __ne__(self, other: YAMLObjectWrapper) -> bool:  # type: ignore
+        return not self.__eq__(other)
+
+    def __le__(self, other: YAMLObjectWrapper) -> bool:
+        return not self.__gt__(other)
+
+    def __ge__(self, other: YAMLObjectWrapper) -> bool:
+        return self.__eq__(other) or self.__gt__(other)
+
+    def __lt__(self, other: YAMLObjectWrapper) -> bool:
+        return not self.__ge__(other)
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {
+            name: getattr(self, name)
+            for name in self.__slots__
+        }
+
+
+class Frame(YAMLObjectWrapper):
     yaml_tag = '!Frame'
 
-    __slots__ = (
-        'value',
-    )
+    __slots__ = ('value',)
 
     def __init__(self, init_value: Union[Frame, int, Time]) -> None:
         from vspreview.utils import main_window
@@ -53,55 +95,24 @@ class Frame(YAMLObject):
     @overload
     def __sub__(self, other: Frame) -> FrameInterval: ...
 
-    def __sub__(self, other):  # type: ignore
+    def __sub__(self, other: Frame | FrameInterval) -> Union[Frame, FrameInterval]:
         if isinstance(other, Frame):
             return FrameInterval(self.value - other.value)
         if isinstance(other, FrameInterval):
             return Frame(self.value - other.value)
         raise TypeError
 
-    def __isub__(self, other: FrameInterval) -> Frame:  # type: ignore
+    @overload
+    def __isub__(self, other: FrameInterval) -> Frame: ...
+    @overload
+    def __isub__(self, other: Frame) -> FrameInterval: ...
+
+    def __isub__(self, other: Frame | FrameInterval) -> Union[Frame, FrameInterval]:  # type: ignore
         self.value -= other.value
         return self
 
-    def __int__(self) -> int:
-        return self.value
-
-    def __float__(self) -> float:
-        return float(self.value)
-
-    def __index__(self) -> int:
-        return int(self)
-
-    def __str__(self) -> str:
-        return str(self.value)
-
     def __repr__(self) -> str:
         return f'Frame({self.value})'
-
-    def __eq__(self, other: Frame) -> bool:  # type: ignore
-        return self.value == other.value
-
-    def __gt__(self, other: Frame) -> bool:
-        return self.value > other.value
-
-    def __ne__(self, other: Frame) -> bool:  # type: ignore
-        return not self.__eq__(other)
-
-    def __le__(self, other: Frame) -> bool:
-        return not self.__gt__(other)
-
-    def __ge__(self, other: Frame) -> bool:
-        return self.__eq__(other) or self.__gt__(other)
-
-    def __lt__(self, other: Frame) -> bool:
-        return not self.__ge__(other)
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            name: getattr(self, name)
-            for name in self.__slots__
-        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from vspreview.utils import try_load
@@ -112,12 +123,10 @@ class Frame(YAMLObject):
         )
 
 
-class FrameInterval(YAMLObject):
+class FrameInterval(YAMLObjectWrapper):
     yaml_tag = '!FrameInterval'
 
-    __slots__ = (
-        'value',
-    )
+    __slots__ = ('value',)
 
     def __init__(self, init_value: Union[FrameInterval, int, TimeInterval]) -> None:
         from vspreview.utils import main_window
@@ -163,44 +172,8 @@ class FrameInterval(YAMLObject):
         self.value = int(self.value // other)
         return self
 
-    def __int__(self) -> int:
-        return self.value
-
-    def __float__(self) -> float:
-        return float(self.value)
-
-    def __index__(self) -> int:
-        return int(self)
-
-    def __str__(self) -> str:
-        return str(self.value)
-
     def __repr__(self) -> str:
         return f'FrameInterval({self.value})'
-
-    def __eq__(self, other: FrameInterval) -> bool:  # type: ignore
-        return self.value == other.value
-
-    def __gt__(self, other: FrameInterval) -> bool:
-        return self.value > other.value
-
-    def __ne__(self, other: FrameInterval) -> bool:  # type: ignore
-        return not self.__eq__(other)
-
-    def __le__(self, other: FrameInterval) -> bool:
-        return not self.__gt__(other)
-
-    def __ge__(self, other: FrameInterval) -> bool:
-        return self.__eq__(other) or self.__gt__(other)
-
-    def __lt__(self, other: FrameInterval) -> bool:
-        return not self.__ge__(other)
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            name: getattr(self, name)
-            for name in self.__slots__
-        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from vspreview.utils import try_load
@@ -214,7 +187,7 @@ class FrameInterval(YAMLObject):
 FrameType = TypeVar('FrameType', Frame, FrameInterval)
 
 
-class Time(YAMLObject):
+class Time(YAMLObjectWrapper):
     yaml_tag = '!Time'
 
     __slots__ = (
@@ -249,14 +222,19 @@ class Time(YAMLObject):
     @overload
     def __sub__(self, other: Time) -> TimeInterval: ...
 
-    def __sub__(self, other):  # type: ignore
+    def __sub__(self, other: Time | TimeInterval) -> Union[Time, TimeInterval]:
         if isinstance(other, Time):
             return TimeInterval(self.value - other.value)
         if isinstance(other, TimeInterval):
             return Time(self.value - other.value)
         raise TypeError
 
-    def __isub__(self, other: TimeInterval) -> Time:  # type: ignore
+    @overload
+    def __isub__(self, other: TimeInterval) -> Time: ...
+    @overload
+    def __isub__(self, other: Time) -> TimeInterval: ...
+
+    def __isub__(self, other: Time | TimeInterval) -> Union[Time, TimeInterval]:  # type: ignore
         self.value -= other.value
         return self
 
@@ -266,34 +244,10 @@ class Time(YAMLObject):
         return strfdelta(self, '%h:%M:%S.%Z')
 
     def __float__(self) -> float:
-        return self.value.total_seconds()
+        return self.value.total_seconds()  # type: ignore
 
     def __repr__(self) -> str:
         return f'Time({self.value})'
-
-    def __eq__(self, other: Time) -> bool:  # type: ignore
-        return self.value == other.value
-
-    def __gt__(self, other: Time) -> bool:
-        return self.value > other.value
-
-    def __ne__(self, other: Time) -> bool:  # type: ignore
-        return not self.__eq__(other)
-
-    def __le__(self, other: Time) -> bool:
-        return not self.__gt__(other)
-
-    def __ge__(self, other: Time) -> bool:
-        return self.__eq__(other) or self.__gt__(other)
-
-    def __lt__(self, other: Time) -> bool:
-        return not self.__ge__(other)
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            name: getattr(self, name)
-            for name in self.__slots__
-        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from vspreview.utils import try_load
@@ -304,7 +258,7 @@ class Time(YAMLObject):
         )
 
 
-class TimeInterval(YAMLObject):
+class TimeInterval(YAMLObjectWrapper):
     yaml_tag = '!TimeInterval'
 
     __slots__ = (
@@ -365,34 +319,10 @@ class TimeInterval(YAMLObject):
         return strfdelta(self, '%h:%M:%S.%Z')
 
     def __float__(self) -> float:
-        return self.value.total_seconds()
+        return self.value.total_seconds()  # type: ignore
 
     def __repr__(self) -> str:
         return f'TimeInterval({self.value})'
-
-    def __eq__(self, other: TimeInterval) -> bool:  # type: ignore
-        return self.value == other.value
-
-    def __gt__(self, other: TimeInterval) -> bool:
-        return self.value > other.value
-
-    def __ne__(self, other: TimeInterval) -> bool:  # type: ignore
-        return not self.__eq__(other)
-
-    def __le__(self, other: TimeInterval) -> bool:
-        return not self.__gt__(other)
-
-    def __ge__(self, other: TimeInterval) -> bool:
-        return self.__eq__(other) or self.__gt__(other)
-
-    def __lt__(self, other: TimeInterval) -> bool:
-        return not self.__ge__(other)
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            name: getattr(self, name)
-            for name in self.__slots__
-        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from vspreview.utils import try_load
@@ -406,7 +336,7 @@ class TimeInterval(YAMLObject):
 TimeType = TypeVar('TimeType', Time, TimeInterval)
 
 
-class Scene(YAMLObject):
+class Scene(YAMLObjectWrapper):
     yaml_tag = '!Scene'
 
     __slots__ = (
@@ -450,23 +380,11 @@ class Scene(YAMLObject):
     def __eq__(self, other: Scene) -> bool:  # type: ignore
         return self.start == other.start and self.end == other.end
 
-    def __gt__(self, other: Scene) -> bool:
+    def __gt__(self, other: Scene) -> bool:  # type: ignore
         if self.start != other.start:
             return self.start > other.start
         else:
             return self.end > other.end
-
-    def __ne__(self, other: Scene) -> bool:  # type: ignore
-        return not self.__eq__(other)
-
-    def __le__(self, other: Scene) -> bool:
-        return not self.__gt__(other)
-
-    def __ge__(self, other: Scene) -> bool:
-        return self.__eq__(other) or self.__gt__(other)
-
-    def __lt__(self, other: Scene) -> bool:
-        return not self.__ge__(other)
 
     def duration(self) -> FrameInterval:
         return self.end - self.start
@@ -474,56 +392,48 @@ class Scene(YAMLObject):
     def __contains__(self, frame: Frame) -> bool:
         return self.start <= frame <= self.end
 
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            name: getattr(self, name)
-            for name in self.__slots__
-        }
-
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try:
-            start = state['start']
-            if not isinstance(start, Frame):
+            if not isinstance(state['start'], Frame):
                 raise TypeError('Start frame of Scene is not a Frame. It\'s most probably corrupted.')
 
-            end = state['end']
-            if not isinstance(end, Frame):
+            if not isinstance(state['end'], Frame):
                 raise TypeError('End frame of Scene is not a Frame. It\'s most probably corrupted.')
 
-            label = state['label']
-            if not isinstance(label, str):
+            if not isinstance(state['label'], str):
                 raise TypeError('Label of Scene is not a string. It\'s most probably corrupted.')
         except KeyError:
             raise KeyError(
-                'Scene lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(
-                    ', '.join(self.__slots__)))
+                'Scene lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'
+                .format(', '.join(self.__slots__))
+            )
 
-        self.__init__(start, end, label)  # type: ignore
+        self.__init__(state['start'], state['end'], state['label'])  # type: ignore
 
 
 class Output(YAMLObject):
     yaml_tag = '!Output'
 
     class Resizer:
-        Bilinear = vs.core.resize.Bilinear
-        Bicubic = vs.core.resize.Bicubic
-        Point = vs.core.resize.Point
-        Lanczos = vs.core.resize.Lanczos
-        Spline16 = vs.core.resize.Spline16
-        Spline36 = vs.core.resize.Spline36
+        Bilinear = core.resize.Bilinear
+        Bicubic = core.resize.Bicubic
+        Point = core.resize.Point
+        Lanczos = core.resize.Lanczos
+        Spline16 = core.resize.Spline16
+        Spline36 = core.resize.Spline36
 
     class Matrix:
         values = {
-            0:  'rgb',
-            1:  '709',
-            2:  'unspec',
-            # 3:  'reserved',
-            4:  'fcc',
-            5:  '470bg',
-            6:  '170m',
-            7:  '240m',
-            8:  'ycgco',
-            9:  '2020ncl',
+            0: 'rgb',
+            1: '709',
+            2: 'unspec',
+            # 3: 'reserved',
+            4: 'fcc',
+            5: '470bg',
+            6: '170m',
+            7: '240m',
+            8: 'ycgco',
+            9: '2020ncl',
             10: '2020cl',
             # 11: 'reserved',
             12: 'chromancl',
@@ -547,16 +457,16 @@ class Output(YAMLObject):
 
     class Transfer:
         values = {
-            # 0:  'reserved',
-            1:  '709',
-            2:  'unspec',
-            # 3:  'reserved',
-            4:  '470m',
-            5:  '470bg',
-            6:  '601',
-            7:  '240m',
-            8:  'linear',
-            9:  'log100',
+            # 0: 'reserved',
+            1: '709',
+            2: 'unspec',
+            # 3: 'reserved',
+            4: '470m',
+            5: '470bg',
+            6: '601',
+            7: '240m',
+            8: 'linear',
+            9: 'log100',
             10: 'log316',
             11: 'xvycc',  # IEC 61966-2-4
             # 12: 'reserved',
@@ -588,16 +498,16 @@ class Output(YAMLObject):
 
     class Primaries:
         values = {
-            # 0:  'reserved',
-            1:  '709',
-            2:  'unspec',
-            # 3:  'reserved',
-            4:  '470m',
-            5:  '470bg',
-            6:  '170m',
-            7:  '240m',
-            8:  'film',
-            9:  '2020',
+            # 0: 'reserved',
+            1: '709',
+            2: 'unspec',
+            # 3: 'reserved',
+            4: '470m',
+            5: '470bg',
+            6: '170m',
+            7: '240m',
+            8: 'film',
+            9: '2020',
             10: 'st428',  # or 'xyz'
             11: 'st431-2',
             12: 'st431-1',
@@ -650,21 +560,20 @@ class Output(YAMLObject):
         'frame_to_show', 'scening_lists'
     )
     __slots__ = storable_attrs + (
-        'vs_output', 'index', 'width', 'height', 'fps_num', 'fps_den',
-        'format', 'total_frames', 'total_time', 'graphics_scene_item',
-        'end_frame', 'end_time', 'fps', 'has_alpha', 'vs_alpha',
-        'format_alpha', 'props', 'source_vs_output', 'source_vs_alpha',
-        'main', 'checkerboard', "__weakref__", 'qt_output',
-        "cur_frame"  # hack to keep the reference to the current frame
+        'index', 'width', 'height', 'fps_num', 'fps_den',
+        'total_frames', 'total_time', 'graphics_scene_item',
+        'end_frame', 'end_time', 'fps', 'props', 'source', 'prepared',
+        'main', 'checkerboard', '__weakref__', 'cur_frame'
+        # hack to keep the reference to the current frame
     )
 
-    def clear(self):
-        self.source_vs_output = None
-        self.source_vs_alpha = None
-        self.vs_alpha = None
-        self.vs_output = None
-        self.format = None
-        self.props = None
+    source: VideoOutputNode
+    prepared: VideoOutputNode
+    format: vs.VideoFormat
+    props: vs.FrameProps
+
+    def clear(self) -> None:
+        self.source = self.prepared = self.props = None  # type: ignore
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
         from vspreview.models import SceningLists
@@ -673,63 +582,57 @@ class Output(YAMLObject):
         self.main = main_window()
 
         # runtime attributes
+        self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
+        self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha)
 
-        self.has_alpha = False
-        self.source_vs_output = vs_output.clip
-
-        if vs_output.alpha is not None:
-            self.has_alpha = True
-            self.source_vs_alpha = vs_output.alpha
-
-            self.vs_alpha = self.prepare_vs_output(self.source_vs_alpha, alpha=True)
-            self.format_alpha = self.source_vs_alpha.format
+        if self.source.alpha is not None:
+            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True)
 
         self.index = index
-        self.qt_output = Qt.QImage.Format_RGB30
-        if not hasattr(vs.core, 'libp2p'):
+        if not hasattr(core, 'libp2p'):
             print(Warning(
                 "LibP2P is missing, it is reccomended to prepare output clips correctly!\n"
                 "You can get it here: https://github.com/DJATOM/LibP2P-Vapoursynth"
             ))
 
-        self.vs_output = self.prepare_vs_output(self.source_vs_output)
-        self.width = self.vs_output.width
-        self.height = self.vs_output.height
-        self.format = self.source_vs_output.format
-        self.props = self.source_vs_output.get_frame(0).props
-        self.fps_num = self.vs_output.fps.numerator
-        self.fps_den = self.vs_output.fps.denominator
+        self.prepared.clip = self.prepare_vs_output(self.source.clip)
+        self.width = self.prepared.clip.width
+        self.height = self.prepared.clip.height
+        self.props = self.source.clip.get_frame(0).props
+        self.fps_num = self.prepared.clip.fps.numerator
+        self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
-        self.total_frames = FrameInterval(self.vs_output.num_frames)
+        self.total_frames = FrameInterval(self.prepared.clip.num_frames)
         self.total_time = self.to_time_interval(self.total_frames - FrameInterval(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
+        self.name = 'Output ' + str(self.index)
 
-        if self.has_alpha:
+        if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        # set by load_script() when it prepares graphics scene item
-        # based on last showed frame
-
+        # set by load_script() when it prepares graphics scene item based on last showed frame
         self.graphics_scene_item: Qt.QGraphicsPixmapItem
 
         # storable attributes
         if 'Name' in self.props:
-            self.name = 'Output %d: %s' % (index, self.props['Name'].decode('utf-8'))
+            self.name = 'Output %d: %s' % (index, cast(str, self.props['Name']))
 
-        if not hasattr(self, 'name'):
-            self.name = 'Output ' + str(self.index)
-        if (not hasattr(self, 'last_showed_frame')
-                or self.last_showed_frame > self.end_frame):  # pylint: disable=access-member-before-definition
+        if (not hasattr(self, 'last_showed_frame') or self.last_showed_frame > self.end_frame):
             self.last_showed_frame: Frame = Frame(0)
+
         if not hasattr(self, 'scening_lists'):
             self.scening_lists: SceningLists = SceningLists()
+
         if not hasattr(self, 'play_fps'):
             self.play_fps = self.fps_num / self.fps_den
+
         if not hasattr(self, 'frame_to_show'):
             self.frame_to_show: Optional[Frame] = None
 
-    def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
+    def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
+        assert clip.format
+
         resizer = self.main.VS_OUTPUT_RESIZER
         resizer_kwargs = {
             'format': vs.RGB24,
@@ -740,64 +643,64 @@ class Output(YAMLObject):
             'chromaloc_in_s': self.main.VS_OUTPUT_CHROMALOC,
         }
 
-        is_subsampled = (vs_output.format.subsampling_w != 0 or vs_output.format.subsampling_h != 0)
+        is_subsampled = (clip.format.subsampling_w != 0 or clip.format.subsampling_h != 0)
 
         if not is_subsampled:
             resizer = self.Resizer.Point
 
-        if vs_output.format.color_family == vs.RGB:
+        if clip.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in_s']
 
-        if alpha:
-            if vs_output.format == vs.GRAY8:  # type: ignore
-                return vs_output
+        if is_alpha:
+            if clip.format.id == vs.GRAY8:
+                return clip
             resizer_kwargs['format'] = vs.GRAY8
 
-        vs_output = resizer(vs_output, **resizer_kwargs, **self.main.VS_OUTPUT_RESIZER_KWARGS)
+        clip = resizer(clip, **resizer_kwargs, **self.main.VS_OUTPUT_RESIZER_KWARGS)
 
-        if not alpha:
-            if hasattr(vs.core, 'libp2p'):
-                vs_output = vs.core.libp2p.Pack(vs_output)
+        if not is_alpha:
+            if hasattr(core, 'libp2p'):
+                clip = core.libp2p.Pack(clip)  # type: ignore
             else:
-                vs_output = vs.core.akarin.Expr(
-                    vs.core.std.SplitPlanes(vs_output),
-                    'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1)
+                clip = core.akarin.Expr(
+                    core.std.SplitPlanes(clip),
+                    'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1
+                )
 
-        return vs_output
+        return clip
 
     def render_frame(self, frame: Frame) -> Qt.QImage:
-        if not self.has_alpha:
+        if self.prepared.alpha:
             return self.render_raw_videoframe(
-                self.vs_output.get_frame(int(frame)))
+                self.prepared.clip.get_frame(int(frame)),
+                self.prepared.alpha.get_frame(int(frame))
+            )
         else:
             return self.render_raw_videoframe(
-                self.vs_output.get_frame(int(frame)),
-                self.vs_alpha.get_frame(int(frame)))
+                self.prepared.clip.get_frame(int(frame))
+            )
 
     def render_raw_videoframe(
-            self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None) -> Qt.QImage:
+        self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None
+    ) -> Qt.QImage:
         self.cur_frame = (vs_frame, vs_frame_alpha)  # keep a reference to the current frame
+
+        stride_length = vs_frame.format.bytes_per_sample * vs_frame.width * vs_frame.height
+
         # powerful spell. do not touch
-        frame_data_pointer = ctypes.cast(
-            vs_frame.get_read_ptr(0),
-            ctypes.POINTER(ctypes.c_char * (
-                vs_frame.format.bytes_per_sample
-                * vs_frame.width * vs_frame.height))
-        )
+        frame_data_pointer = ctypes.cast(vs_frame.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length))
         frame_image = Qt.QImage(
             frame_data_pointer.contents, vs_frame.width, vs_frame.height,
-            vs_frame.get_stride(0), self.qt_output
+            vs_frame.get_stride(0), Qt.QImage.Format_RGB30
         )
 
         if vs_frame_alpha is None:
             return frame_image
 
-        alpha_data_pointer = ctypes.cast(
-            vs_frame_alpha.get_read_ptr(0),
-            ctypes.POINTER(ctypes.c_char * (
-                vs_frame_alpha.format.bytes_per_sample
-                * vs_frame_alpha.width * vs_frame_alpha.height))
-        )
+        stride_length = vs_frame_alpha.format.bytes_per_sample * vs_frame_alpha.width * vs_frame_alpha.height
+
+        alpha_data_pointer = ctypes.cast(vs_frame_alpha.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length))
+
         alpha_image = Qt.QImage(
             alpha_data_pointer.contents, vs_frame.width, vs_frame.height,
             vs_frame_alpha.get_stride(0), Qt.QImage.Format_Alpha8)
@@ -867,14 +770,14 @@ class Output(YAMLObject):
 
         self.name = ''
         try_load(
-            state, 'name', str, self,
+            state, 'name', str, self.__setattr__,
             'Storage loading: Output: failed to parse name.'
         )
 
         self.last_showed_frame = Frame(0)
         try:
             try_load(
-                state, 'last_showed_frame', Frame, self,
+                state, 'last_showed_frame', Frame, self.__setattr__,
                 'Storage loading: Output: failed to parse last showed frame.'
             )
         except IndexError:
@@ -882,7 +785,7 @@ class Output(YAMLObject):
 
         self.scening_lists = SceningLists()
         try_load(
-            state, 'scening_lists', SceningLists, self,
+            state, 'scening_lists', SceningLists, self.__setattr__,
             'Storage loading: Output: scening lists weren\'t parsed successfully.'
         )
 

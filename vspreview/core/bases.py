@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, no_type_check, Optional, Type, TypeVar, Tuple
 
 from PyQt5 import sip
 from yaml import YAMLObject, YAMLObjectMetaclass
+from typing import Any, Dict, no_type_check, Optional, Type, TypeVar, Tuple, cast
 
 from .better_abc import ABCMeta
 
-# pylint: disable=too-few-public-methods,too-many-ancestors
 
 T = TypeVar('T')
 
 
 class SingletonMeta(type):
     def __init__(cls: Type[T], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> None:
-        super().__init__(name, bases, dct)
+        super().__init__(name, bases, dct)  # type: ignore
         cls.instance: Optional[T] = None  # type: ignore
 
     def __call__(cls, *args: Any, **kwargs: Any) -> T:
@@ -23,15 +22,15 @@ class SingletonMeta(type):
         return cls.instance
 
     def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
-        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)
+        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
         singleton_new = None
         for entry in subcls.__mro__:
             if entry.__class__ is SingletonMeta:
                 singleton_new = entry.__new__
         if subcls.__new__ is not singleton_new:
-            subcls.__default_new__ = subcls.__new__  # type: ignore
-            subcls.__new__ = singleton_new  # type: ignore
-        return subcls
+            subcls.__default_new__ = subcls.__new__
+            subcls.__new__ = singleton_new
+        return cast(type, subcls)
 
 
 class Singleton(metaclass=SingletonMeta):

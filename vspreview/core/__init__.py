@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from .abstracts import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars,
     AbstractAppSettings,

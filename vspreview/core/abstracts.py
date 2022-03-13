@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-from abc import abstractmethod
-import logging
-from pathlib import Path
-from typing import (
-    Any, cast, Iterator, Mapping, Optional,
-    TYPE_CHECKING, Union,
-)
-
 from PyQt5 import Qt
-from .bases import (
-    AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton,
-)
-from .better_abc import abstract_attribute
+from pathlib import Path
+from abc import abstractmethod
+from typing import Any, cast, Mapping, Optional, Union, Iterator, TYPE_CHECKING
+
 from .types import Frame, Output, Time
+from .better_abc import abstract_attribute
+from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
 
 
 class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
@@ -44,10 +38,10 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError()
 
     @abstractmethod
-    def show_message(self, message: str, timeout: Optional[int] = None) -> None:
+    def show_message(self, message: str) -> None:
         raise NotImplementedError
 
-    app_settings: AbstractAppSettings = abstract_attribute()  # pylint: disable=used-before-assignment
+    app_settings: AbstractAppSettings = abstract_attribute()
     central_widget: Qt.QWidget = abstract_attribute()
     clipboard: Qt.QClipboard = abstract_attribute()
     current_time: Time = abstract_attribute()
@@ -58,7 +52,7 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     graphics_view: Qt.QGraphicsView = abstract_attribute()
     outputs: Outputs = abstract_attribute()
     timeline: Timeline = abstract_attribute()
-    toolbars: AbstractToolbars = abstract_attribute()  # pylint: disable=used-before-assignment
+    toolbars: AbstractToolbars = abstract_attribute()
     save_on_exit: bool = abstract_attribute()
     script_path: Path = abstract_attribute()
     statusbar: Qt.QStatusBar = abstract_attribute()
@@ -68,12 +62,10 @@ class AbstractToolbar(Qt.QWidget, QABC):
     if TYPE_CHECKING:
         from vspreview.widgets import Notches
 
-    __slots__ = (
-        'main', 'toggle_button',
-    )
+    __slots__ = ('main', 'toggle_button',)
 
     if TYPE_CHECKING:
-        notches_changed = Qt.pyqtSignal(AbstractToolbar)  # pylint: disable=undefined-variable
+        notches_changed = Qt.pyqtSignal(AbstractToolbar)  # noqa: F821
     else:
         notches_changed = Qt.pyqtSignal(object)
 
@@ -90,7 +82,7 @@ class AbstractToolbar(Qt.QWidget, QABC):
         self.toggle_button = Qt.QPushButton(self)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setText(name)
-        self.toggle_button.clicked.connect(self.on_toggle)
+        self.toggle_button.clicked.connect(self.on_toggle)  # type: ignore
 
         self.setVisible(False)
 
@@ -114,8 +106,7 @@ class AbstractToolbar(Qt.QWidget, QABC):
         return self.isVisible()
 
     def resize_main_window(self, expanding: bool) -> None:
-        if self.main.windowState() in (Qt.Qt.WindowMaximized,
-                                       Qt.Qt.WindowFullScreen):
+        if self.main.windowState() in (Qt.Qt.WindowMaximized, Qt.Qt.WindowFullScreen):
             return
 
         if expanding:
@@ -153,8 +144,12 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
     debug: AbstractToolbar = abstract_attribute()
 
     toolbars_names = ('playback', 'scening', 'pipette', 'benchmark', 'misc', 'debug')
+
     # 'main' should be the first
     all_toolbars_names = ['main'] + list(toolbars_names)
+
+    _max = len(all_toolbars_names)
+    _cidx = 0
 
     def __getitem__(self, index: int) -> AbstractToolbar:
         if index >= len(self.toolbars_names):

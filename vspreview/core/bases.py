@@ -18,6 +18,7 @@ class SingletonMeta(type):
         cls.instance: Optional[T] = None  # type: ignore
 
     def __call__(cls, *args: Any, **kwargs: Any) -> T:
+        print(cls, args, kwargs)
         if cls.instance is None:
             cls.instance = super().__call__(*args, **kwargs)
         return cls.instance

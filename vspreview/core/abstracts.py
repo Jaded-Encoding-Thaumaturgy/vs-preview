@@ -37,7 +37,7 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def switch_output(self, value: Union[int, Output]) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def switch_frame(self, pos: Union[Frame, Time], *, render_frame: bool = True) -> None:
@@ -47,20 +47,21 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     def show_message(self, message: str, timeout: Optional[int] = None) -> None:
         raise NotImplementedError
 
-    central_widget: Qt.QWidget        = abstract_attribute()
-    clipboard     : Qt.QClipboard     = abstract_attribute()
-    current_frame : Frame             = abstract_attribute()
-    current_time  : Time              = abstract_attribute()
-    current_output: Output            = abstract_attribute()
-    display_scale : float             = abstract_attribute()
-    graphics_scene: Qt.QGraphicsScene = abstract_attribute()
-    graphics_view : Qt.QGraphicsView  = abstract_attribute()
-    outputs       : Outputs           = abstract_attribute()
-    timeline      : Timeline          = abstract_attribute()
-    toolbars      : AbstractToolbars  = abstract_attribute()  # pylint: disable=used-before-assignment
-    save_on_exit  : bool              = abstract_attribute()
-    script_path   : Path              = abstract_attribute()
-    statusbar     : Qt.QStatusBar     = abstract_attribute()
+    app_settings  : AbstractAppSettings = abstract_attribute()  # pylint: disable=used-before-assignment
+    central_widget: Qt.QWidget          = abstract_attribute()
+    clipboard     : Qt.QClipboard       = abstract_attribute()
+    current_time  : Time                = abstract_attribute()
+    current_frame : Frame               = abstract_attribute()
+    current_output: Output              = abstract_attribute()
+    display_scale : float               = abstract_attribute()
+    graphics_scene: Qt.QGraphicsScene   = abstract_attribute()
+    graphics_view : Qt.QGraphicsView    = abstract_attribute()
+    outputs       : Outputs             = abstract_attribute()
+    timeline      : Timeline            = abstract_attribute()
+    toolbars      : AbstractToolbars    = abstract_attribute()  # pylint: disable=used-before-assignment
+    save_on_exit  : bool                = abstract_attribute()
+    script_path   : Path                = abstract_attribute()
+    statusbar     : Qt.QStatusBar       = abstract_attribute()
 
 
 class AbstractToolbar(Qt.QWidget, QABC):
@@ -76,15 +77,17 @@ class AbstractToolbar(Qt.QWidget, QABC):
     else:
         notches_changed = Qt.pyqtSignal(object)
 
-    def __init__(self, main: AbstractMainWindow, name: str) -> None:
+    def __init__(self, main: AbstractMainWindow, name: str, settings: Optional[Qt.QWidget] = None) -> None:
         super().__init__(main.central_widget)
-        self.main = main
+        self.main     = main
+        self.settings = settings if settings is not None else Qt.QWidget()
 
+        self.main.app_settings.addTab(self.settings, name)
         self.setFocusPolicy(Qt.Qt.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 
-        self.toggle_button = Qt.QToolButton(self)
+        self.toggle_button = Qt.QPushButton(self)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setText(name)
         self.toggle_button.clicked.connect(self.on_toggle)
@@ -103,11 +106,6 @@ class AbstractToolbar(Qt.QWidget, QABC):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
 
-    def on_script_unloaded(self) -> None:
-        pass
-
-    def on_script_loaded(self) -> None:
-        pass
 
     def get_notches(self) -> Notches:
         from vspreview.widgets import Notches
@@ -123,32 +121,23 @@ class AbstractToolbar(Qt.QWidget, QABC):
             return
 
         if expanding:
-            self.main.resize(
-                self.main.width(),
-                self.main.height() + self.height() + round(6 * self.main.display_scale))
+            self.main.resize(self.main.width(), self.main.height() + self.height() + round(6 * self.main.display_scale))
         if not expanding:
-            self.main.resize(
-                self.main.width(),
-                self.main.height() - self.height() - round(6 * self.main.display_scale))
+            self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
             self.main.timeline.full_repaint()
 
+
     def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            'toggle': self.toggle_button.isChecked()
-        }
+        return {}
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try:
-            toggle = state['toggle']
-            if not isinstance(toggle, bool):
-                raise TypeError
-        except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: Toolbar: failed to parse toggle')
-            toggle = self.main.TOGGLE_TOOLBAR
+        pass
 
-        if self.toggle_button.isChecked() != toggle:
-            self.toggle_button.click()
+
+class AbstractAppSettings(Qt.QDialog, QABC):
+    @abstractmethod
+    def addTab(self, widget: Qt.QWidget, label: str) -> int:
+        raise NotImplementedError
 
 
 class AbstractToolbars(AbstractYAMLObjectSingleton):
@@ -156,8 +145,7 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
 
     __slots__ = ()
 
-    # special toolbar ignored by len()
-    # and not accessible via subscription and 'in' operator
+    # special toolbar ignored by len() and not accessible via subscription and 'in' operator
     main     : AbstractToolbar = abstract_attribute()
 
     playback : AbstractToolbar = abstract_attribute()

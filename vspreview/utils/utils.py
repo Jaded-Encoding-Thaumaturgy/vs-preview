@@ -4,8 +4,8 @@ from   functools import lru_cache, partial, wraps
 import logging
 from   string    import Template
 from   typing    import (
-    Any, Callable, cast, MutableMapping, Optional, Type,
-    TYPE_CHECKING, TypeVar, Union,
+    Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING,
+    TypeVar, Union,
 )
 
 from PyQt5 import Qt
@@ -19,10 +19,9 @@ T = TypeVar('T')
 
 def to_qtime(time: Union[TimeType]) -> Qt.QTime:
     td = time.value
-    hours, secs_rem = divmod(td.seconds, 3600)
-    return Qt.QTime(hours,
-                    secs_rem        //   60,
-                    secs_rem         %   60,
+    return Qt.QTime(td.seconds      // 3600,
+                    td.seconds      //   60,
+                    td.seconds       %   60,
                     td.microseconds // 1000)
 
 
@@ -47,9 +46,9 @@ class DeltaTemplate(Template):
 def strfdelta(time: Union[TimeType], output_format: str) -> str:
     d: MutableMapping[str, str] = {}
     td = time.value
-    hours, secs_rem = divmod(td.seconds, 3600)
-    minutes      = secs_rem // 60
-    seconds      = secs_rem  % 60
+    hours        = td.seconds      // 3600
+    minutes      = td.seconds      //   60
+    seconds      = td.seconds       %   60
     milliseconds = td.microseconds // 1000
     d['D'] =   '{:d}'.format(td.days)
     d['H'] = '{:02d}'.format(hours)
@@ -76,8 +75,7 @@ def main_window() -> AbstractMainWindow:
     if app is not None:
         for widget in app.topLevelWidgets():
             if isinstance(widget, AbstractMainWindow):
-                # TODO: get rid of excessive cast
-                return cast(AbstractMainWindow, widget)
+                return widget
     logging.critical('main_window() failed')
     app.exit()
     raise RuntimeError
@@ -109,11 +107,15 @@ def set_status_label(label: str) -> Callable[..., T]:
             main = main_window()
 
             if main.statusbar.label.text() == 'Ready':
+                # Qt.QMetaObject.invokeMethod(main.statusbar.label, 'setText', Qt.Qt.QueuedConnection,
+                #                             Qt.Q_ARG(str, label))
                 main.statusbar.label.setText(label)
 
             ret = func(*args, **kwargs)
 
             if main.statusbar.label.text() == label:
+                # Qt.QMetaObject.invokeMethod(main.statusbar.label, 'setText', Qt.Qt.QueuedConnection,
+                #                             Qt.Q_ARG(str, 'Ready'))
                 main.statusbar.label.setText('Ready')
 
             return ret
@@ -145,7 +147,7 @@ def set_qobject_names(obj: object) -> None:
 
     slots = list(obj.__slots__)
 
-    if 'main' in slots:
+    if isinstance(obj, AbstractToolbar) and 'main' in slots:
         slots.remove('main')
 
     for attr_name in slots:
@@ -176,3 +178,17 @@ def vs_clear_cache() -> None:
         output = output.clip
     output.get_frame(0)
     vs.core.max_cache_size = cache_size
+
+
+def try_load(state: Mapping[str, Any], name: str, ty: Type[T], receiver: Union[T, Callable[[T], Any]], error_msg: str) -> None:
+    try:
+        value = state[name]
+        if not isinstance(value, ty):
+            raise TypeError
+    except (KeyError, TypeError):
+        logging.warning(error_msg)
+    else:
+        if isinstance(receiver, ty):
+            receiver = value
+        if callable(receiver):
+            receiver(value)

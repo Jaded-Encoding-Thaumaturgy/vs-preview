@@ -33,7 +33,8 @@ class ABCMeta(NativeABCMeta):
         if len(abstract_attributes) > 0:
             raise NotImplementedError(
                 "Class {} doesn't initialize following abstract attributes: {}"
-                .format(cls.__name__, ', '.join(abstract_attributes)))
+                .format(cls.__name__, ', '.join(abstract_attributes))
+            )
         return instance
 
 

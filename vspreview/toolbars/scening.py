@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-from   pathlib  import Path
+from pathlib import Path
 import re
-from   typing   import (
+from typing import (
     Any, Callable, cast, Dict, Iterator, List, Mapping, Optional, Set, Tuple,
     Union
 )
@@ -227,26 +227,26 @@ class SceningToolbar(AbstractToolbar):
         super().__init__(main, 'Scening')
         self.setup_ui()
 
-        self.first_frame : Optional[Frame] = None
+        self.first_frame: Optional[Frame] = None
         self.second_frame: Optional[Frame] = None
-        self.export_template_pattern  = re.compile(r'.*(?:{start}|{end}|{label}).*')
+        self.export_template_pattern = re.compile(r'.*(?:{start}|{end}|{label}).*')
         self.export_template_scenes_pattern = re.compile(r'.+')
 
         self.scening_update_status_label()
         self.scening_list_dialog = SceningListDialog(self.main)
 
         self.supported_file_types = {
-            'Aegisub Project (*.ass)'       : self.import_ass,
-            'CUE Sheet (*.cue)'             : self.import_cue,
-            'DGIndex Project (*.dgi)'       : self.import_dgi,
-            'L-SMASH Works Index (*.lwi)'   : self.import_lwi,
+            'Aegisub Project (*.ass)': self.import_ass,
+            'CUE Sheet (*.cue)': self.import_cue,
+            'DGIndex Project (*.dgi)': self.import_dgi,
+            'L-SMASH Works Index (*.lwi)': self.import_lwi,
             'Matroska Timestamps v1 (*.txt)': self.import_matroska_timestamps_v1,
             'Matroska Timestamps v2 (*.txt)': self.import_matroska_timestamps_v2,
-            'Matroska XML Chapters (*.xml)' : self.import_matroska_xml_chapters,
-            'OGM Chapters (*.txt)'          : self.import_ogm_chapters,
-            'TFM Log (*.txt)'               : self.import_tfm,
-            'x264/x265 QP File (*.qp)'      : self.import_qp,
-            'XviD Log (*.txt)'              : self.import_xvid,
+            'Matroska XML Chapters (*.xml)': self.import_matroska_xml_chapters,
+            'OGM Chapters (*.txt)': self.import_ogm_chapters,
+            'TFM Log (*.txt)': self.import_tfm,
+            'x264/x265 QP File (*.qp)': self.import_qp,
+            'XviD Log (*.txt)': self.import_xvid,
         }
 
         self.add_list_button               .clicked.connect(self.on_add_list_clicked)
@@ -276,16 +276,17 @@ class SceningToolbar(AbstractToolbar):
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_8, lambda: self.switch_list(7))
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_9, lambda: self.switch_list(8))
 
-        add_shortcut(Qt.Qt.CTRL  + Qt.Qt.Key_Space, self.on_toggle_single_frame)
-        add_shortcut(Qt.Qt.CTRL  + Qt.Qt.Key_Left,  self.seek_to_next_button         .click)
-        add_shortcut(Qt.Qt.CTRL  + Qt.Qt.Key_Right, self.seek_to_prev_button         .click)
-        add_shortcut(              Qt.Qt.Key_Q,     self.toggle_first_frame_button   .click)
-        add_shortcut(              Qt.Qt.Key_W,     self.toggle_second_frame_button  .click)
-        add_shortcut(              Qt.Qt.Key_E,     self.add_to_list_button          .click)
-        add_shortcut(              Qt.Qt.Key_R,     self.remove_last_from_list_button.click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Space, self.on_toggle_single_frame)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Left,  self.seek_to_next_button         .click)
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Right, self.seek_to_prev_button         .click)
+        add_shortcut(Qt.Qt.Key_Q,     self.toggle_first_frame_button   .click)
+        add_shortcut(Qt.Qt.Key_W,     self.toggle_second_frame_button  .click)
+        add_shortcut(Qt.Qt.Key_E,     self.add_to_list_button          .click)
+        add_shortcut(Qt.Qt.Key_R,     self.remove_last_from_list_button.click)
 
         # FIXME: get rid of workaround
-        self._on_list_items_changed = lambda *arg: self.on_list_items_changed(*arg)  # pylint: disable=unnecessary-lambda, no-value-for-parameter
+        self._on_list_items_changed = lambda * arg: self.on_list_items_changed(
+            *arg)  # pylint: disable=unnecessary-lambda, no-value-for-parameter
 
         set_qobject_names(self)
 
@@ -341,7 +342,6 @@ class SceningToolbar(AbstractToolbar):
         layout_line_1.addWidget(self.seek_to_next_button)
 
         layout_line_1.addStretch()
-
 
         layout_line_2 = Qt.QHBoxLayout()
         layout_line_2.setObjectName('SceningToolbar.setup_ui.layout_line_2')
@@ -421,7 +421,6 @@ class SceningToolbar(AbstractToolbar):
         self.status_label = Qt.QLabel(self)
         self.status_label.setVisible(False)
         self.main.statusbar.addPermanentWidget(self.status_label)
-
 
     def on_toggle(self, new_state: bool) -> None:
         # if new_state is True:
@@ -613,7 +612,8 @@ class SceningToolbar(AbstractToolbar):
 
     def on_import_file_clicked(self, checked: Optional[bool] = None) -> None:
         filter_str = ';;'.join(self.supported_file_types.keys())
-        path_strs, file_type = Qt.QFileDialog.getOpenFileNames(self.main, caption='Open chapters file', filter=filter_str)
+        path_strs, file_type = Qt.QFileDialog.getOpenFileNames(
+            self.main, caption='Open chapters file', filter=filter_str)
 
         paths = [Path(path_str) for path_str in path_strs]
         for path in paths:
@@ -628,7 +628,8 @@ class SceningToolbar(AbstractToolbar):
         import_func(path, scening_list, out_of_range_count)
 
         if out_of_range_count > 0:
-            logging.warning(f'Scening import: {out_of_range_count} scenes were out of range of output, so they were dropped.')
+            logging.warning(
+                f'Scening import: {out_of_range_count} scenes were out of range of output, so they were dropped.')
         if len(scening_list) == 0:
             logging.warning(f'Scening import: nothing was imported from \'{path.name}\'.')
             self.current_lists.remove(scening_list_index)
@@ -645,7 +646,7 @@ class SceningToolbar(AbstractToolbar):
         subs = pysubs2.load(str(path))
         for line in subs:
             t_start = Time(milliseconds=line.start)
-            t_end   = Time(milliseconds=line.end)
+            t_end = Time(milliseconds=line.end)
             try:
                 scening_list.add(Frame(t_start), Frame(t_end))
             except ValueError:
@@ -664,9 +665,9 @@ class SceningToolbar(AbstractToolbar):
             if match is None:
                 return None
             return Time(
-                minutes      = int(match[1]),
-                seconds      = int(match[2]),
-                milliseconds = int(match[3]) / 75 * 1000
+                minutes=int(match[1]),
+                seconds=int(match[2]),
+                milliseconds=int(match[3]) / 75 * 1000
             )
 
         cue_sheet = CueSheet()
@@ -761,10 +762,10 @@ class SceningToolbar(AbstractToolbar):
             match = timestamp_pattern.match(start_element.text)
             if match is None:
                 continue
-            start =  Frame(Time(
-                hours   =   int(match[1]),
-                minutes =   int(match[2]),
-                seconds = float(match[3])
+            start = Frame(Time(
+                hours=int(match[1]),
+                minutes=int(match[2]),
+                seconds=float(match[3])
             ))
 
             end = None
@@ -773,9 +774,9 @@ class SceningToolbar(AbstractToolbar):
                 match = timestamp_pattern.match(end_element.text)
                 if match is not None:
                     end = Frame(Time(
-                        hours   =   int(match[1]),
-                        minutes =   int(match[2]),
-                        seconds = float(match[3])
+                        hours=int(match[1]),
+                        minutes=int(match[2]),
+                        seconds=float(match[3])
                     ))
 
             label = ''
@@ -799,9 +800,9 @@ class SceningToolbar(AbstractToolbar):
         )
         for match in pattern.finditer(path.read_text()):
             time = Time(
-                hours   =   int(match[2]),
-                minutes =   int(match[3]),
-                seconds = float(match[4])
+                hours=int(match[2]),
+                minutes=int(match[3]),
+                seconds=float(match[4])
             )
             try:
                 scening_list.add(Frame(time), label=match[5])
@@ -848,7 +849,8 @@ class SceningToolbar(AbstractToolbar):
                 continue
 
         if len(timestamps) < 2:
-            logging.warning('Scening import: timestamps file contains less that 2 timestamps, so there\'s nothing to import.')
+            logging.warning(
+                'Scening import: timestamps file contains less that 2 timestamps, so there\'s nothing to import.')
             return
 
         deltas = [
@@ -988,7 +990,7 @@ class SceningToolbar(AbstractToolbar):
         self.add_to_list_button.setEnabled(False)
 
         if not (self.current_list_index != -1
-                and (self   .first_frame  is not None
+                and (self   .first_frame is not None
                      or self.second_frame is not None)):
             return
 
@@ -1018,19 +1020,17 @@ class SceningToolbar(AbstractToolbar):
             self.export_single_line_button.setEnabled(False)
             self.export_multiline_button  .setEnabled(False)
 
-
     def scening_update_status_label(self) -> None:
-        first_frame_text  = str(self.first_frame)  if self.first_frame  is not None else ''
+        first_frame_text = str(self.first_frame) if self.first_frame is not None else ''
         second_frame_text = str(self.second_frame) if self.second_frame is not None else ''
         self.status_label.setText('Scening: {} - {} '.format(first_frame_text, second_frame_text))
 
-
     def __getstate__(self) -> Mapping[str, Any]:
         return {
-            'first_frame' : self.first_frame,
+            'first_frame': self.first_frame,
             'second_frame': self.second_frame,
-            'label'       : self.label_lineedit.text(),
-            'scening_export_template' : self.export_template_lineedit.text(),
+            'label': self.label_lineedit.text(),
+            'scening_export_template': self.export_template_lineedit.text(),
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:

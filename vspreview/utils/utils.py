@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from   functools import lru_cache, partial, wraps
+from functools import lru_cache, partial, wraps
 import logging
-from   string    import Template
-from   typing    import (
+from string import Template
+from typing import (
     Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING,
     TypeVar, Union,
 )
 
 from PyQt5 import Qt
 
-from vspreview.core  import Time, TimeInterval, TimeType
+from vspreview.core import Time, TimeInterval, TimeType
 from vspreview.utils import debug
 
 
@@ -19,9 +19,9 @@ T = TypeVar('T')
 
 def to_qtime(time: Union[TimeType]) -> Qt.QTime:
     td = time.value
-    return Qt.QTime(td.seconds      // 3600,
-                    td.seconds      //   60,
-                    td.seconds       %   60,
+    return Qt.QTime(td.seconds // 3600,
+                    td.seconds // 60,
+                    td.seconds % 60,
                     td.microseconds // 1000)
 
 
@@ -46,18 +46,18 @@ class DeltaTemplate(Template):
 def strfdelta(time: Union[TimeType], output_format: str) -> str:
     d: MutableMapping[str, str] = {}
     td = time.value
-    hours        = td.seconds      // 3600
-    minutes      = td.seconds      //   60
-    seconds      = td.seconds       %   60
+    hours = td.seconds // 3600
+    minutes = td.seconds // 60
+    seconds = td.seconds % 60
     milliseconds = td.microseconds // 1000
-    d['D'] =   '{:d}'.format(td.days)
+    d['D'] = '{:d}'.format(td.days)
     d['H'] = '{:02d}'.format(hours)
     d['M'] = '{:02d}'.format(minutes)
     d['S'] = '{:02d}'.format(seconds)
     d['Z'] = '{:03d}'.format(milliseconds)
-    d['h'] =   '{:d}'.format(hours)
-    d['m'] =  '{:2d}'.format(minutes)
-    d['s'] =  '{:2d}'.format(seconds)
+    d['h'] = '{:d}'.format(hours)
+    d['m'] = '{:2d}'.format(minutes)
+    d['s'] = '{:2d}'.format(seconds)
 
     template = DeltaTemplate(output_format)
     return template.substitute(**d)
@@ -180,7 +180,12 @@ def vs_clear_cache() -> None:
     vs.core.max_cache_size = cache_size
 
 
-def try_load(state: Mapping[str, Any], name: str, ty: Type[T], receiver: Union[T, Callable[[T], Any]], error_msg: str) -> None:
+def try_load(
+        state: Mapping[str, Any],
+        name: str, ty: Type[T],
+        receiver: Union[T, Callable[[T],
+                                    Any]],
+        error_msg: str) -> None:
     try:
         value = state[name]
         if not isinstance(value, ty):

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from   typing  import Any, cast, Iterator, List, Mapping, Optional, OrderedDict
+from typing import Any, cast, Iterator, List, Mapping, Optional, OrderedDict
 
-from   PyQt5       import Qt
-import vapoursynth as     vs
+from PyQt5 import Qt
+import vapoursynth as vs
 
-from vspreview.core  import Output, QYAMLObjectSingleton
+from vspreview.core import Output, QYAMLObjectSingleton
 from vspreview.utils import debug
 
 
@@ -115,7 +115,7 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
     def __getstate__(self) -> Mapping[str, Any]:
         return dict(zip([
             str(output.index) for output in self.items],
-            [   output        for output in self.items]
+            [output for output in self.items]
         ))
 
     def __setstate__(self, state: Mapping[str, Output]) -> None:

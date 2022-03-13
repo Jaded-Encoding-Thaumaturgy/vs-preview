@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, no_type_check, Optional, Type, TypeVar, Tuple
 
 from PyQt5 import sip
-from yaml  import YAMLObject, YAMLObjectMetaclass
+from yaml import YAMLObject, YAMLObjectMetaclass
 
 from .better_abc import ABCMeta
 
@@ -32,6 +32,8 @@ class SingletonMeta(type):
             subcls.__default_new__ = subcls.__new__  # type: ignore
             subcls.__new__ = singleton_new  # type: ignore
         return subcls
+
+
 class Singleton(metaclass=SingletonMeta):
     @no_type_check
     def __new__(cls: Type[T], *args: Any, **kwargs: Any) -> T:
@@ -42,47 +44,74 @@ class Singleton(metaclass=SingletonMeta):
                 cls.instance = super(Singleton, cls).__new__(cls)
         return cls.instance
 
+
 class AbstractYAMLObjectMeta(YAMLObjectMetaclass, ABCMeta):
     pass
+
+
 class AbstractYAMLObject(YAMLObject, metaclass=AbstractYAMLObjectMeta):
     pass
 
+
 class AbstractYAMLObjectSingletonMeta(SingletonMeta, AbstractYAMLObjectMeta):
     pass
+
+
 class AbstractYAMLObjectSingleton(AbstractYAMLObject, Singleton, metaclass=AbstractYAMLObjectSingletonMeta):
     pass
 
+
 class QABCMeta(sip.wrappertype, ABCMeta):  # type: ignore
     pass
+
+
 class QABC(metaclass=QABCMeta):
     pass
 
+
 class QSingletonMeta(SingletonMeta, sip.wrappertype):  # type: ignore
     pass
+
+
 class QSingleton(Singleton, metaclass=QSingletonMeta):
     pass
 
+
 class QAbstractSingletonMeta(QSingletonMeta, QABCMeta):
     pass
+
+
 class QAbstractSingleton(Singleton, metaclass=QAbstractSingletonMeta):
     pass
 
+
 class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):  # type: ignore
     pass
+
+
 class QYAMLObject(YAMLObject, metaclass=QYAMLObjectMeta):
     pass
 
+
 class QAbstractYAMLObjectMeta(QYAMLObjectMeta, QABC):
     pass
+
+
 class QAbstractYAMLObject(YAMLObject, metaclass=QAbstractYAMLObjectMeta):
     pass
 
+
 class QYAMLObjectSingletonMeta(QSingletonMeta, QYAMLObjectMeta):
     pass
+
+
 class QYAMLObjectSingleton(QYAMLObject, Singleton, metaclass=QYAMLObjectSingletonMeta):
     pass
 
+
 class QAbstractYAMLObjectSingletonMeta(QYAMLObjectSingletonMeta, QABCMeta):
     pass
+
+
 class QAbstractYAMLObjectSingleton(QYAMLObjectSingleton, metaclass=QAbstractYAMLObjectSingletonMeta):
     pass

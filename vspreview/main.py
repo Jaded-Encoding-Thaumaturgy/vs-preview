@@ -3,12 +3,12 @@ from __future__ import annotations
 import shlex
 import logging
 import os
-from   pathlib  import Path
+from pathlib import Path
 import sys
-from   typing   import Any, cast, List, Mapping, Optional, Union
+from typing import Any, cast, List, Mapping, Optional, Union
 
-from   PyQt5       import Qt
-import vapoursynth as     vs
+from PyQt5 import Qt
+import vapoursynth as vs
 
 from vspreview.core import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
@@ -119,7 +119,6 @@ class SettingsDialog(AbstractAppSettings):
         self.tab_widget = Qt.QTabWidget(self)
         layout.addWidget(self.tab_widget)
 
-
     def addTab(self, widget: Qt.QWidget, label: str) -> int:
         return self.tab_widget.addTab(widget, label)
 
@@ -168,8 +167,9 @@ class MainToolbar(AbstractToolbar):
         add_shortcut(Qt.Qt.Key_9, lambda: self.main.switch_output(8))
         add_shortcut(Qt.Qt.Key_0, lambda: self.main.switch_output(9))
         add_shortcut(Qt.Qt.Key_S,         self.sync_outputs_checkbox.click)
-        add_shortcut(Qt.Qt.CTRL               + Qt.Qt.Key_Tab, lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1))
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_Tab, lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1))
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Tab, lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1))
+        add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_Tab,
+                     lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1))
 
         set_qobject_names(self)
 
@@ -266,8 +266,8 @@ class MainToolbar(AbstractToolbar):
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'current_output_index': self.outputs_combobox.currentIndex(),
-            'outputs'             : self.outputs,
-            'sync_outputs'        : self.sync_outputs_checkbox.isChecked()
+            'outputs': self.outputs,
+            'sync_outputs': self.sync_outputs_checkbox.isChecked()
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -301,15 +301,15 @@ class Toolbars(AbstractToolbars):
             BenchmarkToolbar, PipetteToolbar
         )
 
-        self.main      =      MainToolbar(main_window)
+        self.main = MainToolbar(main_window)
         self.main.setObjectName('Toolbars.main')
 
-        self.misc      =      MiscToolbar(main_window)
-        self.playback  =  PlaybackToolbar(main_window)
-        self.scening   =   SceningToolbar(main_window)
-        self.pipette   =   PipetteToolbar(main_window)
+        self.misc = MiscToolbar(main_window)
+        self.playback = PlaybackToolbar(main_window)
+        self.scening = SceningToolbar(main_window)
+        self.pipette = PipetteToolbar(main_window)
         self.benchmark = BenchmarkToolbar(main_window)
-        self.debug     =     DebugToolbar(main_window)
+        self.debug = DebugToolbar(main_window)
 
         self.misc     .setObjectName('Toolbars.misc')
         self.playback .setObjectName('Toolbars.playback')
@@ -317,7 +317,6 @@ class Toolbars(AbstractToolbars):
         self.pipette  .setObjectName('Toolbars.pipette')
         self.benchmark.setObjectName('Toolbars.benchmark')
         self.debug    .setObjectName('Toolbars.debug')
-
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {
@@ -359,7 +358,6 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         layout = Qt.QVBoxLayout(self)
         layout.setObjectName('MainSettings.setup_ui.layout')
 
-
         autosave_layout = Qt.QHBoxLayout()
         autosave_layout.setObjectName('MainSettings.setup_ui.autosave_layout')
         layout.addLayout(autosave_layout)
@@ -387,18 +385,15 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.base_ppi_spinbox.setEnabled(False)
         base_ppi_layout.addWidget(self.base_ppi_spinbox)
 
-
         self.dark_theme_checkbox = Qt.QCheckBox(self)
         self.dark_theme_checkbox.setText('Dark theme')
         self.dark_theme_checkbox.setEnabled(False)
         layout.addWidget(self.dark_theme_checkbox)
 
-
         self.opengl_rendering_checkbox = Qt.QCheckBox(self)
         self.opengl_rendering_checkbox.setText('OpenGL rendering')
         self.opengl_rendering_checkbox.setEnabled(False)
         layout.addWidget(self.opengl_rendering_checkbox)
-
 
         output_index_layout = Qt.QHBoxLayout()
         output_index_layout.setObjectName(
@@ -418,7 +413,6 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.output_index_spinbox.setMaximum(65535)
         output_index_layout.addWidget(self.output_index_spinbox)
 
-
         png_compression_layout = Qt.QHBoxLayout()
         png_compression_layout.setObjectName(
             'MainSettings.setup_ui.png_compression_layout'
@@ -437,7 +431,6 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.png_compressing_spinbox.setMaximum(100)
         png_compression_layout.addWidget(self.png_compressing_spinbox)
 
-
         statusbar_timeout_layout = Qt.QHBoxLayout()
         statusbar_timeout_layout.setObjectName(
             'MainSettings.setup_ui.statusbar_timeout_layout'
@@ -453,7 +446,6 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
 
         self.statusbar_timeout_control = TimeEdit[TimeInterval](self)
         statusbar_timeout_layout.addWidget(self.statusbar_timeout_control)
-
 
         timeline_notches_margin_layout = Qt.QHBoxLayout()
         timeline_notches_margin_layout.setObjectName(
@@ -476,7 +468,6 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
             self.timeline_notches_margin_spinbox
         )
 
-
     def set_defaults(self) -> None:
         self.autosave_control.setValue(TimeInterval(seconds=30))
         self.base_ppi_spinbox.setValue(96)
@@ -486,7 +477,6 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.png_compressing_spinbox.setValue(0)
         self.statusbar_timeout_control.setValue(TimeInterval(seconds=30))
         self.timeline_notches_margin_spinbox.setValue(20)
-
 
     @property
     def autosave_interval(self) -> TimeInterval:
@@ -520,15 +510,14 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
     def timeline_label_notches_margin(self) -> int:
         return self.timeline_notches_margin_spinbox.value()
 
-
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'autosave_interval': self.autosave_interval,
-            'base_ppi'         : self.base_ppi,
-            'dark_theme'       : self.dark_theme_enabled,
-            'opengl_rendering' : self.opengl_rendering_enabled,
-            'output_index'     : self.output_index,
-            'png_compression'  : self.png_compression_level,
+            'base_ppi': self.base_ppi,
+            'dark_theme': self.dark_theme_enabled,
+            'opengl_rendering': self.opengl_rendering_enabled,
+            'output_index': self.output_index,
+            'png_compression': self.png_compression_level,
             'statusbar_message_timeout': self.statusbar_message_timeout,
             'timeline_label_notches_margin':
             self.timeline_label_notches_margin,
@@ -579,51 +568,51 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
 
 class MainWindow(AbstractMainWindow):
     # those are defaults that can be overriden at runtime or used as fallbacks
-    ALWAYS_SHOW_SCENE_MARKS   = False
-    AUTOSAVE_INTERVAL         =    60 * 1000  # s
-    BASE_PPI                  =    96  # PPI
-    BENCHMARK_CLEAR_CACHE     = False
-    BENCHMARK_REFRESH_INTERVAL =  150  # ms
-    CHECKERBOARD_ENABLED      =  True
+    ALWAYS_SHOW_SCENE_MARKS = False
+    AUTOSAVE_INTERVAL = 60 * 1000  # s
+    BASE_PPI = 96  # PPI
+    BENCHMARK_CLEAR_CACHE = False
+    BENCHMARK_REFRESH_INTERVAL = 150  # ms
+    CHECKERBOARD_ENABLED = True
     CHECKERBOARD_TILE_COLOR_1 = Qt.Qt.white
     CHECKERBOARD_TILE_COLOR_2 = Qt.Qt.lightGray
-    CHECKERBOARD_TILE_SIZE    =     8  # px
-    DARK_THEME                =  True
+    CHECKERBOARD_TILE_SIZE = 8  # px
+    DARK_THEME = True
     FPS_AVERAGING_WINDOW_SIZE = FrameInterval(100)
-    FPS_REFRESH_INTERVAL      =   150  # ms
-    LOG_LEVEL         = logging.DEBUG
-    OPENGL_RENDERING          = True
-    ORDERED_OUTPUTS           = True
-    OUTPUT_INDEX              =     0
+    FPS_REFRESH_INTERVAL = 150  # ms
+    LOG_LEVEL = logging.DEBUG
+    OPENGL_RENDERING = True
+    ORDERED_OUTPUTS = True
+    OUTPUT_INDEX = 0
     PLAY_BUFFER_SIZE = FrameInterval(get_usable_cpus_count())
-    PNG_COMPRESSION_LEVEL     =     0  # 0 - 100
+    PNG_COMPRESSION_LEVEL = 0  # 0 - 100
     SAVE_TEMPLATE = '{script_name}_{frame}'
-    SEEK_STEP                 =     1  # frames
-    STATUSBAR_MESSAGE_TIMEOUT =     1500  # s
-    STORAGE_BACKUPS_COUNT     =     2
-    SYNC_OUTPUTS              = True
+    SEEK_STEP = 1  # frames
+    STATUSBAR_MESSAGE_TIMEOUT = 1500  # s
+    STORAGE_BACKUPS_COUNT = 2
+    SYNC_OUTPUTS = True
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
-    TIMELINE_MODE             = 'frame'
-    TOGGLE_TOOLBAR           = True
-    VSP_DIR_NAME              = '.vspreview'
+    TIMELINE_MODE = 'frame'
+    TOGGLE_TOOLBAR = True
+    VSP_DIR_NAME = '.vspreview'
     # used for formats with subsampling
-    VS_OUTPUT_RESIZER         = Output.Resizer.Bicubic
-    VS_OUTPUT_MATRIX          = Output.Matrix.BT709
-    VS_OUTPUT_TRANSFER        = Output.Transfer.BT709
-    VS_OUTPUT_PRIMARIES       = Output.Primaries.BT709
-    VS_OUTPUT_RANGE           = Output.Range.LIMITED
-    VS_OUTPUT_CHROMALOC       = Output.ChromaLoc.LEFT
-    VS_OUTPUT_PREFER_PROPS    = True
-    VS_OUTPUT_RESIZER_KWARGS  = {  # type: Mapping[str, str]
+    VS_OUTPUT_RESIZER = Output.Resizer.Bicubic
+    VS_OUTPUT_MATRIX = Output.Matrix.BT709
+    VS_OUTPUT_TRANSFER = Output.Transfer.BT709
+    VS_OUTPUT_PRIMARIES = Output.Primaries.BT709
+    VS_OUTPUT_RANGE = Output.Range.LIMITED
+    VS_OUTPUT_CHROMALOC = Output.ChromaLoc.LEFT
+    VS_OUTPUT_PREFER_PROPS = True
+    VS_OUTPUT_RESIZER_KWARGS = {  # type: Mapping[str, str]
         'dither_type': 'error_diffusion',
     }
     # status bar
-    STATUS_FRAME_PROP = lambda prop: 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
+    def STATUS_FRAME_PROP(prop): return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
-    BENCHMARK_FRAME_DATA_SHARING_FIX  =  True
-    DEBUG_PLAY_FPS                    = False
-    DEBUG_TOOLBAR                     = False
+    BENCHMARK_FRAME_DATA_SHARING_FIX = True
+    DEBUG_PLAY_FPS = False
+    DEBUG_TOOLBAR = False
     DEBUG_TOOLBAR_BUTTONS_PRINT_STATE = False
 
     yaml_tag = '!MainWindow'
@@ -670,9 +659,9 @@ class MainWindow(AbstractMainWindow):
 
         # global
 
-        self.clipboard    = self.app.clipboard()
+        self.clipboard = self.app.clipboard()
         self.external_args: List[str] = []
-        self.script_path  = Path()
+        self.script_path = Path()
         self.save_on_exit = True
         self.script_exec_failed = False
 
@@ -759,11 +748,11 @@ class MainWindow(AbstractMainWindow):
 
         self.script_error_dialog = ScriptErrorDialog(self)
 
-
     def patch_dark_stylesheet(self, stylesheet: str) -> str:
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
-    def load_script(self, script_path: Path, external_args: List[tuple[str, str]] = None, reloading: bool = False) -> None:
+    def load_script(
+            self, script_path: Path, external_args: List[tuple[str, str]] = None, reloading: bool = False) -> None:
         from traceback import FrameSummary, TracebackException
 
         self.toolbars.playback.stop()
@@ -785,7 +774,7 @@ class MainWindow(AbstractMainWindow):
         try:
             # pylint: disable=exec-used
             exec(self.script_path.read_text(encoding='utf-8'),
-                dict([('__file__', sys.argv[0])] + self.external_args))
+                 dict([('__file__', sys.argv[0])] + self.external_args))
         except Exception as e:  # pylint: disable=broad-except
             self.script_exec_failed = True
             logging.error(e)
@@ -821,7 +810,7 @@ class MainWindow(AbstractMainWindow):
             self.handle_script_error('Script has no outputs set.')
             return
 
-        if not reloading :
+        if not reloading:
             self.toolbars.main.rescan_outputs()
             self.switch_output(self.OUTPUT_INDEX)
 
@@ -842,8 +831,8 @@ class MainWindow(AbstractMainWindow):
                 yaml.load(storage_path.open(), Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
-                    logging.warning('Storage parsing failed on line {} column {}. Using defaults.'
-                                    .format(exc.problem_mark.line + 1, exc.problem_mark.column + 1))  # pylint: disable=no-member
+                    logging.warning('Storage parsing failed on line {} column {}. Using defaults.' .format(
+                        exc.problem_mark.line + 1, exc.problem_mark.column + 1))  # pylint: disable=no-member
                 else:
                     logging.warning('Storage parsing failed. Using defaults.')
         else:
@@ -898,8 +887,8 @@ class MainWindow(AbstractMainWindow):
     def render_raw_videoframe(self, vs_frame: vs.VideoFrame) -> Qt.QImage:
         import ctypes
 
-        frame_pointer  = vs_frame.get_read_ptr(0)
-        frame_stride   = vs_frame.get_stride(0)
+        frame_pointer = vs_frame.get_read_ptr(0)
+        frame_stride = vs_frame.get_stride(0)
         frame_itemsize = vs_frame.format.bytes_per_sample
 
         # powerful spell. do not touch
@@ -907,11 +896,12 @@ class MainWindow(AbstractMainWindow):
             frame_pointer,
             ctypes.POINTER(ctypes.c_char * (frame_itemsize * vs_frame.width * vs_frame.height))
         )[0]
-        frame_image  = Qt.QImage(data_pointer, vs_frame.width, vs_frame.height, frame_stride, Qt.QImage.Format_RGB32)
+        frame_image = Qt.QImage(data_pointer, vs_frame.width, vs_frame.height, frame_stride, Qt.QImage.Format_RGB32)
 
         return frame_image
 
-    def switch_frame(self, frame: Optional[Frame] = None, time: Optional[Time] = None, *, render_frame: bool = True) -> None:
+    def switch_frame(
+            self, frame: Optional[Frame] = None, time: Optional[Time] = None, *, render_frame: bool = True) -> None:
         if frame is not None:
             time = Time(frame)
         elif time is not None:
@@ -967,7 +957,6 @@ class MainWindow(AbstractMainWindow):
             toolbar.on_current_output_changed(index, prev_index)
         self.update_statusbar_output_info()
 
-
     @property  # type: ignore
     def current_output(self) -> Output:  # type: ignore
         output = cast(Output, self.toolbars.main.outputs_combobox.currentData())
@@ -997,7 +986,6 @@ class MainWindow(AbstractMainWindow):
     def outputs(self) -> Outputs:  # type: ignore
         return cast(Outputs, self.toolbars.main.outputs)
 
-
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)
         self.script_error_dialog.label.setText(message)
@@ -1026,7 +1014,8 @@ class MainWindow(AbstractMainWindow):
         self.  statusbar.resolution_label.setText('{}x{} '    .format(output.width, output.height))
         self.statusbar.pixel_format_label.setText('{} '       .format(output.format.name))
         if output.fps_den != 0:
-            self.statusbar.fps_label.setText('{}/{} = {:.3f} fps '.format(output.fps_num, output.fps_den, output.fps_num / output.fps_den))
+            self.statusbar.fps_label.setText('{}/{} = {:.3f} fps '.format(output.fps_num,
+                                             output.fps_den, output.fps_num / output.fps_den))
         else:
             self.statusbar.fps_label.setText('{}/{} fps '         .format(output.fps_num, output.fps_den))
 
@@ -1138,7 +1127,7 @@ def main() -> None:
         os.chdir(script_path.parent)
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
-    ext_args = [ tuple(a.split('=', maxsplit=1)) for a in args.arg or [] ]
+    ext_args = [tuple(a.split('=', maxsplit=1)) for a in args.arg or []]
     main_window.load_script(script_path, ext_args, False)
     main_window.show()
 
@@ -1160,8 +1149,9 @@ def check_versions() -> bool:
         failed = True
 
     if get_distribution('PyQt5').version < '5.15':
-        logging.warning('VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'
-                        .format(get_distribution('PyQt5').version))
+        logging.warning(
+            'VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'.format(
+                get_distribution('PyQt5').version))
         failed = True
 
     if vs.core.version_number() < 53:

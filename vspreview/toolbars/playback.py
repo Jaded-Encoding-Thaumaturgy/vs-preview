@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from   collections import deque
+from collections import deque
 import logging
-from   time        import perf_counter_ns
-from   typing      import Any, cast, Deque, Mapping, Optional, Union
+from time import perf_counter_ns
+from typing import Any, cast, Deque, Mapping, Optional, Union
 
 from PyQt5 import Qt
 
@@ -66,10 +66,10 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_reset_button           .clicked.connect(self.reset_fps)
         self.fps_unlimited_checkbox.stateChanged.connect(self.on_fps_unlimited_changed)
 
-        add_shortcut(              Qt.Qt.Key_Space, self.play_pause_button     .click)
-        add_shortcut(              Qt.Qt.Key_Left , self.seek_to_prev_button   .click)
-        add_shortcut(              Qt.Qt.Key_Right, self.seek_to_next_button   .click)
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Left , self.seek_n_frames_b_button.click)
+        add_shortcut(Qt.Qt.Key_Space, self.play_pause_button     .click)
+        add_shortcut(Qt.Qt.Key_Left, self.seek_to_prev_button   .click)
+        add_shortcut(Qt.Qt.Key_Right, self.seek_to_next_button   .click)
+        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Left, self.seek_n_frames_b_button.click)
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Right, self.seek_n_frames_f_button.click)
 
         set_qobject_names(self)
@@ -133,8 +133,7 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)
         qt_silent_call(self. seek_time_control.setMaximum, self.main.current_output.total_time)
         qt_silent_call(self. seek_time_control.setMinimum, TimeInterval(FrameInterval(1)))
-        qt_silent_call(self.       fps_spinbox.setValue  , self.main.current_output.play_fps)
-
+        qt_silent_call(self.       fps_spinbox.setValue, self.main.current_output.play_fps)
 
     def play(self) -> None:
         if self.main.current_frame == self.main.current_output.end_frame:
@@ -149,13 +148,14 @@ class PlaybackToolbar(AbstractToolbar):
         ))
         self.play_buffer = deque([], play_buffer_size)
         for i in range(cast(int, self.play_buffer.maxlen)):
-            future = self.main.current_output.vs_output.get_frame_async(int(self.main.current_frame + FrameInterval(i) + FrameInterval(1)))
+            future = self.main.current_output.vs_output.get_frame_async(
+                int(self.main.current_frame + FrameInterval(i) + FrameInterval(1)))
             self.play_buffer.appendleft(future)
 
         if self.fps_unlimited_checkbox.isChecked() or self.main.DEBUG_PLAY_FPS:
             self.play_timer.start(0)
             if self.main.DEBUG_PLAY_FPS:
-                self.play_start_time  = debug.perf_counter_ns()
+                self.play_start_time = debug.perf_counter_ns()
                 self.play_start_frame = self.main.current_frame
             else:
                 self.fps_timer.start(self.main.FPS_REFRESH_INTERVAL)
@@ -196,7 +196,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_timer.stop()
 
         if self.main.DEBUG_PLAY_FPS and self.play_start_time is not None:
-            time_interval  = (self.play_end_time - self.play_start_time) / 1_000_000_000
+            time_interval = (self.play_end_time - self.play_start_time) / 1_000_000_000
             frame_interval = self.play_end_frame - self.play_start_frame
             logging.debug(f'{time_interval:.3f} s, {frame_interval} frames, {int(frame_interval) / time_interval:.3f} fps')
             self.play_start_time = None

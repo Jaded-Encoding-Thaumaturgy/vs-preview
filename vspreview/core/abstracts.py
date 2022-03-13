@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-from   abc      import abstractmethod
+from abc import abstractmethod
 import logging
-from   pathlib  import Path
-from   typing   import (
+from pathlib import Path
+from typing import (
     Any, cast, Iterator, Mapping, Optional,
     TYPE_CHECKING, Union,
 )
 
-from   PyQt5       import Qt
+from PyQt5 import Qt
 from .bases import (
     AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton,
 )
 from .better_abc import abstract_attribute
-from .types      import Frame, Output, Time
+from .types import Frame, Output, Time
 
 
 class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     if TYPE_CHECKING:
-        from vspreview.models  import Outputs
+        from vspreview.models import Outputs
         from vspreview.widgets import Timeline
 
     __slots__ = ()
@@ -47,21 +47,21 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     def show_message(self, message: str, timeout: Optional[int] = None) -> None:
         raise NotImplementedError
 
-    app_settings  : AbstractAppSettings = abstract_attribute()  # pylint: disable=used-before-assignment
-    central_widget: Qt.QWidget          = abstract_attribute()
-    clipboard     : Qt.QClipboard       = abstract_attribute()
-    current_time  : Time                = abstract_attribute()
-    current_frame : Frame               = abstract_attribute()
-    current_output: Output              = abstract_attribute()
-    display_scale : float               = abstract_attribute()
-    graphics_scene: Qt.QGraphicsScene   = abstract_attribute()
-    graphics_view : Qt.QGraphicsView    = abstract_attribute()
-    outputs       : Outputs             = abstract_attribute()
-    timeline      : Timeline            = abstract_attribute()
-    toolbars      : AbstractToolbars    = abstract_attribute()  # pylint: disable=used-before-assignment
-    save_on_exit  : bool                = abstract_attribute()
-    script_path   : Path                = abstract_attribute()
-    statusbar     : Qt.QStatusBar       = abstract_attribute()
+    app_settings: AbstractAppSettings = abstract_attribute()  # pylint: disable=used-before-assignment
+    central_widget: Qt.QWidget = abstract_attribute()
+    clipboard: Qt.QClipboard = abstract_attribute()
+    current_time: Time = abstract_attribute()
+    current_frame: Frame = abstract_attribute()
+    current_output: Output = abstract_attribute()
+    display_scale: float = abstract_attribute()
+    graphics_scene: Qt.QGraphicsScene = abstract_attribute()
+    graphics_view: Qt.QGraphicsView = abstract_attribute()
+    outputs: Outputs = abstract_attribute()
+    timeline: Timeline = abstract_attribute()
+    toolbars: AbstractToolbars = abstract_attribute()  # pylint: disable=used-before-assignment
+    save_on_exit: bool = abstract_attribute()
+    script_path: Path = abstract_attribute()
+    statusbar: Qt.QStatusBar = abstract_attribute()
 
 
 class AbstractToolbar(Qt.QWidget, QABC):
@@ -79,7 +79,7 @@ class AbstractToolbar(Qt.QWidget, QABC):
 
     def __init__(self, main: AbstractMainWindow, name: str, settings: Optional[Qt.QWidget] = None) -> None:
         super().__init__(main.central_widget)
-        self.main     = main
+        self.main = main
         self.settings = settings if settings is not None else Qt.QWidget()
 
         self.main.app_settings.addTab(self.settings, name)
@@ -94,7 +94,6 @@ class AbstractToolbar(Qt.QWidget, QABC):
 
         self.setVisible(False)
 
-
     def on_toggle(self, new_state: bool) -> None:
         # invoking order matters
         self.setVisible(new_state)
@@ -105,7 +104,6 @@ class AbstractToolbar(Qt.QWidget, QABC):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
-
 
     def get_notches(self) -> Notches:
         from vspreview.widgets import Notches
@@ -126,7 +124,6 @@ class AbstractToolbar(Qt.QWidget, QABC):
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
             self.main.timeline.full_repaint()
 
-
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
 
@@ -146,14 +143,14 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
     __slots__ = ()
 
     # special toolbar ignored by len() and not accessible via subscription and 'in' operator
-    main     : AbstractToolbar = abstract_attribute()
+    main: AbstractToolbar = abstract_attribute()
 
-    playback : AbstractToolbar = abstract_attribute()
-    scening  : AbstractToolbar = abstract_attribute()
-    pipette  : AbstractToolbar = abstract_attribute()
+    playback: AbstractToolbar = abstract_attribute()
+    scening: AbstractToolbar = abstract_attribute()
+    pipette: AbstractToolbar = abstract_attribute()
     benchmark: AbstractToolbar = abstract_attribute()
-    misc     : AbstractToolbar = abstract_attribute()
-    debug    : AbstractToolbar = abstract_attribute()
+    misc: AbstractToolbar = abstract_attribute()
+    debug: AbstractToolbar = abstract_attribute()
 
     toolbars_names = ('playback', 'scening', 'pipette', 'benchmark', 'misc', 'debug')
     # 'main' should be the first

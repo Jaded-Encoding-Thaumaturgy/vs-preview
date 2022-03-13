@@ -8,7 +8,7 @@ from PyQt5 import Qt
 from vspreview.core import (
     Frame, FrameInterval, FrameType, Time, TimeInterval, TimeType,
 )
-from vspreview.utils  import debug, from_qtime, to_qtime
+from vspreview.utils import debug, from_qtime, to_qtime
 
 
 # TODO: replace specialized Edit classes with some metaclasses magic or such
@@ -17,7 +17,7 @@ from vspreview.utils  import debug, from_qtime, to_qtime
 class FrameEdit(Qt.QSpinBox, Generic[FrameType]):
     def __class_getitem__(cls, ty: Type[FrameType]) -> Type:
         type_specializations: Dict[Type, Type] = {
-            Frame        : _FrameEdit_Frame,
+            Frame: _FrameEdit_Frame,
             FrameInterval: _FrameEdit_FrameInterval,
         }
 
@@ -71,7 +71,7 @@ class _FrameEdit_FrameInterval(FrameEdit):
 class TimeEdit(Qt.QTimeEdit, Generic[TimeType]):
     def __class_getitem__(cls, ty: Type[TimeType]) -> Type:
         type_specializations: Dict[Type, Type] = {
-            Time        : _TimeEdit_Time,
+            Time: _TimeEdit_Time,
             TimeInterval: _TimeEdit_TimeInterval,
         }
 

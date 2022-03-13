@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from   pathlib  import Path
-from   typing   import Any, List, Mapping, Optional
+from pathlib import Path
+from typing import Any, List, Mapping, Optional
 
 from PyQt5 import Qt
 
-from vspreview.core  import (
+from vspreview.core import (
     AbstractMainWindow, AbstractToolbar, Frame, TimeInterval
 )
 from vspreview.utils import (
@@ -41,12 +41,13 @@ class MiscToolbar(AbstractToolbar):
             'Single Image (*.png)': self.save_as_png,
         }
 
-        self.reload_script_button.     clicked.connect(lambda: self.main.reload_script())  # pylint: disable=unnecessary-lambda
+        self.reload_script_button.     clicked.connect(
+            lambda: self.main.reload_script())  # pylint: disable=unnecessary-lambda
         self.         save_button.     clicked.connect(lambda: self.save(manually=True))
-        self.keep_on_top_checkbox.stateChanged.connect(        self.on_keep_on_top_changed)
-        self.   copy_frame_button.     clicked.connect(        self.copy_frame_to_clipboard)
-        self.save_frame_as_button.     clicked.connect(        self.on_save_frame_as_clicked)
-        self. show_debug_checkbox.stateChanged.connect(        self.on_show_debug_changed)
+        self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)
+        self.   copy_frame_button.     clicked.connect(self.copy_frame_to_clipboard)
+        self.save_frame_as_button.     clicked.connect(self.on_save_frame_as_clicked)
+        self. show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)
         self.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
         add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_script_button.click)
@@ -160,7 +161,7 @@ class MiscToolbar(AbstractToolbar):
             self.autosave_timer.start(round(float(new_value) * 1000))
 
     def on_keep_on_top_changed(self, state: Qt.Qt.CheckState) -> None:
-        if   state == Qt.Qt.Checked:
+        if state == Qt.Qt.Checked:
             pass
             # self.main.setWindowFlag(Qt.Qt.X11BypassWindowManagerHint)
             # self.main.setWindowFlag(Qt.Qt.WindowStaysOnTopHint, True)
@@ -174,21 +175,21 @@ class MiscToolbar(AbstractToolbar):
 
         template = self.main.toolbars.misc.save_template_lineedit.text()
         frame_props = self.main.current_output.vs_output.get_frame(
-                          self.main.current_frame).props
+            self.main.current_frame).props
         builtin_substitutions = {
-            'format'       : self.main.current_output.format.name,
-            'fps_den'      : self.main.current_output.fps_den,
-            'fps_num'      : self.main.current_output.fps_num,
-            'frame'        : self.main.current_frame,
-            'height'       : self.main.current_output.height,
-            'index'        : self.main.current_output.index,
-            'matrix'       : Output.Matrix.values[frame_props['_Matrix']],
-            'primaries'    : Output.Primaries.values[frame_props['_Primaries']],
-            'range'        : Output.Range.values[frame_props['_ColorRange']],
-            'script_name'  : self.main.script_path.stem,
-            'total_frames' : self.main.current_output.total_frames,
-            'transfer'     : Output.Transfer.values[frame_props['_Transfer']],
-            'width'        : self.main.current_output.width,
+            'format': self.main.current_output.format.name,
+            'fps_den': self.main.current_output.fps_den,
+            'fps_num': self.main.current_output.fps_num,
+            'frame': self.main.current_frame,
+            'height': self.main.current_output.height,
+            'index': self.main.current_output.index,
+            'matrix': Output.Matrix.values[frame_props['_Matrix']],
+            'primaries': Output.Primaries.values[frame_props['_Primaries']],
+            'range': Output.Range.values[frame_props['_ColorRange']],
+            'script_name': self.main.script_path.stem,
+            'total_frames': self.main.current_output.total_frames,
+            'transfer': Output.Transfer.values[frame_props['_Transfer']],
+            'width': self.main.current_output.width,
         }
         substitutions = dict(frame_props)
         substitutions.update(builtin_substitutions)
@@ -206,7 +207,7 @@ class MiscToolbar(AbstractToolbar):
             pass
 
     def on_show_debug_changed(self, state: Qt.Qt.CheckState) -> None:
-        if   state == Qt.Qt.Checked:
+        if state == Qt.Qt.Checked:
             self.main.toolbars.debug.toggle_button.setVisible(True)
         elif state == Qt.Qt.Unchecked:
             if self.main.toolbars.debug.toggle_button.isChecked():
@@ -224,7 +225,7 @@ class MiscToolbar(AbstractToolbar):
         }
         state.update({
             'save_file_name_template': self.save_template_lineedit.text(),
-            'show_debug'             : self.show_debug_checkbox.isChecked()
+            'show_debug': self.show_debug_checkbox.isChecked()
         })
         state.update(super().__getstate__())
         return state

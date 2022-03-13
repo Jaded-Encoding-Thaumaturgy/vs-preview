@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from   enum    import auto, Enum
+from enum import auto, Enum
 import logging
-from   typing  import (
+from typing import (
     Any, cast, Dict, Iterator, List, Optional, Tuple, Type, Union,
 )
 
 from PyQt5 import Qt
-from yaml  import YAMLObject
+from yaml import YAMLObject
 
 from vspreview.core import (
     AbstractToolbar, Frame, FrameInterval, Scene, Time, TimeInterval,
@@ -26,10 +26,10 @@ from vspreview.utils import debug
 class Notch:
     def __init__(self, data: Union[Frame, Time], color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
                  label: str = '', line: Qt.QLineF = Qt.QLineF()) -> None:
-        self.data  = data
+        self.data = data
         self.color = color
         self.label = label
-        self.line  = line
+        self.line = line
 
     def __repr__(self) -> str:
         return '{}({}, {}, {}, {})'.format(
@@ -45,7 +45,10 @@ class Notches:
             return
         self.items = other.items
 
-    def add(self, data: Union[Frame, Scene, Time, Notch], color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white), label: str = '') -> None:
+    def add(
+            self, data: Union[Frame, Scene, Time, Notch],
+            color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
+            label: str = '') -> None:
         if isinstance(data, Notch):
             self.items.append(data)
         elif isinstance(data, Scene):
@@ -87,7 +90,7 @@ class Timeline(Qt.QWidget):
         yaml_tag = '!Timeline.Mode'
 
         FRAME = 'frame'
-        TIME  = 'time'
+        TIME = 'time'
 
         @classmethod
         def is_valid(cls, value: str) -> bool:
@@ -100,22 +103,22 @@ class Timeline(Qt.QWidget):
         from vspreview.utils import main_window
 
         super().__init__(parent)
-        self.app  = Qt.QApplication.instance()
+        self.app = Qt.QApplication.instance()
         self.main = main_window()
 
         self._mode = self.Mode.TIME
 
-        self.rect_f  = Qt.QRectF()
+        self.rect_f = Qt.QRectF()
 
         self.end_t = Time(seconds=1)
         self.end_f = Frame(1)
 
         self.notch_interval_target_x = round(75 * self.main.display_scale)
-        self.notch_height            = round( 6 * self.main.display_scale)
-        self.font_height             = round(10 * self.main.display_scale)
-        self.notch_label_interval    = round(-1 * self.main.display_scale)
-        self.notch_scroll_interval   = round( 2 * self.main.display_scale)
-        self.scroll_height           = round(10 * self.main.display_scale)
+        self.notch_height = round(6 * self.main.display_scale)
+        self.font_height = round(10 * self.main.display_scale)
+        self.notch_label_interval = round(-1 * self.main.display_scale)
+        self.notch_scroll_interval = round(2 * self.main.display_scale)
+        self.scroll_height = round(10 * self.main.display_scale)
 
         self.setMinimumSize(self.notch_interval_target_x,
                             round(33 * self.main.display_scale))
@@ -160,14 +163,14 @@ class Timeline(Qt.QWidget):
             label_notch_bottom = (self.rect_f.top() + self.font_height
                                   + self.notch_label_interval
                                   + self.notch_height + 5)
-            label_notch_top    = label_notch_bottom - self.notch_height
+            label_notch_top = label_notch_bottom - self.notch_height
             label_notch_x = self.rect_f.left()
 
             if self.mode == self.Mode.TIME:
                 notch_interval_t = self.calculate_notch_interval_t(
                     self.notch_interval_target_x)
-                label_format  = self.generate_label_format(notch_interval_t,
-                                                           self.end_t)
+                label_format = self.generate_label_format(notch_interval_t,
+                                                          self.end_t)
                 label_notch_t = Time()
 
                 while (label_notch_x < self.rect_f.right()
@@ -177,12 +180,12 @@ class Timeline(Qt.QWidget):
                     labels_notches.add(Notch(deepcopy(label_notch_t),
                                              line=line))
                     label_notch_t += notch_interval_t
-                    label_notch_x  = self.t_to_x(label_notch_t)
+                    label_notch_x = self.t_to_x(label_notch_t)
 
             elif self.mode == self.Mode.FRAME:
                 notch_interval_f = self.calculate_notch_interval_f(
                     self.notch_interval_target_x)
-                label_notch_f    = Frame(0)
+                label_notch_f = Frame(0)
 
                 while (label_notch_x < self.rect_f.right()
                         and label_notch_f <= self.end_f):
@@ -191,7 +194,7 @@ class Timeline(Qt.QWidget):
                     labels_notches.add(Notch(deepcopy(label_notch_f),
                                              line=line))
                     label_notch_f += notch_interval_f
-                    label_notch_x  = self.f_to_x(label_notch_f)
+                    label_notch_x = self.f_to_x(label_notch_f)
 
             self.scroll_rect = Qt.QRectF(
                 self.rect_f.left(),
@@ -203,7 +206,7 @@ class Timeline(Qt.QWidget):
                     continue
 
                 for notch in notches:
-                    if   isinstance(notch.data, Frame):
+                    if isinstance(notch.data, Frame):
                         x = self.f_to_x(notch.data)
                     elif isinstance(notch.data, Time):
                         x = self.t_to_x(notch.data)
@@ -233,7 +236,7 @@ class Timeline(Qt.QWidget):
                     line.x2(), line.y2() - self.notch_label_interval, 0, 0)
 
                 if self.mode == self.Mode.TIME:
-                    time  = cast(Time, notch.data)
+                    time = cast(Time, notch.data)
                     label = strfdelta(time, label_format)
                 if self.mode == self.Mode.FRAME:
                     label = str(notch.data)
@@ -335,18 +338,18 @@ class Timeline(Qt.QWidget):
         self.full_repaint()
 
     notch_intervals_t = (
-        TimeInterval(seconds=   1),
-        TimeInterval(seconds=   2),
-        TimeInterval(seconds=   5),
-        TimeInterval(seconds=  10),
-        TimeInterval(seconds=  15),
-        TimeInterval(seconds=  30),
-        TimeInterval(seconds=  60),
-        TimeInterval(seconds=  90),
-        TimeInterval(seconds= 120),
-        TimeInterval(seconds= 300),
-        TimeInterval(seconds= 600),
-        TimeInterval(seconds= 900),
+        TimeInterval(seconds=1),
+        TimeInterval(seconds=2),
+        TimeInterval(seconds=5),
+        TimeInterval(seconds=10),
+        TimeInterval(seconds=15),
+        TimeInterval(seconds=30),
+        TimeInterval(seconds=60),
+        TimeInterval(seconds=90),
+        TimeInterval(seconds=120),
+        TimeInterval(seconds=300),
+        TimeInterval(seconds=600),
+        TimeInterval(seconds=900),
         TimeInterval(seconds=1200),
         TimeInterval(seconds=1800),
         TimeInterval(seconds=2700),
@@ -366,23 +369,23 @@ class Timeline(Qt.QWidget):
         raise RuntimeError
 
     notch_intervals_f = (
-        FrameInterval(    1),
-        FrameInterval(    5),
-        FrameInterval(   10),
-        FrameInterval(   20),
-        FrameInterval(   25),
-        FrameInterval(   50),
-        FrameInterval(   75),
-        FrameInterval(  100),
-        FrameInterval(  200),
-        FrameInterval(  250),
-        FrameInterval(  500),
-        FrameInterval(  750),
-        FrameInterval( 1000),
-        FrameInterval( 2000),
-        FrameInterval( 2500),
-        FrameInterval( 5000),
-        FrameInterval( 7500),
+        FrameInterval(1),
+        FrameInterval(5),
+        FrameInterval(10),
+        FrameInterval(20),
+        FrameInterval(25),
+        FrameInterval(50),
+        FrameInterval(75),
+        FrameInterval(100),
+        FrameInterval(200),
+        FrameInterval(250),
+        FrameInterval(500),
+        FrameInterval(750),
+        FrameInterval(1000),
+        FrameInterval(2000),
+        FrameInterval(2500),
+        FrameInterval(5000),
+        FrameInterval(7500),
         FrameInterval(10000),
         FrameInterval(20000),
         FrameInterval(25000),
@@ -403,7 +406,7 @@ class Timeline(Qt.QWidget):
         raise RuntimeError
 
     def generate_label_format(self, notch_interval_t: TimeInterval, end_time: TimeInterval) -> str:
-        if   end_time >= TimeInterval(hours=1):
+        if end_time >= TimeInterval(hours=1):
             return '%h:%M:00'
         elif notch_interval_t >= TimeInterval(minutes=1):
             return '%m:00'
@@ -419,7 +422,7 @@ class Timeline(Qt.QWidget):
         if self.rect_f.width() == 0.0:
             self.cursor_ftx = pos
 
-        if   isinstance(pos, Frame):
+        if isinstance(pos, Frame):
             self.cursor_x = self.f_to_x(pos)
         elif isinstance(pos, Time):
             self.cursor_x = self.t_to_x(pos)

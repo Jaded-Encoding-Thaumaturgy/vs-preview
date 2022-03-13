@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from   functools import wraps
+from functools import wraps
 import inspect
 import logging
 import re
-from   time      import perf_counter_ns
-from   typing    import Any, Callable, cast, Dict, Type, TypeVar, Tuple, Union
+from time import perf_counter_ns
+from typing import Any, Callable, cast, Dict, Type, TypeVar, Tuple, Union
 
-from   pprint      import pprint
-from   PyQt5       import Qt, sip
-import vapoursynth as     vs
+from pprint import pprint
+from PyQt5 import Qt, sip
+import vapoursynth as vs
 
 from vspreview.core import AbstractMainWindow
 
@@ -38,19 +38,19 @@ class EventFilter(Qt.QObject):
         self.main = main
 
     def eventFilter(self, obj: Qt.QObject, event: Qt.QEvent) -> bool:
-        if   (event.type() == Qt.QEvent.Show):
-            logging.debug( '--------------------------------')
+        if (event.type() == Qt.QEvent.Show):
+            logging.debug('--------------------------------')
             logging.debug(f'{obj.objectName()}')
-            logging.debug( 'event:       Show')
+            logging.debug('event:       Show')
             logging.debug(f'spontaneous: {event.spontaneous()}')
-            logging.debug( '')
+            logging.debug('')
             self.print_toolbars_state()
         elif (event.type() == Qt.QEvent.Hide):
-            logging.debug( '--------------------------------')
+            logging.debug('--------------------------------')
             logging.debug(f'{obj.objectName()}')
-            logging.debug( 'event:       Hide')
+            logging.debug('event:       Hide')
             logging.debug(f'spontaneous: {event.spontaneous()}')
-            logging.debug( '')
+            logging.debug('')
             self.print_toolbars_state()
 
         # return Qt.QObject.eventFilter(object, event)
@@ -92,7 +92,9 @@ class EventFilter(Qt.QObject):
         logging.debug(f'Sync average:  {total_sync  / N - 1} ns, {1_000_000_000 / (total_sync  / N - 1)} fps')
 
 
-def measure_exec_time_ms(func: Callable[..., T], return_exec_time: bool = False, print_exec_time: bool = True) -> Callable[..., Union[T, Tuple[T, float]]]:
+def measure_exec_time_ms(func: Callable[..., T],
+                         return_exec_time: bool = False, print_exec_time: bool = True) -> Callable[...,
+                                                                                                   Union[T, Tuple[T, float]]]:
     @wraps(func)
     def decorator(*args: Any, **kwargs: Any) -> T:
         t1 = perf_counter_ns()
@@ -118,7 +120,7 @@ def profile_cpu(func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
     def decorator(*args: Any, **kwargs: Any) -> T:
         from cProfile import Profile
-        from pstats   import Stats, SortKey  # type: ignore
+        from pstats import Stats, SortKey  # type: ignore
 
         p = Profile(perf_counter_ns, 0.000_000_001, True, False)
         ret = p.runcall(func, *args, **kwargs)
@@ -135,9 +137,9 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
 
     props = vs_output.get_frame(0).props
     logging.debug('Matrix: {}, Transfer: {}, Primaries: {}, Range: {}'.format(
-        Output.Matrix   .values[props['_Matrix']]     if '_Matrix'     in props else None,
-        Output.Transfer .values[props['_Transfer']]   if '_Transfer'   in props else None,
-        Output.Primaries.values[props['_Primaries']]  if '_Primaries'  in props else None,
+        Output.Matrix   .values[props['_Matrix']] if '_Matrix' in props else None,
+        Output.Transfer .values[props['_Transfer']] if '_Transfer' in props else None,
+        Output.Primaries.values[props['_Primaries']] if '_Primaries' in props else None,
         Output.Range    .values[props['_ColorRange']] if '_ColorRange' in props else None,
     ))
 
@@ -412,7 +414,8 @@ class Application(Qt.QApplication):
         isex = False
         try:
             self.enter_count += 1
-            ret, time = cast(Tuple[bool, float], measure_exec_time_ms(Qt.QApplication.notify, True, False)(self, obj, event))
+            ret, time = cast(Tuple[bool, float], measure_exec_time_ms(
+                Qt.QApplication.notify, True, False)(self, obj, event))
             self.enter_count -= 1
 
             if type(event).__name__ == 'QEvent' and event.type() in qevent_info:

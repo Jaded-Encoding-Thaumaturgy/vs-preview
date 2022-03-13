@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from   typing  import Any, Iterator, Sequence
+from typing import Any, Iterator, Sequence
 
 from PyQt5 import Qt
 
@@ -30,8 +30,7 @@ class ZoomLevels(Qt.QAbstractListModel):
         return self.levels.index(item)
 
     def data(self, index: Qt.QModelIndex, role: int = Qt.Qt.UserRole) -> Any:
-        if (not index.isValid()
-                or index.row() >= len(self.levels)):
+        if (not index.isValid() or index.row() >= len(self.levels)):
             return None
 
         if role == Qt.Qt.DisplayRole:

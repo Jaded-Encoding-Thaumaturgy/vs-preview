@@ -1,8 +1,8 @@
-from typing   import Optional
+from typing import Optional
 
 from PyQt5 import Qt
 
-from vspreview.core  import AbstractMainWindow, AbstractToolbar, Frame
+from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame
 from vspreview.utils import debug, set_qobject_names
 
 
@@ -58,7 +58,6 @@ class DebugToolbar(AbstractToolbar):
         layout.addStretch()
 
         self.toggle_button.setVisible(False)
-
 
     def test_button_clicked(self, checked: Optional[bool] = None) -> None:
         from vspreview.utils import vs_clear_cache

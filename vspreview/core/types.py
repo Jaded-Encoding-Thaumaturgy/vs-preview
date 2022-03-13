@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import ctypes
-from   datetime import timedelta
+from datetime import timedelta
 import logging
-from   typing   import (
+from typing import (
     Any, Mapping, Optional,
     overload, TypeVar, Union,
 )
 
-from   PyQt5       import Qt
-from   yaml        import YAMLObject
-import vapoursynth as     vs
+from PyQt5 import Qt
+from yaml import YAMLObject
+import vapoursynth as vs
 
 
 # pylint: disable=function-redefined
@@ -416,13 +416,13 @@ class Scene(YAMLObject):
     def __init__(self, start: Optional[Frame] = None, end: Optional[Frame] = None, label: str = '') -> None:
         if start is not None and end is not None:
             self.start = start
-            self.end   = end
+            self.end = end
         elif start is not None:
             self.start = start
-            self.end   = start
+            self.end = start
         elif end is not None:
             self.start = end
-            self.end   = end
+            self.end = end
         else:
             raise ValueError
 
@@ -454,7 +454,7 @@ class Scene(YAMLObject):
         if self.start != other.start:
             return self.start > other.start
         else:
-            return self.end   > other.end
+            return self.end > other.end
 
     def __ne__(self, other: Scene) -> bool:  # type: ignore
         return not self.__eq__(other)
@@ -494,7 +494,9 @@ class Scene(YAMLObject):
             if not isinstance(label, str):
                 raise TypeError('Label of Scene is not a string. It\'s most probably corrupted.')
         except KeyError:
-            raise KeyError('Scene lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(', '.join(self.__slots__)))
+            raise KeyError(
+                'Scene lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(
+                    ', '.join(self.__slots__)))
 
         self.__init__(start, end, label)  # type: ignore
 
@@ -504,9 +506,9 @@ class Output(YAMLObject):
 
     class Resizer:
         Bilinear = vs.core.resize.Bilinear
-        Bicubic  = vs.core.resize.Bicubic
-        Point    = vs.core.resize.Point
-        Lanczos  = vs.core.resize.Lanczos
+        Bicubic = vs.core.resize.Bicubic
+        Point = vs.core.resize.Point
+        Lanczos = vs.core.resize.Lanczos
         Spline16 = vs.core.resize.Spline16
         Spline36 = vs.core.resize.Spline36
 
@@ -529,19 +531,19 @@ class Output(YAMLObject):
             14: 'ictcp',
         }
 
-        RGB        = values[ 0]
-        BT709      = values[ 1]
-        UNSPEC     = values[ 2]
-        BT470_BG   = values[ 5]
-        ST170_M    = values[ 6]
-        ST240_M    = values[ 7]
-        FCC        = values[ 4]
-        YCGCO      = values[ 8]
-        BT2020_NCL = values[ 9]
-        BT2020_CL  = values[10]
-        CHROMA_CL  = values[13]
+        RGB = values[0]
+        BT709 = values[1]
+        UNSPEC = values[2]
+        BT470_BG = values[5]
+        ST170_M = values[6]
+        ST240_M = values[7]
+        FCC = values[4]
+        YCGCO = values[8]
+        BT2020_NCL = values[9]
+        BT2020_CL = values[10]
+        CHROMA_CL = values[13]
         CHROMA_NCL = values[12]
-        ICTCP      = values[14]
+        ICTCP = values[14]
 
     class Transfer:
         values = {
@@ -566,21 +568,21 @@ class Output(YAMLObject):
             18: 'std-b67',
         }
 
-        BT709         = values[ 1]
-        UNSPEC        = values[ 2]
-        BT601         = values[ 6]
-        LINEAR        = values[ 8]
-        BT2020_10     = values[14]
-        BT2020_12     = values[15]
-        ST240_M       = values[ 7]
-        BT470_M       = values[ 4]
-        BT470_BG      = values[ 5]
-        LOG_100       = values[ 9]
-        LOG_316       = values[10]
-        ST2084        = values[16]
-        ARIB_B67      = values[18]
-        SRGB          = values[13]
-        XV_YCC        = values[11]
+        BT709 = values[1]
+        UNSPEC = values[2]
+        BT601 = values[6]
+        LINEAR = values[8]
+        BT2020_10 = values[14]
+        BT2020_12 = values[15]
+        ST240_M = values[7]
+        BT470_M = values[4]
+        BT470_BG = values[5]
+        LOG_100 = values[9]
+        LOG_316 = values[10]
+        ST2084 = values[16]
+        ARIB_B67 = values[18]
+        SRGB = values[13]
+        XV_YCC = values[11]
         IEC_61966_2_4 = XV_YCC
         IEC_61966_2_1 = SRGB
 
@@ -602,18 +604,18 @@ class Output(YAMLObject):
             22: 'jedec-p22',
         }
 
-        BT709     = values[ 1]
-        UNSPEC    = values[ 2]
-        ST170_M   = values[ 6]
-        ST240_M   = values[ 7]
-        BT470_M   = values[ 4]
-        BT470_BG  = values[ 5]
-        FILM      = values[ 8]
-        BT2020    = values[ 9]
-        ST428     = values[10]
-        XYZ       = ST428
-        ST431_2   = values[11]
-        ST431_1   = values[12]
+        BT709 = values[1]
+        UNSPEC = values[2]
+        ST170_M = values[6]
+        ST240_M = values[7]
+        BT470_M = values[4]
+        BT470_BG = values[5]
+        FILM = values[8]
+        BT2020 = values[9]
+        ST428 = values[10]
+        XYZ = ST428
+        ST431_2 = values[11]
+        ST431_1 = values[12]
         JEDEC_P22 = values[22]
         EBU3213_E = JEDEC_P22
 
@@ -624,7 +626,7 @@ class Output(YAMLObject):
         }
 
         LIMITED = values[1]
-        FULL    = values[0]
+        FULL = values[0]
 
     class ChromaLoc:
         values = {
@@ -636,12 +638,12 @@ class Output(YAMLObject):
             5: 'bottom',
         }
 
-        LEFT        = values[0]
-        CENTER      = values[1]
-        TOP_LEFT    = values[2]
-        TOP         = values[3]
+        LEFT = values[0]
+        CENTER = values[1]
+        TOP_LEFT = values[2]
+        TOP = values[3]
         BOTTOM_LEFT = values[4]
-        BOTTOM      = values[5]
+        BOTTOM = values[5]
 
     storable_attrs = (
         'name', 'last_showed_frame', 'play_fps',
@@ -652,21 +654,21 @@ class Output(YAMLObject):
         'format', 'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'has_alpha', 'vs_alpha',
         'format_alpha', 'props', 'source_vs_output', 'source_vs_alpha',
-        'main', 'checkerboard', "__weakref__",'qt_output',
-        "cur_frame" # hack to keep the reference to the current frame
+        'main', 'checkerboard', "__weakref__", 'qt_output',
+        "cur_frame"  # hack to keep the reference to the current frame
     )
 
     def clear(self):
         self.source_vs_output = None
-        self.source_vs_alpha  = None
+        self.source_vs_alpha = None
         self.vs_alpha = None
         self.vs_output = None
-        self.format    = None
-        self.props     = None
+        self.format = None
+        self.props = None
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
-        from vspreview.models  import SceningLists
-        from vspreview.utils   import main_window
+        from vspreview.models import SceningLists
+        from vspreview.utils import main_window
 
         self.main = main_window()
 
@@ -679,29 +681,29 @@ class Output(YAMLObject):
             self.has_alpha = True
             self.source_vs_alpha = vs_output.alpha
 
-            self.vs_alpha        = self.prepare_vs_output(self.source_vs_alpha, alpha=True)
-            self.format_alpha    = self.source_vs_alpha.format
+            self.vs_alpha = self.prepare_vs_output(self.source_vs_alpha, alpha=True)
+            self.format_alpha = self.source_vs_alpha.format
 
-        self.index        = index
-        self.qt_output    = Qt.QImage.Format_RGB30
+        self.index = index
+        self.qt_output = Qt.QImage.Format_RGB30
         if not hasattr(vs.core, 'libp2p'):
             print(Warning(
                 "LibP2P is missing, it is reccomended to prepare output clips correctly!\n"
                 "You can get it here: https://github.com/DJATOM/LibP2P-Vapoursynth"
-                ))
-                
-        self.vs_output    = self.prepare_vs_output(self.source_vs_output)
-        self.width        = self.vs_output.width
-        self.height       = self.vs_output.height
-        self.format       = self.source_vs_output.format
-        self.props        = self.source_vs_output.get_frame(0).props
-        self.fps_num      = self.vs_output.fps.numerator
-        self.fps_den      = self.vs_output.fps.denominator
-        self.fps          = self.fps_num / self.fps_den
+            ))
+
+        self.vs_output = self.prepare_vs_output(self.source_vs_output)
+        self.width = self.vs_output.width
+        self.height = self.vs_output.height
+        self.format = self.source_vs_output.format
+        self.props = self.source_vs_output.get_frame(0).props
+        self.fps_num = self.vs_output.fps.numerator
+        self.fps_den = self.vs_output.fps.denominator
+        self.fps = self.fps_num / self.fps_den
         self.total_frames = FrameInterval(self.vs_output.num_frames)
-        self.total_time   = self.to_time_interval(self.total_frames - FrameInterval(1))
-        self.end_frame    = Frame(int(self.total_frames) - 1)
-        self.end_time     = self.to_time(self.end_frame)
+        self.total_time = self.to_time_interval(self.total_frames - FrameInterval(1))
+        self.end_frame = Frame(int(self.total_frames) - 1)
+        self.end_time = self.to_time(self.end_frame)
 
         if self.has_alpha:
             self.checkerboard = self._generate_checkerboard()
@@ -730,11 +732,11 @@ class Output(YAMLObject):
     def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
         resizer = self.main.VS_OUTPUT_RESIZER
         resizer_kwargs = {
-            'format'        : vs.RGB24,
-            'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,
-            'transfer_in_s' : self.main.VS_OUTPUT_TRANSFER,
+            'format': vs.RGB24,
+            'matrix_in_s': self.main.VS_OUTPUT_MATRIX,
+            'transfer_in_s': self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
-            'range_in_s'    : self.main.VS_OUTPUT_RANGE,
+            'range_in_s': self.main.VS_OUTPUT_RANGE,
             'chromaloc_in_s': self.main.VS_OUTPUT_CHROMALOC,
         }
 
@@ -757,8 +759,10 @@ class Output(YAMLObject):
             if hasattr(vs.core, 'libp2p'):
                 vs_output = vs.core.libp2p.Pack(vs_output)
             else:
-                vs_output = vs.core.akarin.Expr(vs.core.std.SplitPlanes(vs_output), 'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1)
-                
+                vs_output = vs.core.akarin.Expr(
+                    vs.core.std.SplitPlanes(vs_output),
+                    'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1)
+
         return vs_output
 
     def render_frame(self, frame: Frame) -> Qt.QImage:
@@ -770,8 +774,9 @@ class Output(YAMLObject):
                 self.vs_output.get_frame(int(frame)),
                 self.vs_alpha.get_frame(int(frame)))
 
-    def render_raw_videoframe(self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None) -> Qt.QImage:
-        self.cur_frame = (vs_frame, vs_frame_alpha) # keep a reference to the current frame
+    def render_raw_videoframe(
+            self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None) -> Qt.QImage:
+        self.cur_frame = (vs_frame, vs_frame_alpha)  # keep a reference to the current frame
         # powerful spell. do not touch
         frame_data_pointer = ctypes.cast(
             vs_frame.get_read_ptr(0),
@@ -813,7 +818,7 @@ class Output(YAMLObject):
         return result_image
 
     def _generate_checkerboard(self) -> Qt.QImage:
-        tile_size    = self.main.CHECKERBOARD_TILE_SIZE
+        tile_size = self.main.CHECKERBOARD_TILE_SIZE
         tile_color_1 = self.main.CHECKERBOARD_TILE_COLOR_1
         tile_color_2 = self.main.CHECKERBOARD_TILE_COLOR_2
 
@@ -858,7 +863,7 @@ class Output(YAMLObject):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from vspreview.models import SceningLists
-        from vspreview.utils  import try_load
+        from vspreview.utils import try_load
 
         self.name = ''
         try_load(

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from   bisect   import bisect_left, bisect_right
+from bisect import bisect_left, bisect_right
 import logging
-from   typing   import (
+from typing import (
     Any, Callable, cast, Dict, Iterator, List, Mapping, Optional, Set, Tuple,
     Union
 )
@@ -26,17 +26,17 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
     )
 
     START_FRAME_COLUMN = 0
-    END_FRAME_COLUMN   = 1
-    START_TIME_COLUMN  = 2
-    END_TIME_COLUMN    = 3
-    LABEL_COLUMN       = 4
-    COLUMN_COUNT       = 5
+    END_FRAME_COLUMN = 1
+    START_TIME_COLUMN = 2
+    END_TIME_COLUMN = 3
+    LABEL_COLUMN = 4
+    COLUMN_COUNT = 5
 
     def __init__(self, name: str = '', max_value: Optional[Frame] = None, items: Optional[List[Scene]] = None) -> None:
         super().__init__()
-        self.name      = name
+        self.name = name
         self.max_value = max_value if max_value is not None else Frame(2**31)
-        self.items     =     items if     items is not None else []
+        self.items = items if items is not None else []
 
         self.main = main_window()
 
@@ -117,9 +117,9 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
                         Qt.Qt.UserRole):
             return False
 
-        row    = index.row()
+        row = index.row()
         column = index.column()
-        scene  = deepcopy(self.items[row])
+        scene = deepcopy(self.items[row])
 
         if column == self.START_FRAME_COLUMN:
             if not isinstance(value, Frame):
@@ -231,7 +231,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
             raise IndexError
 
     def get_next_frame(self, initial: Frame) -> Optional[Frame]:
-        result       = None
+        result = None
         result_delta = FrameInterval(int(self.max_value))
         for scene in self.items:
             if FrameInterval(0) < scene.start - initial < result_delta:
@@ -244,7 +244,7 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
         return result
 
     def get_prev_frame(self, initial: Frame) -> Optional[Frame]:
-        result       = None
+        result = None
         result_delta = FrameInterval(int(self.max_value))
         for scene in self.items:
             if FrameInterval(0) < initial - scene.start < result_delta:
@@ -277,7 +277,9 @@ class SceningList(Qt.QAbstractTableModel, QYAMLObject):
                 if not isinstance(item, Scene):
                     raise TypeError('One of the items of SceningList is not a Scene. It\'s most probably corrupted.')
         except KeyError:
-            raise KeyError('SceningList lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(', '.join(self.__slots__)))
+            raise KeyError(
+                'SceningList lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(
+                    ', '.join(self.__slots__)))
 
         self.__init__(name, max_value, items)  # type: ignore
 
@@ -394,8 +396,11 @@ class SceningLists(Qt.QAbstractListModel, QYAMLObject):
                 raise TypeError('\'items\' of a SceningLists is not a List. It\'s most probably corrupted.')
             for item in items:
                 if not isinstance(item, SceningList):
-                    raise TypeError('One of the items of a SceningLists is not a SceningList. It\'s most probably corrupted.')
+                    raise TypeError(
+                        'One of the items of a SceningLists is not a SceningList. It\'s most probably corrupted.')
         except KeyError:
-            raise KeyError('SceningLists lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(', '.join(self.__slots__)))
+            raise KeyError(
+                'SceningLists lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(
+                    ', '.join(self.__slots__)))
 
         self.__init__(items)  # type: ignore

@@ -2,7 +2,7 @@
 # pylint: skip-file
 from __future__ import annotations
 
-from abc    import ABCMeta as NativeABCMeta
+from abc import ABCMeta as NativeABCMeta
 from typing import Any, cast, Optional, TypeVar, Union
 
 

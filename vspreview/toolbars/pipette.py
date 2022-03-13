@@ -6,8 +6,8 @@ from weakref import WeakKeyDictionary
 from PyQt5 import Qt
 import vapoursynth as vs
 
-from vspreview.core    import AbstractMainWindow, AbstractToolbar, Output
-from vspreview.utils   import set_qobject_names
+from vspreview.core import AbstractMainWindow, AbstractToolbar, Output
+from vspreview.utils import set_qobject_names
 from vspreview.widgets import ColorView
 
 
@@ -59,7 +59,7 @@ class PipetteToolbar(AbstractToolbar):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.color_view = ColorView(self)
-        self.color_view.setFixedSize(self.height() // 2 , self.height() // 2)
+        self.color_view.setFixedSize(self.height() // 2, self.height() // 2)
         layout.addWidget(self.color_view)
 
         font = Qt.QFont('Consolas', 9)

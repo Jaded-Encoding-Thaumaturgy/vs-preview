@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from vspreview.utils import strfdelta
-from   collections import deque
-from   concurrent.futures import Future
+from collections import deque
+from concurrent.futures import Future
 import logging
-from   time        import perf_counter
-from   typing      import Any, Deque, Mapping, Optional, Union
+from time import perf_counter
+from typing import Any, Deque, Mapping, Optional, Union
 
 from PyQt5 import Qt
 
@@ -44,13 +44,11 @@ class BenchmarkSettings(Qt.QWidget, QYAMLObjectSingleton):
         layout = Qt.QVBoxLayout(self)
         layout.setObjectName('BenchmarkSettings.setup_ui.layout')
 
-
         self.clear_cache_checkbox = Qt.QCheckBox(self)
         self.clear_cache_checkbox.setText(
             'Clear VS frame caches before each run'
         )
         layout.addWidget(self.clear_cache_checkbox)
-
 
         refresh_interval_layout = Qt.QHBoxLayout()
         refresh_interval_layout.setObjectName(
@@ -65,7 +63,6 @@ class BenchmarkSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.refresh_interval_control = TimeEdit[TimeInterval](self)
         refresh_interval_layout.addWidget(self.refresh_interval_control)
 
-
         self.frame_data_sharing_fix_checkbox = Qt.QCheckBox(self)
         self.frame_data_sharing_fix_checkbox.setText(
             '(Debug) Enable frame data sharing fix'
@@ -76,7 +73,6 @@ class BenchmarkSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.clear_cache_checkbox.setChecked(False)
         self.refresh_interval_control.setValue(TimeInterval(milliseconds=150))
         self.frame_data_sharing_fix_checkbox.setChecked(True)
-
 
     @property
     def clear_cache_enabled(self) -> bool:
@@ -90,11 +86,10 @@ class BenchmarkSettings(Qt.QWidget, QYAMLObjectSingleton):
     def frame_data_sharing_fix_enabled(self) -> bool:
         return self.frame_data_sharing_fix_checkbox.isChecked()
 
-
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'clear_cache_enabled': self.clear_cache_enabled,
-            'refresh_interval'   : self.refresh_interval,
+            'refresh_interval': self.refresh_interval,
             'frame_data_sharing_fix_enabled':
             self.frame_data_sharing_fix_enabled,
         }
@@ -142,10 +137,10 @@ class BenchmarkToolbar(AbstractToolbar):
         self.unsequenced = False
         self.buffer: Deque[Future] = deque()
         self.run_start_time = 0.0
-        self.start_frame  = Frame(0)
-        self.  end_frame  = Frame(0)
+        self.start_frame = Frame(0)
+        self.  end_frame = Frame(0)
         self.total_frames = FrameInterval(0)
-        self.frames_left  = FrameInterval(0)
+        self.frames_left = FrameInterval(0)
 
         self.sequenced_timer = Qt.QTimer()
         self.sequenced_timer.setTimerType(Qt.Qt.PreciseTimer)
@@ -156,8 +151,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self. start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))
         self.  start_time_control.valueChanged.connect(lambda value: self.update_controls(start=Frame(value)))
-        self.   end_frame_control.valueChanged.connect(lambda value: self.update_controls(  end=value))
-        self.    end_time_control.valueChanged.connect(lambda value: self.update_controls(  end=Frame(value)))
+        self.   end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))
+        self.    end_time_control.valueChanged.connect(lambda value: self.update_controls(end=Frame(value)))
         self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
         self.  total_time_control.valueChanged.connect(lambda value: self.update_controls(total=FrameInterval(value)))
         self.   prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
@@ -244,7 +239,6 @@ class BenchmarkToolbar(AbstractToolbar):
         self.  total_time_control.setMaximum(self.main.current_output.total_time)
         self.  total_time_control.setMaximum(TimeInterval(FrameInterval(1)))
 
-
     def run(self) -> None:
         from copy import deepcopy
 
@@ -257,10 +251,10 @@ class BenchmarkToolbar(AbstractToolbar):
                 self.main.current_output.graphics_scene_item.image().copy()
             )
 
-        self.start_frame  = self.start_frame_control .value()
-        self.  end_frame  = self.  end_frame_control .value()
+        self.start_frame = self.start_frame_control .value()
+        self.  end_frame = self.  end_frame_control .value()
         self.total_frames = self.total_frames_control.value()
-        self.frames_left  = deepcopy(self.total_frames)
+        self.frames_left = deepcopy(self.total_frames)
         if self.prefetch_checkbox.isChecked():
             concurrent_requests_count = get_usable_cpus_count()
         else:
@@ -329,7 +323,6 @@ class BenchmarkToolbar(AbstractToolbar):
             future.result()
         self.frames_left -= FrameInterval(1)
 
-
     def on_run_abort_pressed(self, checked: bool) -> None:
         if checked:
             self.set_ui_editable(False)
@@ -355,9 +348,10 @@ class BenchmarkToolbar(AbstractToolbar):
         self.   prefetch_checkbox.setEnabled(new_state)
         self. unsequenced_checkbox.setEnabled(new_state)
 
-    def update_controls(self, start: Optional[Frame] = None, end: Optional[Frame] = None, total: Optional[FrameInterval] = None) -> None:
+    def update_controls(
+            self, start: Optional[Frame] = None, end: Optional[Frame] = None, total: Optional[FrameInterval] = None) -> None:
         if start is not None:
-            end   = self.   end_frame_control.value()
+            end = self.   end_frame_control.value()
             total = self.total_frames_control.value()
 
             if start > end:
@@ -374,14 +368,14 @@ class BenchmarkToolbar(AbstractToolbar):
 
         elif total is not None:
             start = self.start_frame_control.value()
-            end   = self.  end_frame_control.value()
+            end = self.  end_frame_control.value()
             old_total = end - start + FrameInterval(1)
             delta = total - old_total
 
             end += delta
             if end > self.main.current_output.end_frame:
                 start -= end - self.main.current_output.end_frame
-                end    = self.main.current_output.end_frame
+                end = self.main.current_output.end_frame
         else:
             return
 
@@ -399,7 +393,6 @@ class BenchmarkToolbar(AbstractToolbar):
 
         info_str = (f"{frames_done}/{self.total_frames} frames in {strfdelta(run_time, '%M:%S.%Z')}, {fps:.4f} fps")
         self.info_label.setText(info_str)
-
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {

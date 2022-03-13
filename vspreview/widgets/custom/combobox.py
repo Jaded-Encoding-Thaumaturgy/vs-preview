@@ -14,9 +14,9 @@ T = TypeVar('T', Output, SceningList, float)
 class ComboBox(Qt.QComboBox, Generic[T]):
     def __class_getitem__(cls, ty: Type[T]) -> Type:
         type_specializations: Dict[Type, Type] = {
-            Output     : _ComboBox_Output,
+            Output: _ComboBox_Output,
             SceningList: _ComboBox_SceningList,
-            float      : _ComboBox_float,
+            float: _ComboBox_float,
         }
 
         try:

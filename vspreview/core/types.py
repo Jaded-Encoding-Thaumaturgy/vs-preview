@@ -667,7 +667,6 @@ class Output(YAMLObject):
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
         from vspreview.models  import SceningLists
         from vspreview.utils   import main_window
-        from vspreview.widgets import GraphicsImageItem
 
         self.main = main_window()
 
@@ -731,7 +730,7 @@ class Output(YAMLObject):
     def prepare_vs_output(self, vs_output: vs.VideoNode, alpha: bool = False) -> vs.VideoNode:
         resizer = self.main.VS_OUTPUT_RESIZER
         resizer_kwargs = {
-            'format'        : vs.RGB30,
+            'format'        : vs.RGB24,
             'matrix_in_s'   : self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s' : self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
@@ -861,15 +860,11 @@ class Output(YAMLObject):
         from vspreview.models import SceningLists
         from vspreview.utils  import try_load
 
-        print(state)
-        print(self)
-
         self.name = ''
         try_load(
             state, 'name', str, self,
             'Storage loading: Output: failed to parse name.'
         )
-        print(self.name)
 
         self.last_showed_frame = Frame(0)
         try:

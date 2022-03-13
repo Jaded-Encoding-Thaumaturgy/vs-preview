@@ -16,7 +16,8 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
 
     __slots__ = ('items',)
 
-    def __init__(self, main_window: Any, local_storage: Optional[Mapping[str, Output]] = None) -> None:
+    def __init__(self, local_storage: Optional[Mapping[str, Output]] = None) -> None:
+        from vspreview.utils import main_window
         super().__init__()
         self.items: List[Output] = []
 
@@ -24,10 +25,9 @@ class Outputs(Qt.QAbstractListModel, QYAMLObjectSingleton):
 
         outputs = OrderedDict(sorted(vs.get_outputs().items()))
 
-        if main_window:
-            main_window.reload_signal.connect(self.clear_outputs)
+        main_window().reload_signal.connect(self.clear_outputs)
 
-        for i, vs_output in enumerate([x for x in outputs if isinstance(x, vs.VideoOutputTuple)]):
+        for i, vs_output in outputs.items():
             try:
                 output = local_storage[str(i)]
                 output.__init__(vs_output, i)  # type: ignore

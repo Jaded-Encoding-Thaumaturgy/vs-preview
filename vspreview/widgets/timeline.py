@@ -18,8 +18,10 @@ from ..core import (
 
 
 class Notch:
-    def __init__(self, data: Union[Frame, Time], color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
-                 label: str = '', line: Qt.QLineF = Qt.QLineF()) -> None:
+    def __init__(
+        self, data: Union[Frame, Time], color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
+        label: str = '', line: Qt.QLineF = Qt.QLineF()
+    ) -> None:
         self.data = data
         self.color = color
         self.label = label
@@ -40,9 +42,10 @@ class Notches:
         self.items = other.items
 
     def add(
-            self, data: Union[Frame, Scene, Time, Notch],
-            color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
-            label: str = '') -> None:
+        self, data: Union[Frame, Scene, Time, Notch],
+        color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
+        label: str = ''
+    ) -> None:
         if isinstance(data, Notch):
             self.items.append(data)
         elif isinstance(data, Scene):

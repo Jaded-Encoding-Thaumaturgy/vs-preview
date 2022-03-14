@@ -36,7 +36,7 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     @abstractmethod
-    def switch_frame(self, pos: Union[Frame, Time], *, render_frame: bool = True) -> None:
+    def switch_frame(self, pos: Union[Frame, Time] | None, *, render_frame: bool = True) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -92,7 +92,7 @@ class AbstractToolbar(Qt.QWidget, QABC):
         self.setVisible(new_state)
         self.resize_main_window(new_state)
 
-    def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
+    def on_current_frame_changed(self, frame: Frame) -> None:
         pass
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:

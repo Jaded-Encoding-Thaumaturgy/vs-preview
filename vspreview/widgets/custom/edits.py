@@ -7,7 +7,7 @@ from PyQt5 import Qt
 from vspreview.core import (
     Frame, FrameInterval, FrameType, Time, TimeInterval, TimeType,
 )
-from vspreview.utils import debug, from_qtime, to_qtime
+from vspreview.utils import from_qtime, to_qtime
 
 
 # TODO: replace specialized Edit classes with some metaclasses magic or such
@@ -33,38 +33,38 @@ class FrameEdit(Qt.QSpinBox, Generic[FrameType]):
         self.setMinimum(self.ty(0))
 
         self.oldValue: FrameType = self.value()
-        super().valueChanged.connect(self._valueChanged)
+        super().valueChanged.connect(self._valueChanged)  # type: ignore
 
     def _valueChanged(self, newValue: int) -> None:
         self.valueChanged.emit(self.value(), self.oldValue)
 
-    def value(self) -> FrameType:
+    def value(self) -> FrameType:  # type: ignore
         return self.ty(super().value())
 
-    def setValue(self, newValue: FrameType) -> None:
+    def setValue(self, newValue: FrameType) -> None:  # type: ignore
         super().setValue(int(newValue))
 
-    def minimum(self) -> FrameType:
+    def minimum(self) -> FrameType:  # type: ignore
         return self.ty(super().minimum())
 
-    def setMinimum(self, newValue: FrameType) -> None:
+    def setMinimum(self, newValue: FrameType) -> None:  # type: ignore
         super().setMinimum(int(newValue))
 
-    def maximum(self) -> FrameType:
+    def maximum(self) -> FrameType:  # type: ignore
         return self.ty(super().maximum())
 
-    def setMaximum(self, newValue: FrameType) -> None:
+    def setMaximum(self, newValue: FrameType) -> None:  # type: ignore
         super().setMaximum(int(newValue))
 
 
 class _FrameEdit_Frame(FrameEdit):
     ty = Frame
-    valueChanged = Qt.pyqtSignal(ty, ty)
+    valueChanged = Qt.pyqtSignal(ty, ty)  # type: ignore
 
 
 class _FrameEdit_FrameInterval(FrameEdit):
     ty = FrameInterval
-    valueChanged = Qt.pyqtSignal(ty, ty)
+    valueChanged = Qt.pyqtSignal(ty, ty)  # type: ignore
 
 
 class TimeEdit(Qt.QTimeEdit, Generic[TimeType]):
@@ -89,7 +89,7 @@ class TimeEdit(Qt.QTimeEdit, Generic[TimeType]):
         self.setMinimum(self.ty())
 
         self.oldValue: TimeType = self.value()
-        cast(Qt.pyqtSignal, self.timeChanged).connect(self._timeChanged)
+        cast(Qt.pyqtSignal, self.timeChanged).connect(self._timeChanged)  # type: ignore
 
     def _timeChanged(self, newValue: Qt.QTime) -> None:
         self.valueChanged.emit(self.value(), self.oldValue)

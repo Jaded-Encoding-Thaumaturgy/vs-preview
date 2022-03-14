@@ -252,7 +252,7 @@ class SceningToolbar(AbstractToolbar):
         self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)  # type: ignore
         self.import_file_button.clicked.connect(self.on_import_file_clicked)  # type: ignore
         self.items_combobox.valueChanged.connect(self.on_current_list_changed)
-        self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
+        self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)  # type: ignore
         self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)  # type: ignore
         self.remove_list_button.clicked.connect(self.on_remove_list_clicked)  # type: ignore
         self.seek_to_next_button.clicked.connect(self.on_seek_to_next_clicked)  # type: ignore
@@ -437,9 +437,9 @@ class SceningToolbar(AbstractToolbar):
         self.notches_changed.emit(self)
         self.scening_list_dialog.on_current_output_changed(index, prev_index)
 
-    def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
+    def on_current_frame_changed(self, frame: Frame) -> None:
         self.check_remove_export_possibility()
-        self.scening_list_dialog.on_current_frame_changed(frame, time)
+        self.scening_list_dialog.on_current_frame_changed(frame, Time(frame))
 
     def get_notches(self) -> Notches:
         marks = Notches()
@@ -477,12 +477,12 @@ class SceningToolbar(AbstractToolbar):
         _, i = self.current_lists.add()
         self.current_list_index = i
 
-    def on_current_list_changed(self, new_value: SceningList, old_value: SceningList) -> None:
+    def on_current_list_changed(self, new_value: SceningList | None, old_value: SceningList) -> None:
         if new_value is not None:
             self.remove_list_button.setEnabled(True)
             self.  view_list_button.setEnabled(True)
-            new_value.rowsInserted.connect(self._on_list_items_changed)
-            new_value.rowsRemoved .connect(self._on_list_items_changed)
+            new_value.rowsInserted.connect(self._on_list_items_changed)  # type: ignore
+            new_value.rowsRemoved .connect(self._on_list_items_changed)  # type: ignore
             self.scening_list_dialog.on_current_list_changed(new_value)
         else:
             self.remove_list_button.setEnabled(False)
@@ -490,8 +490,8 @@ class SceningToolbar(AbstractToolbar):
 
         if old_value is not None:
             try:
-                old_value.rowsInserted.disconnect(self._on_list_items_changed)
-                old_value.rowsRemoved .disconnect(self._on_list_items_changed)
+                old_value.rowsInserted.disconnect(self._on_list_items_changed)  # type: ignore
+                old_value.rowsRemoved .disconnect(self._on_list_items_changed)  # type: ignore
             except (IndexError, TypeError):
                 pass
 
@@ -543,7 +543,7 @@ class SceningToolbar(AbstractToolbar):
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: Optional[bool] = None) -> None:
-        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())
+        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())  # type: ignore
 
         if self.toggle_first_frame_button.isChecked():
             self.toggle_first_frame_button.click()
@@ -915,7 +915,7 @@ class SceningToolbar(AbstractToolbar):
                 out_of_range_count += 1
                 continue
 
-            tfm_frames -= set(range(int(scene.start), int(scene.end) + 1))
+            tfm_frames -= set(range(int(scene.start), int(scene.end) + 1))  # type: ignore
 
         for tfm_frame in tfm_frames:
             try:

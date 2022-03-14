@@ -78,8 +78,7 @@ class Frame(YAMLObjectWrapper):
         elif isinstance(init_value, Frame):
             self.value = init_value.value
         elif isinstance(init_value, Time):
-            self.value = main_window().current_output.to_frame(
-                init_value).value
+            self.value = main_window().current_output.to_frame(init_value).value
         else:
             raise TypeError
 

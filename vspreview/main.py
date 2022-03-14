@@ -219,9 +219,9 @@ class MainToolbar(AbstractToolbar):
 
         self.toggle_button.setVisible(False)
 
-    def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
+    def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
-        qt_silent_call(self.time_control.setValue, time)
+        qt_silent_call(self.time_control.setValue, Time(frame))
 
         if self.sync_outputs_checkbox.isChecked():
             for output in self.main.outputs:
@@ -902,16 +902,12 @@ class MainWindow(AbstractMainWindow):
 
         return frame_image
 
-    def switch_frame(self, pos: Union[Frame, Time] | None, *, render_frame: bool = True) -> None:
-        if isinstance(pos, Frame):
-            time = Time(pos)
-            frame = Frame(time)
-        elif isinstance(pos, Time):
-            frame = Frame(pos)
-            time = Time(frame)
-        else:
+    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool = True) -> None:
+        if pos is None:
             logging.debug('switch_frame(): position is None!')
             return
+
+        frame = Frame(pos)
 
         if frame > self.current_output.end_frame:
             return
@@ -919,10 +915,10 @@ class MainWindow(AbstractMainWindow):
         self.current_output.last_showed_frame = frame
 
         self.timeline.set_position(frame)
-        self.toolbars.main.on_current_frame_changed(frame, time)
+        self.toolbars.main.on_current_frame_changed(frame)
         for toolbar in self.toolbars:
             if hasattr(toolbar, 'on_current_frame_changed'):
-                toolbar.on_current_frame_changed(frame, time)
+                toolbar.on_current_frame_changed(frame)
 
         if render_frame:
             self.current_output.graphics_scene_item.setImage(self.render_frame(frame))

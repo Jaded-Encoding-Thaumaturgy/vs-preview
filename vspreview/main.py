@@ -221,7 +221,7 @@ class MainToolbar(AbstractToolbar):
 
     def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
-        qt_silent_call(self. time_control.setValue, time)
+        qt_silent_call(self.time_control.setValue, time)
 
         if self.sync_outputs_checkbox.isChecked():
             for output in self.main.outputs:
@@ -902,15 +902,17 @@ class MainWindow(AbstractMainWindow):
 
         return frame_image
 
-    def switch_frame(
-            self, frame: Optional[Frame] = None, time: Optional[Time] = None, *, render_frame: bool = True) -> None:
-        if frame is not None:
-            time = Time(frame)
-        elif time is not None:
+    def switch_frame(self, pos: Union[Frame, Time] | None, *, render_frame: bool = True) -> None:
+        if isinstance(pos, Frame):
+            time = Time(pos)
             frame = Frame(time)
+        elif isinstance(pos, Time):
+            frame = Frame(pos)
+            time = Time(frame)
         else:
-            logging.debug('switch_frame(): both frame and time is None')
+            logging.debug('switch_frame(): position is None!')
             return
+
         if frame > self.current_output.end_frame:
             return
 
@@ -929,7 +931,6 @@ class MainWindow(AbstractMainWindow):
 
     def switch_output(self, value: Union[int, Output]) -> None:
         if len(self.outputs) == 0:
-            # TODO: consider returning False
             return
         if isinstance(value, Output):
             index = self.outputs.index_of(value)
@@ -946,6 +947,7 @@ class MainWindow(AbstractMainWindow):
         # current_output relies on outputs_combobox
         self.toolbars.main.on_current_output_changed(index, prev_index)
         self.timeline.set_end_frame(self.current_output.end_frame)
+
         if self.current_output.frame_to_show is not None:
             self.current_frame = self.current_output.frame_to_show
         else:
@@ -953,16 +955,19 @@ class MainWindow(AbstractMainWindow):
 
         for output in self.outputs:
             output.graphics_scene_item.hide()
+
         self.current_output.graphics_scene_item.show()
         self.graphics_scene.setSceneRect(Qt.QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
         self.timeline.update_notches()
+
         for toolbar in self.toolbars:
             if hasattr(toolbar, 'on_current_output_changed'):
                 toolbar.on_current_output_changed(index, prev_index)
+
         self.update_statusbar_output_info()
 
-    @property
-    def current_output(self) -> Output:
+    @property  # type: ignore
+    def current_output(self) -> Output:  # type: ignore
         output = cast(Output, self.toolbars.main.outputs_combobox.currentData())
         return output
 
@@ -970,8 +975,8 @@ class MainWindow(AbstractMainWindow):
     def current_output(self, value: Output) -> None:
         self.switch_output(self.outputs.index_of(value))
 
-    @property
-    def current_frame(self) -> Frame:
+    @property  # type: ignore
+    def current_frame(self) -> Frame:  # type: ignore
         return self.current_output.last_showed_frame
 
     @current_frame.setter
@@ -979,6 +984,7 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
+    def outputs(self) -> Outputs:  # type: ignore
         return cast(Outputs, self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:

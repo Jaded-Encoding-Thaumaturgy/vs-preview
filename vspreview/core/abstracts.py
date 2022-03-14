@@ -46,7 +46,6 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     app_settings: AbstractAppSettings = abstract_attribute()
     central_widget: Qt.QWidget = abstract_attribute()
     clipboard: Qt.QClipboard = abstract_attribute()
-    current_time: Time = abstract_attribute()
     current_frame: Frame = abstract_attribute()
     current_output: Output = abstract_attribute()
     display_scale: float = abstract_attribute()

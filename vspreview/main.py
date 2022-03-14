@@ -979,15 +979,6 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def current_time(self) -> Time:
-        return Time(self.current_output.last_showed_frame)
-
-    @current_time.setter
-    def current_time(self, value: Time) -> None:
-        self.switch_frame(value)
-
-    @property
-    def outputs(self) -> Outputs:
         return cast(Outputs, self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:

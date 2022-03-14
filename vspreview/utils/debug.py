@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from functools import wraps
+import re
 import inspect
 import logging
-import re
+import vapoursynth as vs
+from PyQt5 import Qt, sip
+from functools import wraps
 from time import perf_counter_ns
 from typing import Any, Callable, cast, Dict, Type, TypeVar, Tuple, Union
 
-from pprint import pprint
-from PyQt5 import Qt, sip
-import vapoursynth as vs
 
 from vspreview.core import AbstractMainWindow
 
@@ -18,9 +17,9 @@ T = TypeVar('T')
 
 
 def print_var(var: Any) -> None:
-    frame = inspect.currentframe().f_back
-    s = inspect.getframeinfo(frame).code_context[0]
-    r = re.search(r"\((.*)\)", s).group(1)
+    frame = inspect.currentframe().f_back  # type: ignore
+    s = inspect.getframeinfo(frame).code_context[0]  # type: ignore
+    r = re.search(r"\((.*)\)", s).group(1)  # type: ignore
     logging.debug(f'{r}: {var}')
 
 
@@ -81,7 +80,7 @@ class EventFilter(Qt.QObject):
 
         for i in range(start_frame_sync, start_frame_sync + N):
             s1 = perf_counter_ns()
-            f2 = self.main.current_output.prepared.clip.get_frame(i)  # pylint: disable=unused-variable
+            f2 = self.main.current_output.prepared.clip.get_frame(i)  # noqa: F841
             s2 = perf_counter_ns()
             # logging.debug(f'sync test time: {s2 - s1} ns')
             if i != start_frame_sync:
@@ -92,9 +91,9 @@ class EventFilter(Qt.QObject):
         logging.debug(f'Sync average:  {total_sync  / N - 1} ns, {1_000_000_000 / (total_sync  / N - 1)} fps')
 
 
-def measure_exec_time_ms(func: Callable[..., T],
-                         return_exec_time: bool = False, print_exec_time: bool = True) -> Callable[...,
-                                                                                                   Union[T, Tuple[T, float]]]:
+def measure_exec_time_ms(
+    func: Callable[..., T], return_exec_time: bool = False, print_exec_time: bool = True
+) -> Callable[..., Union[T, Tuple[T, float]]]:
     @wraps(func)
     def decorator(*args: Any, **kwargs: Any) -> T:
         t1 = perf_counter_ns()
@@ -104,7 +103,7 @@ def measure_exec_time_ms(func: Callable[..., T],
         if print_exec_time:
             logging.debug(f'{exec_time:7.3f} ms: {func.__name__}()')
         if return_exec_time:
-            return ret, exec_time
+            return ret, exec_time  # type: ignore
         return ret
     return decorator
 
@@ -137,23 +136,34 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
 
     props = vs_output.get_frame(0).props
     logging.debug('Matrix: {}, Transfer: {}, Primaries: {}, Range: {}'.format(
-        Output.Matrix   .values[props['_Matrix']] if '_Matrix' in props else None,
-        Output.Transfer .values[props['_Transfer']] if '_Transfer' in props else None,
-        Output.Primaries.values[props['_Primaries']] if '_Primaries' in props else None,
-        Output.Range    .values[props['_ColorRange']] if '_ColorRange' in props else None,
+        Output.Matrix.values[int(str(props['_Matrix']))] if '_Matrix' in props else None,
+        Output.Transfer.values[int(str(props['_Transfer']))] if '_Transfer' in props else None,
+        Output.Primaries.values[int(str(props['_Primaries']))] if '_Primaries' in props else None,
+        Output.Range.values[int(str(props['_ColorRange']))] if '_ColorRange' in props else None,
     ))
 
 
-class DebugMeta(sip.wrappertype):
+class DebugMeta(sip.wrappertype):  # type: ignore
     def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
         from functools import partialmethod
 
         base = bases[0]
-        # attr_list = ['activePanel', 'activeWindow', 'addEllipse', 'addItem', 'addLine', 'addPath', 'addPixmap', 'addPolygon', 'addRect', 'addSimpleText', 'addText', 'addWidget', 'backgroundBrush', 'bspTreeDepth', 'clearFocus', 'collidingItems', 'createItemGroup', 'destroyItemGroup', 'focusItem', 'font', 'foregroundBrush', 'hasFocus', 'height', 'inputMethodQuery', 'invalidate', 'isActive', 'itemAt', 'itemIndexMethod', 'items', 'itemsBoundingRect', 'minimumRenderSize', 'mouseGrabberItem', 'palette', 'removeItem', 'render', 'sceneRect', 'selectedItems', 'selectionArea', 'sendEvent', 'setActivePanel', 'setActiveWindow','setBackgroundBrush', 'setBspTreeDepth', 'setFocus', 'setFocusItem', 'setFont', 'setForegroundBrush', 'setItemIndexMethod', 'setMinimumRenderSize', 'setPalette', 'setSceneRect', 'setSelectionArea', 'setStickyFocus', 'setStyle', 'stickyFocus', 'style', 'update', 'views', 'width']
+        # attr_list = [
+        #     'activePanel', 'activeWindow', 'addEllipse', 'addItem', 'addLine', 'addPath', 'addPixmap',
+        #     'addPolygon', 'addRect', 'addSimpleText', 'addText', 'addWidget', 'backgroundBrush',
+        #     'bspTreeDepth', 'clearFocus', 'collidingItems', 'createItemGroup', 'destroyItemGroup',
+        #     'focusItem', 'font', 'foregroundBrush', 'hasFocus', 'height', 'inputMethodQuery', 'invalidate',
+        #     'isActive', 'itemAt', 'itemIndexMethod', 'items', 'itemsBoundingRect', 'minimumRenderSize',
+        #     'palette', 'removeItem', 'render', 'sceneRect', 'selectedItems', 'selectionArea', 'sendEvent',
+        #     'setActivePanel', 'setActiveWindow','setBackgroundBrush', 'setBspTreeDepth', 'setFocus',
+        #     'setFocusItem', 'setFont', 'setForegroundBrush', 'setItemIndexMethod', 'setMinimumRenderSize',
+        #     'setPalette', 'setSceneRect', 'setSelectionArea', 'setStickyFocus', 'setStyle', 'stickyFocus',
+        #     'style', 'update', 'views', 'width', 'mouseGrabberItem'
+        # ]
         for attr in dir(base):
             if not attr.endswith('__') and callable(getattr(base, attr)):
                 dct[attr] = partialmethod(DebugMeta.dummy_method, attr)
-        subcls = super(DebugMeta, cls).__new__(cls, name, bases, dct)
+        subcls = super(DebugMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
         return cast(type, subcls)
 
     def dummy_method(self, name: str, *args: Any, **kwargs: Any) -> Any:
@@ -437,7 +447,10 @@ class Application(Qt.QApplication):
 
             recursive_indent = 2 * (self.enter_count - 1)
 
-            print(f'{time:7.3f} ms, receiver: {type(obj).__name__:>25}, event: {event.type():3d} {" " * recursive_indent + event_name:<30}, name: {obj_name}')
+            print(
+                f'{time:7.3f} ms, receiver: {type(obj).__name__:>25}, event: {event.type():3d} '
+                f'{" " * recursive_indent + event_name:<30}, name: {obj_name}'
+            )
 
             return ret
         except Exception:  # pylint: disable=broad-except

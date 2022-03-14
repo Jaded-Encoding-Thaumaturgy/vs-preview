@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from functools import lru_cache, partial, wraps
 import logging
-from string import Template
-from typing import (
-    Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING,
-    TypeVar, Union, Dict
-)
-
 from PyQt5 import Qt
+from string import Template
+from functools import lru_cache, partial, wraps
+from typing import Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING, TypeVar, Union, cast
+
 
 from vspreview.core import TimeType
 
@@ -31,7 +28,7 @@ def from_qtime(qtime: Qt.QTime, t: Type[TimeType]) -> TimeType:
 # it is a BuiltinMethodType at the same time
 def qt_silent_call(qt_method: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     # https://github.com/python/typing/issues/213
-    qobject = qt_method.__self__
+    qobject = qt_method.__self__  # type: ignore
     block = Qt.QSignalBlocker(qobject)
     ret = qt_method(*args, **kwargs)
     del(block)
@@ -74,7 +71,7 @@ def main_window() -> AbstractMainWindow:
     if app is not None:
         for widget in app.topLevelWidgets():
             if isinstance(widget, AbstractMainWindow):
-                return widget
+                return cast(AbstractMainWindow, widget)
     logging.critical('main_window() failed')
     app.exit()
     raise RuntimeError
@@ -83,7 +80,7 @@ def main_window() -> AbstractMainWindow:
 def add_shortcut(key: int, handler: Callable[[], None], widget: Optional[Qt.QWidget] = None) -> None:
     if widget is None:
         widget = main_window()
-    Qt.QShortcut(Qt.QKeySequence(key), widget).activated.connect(handler)
+    Qt.QShortcut(Qt.QKeySequence(key), widget).activated.connect(handler)  # type: ignore
 
 
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
@@ -129,7 +126,7 @@ def method_dispatch(func: Callable[..., T]) -> Callable[..., T]:
     def wrapper(*args: Any, **kwargs: Any) -> T:
         return dispatcher.dispatch(args[1].__class__)(*args, **kwargs)
 
-    wrapper.register = dispatcher.register
+    wrapper.register = dispatcher.register  # type: ignore
     update_wrapper(wrapper, dispatcher)
     return wrapper
 
@@ -190,9 +187,9 @@ def try_load(
             receiver = value
         elif callable(receiver):
             try:
-                receiver(name, value)
+                receiver(name, value)  # type: ignore
             except Exception:
-                receiver(value)
+                receiver(value)  # type: ignore
         elif hasattr(receiver, name) and isinstance(getattr(receiver, name), ty):
             try:
                 receiver.__setattr__(name, value)

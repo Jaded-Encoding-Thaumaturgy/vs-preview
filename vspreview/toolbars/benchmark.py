@@ -319,7 +319,7 @@ class BenchmarkToolbar(AbstractToolbar):
             new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
-            new_future.add_done_callback(self._request_next_frame_unsequenced)
+            new_future.add_done_callback(self._request_next_frame_unsequenced)  # type: ignore
 
         if future is not None:
             future.result()

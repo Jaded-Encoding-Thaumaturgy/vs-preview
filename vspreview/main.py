@@ -131,7 +131,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs()
+        self.outputs = Outputs[Output]()
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -233,7 +233,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.    time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs()
+        self.outputs = Outputs[Output]()
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
@@ -811,6 +811,7 @@ class MainWindow(AbstractMainWindow):
 
         if not reloading:
             self.toolbars.main.rescan_outputs()
+            self.toolbars.playback.rescan_outputs()
             self.switch_output(self.OUTPUT_INDEX)
 
             self.load_storage()
@@ -980,8 +981,8 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def outputs(self) -> Outputs:  # type: ignore
-        return cast(Outputs, self.toolbars.main.outputs)
+    def outputs(self) -> Outputs[Output]:  # type: ignore
+        return cast(Outputs[Output], self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)

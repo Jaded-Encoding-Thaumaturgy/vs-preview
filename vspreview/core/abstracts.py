@@ -51,7 +51,7 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
     display_scale: float = abstract_attribute()
     graphics_scene: Qt.QGraphicsScene = abstract_attribute()
     graphics_view: Qt.QGraphicsView = abstract_attribute()
-    outputs: Outputs = abstract_attribute()
+    outputs: Outputs[Output] = abstract_attribute()
     timeline: Timeline = abstract_attribute()
     toolbars: AbstractToolbars = abstract_attribute()
     save_on_exit: bool = abstract_attribute()

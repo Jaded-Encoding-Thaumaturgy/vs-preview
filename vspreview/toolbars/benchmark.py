@@ -134,7 +134,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.running = False
         self.unsequenced = False
-        self.buffer: Deque[Future] = deque()
+        self.buffer: Deque[Future[vs.VideoFrame]] = deque()
         self.run_start_time = 0.0
         self.start_frame = Frame(0)
         self.  end_frame = Frame(0)

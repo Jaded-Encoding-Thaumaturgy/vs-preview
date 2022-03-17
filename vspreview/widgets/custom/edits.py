@@ -36,7 +36,7 @@ class FrameEdit(Qt.QSpinBox, Generic[FrameType]):
         super().valueChanged.connect(self._valueChanged)  # type: ignore
 
     def _valueChanged(self, newValue: int) -> None:
-        self.valueChanged.emit(self.value(), self.oldValue)
+        self.valueChanged.emit(self.value(), self.oldValue)  # type: ignore
 
     def value(self) -> FrameType:  # type: ignore
         return self.ty(super().value())

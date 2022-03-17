@@ -52,20 +52,20 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_end_time = 0
         self.play_end_frame = Frame(0)
 
-        self.play_pause_button.clicked.connect(self.on_play_pause_clicked)  # type: ignore
-        self.seek_to_prev_button.clicked.connect(self.seek_to_prev)  # type: ignore
-        self.seek_to_next_button.clicked.connect(self.seek_to_next)  # type: ignore
-        self.seek_n_frames_b_button.clicked.connect(self.seek_n_frames_b)  # type: ignore
-        self.seek_n_frames_f_button.clicked.connect(self.seek_n_frames_f)  # type: ignore
-        self.seek_frame_control.valueChanged.connect(self.on_seek_frame_changed)  # type: ignore
+        self.play_pause_button.clicked.connect(self.on_play_pause_clicked)
+        self.seek_to_prev_button.clicked.connect(self.seek_to_prev)
+        self.seek_to_next_button.clicked.connect(self.seek_to_next)
+        self.seek_n_frames_b_button.clicked.connect(self.seek_n_frames_b)
+        self.seek_n_frames_f_button.clicked.connect(self.seek_n_frames_f)
+        self.seek_frame_control.valueChanged.connect(self.on_seek_frame_changed)
         self.seek_time_control.valueChanged.connect(self.on_seek_time_changed)
-        self.fps_spinbox.valueChanged.connect(self.on_fps_changed)  # type: ignore
-        self.fps_reset_button.clicked.connect(self.reset_fps)  # type: ignore
-        self.fps_unlimited_checkbox.stateChanged.connect(self.on_fps_unlimited_changed)  # type: ignore
+        self.fps_spinbox.valueChanged.connect(self.on_fps_changed)
+        self.fps_reset_button.clicked.connect(self.reset_fps)
+        self.fps_unlimited_checkbox.stateChanged.connect(self.on_fps_unlimited_changed)
 
-        add_shortcut(Qt.Qt.Key_Space, self.play_pause_button     .click)
-        add_shortcut(Qt.Qt.Key_Left, self.seek_to_prev_button   .click)
-        add_shortcut(Qt.Qt.Key_Right, self.seek_to_next_button   .click)
+        add_shortcut(Qt.Qt.Key_Space, self.play_pause_button.click)
+        add_shortcut(Qt.Qt.Key_Left, self.seek_to_prev_button.click)
+        add_shortcut(Qt.Qt.Key_Right, self.seek_to_next_button.click)
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Left, self.seek_n_frames_b_button.click)
         add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_Right, self.seek_n_frames_f_button.click)
 

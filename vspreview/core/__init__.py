@@ -1,5 +1,5 @@
 # flake8: noqa
-
+from . import vsenv
 from .abstracts import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars,
     AbstractAppSettings,

@@ -19,6 +19,10 @@ from PyQt5.QtWidgets import (
     QOpenGLWidget, QTabWidget, QComboBox, QCheckBox, QSpinBox, QSizePolicy, QGraphicsView
 )
 
+# import vspreview.cores as early as possible:
+# This is so other modules cannot accidentally
+# use and lock us into a different policy.
+from .core.vsenv import get_policy
 from .models import Outputs
 from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit
 from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names, try_load
@@ -289,7 +293,7 @@ class MainToolbar(AbstractToolbar):
             self.outputs = outputs
             self.main.init_outputs()
             self.outputs_combobox.setModel(self.outputs)
-            
+
         except (KeyError, TypeError):
             logging.warning('Storage loading: Main toolbar: failed to parse outputs.')
 
@@ -883,6 +887,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene.clear()
 
         self.outputs.clear()
+        get_policy().reload_core()
         # make sure old filter graph is freed
         gc.collect()
 

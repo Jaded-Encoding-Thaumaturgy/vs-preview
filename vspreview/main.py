@@ -177,6 +177,7 @@ class MainToolbar(AbstractToolbar):
             Qt.CTRL + Qt.SHIFT + Qt.Key_Tab,
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
         )
+        add_shortcut(Qt.Key_V, self.on_copy_frame_button_clicked)
 
         set_qobject_names(self)
 
@@ -644,7 +645,6 @@ class MainWindow(AbstractMainWindow):
         self.settings = MainSettings()
 
         # logging
-
         logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.LOG_LEVEL)
         logging.Formatter.default_msec_format = '%s.%03d'
 

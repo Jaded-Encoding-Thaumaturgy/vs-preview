@@ -245,7 +245,7 @@ class SceningToolbar(AbstractToolbar):
             'TFM Log (*.txt)': self.import_tfm,
             'x264/x265 QP File (*.qp)': self.import_qp,
             'XviD Log (*.txt)': self.import_xvid,
-            'Simple Mappings (*.txt)' : self.import_simple,
+            'Simple Mappings (*.txt)': self.import_simple,
         }
 
         self.add_list_button.clicked.connect(self.on_add_list_clicked)
@@ -282,6 +282,10 @@ class SceningToolbar(AbstractToolbar):
         add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
         add_shortcut(Qt.Key_E, self.add_to_list_button.click)
         add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
+        add_shortcut(
+            Qt.Key_B,
+            lambda: self.scening_list_dialog.label_lineedit.setText(str(self.main.current_frame))
+        )
 
         # FIXME: get rid of workaround
         self._on_list_items_changed = lambda * arg: self.on_list_items_changed(
@@ -993,7 +997,6 @@ class SceningToolbar(AbstractToolbar):
         self.main.show_message('Scening data exported to the clipboard')
 
     # misc
-
     def check_add_to_list_possibility(self) -> None:
         self.add_to_list_button.setEnabled(False)
 

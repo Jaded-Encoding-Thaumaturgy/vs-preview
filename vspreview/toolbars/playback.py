@@ -25,7 +25,7 @@ class PlaybackToolbar(AbstractToolbar):
     __slots__ = (
         'play_timer', 'fps_timer', 'fps_history', 'current_fps',
         'seek_n_frames_b_button', 'seek_to_prev_button', 'play_pause_button',
-        'seek_to_next_button', 'seek_n_frames_f_button',
+        'seek_to_next_button', 'seek_n_frames_f_button', 'play_n_frames_button',
         'seek_frame_control', 'seek_time_control',
         'fps_spinbox', 'fps_unlimited_checkbox', 'fps_reset_button',
         'play_start_time', 'play_start_frame', 'play_end_time',
@@ -67,6 +67,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_end_frame = Frame(0)
 
         self.play_pause_button.clicked.connect(self.on_play_pause_clicked)
+        self.play_n_frames_button.clicked.connect(self.on_play_n_frames_clicked)
         self.seek_to_prev_button.clicked.connect(self.seek_to_prev)
         self.seek_to_next_button.clicked.connect(self.seek_to_next)
         self.seek_n_frames_b_button.clicked.connect(self.seek_n_frames_b)
@@ -123,6 +124,12 @@ class PlaybackToolbar(AbstractToolbar):
         self.seek_frame_control.setToolTip('Seek N Frames Step')
         layout.addWidget(self.seek_frame_control)
 
+        self.play_n_frames_button = QPushButton(self)
+        self.play_n_frames_button.setText('⏯')
+        self.play_n_frames_button.setToolTip('Play N Frames')
+        self.play_n_frames_button.setCheckable(True)
+        layout.addWidget(self.play_n_frames_button)
+
         self.seek_time_control = TimeEdit[TimeInterval](self)
         layout.addWidget(self.seek_time_control)
 
@@ -171,7 +178,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs = Outputs[AudioOutput]()  # type: ignore
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-    def play(self) -> None:
+    def play(self, stop_at_frame: int | None = None) -> None:
         if self.main.current_frame == self.main.current_output.end_frame:
             return
 
@@ -188,6 +195,8 @@ class PlaybackToolbar(AbstractToolbar):
                 int(self.main.current_frame + FrameInterval(i) + FrameInterval(1))
             )
             self.play_buffer.appendleft(future)
+
+        self.last_frame = Frame(stop_at_frame or 0)
 
         if self.fps_unlimited_checkbox.isChecked() or self.main.DEBUG_PLAY_FPS:
             self.mute_checkbox.setState(Qt.Checked)
@@ -230,6 +239,10 @@ class PlaybackToolbar(AbstractToolbar):
         )
 
     def _show_next_frame(self) -> None:
+        if self.last_frame == self.main.current_frame and self.last_frame != Frame(0):
+            self.play_n_frames_button.click()
+            return
+
         try:
             frame_future = self.play_buffer.pop()
         except IndexError:
@@ -368,6 +381,13 @@ class PlaybackToolbar(AbstractToolbar):
             future = self.current_audio_output.vs_output.get_frame_async(
                 int(self.current_audio_frame + FrameInterval(i) + FrameInterval(1)))
             self.play_buffer_audio.appendleft(future)
+
+    def on_play_n_frames_clicked(self, checked: bool) -> None:
+        if checked:
+            last_frame = (self.main.current_frame + FrameInterval(self.seek_frame_control.value()))
+            self.play(last_frame)
+        else:
+            self.stop()
 
     def on_fps_changed(self, new_fps: float) -> None:
         if not self.fps_spinbox.isEnabled():

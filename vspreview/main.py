@@ -9,7 +9,7 @@ import vapoursynth as vs
 from pathlib import Path
 from platform import python_version
 from pkg_resources import get_distribution
-from typing import Any, cast, List, Mapping, Optional, Union, Tuple
+from typing import Any, cast, List, Mapping, Tuple, Type
 
 from PyQt5 import sip
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent, QObject
@@ -86,11 +86,11 @@ class ScriptErrorDialog(QDialog):
 
         main_layout.addWidget(buttons_widget)
 
-    def on_reload_clicked(self, clicked: Optional[bool] = None) -> None:
+    def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
         self.main.reload_script()
 
-    def on_exit_clicked(self, clicked: Optional[bool] = None) -> None:
+    def on_exit_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
         self.main.save_on_exit = False
         self.main.app.exit()
@@ -139,7 +139,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs[Output]()  # type: ignore
+        self.outputs = Outputs[Output](Output)
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -242,19 +242,19 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs[Output]()  # type: ignore
+        self.outputs = Outputs(Output)
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
-    def on_copy_frame_button_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_copy_frame_button_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(str(self.main.current_frame))
         self.main.show_message('Current frame number copied to clipboard')
 
-    def on_copy_timestamp_button_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_copy_timestamp_button_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.time_control.text())
         self.main.show_message('Current timestamp copied to clipboard')
 
-    def on_switch_timeline_mode_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_switch_timeline_mode_clicked(self, checked: bool | None = None) -> None:
         if self.main.timeline.mode == self.main.timeline.Mode.TIME:
             self.main.timeline.mode = self.main.timeline.Mode.FRAME
         elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
@@ -268,7 +268,7 @@ class MainToolbar(AbstractToolbar):
             for output in self.main.outputs:
                 output.frame_to_show = None
 
-    def on_zoom_changed(self, text: Optional[str] = None) -> None:
+    def on_zoom_changed(self, text: str | None = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())
 
     def __getstate__(self) -> Mapping[str, Any]:
@@ -888,7 +888,7 @@ class MainWindow(AbstractMainWindow):
 
         self.show_message('Reloaded successfully')
 
-    def render_frame(self, frame: Frame, output: Optional[Output] = None) -> QPixmap:
+    def render_frame(self, frame: Frame, output: Output | None = None) -> QPixmap:
         if output is None:
             output = self.current_output
 
@@ -928,7 +928,7 @@ class MainWindow(AbstractMainWindow):
 
         self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 
-    def switch_output(self, value: Union[int, Output]) -> None:
+    def switch_output(self, value: int | Output) -> None:
         if len(self.outputs) == 0:
             return
         if isinstance(value, Output):
@@ -983,8 +983,8 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def outputs(self) -> Outputs[Output]:  # type: ignore
-        return cast(Outputs[Output], self.toolbars.main.outputs)  # type: ignore
+    def outputs(self) -> Type[Outputs[Output]]:  # type: ignore
+        return cast(Outputs[Output], self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)
@@ -1005,7 +1005,7 @@ class MainWindow(AbstractMainWindow):
             round(float(self.settings.statusbar_message_timeout) * 1000)
         )
 
-    def update_statusbar_output_info(self, output: Optional[Output] = None) -> None:
+    def update_statusbar_output_info(self, output: Output | None = None) -> None:
         if output is None:
             output = self.current_output
 

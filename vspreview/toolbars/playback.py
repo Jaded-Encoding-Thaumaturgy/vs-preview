@@ -4,7 +4,7 @@ import logging
 from math import floor
 from collections import deque
 from time import perf_counter_ns
-from typing import Any, cast, Deque, Mapping, Optional
+from typing import Any, cast, Deque, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QFrame, QComboBox
@@ -52,7 +52,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future] = deque()
 
-        self.audio_outputs = Outputs[AudioOutput]()  # type: ignore
+        self.audio_outputs = Outputs[AudioOutput](AudioOutput)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
         self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
@@ -61,7 +61,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_timer.setTimerType(Qt.PreciseTimer)
         self.fps_timer.timeout.connect(lambda: self.fps_spinbox.setValue(self.current_fps))
 
-        self.play_start_time: Optional[int] = None
+        self.play_start_time: int | None = None
         self.play_start_frame = Frame(0)
         self.play_end_time = 0
         self.play_end_frame = Frame(0)
@@ -175,10 +175,10 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.fps_spinbox.setValue, self.main.current_output.play_fps)
 
     def rescan_outputs(self) -> None:
-        self.audio_outputs = Outputs[AudioOutput]()  # type: ignore
+        self.audio_outputs = Outputs[AudioOutput](AudioOutput)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-    def play(self, stop_at_frame: int | None = None) -> None:
+    def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if self.main.current_frame == self.main.current_output.end_frame:
             return
 
@@ -319,7 +319,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame = Frame(0)
         self.audio_outputs_combobox.setEnabled(True)
 
-    def seek_to_prev(self, checked: Optional[bool] = None) -> None:
+    def seek_to_prev(self, checked: bool | None = None) -> None:
         try:
             new_pos = self.main.current_frame - FrameInterval(1)
         except ValueError:
@@ -328,7 +328,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
         self.main.current_frame = new_pos
 
-    def seek_to_next(self, checked: Optional[bool] = None) -> None:
+    def seek_to_next(self, checked: bool | None = None) -> None:
         new_pos = self.main.current_frame + FrameInterval(1)
         if new_pos > self.main.current_output.end_frame:
             return
@@ -336,7 +336,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
         self.main.current_frame = new_pos
 
-    def seek_n_frames_b(self, checked: Optional[bool] = None) -> None:
+    def seek_n_frames_b(self, checked: bool | None = None) -> None:
         try:
             new_pos = self.main.current_frame - FrameInterval(self.seek_frame_control.value())
         except ValueError:
@@ -345,7 +345,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
         self.main.current_frame = new_pos
 
-    def seek_n_frames_f(self, checked: Optional[bool] = None) -> None:
+    def seek_n_frames_f(self, checked: bool | None = None) -> None:
         new_pos = self.main.current_frame + FrameInterval(self.seek_frame_control.value())
         if new_pos > self.main.current_output.end_frame:
             return
@@ -384,8 +384,7 @@ class PlaybackToolbar(AbstractToolbar):
 
     def on_play_n_frames_clicked(self, checked: bool) -> None:
         if checked:
-            last_frame = (self.main.current_frame + FrameInterval(self.seek_frame_control.value()))
-            self.play(last_frame)
+            self.play(self.main.current_frame + FrameInterval(self.seek_frame_control.value()))
         else:
             self.stop()
 
@@ -398,7 +397,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
             self.play()
 
-    def reset_fps(self, checked: Optional[bool] = None) -> None:
+    def reset_fps(self, checked: bool | None = None) -> None:
         self.fps_spinbox.setValue(self.main.current_output.fps_num / self.main.current_output.fps_den)
 
     def on_fps_unlimited_changed(self, state: int) -> None:

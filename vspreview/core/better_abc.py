@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 from abc import ABCMeta as NativeABCMeta
-from typing import Any, cast, Optional, TypeVar
+from typing import Any, cast, TypeVar
 
 
 T = TypeVar('T')
@@ -12,7 +12,7 @@ class DummyAttribute:
     _is_abstract_attribute_ = True
 
 
-def abstract_attribute(obj: Optional[T] = None) -> T:
+def abstract_attribute(obj: T | None = None) -> T:
     return cast(T, obj or DummyAttribute())
 
 

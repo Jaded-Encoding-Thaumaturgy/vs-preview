@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from string import Template
 from functools import lru_cache, partial, wraps
-from typing import Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING, TypeVar, Union, cast
+from typing import Any, Callable, Mapping, MutableMapping, Type, TYPE_CHECKING, TypeVar, cast
 
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import QTime, QSignalBlocker, QObject
@@ -15,7 +15,7 @@ from vspreview.core import TimeType
 T = TypeVar('T')
 
 
-def to_qtime(time: Union[TimeType]) -> QTime:
+def to_qtime(time: TimeType) -> QTime:
     td = time.value
     return QTime(td.seconds // 3600, td.seconds // 60, td.seconds % 60, td.microseconds // 1000)
 
@@ -38,7 +38,7 @@ class DeltaTemplate(Template):
     delimiter = '%'
 
 
-def strfdelta(time: Union[TimeType], output_format: str) -> str:
+def strfdelta(time: TimeType, output_format: str) -> str:
     d: MutableMapping[str, str] = {}
     td = time.value
     hours = td.seconds // 3600
@@ -79,7 +79,7 @@ def main_window() -> AbstractMainWindow:
     raise RuntimeError
 
 
-def add_shortcut(key: int, handler: Callable[[], None], widget: Optional[QWidget] = None) -> None:
+def add_shortcut(key: int, handler: Callable[[], None], widget: QWidget | None = None) -> None:
     if widget is None:
         widget = main_window()
     QShortcut(QKeySequence(key), widget).activated.connect(handler)
@@ -176,7 +176,7 @@ def vs_clear_cache() -> None:
 def try_load(
         state: Mapping[str, Any],
         name: str, ty: Type[T],
-        receiver: Union[T, Callable[[T], Any], Callable[[str, T], Any]],
+        receiver: T | Callable[[T], Any] | Callable[[str, T], Any],
         error_msg: str) -> None:
     try:
         value = state[name]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from bisect import bisect_right
-from typing import Any, cast, Iterator, List, Mapping, Optional, Tuple, Union
+from typing import Any, cast, Iterator, List, Mapping, Tuple
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel, QAbstractListModel
 
@@ -26,7 +26,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     LABEL_COLUMN = 4
     COLUMN_COUNT = 5
 
-    def __init__(self, name: str = '', max_value: Optional[Frame] = None, items: Optional[List[Scene]] = None) -> None:
+    def __init__(self, name: str = '', max_value: Frame | None = None, items: List[Scene] | None = None) -> None:
         super().__init__()
         self.name = name
         self.max_value = max_value if max_value is not None else Frame(2**31)
@@ -179,7 +179,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         self.items[i] = value
         self.dataChanged.emit(self.createIndex(i, 0), self.createIndex(i, self.COLUMN_COUNT - 1))
 
-    def __contains__(self, item: Union[Scene, Frame]) -> bool:
+    def __contains__(self, item: Scene | Frame) -> bool:
         if isinstance(item, Scene):
             return item in self.items
         if isinstance(item, Frame):
@@ -192,7 +192,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     def __getiter__(self) -> Iterator[Scene]:
         return iter(self.items)
 
-    def add(self, start: Frame, end: Optional[Frame] = None, label: str = '') -> Scene:
+    def add(self, start: Frame, end: Frame | None = None, label: str = '') -> Scene:
         scene = Scene(start, end, label)
 
         if scene in self.items:
@@ -208,7 +208,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         return scene
 
-    def remove(self, i: Union[int, Scene]) -> None:
+    def remove(self, i: int | Scene) -> None:
         if isinstance(i, Scene):
             i = self.items.index(i)
 
@@ -219,7 +219,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         else:
             raise IndexError
 
-    def get_next_frame(self, initial: Frame) -> Optional[Frame]:
+    def get_next_frame(self, initial: Frame) -> Frame | None:
         result = None
         result_delta = FrameInterval(int(self.max_value))
         for scene in self.items:
@@ -232,7 +232,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         return result
 
-    def get_prev_frame(self, initial: Frame) -> Optional[Frame]:
+    def get_prev_frame(self, initial: Frame) -> Frame | None:
         result = None
         result_delta = FrameInterval(int(self.max_value))
         for scene in self.items:
@@ -278,7 +278,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
     __slots__ = ('items',)
 
-    def __init__(self, items: Optional[List[SceningList]] = None) -> None:
+    def __init__(self, items: List[SceningList] | None = None) -> None:
         super().__init__()
         self.main = main_window()
         self.items = items if items is not None else []
@@ -343,7 +343,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
         return True
 
     def add(
-        self, name: Optional[str] = None, max_value: Optional[Frame] = None, i: Optional[int] = None
+        self, name: str | None = None, max_value: Frame | None = None, i: int | None = None
     ) -> Tuple[SceningList, int]:
         if max_value is None:
             max_value = self.main.current_output.end_frame
@@ -358,7 +358,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
         self.endInsertRows()
         return self.items[i], i
 
-    def remove(self, item: Union[int, SceningList]) -> None:
+    def remove(self, item: int | SceningList) -> None:
         i = item
         if isinstance(i, SceningList):
             i = self.items.index(i)

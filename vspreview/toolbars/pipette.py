@@ -1,6 +1,6 @@
 import ctypes
+from typing import cast, TypeVar
 from weakref import WeakKeyDictionary
-from typing import cast, TypeVar, Union
 
 import vapoursynth as vs
 
@@ -42,7 +42,7 @@ class PipetteToolbar(AbstractToolbar):
 
         self.pos_fmt = '{},{}'
         self.src_hex_fmt = '{:2X}'
-        self.src_max_val: Union[int, float] = 2**8 - 1
+        self.src_max_val: float = 2**8 - 1
         self.src_dec_fmt = '{:3d}'
         self.src_norm_fmt = '{:0.5f}'
         self.outputs = WeakKeyDictionary[Output, vs.VideoNode]()
@@ -161,7 +161,7 @@ class PipetteToolbar(AbstractToolbar):
         if not self.src_label.isVisible():
             return
 
-        def extract_value(vs_frame: vs.VideoFrame, plane: int, pos: QPoint) -> Union[int, float]:
+        def extract_value(vs_frame: vs.VideoFrame, plane: int, pos: QPoint) -> float:
             fmt = vs_frame.format
             stride = vs_frame.get_stride(plane)
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:

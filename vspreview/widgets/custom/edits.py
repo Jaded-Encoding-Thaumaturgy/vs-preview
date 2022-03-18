@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Generic, Optional, Type
+from typing import Dict, Generic, Type
 
 from PyQt5.QtCore import pyqtSignal, QTime
 from PyQt5.QtWidgets import QWidget, QSpinBox, QTimeEdit
@@ -24,7 +24,7 @@ class FrameEdit(QSpinBox, Generic[FrameType]):
         except KeyError:
             raise TypeError
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.ty: Type[FrameType]
@@ -78,7 +78,7 @@ class TimeEdit(QTimeEdit, Generic[TimeType]):
         except KeyError:
             raise TypeError
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.ty: Type[TimeType]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from abc import abstractmethod
-from typing import Any, cast, Mapping, Optional, Union, Iterator, TYPE_CHECKING, Tuple, List
+from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List
 
 from .types import Frame, Output, Time
 from .better_abc import abstract_attribute
@@ -35,11 +35,11 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     @abstractmethod
-    def switch_output(self, value: Union[int, Output]) -> None:
+    def switch_output(self, value: int | Output) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def switch_frame(self, pos: Union[Frame, Time] | None, *, render_frame: bool = True) -> None:
+    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool = True) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -54,7 +54,7 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
     display_scale: float = abstract_attribute()
     graphics_scene: QGraphicsScene = abstract_attribute()
     graphics_view: QGraphicsView = abstract_attribute()
-    outputs: Outputs[Output] = abstract_attribute()  # type: ignore
+    outputs: Outputs[Output] = abstract_attribute()
     timeline: Timeline = abstract_attribute()
     toolbars: AbstractToolbars = abstract_attribute()
     save_on_exit: bool = abstract_attribute()
@@ -73,7 +73,7 @@ class AbstractToolbar(QWidget, QABC):
     else:
         notches_changed = pyqtSignal(object)
 
-    def __init__(self, main: AbstractMainWindow, name: str, settings: Optional[QWidget] = None) -> None:
+    def __init__(self, main: AbstractMainWindow, name: str, settings: QWidget | None = None) -> None:
         super().__init__(main.central_widget)
         self.main = main
         self.settings = settings if settings is not None else QWidget()

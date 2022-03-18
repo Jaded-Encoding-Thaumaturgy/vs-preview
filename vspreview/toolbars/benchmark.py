@@ -4,7 +4,7 @@ import vapoursynth as vs
 from time import perf_counter
 from collections import deque
 from concurrent.futures import Future
-from typing import Any, Deque, Mapping, Optional
+from typing import Any, Deque, Mapping
 
 from PyQt5.QtCore import Qt, QTimer, QMetaObject
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QPushButton
@@ -310,7 +310,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.frames_left -= FrameInterval(1)
 
-    def _request_next_frame_unsequenced(self, future: Optional[Future] = None) -> None:
+    def _request_next_frame_unsequenced(self, future: Future | None = None) -> None:
         if self.frames_left <= FrameInterval(0):
             self.abort()
             return
@@ -352,7 +352,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self. unsequenced_checkbox.setEnabled(new_state)
 
     def update_controls(
-        self, start: Optional[Frame] = None, end: Optional[Frame] = None, total: Optional[FrameInterval] = None
+        self, start: Frame | None = None, end: Frame | None = None, total: FrameInterval | None = None
     ) -> None:
         if start is not None:
             end = self.end_frame_control.value()

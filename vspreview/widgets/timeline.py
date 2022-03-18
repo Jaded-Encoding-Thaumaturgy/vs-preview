@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PyQt5.QtCore import Qt
 from yaml import YAMLObject
-from typing import cast, Dict, Iterator, List, Optional, Type, Union
+from typing import cast, Dict, Iterator, List, Type
 
 from PyQt5.QtWidgets import QWidget, QApplication, QToolTip
 from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
@@ -22,7 +22,7 @@ from ..core import (
 
 class Notch:
     def __init__(
-        self, data: Union[Frame, Time], color: QColor = cast(QColor, Qt.white),
+        self, data: Frame | Time, color: QColor = cast(QColor, Qt.white),
         label: str = '', line: QLineF = QLineF()
     ) -> None:
         self.data = data
@@ -37,7 +37,7 @@ class Notch:
 
 
 class Notches:
-    def __init__(self, other: Optional[Notches] = None) -> None:
+    def __init__(self, other: Notches | None = None) -> None:
         self.items: List[Notch] = []
 
         if other is None:
@@ -45,7 +45,7 @@ class Notches:
         self.items = other.items
 
     def add(
-        self, data: Union[Frame, Scene, Time, Notch],
+        self, data: Frame | Scene | Time | Notch,
         color: QColor = cast(QColor, Qt.white),
         label: str = ''
     ) -> None:
@@ -129,7 +129,7 @@ class Timeline(QWidget):
         self.cursor_x = 0
         # used as a fallback when self.rectF.width() is 0,
         # so cursorX is incorrect
-        self.cursor_ftx: Optional[Union[Frame, Time, int]] = None
+        self.cursor_ftx: Frame | Time | int | None = None
         # False means that only cursor position'll be recalculated
         self.need_full_repaint = True
 
@@ -401,7 +401,7 @@ class Timeline(QWidget):
         self.end_t = Time(end_f)
         self.full_repaint()
 
-    def set_position(self, pos: Union[Frame, Time, int]) -> None:
+    def set_position(self, pos: Frame | Time | int) -> None:
         if self.rect_f.width() == 0.0:
             self.cursor_ftx = pos
 

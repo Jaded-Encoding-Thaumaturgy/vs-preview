@@ -6,7 +6,7 @@ import vapoursynth as vs
 from yaml import YAMLObject
 from datetime import timedelta
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional, overload, TypeVar, Union, cast
+from typing import Any, Mapping, overload, TypeVar, cast
 
 from PyQt5 import sip
 from PyQt5.QtGui import QImage, QPixmap, QPainter
@@ -71,7 +71,7 @@ class Frame(YAMLObjectWrapper):
 
     __slots__ = ('value',)
 
-    def __init__(self, init_value: Union[Frame, int, Time]) -> None:
+    def __init__(self, init_value: Frame | int | Time) -> None:
         from vspreview.utils import main_window
 
         if isinstance(init_value, int):
@@ -97,7 +97,7 @@ class Frame(YAMLObjectWrapper):
     @overload
     def __sub__(self, other: Frame) -> FrameInterval: ...
 
-    def __sub__(self, other: Frame | FrameInterval) -> Union[Frame, FrameInterval]:
+    def __sub__(self, other: Frame | FrameInterval) -> Frame | FrameInterval:
         if isinstance(other, Frame):
             return FrameInterval(self.value - other.value)
         if isinstance(other, FrameInterval):
@@ -109,7 +109,7 @@ class Frame(YAMLObjectWrapper):
     @overload
     def __isub__(self, other: Frame) -> FrameInterval: ...
 
-    def __isub__(self, other: Frame | FrameInterval) -> Union[Frame, FrameInterval]:  # type: ignore
+    def __isub__(self, other: Frame | FrameInterval) -> Frame | FrameInterval:  # type: ignore
         self.value -= other.value
         return self
 
@@ -130,7 +130,7 @@ class FrameInterval(YAMLObjectWrapper):
 
     __slots__ = ('value',)
 
-    def __init__(self, init_value: Union[FrameInterval, int, TimeInterval]) -> None:
+    def __init__(self, init_value: FrameInterval | int | TimeInterval) -> None:
         from vspreview.utils import main_window
 
         if isinstance(init_value, int):
@@ -196,7 +196,7 @@ class Time(YAMLObjectWrapper):
         'value',
     )
 
-    def __init__(self, init_value: Optional[Union[Time, timedelta, Frame]] = None, **kwargs: Any):
+    def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
         from vspreview.utils import main_window
 
         if isinstance(init_value, timedelta):
@@ -224,7 +224,7 @@ class Time(YAMLObjectWrapper):
     @overload
     def __sub__(self, other: Time) -> TimeInterval: ...
 
-    def __sub__(self, other: Time | TimeInterval) -> Union[Time, TimeInterval]:
+    def __sub__(self, other: Time | TimeInterval) -> Time | TimeInterval:
         if isinstance(other, Time):
             return TimeInterval(self.value - other.value)
         if isinstance(other, TimeInterval):
@@ -236,7 +236,7 @@ class Time(YAMLObjectWrapper):
     @overload
     def __isub__(self, other: Time) -> TimeInterval: ...
 
-    def __isub__(self, other: Time | TimeInterval) -> Union[Time, TimeInterval]:  # type: ignore
+    def __isub__(self, other: Time | TimeInterval) -> Time | TimeInterval:  # type: ignore
         self.value -= other.value
         return self
 
@@ -267,7 +267,7 @@ class TimeInterval(YAMLObjectWrapper):
         'value',
     )
 
-    def __init__(self, init_value: Optional[Union[TimeInterval, timedelta, FrameInterval]] = None, **kwargs: Any):
+    def __init__(self, init_value: TimeInterval | timedelta | FrameInterval | None = None, **kwargs: Any):
         from vspreview.utils import main_window
 
         if isinstance(init_value, timedelta):
@@ -344,7 +344,7 @@ class Scene(YAMLObjectWrapper):
         'start', 'end', 'label'
     )
 
-    def __init__(self, start: Optional[Frame] = None, end: Optional[Frame] = None, label: str = '') -> None:
+    def __init__(self, start: Frame | None = None, end: Frame | None = None, label: str = '') -> None:
         if start is not None and end is not None:
             self.start = start
             self.end = end
@@ -631,7 +631,7 @@ class Output(YAMLObject):
             self.play_fps = self.fps_num / self.fps_den
 
         if not hasattr(self, 'frame_to_show'):
-            self.frame_to_show: Optional[Frame] = None
+            self.frame_to_show: Frame | None = None
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         assert clip.format
@@ -684,7 +684,7 @@ class Output(YAMLObject):
             )
 
     def render_raw_videoframe(
-        self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None
+        self, vs_frame: vs.VideoFrame, vs_frame_alpha: vs.VideoFrame | None = None
     ) -> QPixmap:
         self.cur_frame = (vs_frame, vs_frame_alpha)  # keep a reference to the current frame
 

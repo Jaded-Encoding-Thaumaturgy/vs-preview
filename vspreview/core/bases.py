@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from PyQt5 import sip
 from yaml import YAMLObject, YAMLObjectMetaclass
-from typing import Any, Dict, no_type_check, Optional, Type, TypeVar, Tuple, cast
+from typing import Any, Dict, no_type_check, Type, TypeVar, Tuple, cast
 
 from .better_abc import ABCMeta
 
@@ -14,7 +14,7 @@ T = TypeVar('T')
 class SingletonMeta(type):
     def __init__(cls: Type[T], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> None:
         super().__init__(name, bases, dct)  # type: ignore
-        cls.instance: Optional[T] = None  # type: ignore
+        cls.instance: T | None = None  # type: ignore
 
     def __call__(cls, *args: Any, **kwargs: Any) -> T:
         if cls.instance is None:

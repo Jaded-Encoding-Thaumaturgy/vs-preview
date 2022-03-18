@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import logging
 from pathlib import Path
-from typing import Any, Callable, cast, List, Mapping, Optional, Set, Union
+from typing import Any, Callable, cast, List, Mapping, Set
 
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QModelIndex, QItemSelection, QItemSelectionModel
@@ -86,7 +86,7 @@ class SceningListDialog(QDialog):
         self.add_button.setEnabled(False)
         scene_layout.addWidget(self.add_button)
 
-    def on_add_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_add_clicked(self, checked: bool | None = None) -> None:
         pass
 
     def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
@@ -106,7 +106,7 @@ class SceningListDialog(QDialog):
             )
         )
 
-    def on_current_list_changed(self, scening_list: Optional[SceningList] = None) -> None:
+    def on_current_list_changed(self, scening_list: SceningList | None = None) -> None:
         if scening_list is not None:
             self.scening_list = scening_list
         else:
@@ -126,7 +126,7 @@ class SceningListDialog(QDialog):
         self.start_time_control.setMaximum(self.main.current_output.end_time)
         self.end_time_control.setMaximum(self.main.current_output.end_time)
 
-    def on_end_frame_changed(self, value: Union[Frame, int]) -> None:
+    def on_end_frame_changed(self, value: Frame | int) -> None:
         frame = Frame(value)
         index = self.tableview.selectionModel().selectedRows()[0]
         if not index.isValid():
@@ -159,7 +159,7 @@ class SceningListDialog(QDialog):
         index = self.main.current_output.scening_lists.index(i)
         self.main.current_output.scening_lists.setData(index, text, Qt.UserRole)
 
-    def on_start_frame_changed(self, value: Union[Frame, int]) -> None:
+    def on_start_frame_changed(self, value: Frame | int) -> None:
         frame = Frame(value)
         index = self.tableview.selectionModel().selectedRows()[0]
         if not index.isValid():
@@ -225,8 +225,8 @@ class SceningToolbar(AbstractToolbar):
         super().__init__(main, 'Scening')
         self.setup_ui()
 
-        self.first_frame: Optional[Frame] = None
-        self.second_frame: Optional[Frame] = None
+        self.first_frame: Frame | None = None
+        self.second_frame: Frame | None = None
         self.export_template_pattern = re.compile(r'.*(?:{start}|{end}|{label}).*')
         self.export_template_scenes_pattern = re.compile(r'.+')
 
@@ -458,7 +458,7 @@ class SceningToolbar(AbstractToolbar):
         return marks
 
     @property
-    def current_list(self) -> Optional[SceningList]:
+    def current_list(self) -> SceningList | None:
         return self.items_combobox.currentValue()
 
     @current_list.setter
@@ -481,7 +481,7 @@ class SceningToolbar(AbstractToolbar):
 
     # list management
 
-    def on_add_list_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_add_list_clicked(self, checked: bool | None = None) -> None:
         _, i = self.current_lists.add()
         self.current_list_index = i
 
@@ -510,10 +510,10 @@ class SceningToolbar(AbstractToolbar):
     def on_list_items_changed(self, parent: QModelIndex, first: int, last: int) -> None:
         self.notches_changed.emit(self)
 
-    def on_remove_list_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_remove_list_clicked(self, checked: bool | None = None) -> None:
         self.current_lists.remove(self.current_list_index)
 
-    def on_view_list_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_view_list_clicked(self, checked: bool | None = None) -> None:
         self.scening_list_dialog.show()
 
     def switch_list(self, index: int) -> None:
@@ -524,7 +524,7 @@ class SceningToolbar(AbstractToolbar):
 
     # seeking
 
-    def on_seek_to_next_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_seek_to_next_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -533,7 +533,7 @@ class SceningToolbar(AbstractToolbar):
             return
         self.main.current_frame = new_pos
 
-    def on_seek_to_prev_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_seek_to_prev_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -544,13 +544,13 @@ class SceningToolbar(AbstractToolbar):
 
     # scene management
 
-    def on_add_single_frame_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()
         cast(SceningList, self.current_list).add(self.main.current_frame)
         self.check_remove_export_possibility()
 
-    def on_add_to_list_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_add_to_list_clicked(self, checked: bool | None = None) -> None:
         self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())
 
         if self.toggle_first_frame_button.isChecked():
@@ -562,7 +562,7 @@ class SceningToolbar(AbstractToolbar):
 
         self.check_remove_export_possibility()
 
-    def on_first_frame_clicked(self, checked: bool, frame: Optional[Frame] = None) -> None:
+    def on_first_frame_clicked(self, checked: bool, frame: Frame | None = None) -> None:
         if frame is None:
             frame = self.main.current_frame
 
@@ -573,7 +573,7 @@ class SceningToolbar(AbstractToolbar):
         self.scening_update_status_label()
         self.check_add_to_list_possibility()
 
-    def on_remove_at_current_frame_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_remove_at_current_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -584,7 +584,7 @@ class SceningToolbar(AbstractToolbar):
         self.remove_at_current_frame_button.clearFocus()
         self.check_remove_export_possibility()
 
-    def on_remove_last_from_list_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_remove_last_from_list_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -592,7 +592,7 @@ class SceningToolbar(AbstractToolbar):
         self.remove_last_from_list_button.clearFocus()
         self.check_remove_export_possibility()
 
-    def on_second_frame_clicked(self, checked: bool, frame: Optional[Frame] = None) -> None:
+    def on_second_frame_clicked(self, checked: bool, frame: Frame | None = None) -> None:
         if frame is None:
             frame = self.main.current_frame
 
@@ -611,7 +611,7 @@ class SceningToolbar(AbstractToolbar):
 
     # import
 
-    def on_import_file_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_import_file_clicked(self, checked: bool | None = None) -> None:
         filter_str = ';;'.join(self.supported_file_types.keys())
         path_strs, file_type = QFileDialog.getOpenFileNames(
             self.main, caption='Open chapters file', filter=filter_str)
@@ -660,7 +660,7 @@ class SceningToolbar(AbstractToolbar):
         '''
         from cueparser import CueSheet
 
-        def offset_to_time(offset: str) -> Optional[Time]:
+        def offset_to_time(offset: str) -> Time | None:
             pattern = re.compile(r'(\d{1,2}):(\d{1,2}):(\d{1,2})')
             match = pattern.match(offset)
             if match is None:
@@ -860,7 +860,7 @@ class SceningToolbar(AbstractToolbar):
         ]
         scene_delta = deltas[0]
         scene_start = Frame(0)
-        scene_end: Optional[Frame] = None
+        scene_end: Frame | None = None
         for i in range(1, len(deltas)):
             if abs(round(float(deltas[i] - scene_delta), 6)) <= 0.000_001:
                 continue
@@ -893,7 +893,7 @@ class SceningToolbar(AbstractToolbar):
         Combed probability is used for label.
         '''
         class TFMFrame(Frame):
-            mic: Optional[int]
+            mic: int | None
 
         tfm_frame_pattern = re.compile(r'(\d+)\s\((\d+)\)')
         tfm_group_pattern = re.compile(r'(\d+),(\d+)\s\((\d+(?:\.\d+)%)\)')
@@ -956,7 +956,7 @@ class SceningToolbar(AbstractToolbar):
 
     # export
 
-    def export_multiline(self, checked: Optional[bool] = None) -> None:
+    def export_multiline(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -976,7 +976,7 @@ class SceningToolbar(AbstractToolbar):
         self.main.clipboard.setText(export_str)
         self.main.show_message('Scening data exported to the clipboard')
 
-    def export_single_line(self, checked: Optional[bool] = None) -> None:
+    def export_single_line(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -1005,7 +1005,7 @@ class SceningToolbar(AbstractToolbar):
 
         self.add_to_list_button.setEnabled(True)
 
-    def check_remove_export_possibility(self, checked: Optional[bool] = None) -> None:
+    def check_remove_export_possibility(self, checked: bool | None = None) -> None:
         if self.current_list is not None and len(self.current_list) > 0:
             self.remove_last_from_list_button.setEnabled(True)
             self.seek_to_next_button.setEnabled(True)

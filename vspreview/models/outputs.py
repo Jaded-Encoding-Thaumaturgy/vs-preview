@@ -3,7 +3,7 @@ from __future__ import annotations
 import vapoursynth as vs
 from functools import partial
 from yaml import YAMLObjectMetaclass
-from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING
+from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING, Generic
 
 from vspreview.core import QYAMLObject, Output, AudioOutput
 
@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 T = TypeVar('T', Output, AudioOutput)
 
 
-class Outputs(QAbstractListModel, QYAMLObject):
+class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
     yaml_tag = '!Outputs'
 
     __slots__ = (
@@ -143,4 +143,4 @@ class Outputs(QAbstractListModel, QYAMLObject):
 
     if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/2220
-        def __iter__(self) -> Iterator[T]: ...
+        def __iter__(self) -> Iterator[Outputs]: ...

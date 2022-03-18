@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
@@ -114,10 +114,10 @@ class MiscToolbar(AbstractToolbar):
 
     @fire_and_forget
     @set_status_label(label='Saving')
-    def save(self, path: Optional[Path] = None) -> None:
+    def save(self, path: Path | None = None) -> None:
         self.save_sync(path)
 
-    def save_sync(self, path: Optional[Path] = None, manually: bool = False) -> None:
+    def save_sync(self, path: Path | None = None, manually: bool = False) -> None:
         import yaml
 
         yaml.Dumper.ignore_aliases = lambda *args: True
@@ -155,7 +155,7 @@ class MiscToolbar(AbstractToolbar):
         elif state == Qt.Unchecked:
             self.main.setWindowFlag(Qt.WindowStaysOnTopHint, False)
 
-    def on_save_frame_as_clicked(self, checked: Optional[bool] = None) -> None:
+    def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
         from vspreview.core.types import Output
 
         fmt = self.main.current_output.source.clip.format

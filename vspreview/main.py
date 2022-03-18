@@ -609,7 +609,6 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_PRIMARIES = Output.Primaries.BT709
     VS_OUTPUT_RANGE = Output.Range.LIMITED
     VS_OUTPUT_CHROMALOC = Output.ChromaLoc.LEFT
-    VS_OUTPUT_PREFER_PROPS = True
     VS_OUTPUT_RESIZER_KWARGS = {
         'dither_type': 'error_diffusion',
     }
@@ -640,8 +639,6 @@ class MainWindow(AbstractMainWindow):
     reload_signal = pyqtSignal()
 
     def __init__(self, config_dir: Path) -> None:
-        from qdarkstyle import load_stylesheet_pyqt5
-
         super().__init__()
 
         self.settings = MainSettings()
@@ -651,16 +648,19 @@ class MainWindow(AbstractMainWindow):
         logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.LOG_LEVEL)
         logging.Formatter.default_msec_format = '%s.%03d'
 
-        # ???
-
         self.config_dir = config_dir / self.VSP_DIR_NAME
 
         self.app = QApplication.instance()
         assert self.app
 
         if self.settings.dark_theme_enabled:
-            self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
-            self.ensurePolished()
+            try:
+                from qdarkstyle import load_stylesheet_pyqt5
+            except ImportError:
+                self.self.settings.dark_theme_enabled = False
+            else:
+                self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
+                self.ensurePolished()
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')

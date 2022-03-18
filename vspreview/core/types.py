@@ -609,7 +609,7 @@ class VideoOutput(YAMLObject):
         self.total_time = self.to_time_interval(self.total_frames - FrameInterval(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
-        self.name = 'Video Output ' + str(self.index)
+        self.name = 'Video Node ' + str(self.index)
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
@@ -619,7 +619,7 @@ class VideoOutput(YAMLObject):
 
         # storable attributes
         if 'Name' in self.props:
-            self.name = 'Video Output %d: %s' % (index, cast(str, self.props['Name']))
+            self.name = 'Video Node %d: %s' % (index, cast(str, self.props['Name']))
 
         if (not hasattr(self, 'last_showed_frame') or self.last_showed_frame > self.end_frame):
             self.last_showed_frame: Frame = Frame(0)
@@ -878,7 +878,7 @@ class AudioOutput(YAMLObject):
         self.end_time = self.to_time(self.end_frame)
 
         if not hasattr(self, 'name'):
-            self.name = 'Audio Output ' + str(self.index)
+            self.name = 'Audio Node ' + str(self.index)
 
     def clear(self) -> None:
         self.source_vs_output = self.vs_output = self.format = None  # type: ignore

@@ -5,16 +5,16 @@ from typing import cast, Generic, Mapping, Optional, Type, TYPE_CHECKING, TypeVa
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QComboBox
 
-from vspreview.core import Output, AudioOutput
+from vspreview.core import VideoOutput, AudioOutput
 from vspreview.models import SceningList
 
-T = TypeVar('T', Output, AudioOutput, SceningList, float)
+T = TypeVar('T', VideoOutput, AudioOutput, SceningList, float)
 
 
 class ComboBox(QComboBox, Generic[T]):
     def __class_getitem__(cls, ty: Type[T]) -> Type:
         type_specializations: Mapping[Type, Type] = {
-            Output: _ComboBox_Output,
+            VideoOutput: _ComboBox_Output,
             AudioOutput: _ComboBox_AudioOutput,
             SceningList: _ComboBox_SceningList,
             float: _ComboBox_float,
@@ -54,8 +54,8 @@ class ComboBox(QComboBox, Generic[T]):
 
 
 class _ComboBox_Output(ComboBox):
-    ty = Output
-    T = Output
+    ty = VideoOutput
+    T = VideoOutput
     if TYPE_CHECKING:
         valueChanged = pyqtSignal(ty, Optional[ty])
     else:
@@ -64,6 +64,7 @@ class _ComboBox_Output(ComboBox):
 
 class _ComboBox_AudioOutput(ComboBox):
     ty = AudioOutput
+    T = AudioOutput
     if TYPE_CHECKING:
         valueChanged = pyqtSignal(ty, Optional[ty])
     else:

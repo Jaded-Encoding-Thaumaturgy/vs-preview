@@ -156,7 +156,7 @@ class MiscToolbar(AbstractToolbar):
             self.main.setWindowFlag(Qt.WindowStaysOnTopHint, False)
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
-        from vspreview.core.types import Output
+        from vspreview.core.types import VideoOutput
 
         fmt = self.main.current_output.source.clip.format
         assert fmt
@@ -175,12 +175,12 @@ class MiscToolbar(AbstractToolbar):
             'frame': self.main.current_frame,
             'height': self.main.current_output.height,
             'index': self.main.current_output.index,
-            'matrix': Output.Matrix.values[int(str(frame_props['_Matrix']))],
-            'primaries': Output.Primaries.values[int(str(frame_props['_Primaries']))],
-            'range': Output.Range.values[int(str(frame_props['_ColorRange']))],
+            'matrix': VideoOutput.Matrix.values[int(str(frame_props['_Matrix']))],
+            'primaries': VideoOutput.Primaries.values[int(str(frame_props['_Primaries']))],
+            'range': VideoOutput.Range.values[int(str(frame_props['_ColorRange']))],
             'script_name': self.main.script_path.stem,
             'total_frames': self.main.current_output.total_frames,
-            'transfer': Output.Transfer.values[int(str(frame_props['_Transfer']))],
+            'transfer': VideoOutput.Transfer.values[int(str(frame_props['_Transfer']))],
             'width': self.main.current_output.width,
         }
         try:

@@ -24,7 +24,7 @@ from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit
 from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names, try_load
 from .core import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
-    Frame, FrameInterval, Output, Time, TimeInterval, QYAMLObjectSingleton,
+    Frame, FrameInterval, VideoOutput, Time, TimeInterval, QYAMLObjectSingleton,
 )
 
 
@@ -139,7 +139,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs[Output](Output)
+        self.outputs = Outputs[VideoOutput](VideoOutput)
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -186,11 +186,14 @@ class MainToolbar(AbstractToolbar):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.outputs_combobox = ComboBox[Output](self)
+        self.outputs_combobox = ComboBox[VideoOutput](self)
         self.outputs_combobox.setEditable(True)
         self.outputs_combobox.setInsertPolicy(QComboBox.InsertAtCurrent)
         self.outputs_combobox.setDuplicatesEnabled(True)
         self.outputs_combobox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.outputs_combobox.view().setMinimumWidth(
+            self.outputs_combobox.minimumSizeHint().width()
+        )
         layout.addWidget(self.outputs_combobox)
 
         self.frame_control = FrameEdit[Frame](self)
@@ -242,7 +245,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs(Output)
+        self.outputs = Outputs(VideoOutput)
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
@@ -286,6 +289,7 @@ class MainToolbar(AbstractToolbar):
             self.outputs = outputs
             self.main.init_outputs()
             self.outputs_combobox.setModel(self.outputs)
+            
         except (KeyError, TypeError):
             logging.warning('Storage loading: Main toolbar: failed to parse outputs.')
 
@@ -604,12 +608,12 @@ class MainWindow(AbstractMainWindow):
     TOGGLE_TOOLBAR = True
     VSP_DIR_NAME = '.vspreview'
     # used for formats with subsampling
-    VS_OUTPUT_RESIZER = Output.Resizer.Bicubic
-    VS_OUTPUT_MATRIX = Output.Matrix.BT709
-    VS_OUTPUT_TRANSFER = Output.Transfer.BT709
-    VS_OUTPUT_PRIMARIES = Output.Primaries.BT709
-    VS_OUTPUT_RANGE = Output.Range.LIMITED
-    VS_OUTPUT_CHROMALOC = Output.ChromaLoc.LEFT
+    VS_OUTPUT_RESIZER = VideoOutput.Resizer.Bicubic
+    VS_OUTPUT_MATRIX = VideoOutput.Matrix.BT709
+    VS_OUTPUT_TRANSFER = VideoOutput.Transfer.BT709
+    VS_OUTPUT_PRIMARIES = VideoOutput.Primaries.BT709
+    VS_OUTPUT_RANGE = VideoOutput.Range.LIMITED
+    VS_OUTPUT_CHROMALOC = VideoOutput.ChromaLoc.LEFT
     VS_OUTPUT_RESIZER_KWARGS = {
         'dither_type': 'error_diffusion',
     }
@@ -888,7 +892,7 @@ class MainWindow(AbstractMainWindow):
 
         self.show_message('Reloaded successfully')
 
-    def render_frame(self, frame: Frame, output: Output | None = None) -> QPixmap:
+    def render_frame(self, frame: Frame, output: VideoOutput | None = None) -> QPixmap:
         if output is None:
             output = self.current_output
 
@@ -928,10 +932,10 @@ class MainWindow(AbstractMainWindow):
 
         self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 
-    def switch_output(self, value: int | Output) -> None:
+    def switch_output(self, value: int | VideoOutput) -> None:
         if len(self.outputs) == 0:
             return
-        if isinstance(value, Output):
+        if isinstance(value, VideoOutput):
             index = self.outputs.index_of(value)
         else:
             index = value
@@ -966,12 +970,12 @@ class MainWindow(AbstractMainWindow):
         self.update_statusbar_output_info()
 
     @property  # type: ignore
-    def current_output(self) -> Output:  # type: ignore
-        output = cast(Output, self.toolbars.main.outputs_combobox.currentData())
+    def current_output(self) -> VideoOutput:  # type: ignore
+        output = cast(VideoOutput, self.toolbars.main.outputs_combobox.currentData())
         return output
 
     @current_output.setter
-    def current_output(self, value: Output) -> None:
+    def current_output(self, value: VideoOutput) -> None:
         self.switch_output(self.outputs.index_of(value))
 
     @property  # type: ignore
@@ -983,8 +987,8 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def outputs(self) -> Type[Outputs[Output]]:  # type: ignore
-        return cast(Outputs[Output], self.toolbars.main.outputs)
+    def outputs(self) -> Type[Outputs[VideoOutput]]:  # type: ignore
+        return cast(Outputs[VideoOutput], self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)
@@ -1005,7 +1009,7 @@ class MainWindow(AbstractMainWindow):
             round(float(self.settings.statusbar_message_timeout) * 1000)
         )
 
-    def update_statusbar_output_info(self, output: Output | None = None) -> None:
+    def update_statusbar_output_info(self, output: VideoOutput | None = None) -> None:
         if output is None:
             output = self.current_output
 

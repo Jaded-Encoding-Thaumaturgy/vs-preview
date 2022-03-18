@@ -138,14 +138,14 @@ def profile_cpu(func: Callable[..., T]) -> Callable[..., T]:
 
 
 def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
-    from vspreview.core import Output
+    from vspreview.core import VideoOutput
 
     props = vs_output.get_frame(0).props
     logging.debug('Matrix: {}, Transfer: {}, Primaries: {}, Range: {}'.format(
-        Output.Matrix.values[int(str(props['_Matrix']))] if '_Matrix' in props else None,
-        Output.Transfer.values[int(str(props['_Transfer']))] if '_Transfer' in props else None,
-        Output.Primaries.values[int(str(props['_Primaries']))] if '_Primaries' in props else None,
-        Output.Range.values[int(str(props['_ColorRange']))] if '_ColorRange' in props else None,
+        VideoOutput.Matrix.values[int(str(props['_Matrix']))] if '_Matrix' in props else None,
+        VideoOutput.Transfer.values[int(str(props['_Transfer']))] if '_Transfer' in props else None,
+        VideoOutput.Primaries.values[int(str(props['_Primaries']))] if '_Primaries' in props else None,
+        VideoOutput.Range.values[int(str(props['_ColorRange']))] if '_ColorRange' in props else None,
     ))
 
 

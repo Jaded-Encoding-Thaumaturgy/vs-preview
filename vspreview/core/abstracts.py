@@ -4,7 +4,7 @@ from pathlib import Path
 from abc import abstractmethod
 from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List
 
-from .types import Frame, Output, Time
+from .types import Frame, VideoOutput, Time
 from .better_abc import abstract_attribute
 from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
 
@@ -35,7 +35,7 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     @abstractmethod
-    def switch_output(self, value: int | Output) -> None:
+    def switch_output(self, value: int | VideoOutput) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -50,11 +50,11 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
     central_widget: QWidget = abstract_attribute()
     clipboard: QClipboard = abstract_attribute()
     current_frame: Frame = abstract_attribute()
-    current_output: Output = abstract_attribute()
+    current_output: VideoOutput = abstract_attribute()
     display_scale: float = abstract_attribute()
     graphics_scene: QGraphicsScene = abstract_attribute()
     graphics_view: QGraphicsView = abstract_attribute()
-    outputs: Outputs[Output] = abstract_attribute()
+    outputs: Outputs[VideoOutput] = abstract_attribute()
     timeline: Timeline = abstract_attribute()
     toolbars: AbstractToolbars = abstract_attribute()
     save_on_exit: bool = abstract_attribute()

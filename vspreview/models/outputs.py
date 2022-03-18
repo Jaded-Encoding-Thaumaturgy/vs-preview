@@ -5,12 +5,12 @@ from functools import partial
 from yaml import YAMLObjectMetaclass
 from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING, Generic
 
-from vspreview.core import QYAMLObject, Output, AudioOutput
+from vspreview.core import QYAMLObject, VideoOutput, AudioOutput
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
-T = TypeVar('T', Output, AudioOutput)
+T = TypeVar('T', VideoOutput, AudioOutput)
 
 
 class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
@@ -20,7 +20,7 @@ class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
         'items', 'T',
     )
 
-    supported_types = {Output: 'video', AudioOutput: 'audio'}
+    supported_types = {VideoOutput: 'video', AudioOutput: 'audio'}
 
     def __class_getitem__(self, ty: Type[T]) -> partial[Outputs]:
         return partial(Outputs, ty)
@@ -43,7 +43,7 @@ class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
                 continue
             try:
                 output = local_storage[str(i)]
-                output.__init__(vs_output, i)
+                output.__init__(vs_output, i)  # type: ignore
             except KeyError:
                 output = ty(vs_output, i)
 
@@ -119,7 +119,7 @@ class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
             [output for output in self.items]
         ), type=self.supported_types[self.T])
 
-    def __setstate__(self, state: Mapping[str, Output | str]) -> None:
+    def __setstate__(self, state: Mapping[str, T | str]) -> None:
         try:
             type_string = state['type']
             if not isinstance(type_string, str):

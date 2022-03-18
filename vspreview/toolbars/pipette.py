@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGraphicsView
 
-from vspreview.core import AbstractMainWindow, AbstractToolbar, Output
+from vspreview.core import AbstractMainWindow, AbstractToolbar, VideoOutput
 from vspreview.utils import set_qobject_names
 from vspreview.widgets import ColorView
 
@@ -45,7 +45,7 @@ class PipetteToolbar(AbstractToolbar):
         self.src_max_val: float = 2**8 - 1
         self.src_dec_fmt = '{:3d}'
         self.src_norm_fmt = '{:0.5f}'
-        self.outputs = WeakKeyDictionary[Output, vs.VideoNode]()
+        self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
 
         main.reload_signal.connect(self.clear_outputs)

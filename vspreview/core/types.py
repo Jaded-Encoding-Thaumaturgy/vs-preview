@@ -17,7 +17,7 @@ core = vs.core
 
 
 # TODO: consider making FrameInterval non-negative
-# TODO: consider storing assosiated Output in Frame and others
+# TODO: consider storing assosiated VideoOutput in Frame and others
 
 
 @dataclass
@@ -412,8 +412,8 @@ class Scene(YAMLObjectWrapper):
         self.__init__(state['start'], state['end'], state['label'])  # type: ignore
 
 
-class Output(YAMLObject):
-    yaml_tag = '!Output'
+class VideoOutput(YAMLObject):
+    yaml_tag = '!VideoOutput'
     vs_type = vs.VideoOutputTuple
 
     class Resizer:
@@ -609,7 +609,7 @@ class Output(YAMLObject):
         self.total_time = self.to_time_interval(self.total_frames - FrameInterval(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
-        self.name = 'Output ' + str(self.index)
+        self.name = 'Video Output ' + str(self.index)
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
@@ -619,7 +619,7 @@ class Output(YAMLObject):
 
         # storable attributes
         if 'Name' in self.props:
-            self.name = 'Output %d: %s' % (index, cast(str, self.props['Name']))
+            self.name = 'Video Output %d: %s' % (index, cast(str, self.props['Name']))
 
         if (not hasattr(self, 'last_showed_frame') or self.last_showed_frame > self.end_frame):
             self.last_showed_frame: Frame = Frame(0)
@@ -780,22 +780,22 @@ class Output(YAMLObject):
         self.name = ''
         try_load(
             state, 'name', str, self.__setattr__,
-            'Storage loading: Output: failed to parse name.'
+            'Storage loading: Video Output: failed to parse name.'
         )
 
         self.last_showed_frame = Frame(0)
         try:
             try_load(
                 state, 'last_showed_frame', Frame, self.__setattr__,
-                'Storage loading: Output: failed to parse last showed frame.'
+                'Storage loading: Video Output: failed to parse last showed frame.'
             )
         except IndexError:
-            logging.warning('Storage loading: Output: last showed frame is out of range.')
+            logging.warning('Storage loading: Video Output: last showed frame is out of range.')
 
         self.scening_lists = SceningLists()
         try_load(
             state, 'scening_lists', SceningLists, self.__setattr__,
-            'Storage loading: Output: scening lists weren\'t parsed successfully.'
+            'Storage loading: Video Output: scening lists weren\'t parsed successfully.'
         )
 
         try:
@@ -805,7 +805,7 @@ class Output(YAMLObject):
             if play_fps > 0:
                 self.play_fps = play_fps
         except (KeyError, TypeError):
-            logging.warning('Storage loading: Output: play fps weren\'t parsed successfully.')
+            logging.warning('Storage loading: Video Output: play fps weren\'t parsed successfully.')
 
 
 class AudioOutput(YAMLObject):

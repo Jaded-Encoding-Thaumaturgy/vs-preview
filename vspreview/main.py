@@ -875,7 +875,7 @@ class MainWindow(AbstractMainWindow):
         return output.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
 
     def switch_frame(
-        self, pos: Frame | Time | FrameInterval | TimeInterval | int | None, *, render_frame: bool | vs.VideoFrame = True
+        self, pos: Frame | Time | int | None, *, render_frame: bool | vs.VideoFrame = True
     ) -> None:
         if pos is None:
             logging.debug('switch_frame: position is None!')

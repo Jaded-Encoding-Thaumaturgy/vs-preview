@@ -94,21 +94,10 @@ class AudioOutput(YAMLObject):
     def render_raw_audio_frame(self, vs_frame: vs.AudioFrame) -> None:
         from array import array
 
-        size = self.format.samples_per_frame
-        ptr_type = ctypes.POINTER(ctypes.c_float * size)
+        ptr_type = ctypes.POINTER(ctypes.c_float * self.format.samples_per_frame)
 
-        frame_data_ptr_l = ctypes.cast(
-            vs_frame.get_read_ptr(0),
-            ptr_type
-        )
-
-        frame_data_ptr_r = ctypes.cast(
-            vs_frame.get_read_ptr(1),
-            ptr_type
-        )
-
-        barray_l = bytes(frame_data_ptr_l.contents)
-        barray_r = bytes(frame_data_ptr_r.contents)
+        barray_l = bytes(ctypes.cast(vs_frame.get_read_ptr(0), ptr_type).contents)
+        barray_r = bytes(ctypes.cast(vs_frame.get_read_ptr(1), ptr_type).contents)
 
         array_l = array('f', barray_l)
         array_r = array('f', barray_r)
@@ -118,6 +107,7 @@ class AudioOutput(YAMLObject):
         array_lr[1::2] = array_r
 
         barray = bytes(array_lr.tobytes())
+
         self.iodevice.write(barray)
 
     def _calculate_frame(self, seconds: float) -> int:

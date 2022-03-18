@@ -166,14 +166,15 @@ class PipetteToolbar(AbstractToolbar):
             stride = vs_frame.get_stride(plane)
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:
                 ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                    ctypes.c_char * (stride * vs_frame.height)))
+                    ctypes.c_char * (stride * vs_frame.height)
+                ))
                 offset = pos.y() * stride + pos.x() * 2
                 val = unpack('e', cast(bytearray, ptr.contents[offset:(offset + 2)]))[0]
                 return cast(float, val)
             else:
                 ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                    self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (  # type:ignore
-                        stride * vs_frame.height)))
+                    self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
+                ))
                 logical_stride = stride // fmt.bytes_per_sample
                 idx = pos.y() * logical_stride + pos.x()
                 return cast(int, ptr.contents[idx])
@@ -189,8 +190,9 @@ class PipetteToolbar(AbstractToolbar):
         self.src_dec.setText(self.src_dec_fmt.format(*src_vals))
         if fmt.sample_type == vs.INTEGER:
             self.src_hex.setText(self.src_hex_fmt.format(*src_vals))
-            self.src_norm.setText(self.src_norm_fmt.format(
-                *[src_val / self.src_max_val for src_val in src_vals]))
+            self.src_norm.setText(self.src_norm_fmt.format(*[
+                src_val / self.src_max_val for src_val in src_vals
+            ]))
         elif fmt.sample_type == vs.FLOAT:
             self.src_norm.setText(self.src_norm_fmt.format(*[
                 self.clip(val, 0.0, 1.0) if i in {0, 3} else self.clip(val, -0.5, 0.5) + 0.5

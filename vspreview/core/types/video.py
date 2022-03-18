@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import ctypes
 import logging
 import vapoursynth as vs
 from yaml import YAMLObject
 from dataclasses import dataclass
 from typing import Any, Mapping, cast
 
-from PyQt5 import sip
 from PyQt5.QtGui import QImage, QPixmap, QPainter
 
 from .units import Frame, FrameInterval, Time, TimeInterval
@@ -176,7 +174,6 @@ class VideoOutput(YAMLObject):
         'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'props', 'source', 'prepared',
         'main', 'checkerboard', '__weakref__', 'cur_frame'
-        # hack to keep the reference to the current frame
     )
 
     source: VideoOutputNode
@@ -296,34 +293,14 @@ class VideoOutput(YAMLObject):
     def render_raw_videoframe(
         self, vs_frame: vs.VideoFrame, vs_frame_alpha: vs.VideoFrame | None = None
     ) -> QPixmap:
-        self.cur_frame = (vs_frame, vs_frame_alpha)  # keep a reference to the current frame
+        self.cur_frame = (vs_frame, vs_frame_alpha)
 
-        stride_length = vs_frame.format.bytes_per_sample * vs_frame.width * vs_frame.height
-
-        # powerful spell. do not touch
-        frame_data_pointer = cast(
-            sip.voidptr, ctypes.cast(vs_frame.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length)).contents
-        )
-        frame_image = QImage(
-            frame_data_pointer, vs_frame.width, vs_frame.height,
-            vs_frame.get_stride(0), QImage.Format_RGB32
-        )
+        frame_image = QImage(cast(bytes, vs_frame[0]), vs_frame.width, vs_frame.height, QImage.Format_RGB32)
 
         if vs_frame_alpha is None:
             return QPixmap.fromImage(frame_image)
 
-        stride_length = vs_frame_alpha.format.bytes_per_sample * vs_frame_alpha.width * vs_frame_alpha.height
-
-        alpha_data_pointer = cast(
-            sip.voidptr, ctypes.cast(
-                vs_frame_alpha.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length)
-            ).contents
-        )
-
-        alpha_image = QImage(
-            alpha_data_pointer, vs_frame.width, vs_frame.height,
-            vs_frame_alpha.get_stride(0), QImage.Format_Alpha8
-        )
+        alpha_image = QImage(cast(bytes, vs_frame_alpha[0]), vs_frame.width, vs_frame.height, QImage.Format_Alpha8)
 
         result_image = QImage(vs_frame.width, vs_frame.height, QImage.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)

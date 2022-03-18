@@ -210,10 +210,10 @@ class PlaybackToolbar(AbstractToolbar):
             for i in range(cast(int, self.play_buffer.maxlen) // 2):
                 frame = (self.main.current_frame + FrameInterval(i) + FrameInterval(1))
                 self.play_buffer.appendleft(
-                    self.main.current_output.prepared.clip.get_frame_async(frame)
+                    self.main.current_output.prepared.clip.get_frame_async(int(frame))
                 )
                 self.play_buffer.appendleft(
-                    self.main.current_output.prepared.alpha.get_frame_async(frame)
+                    self.main.current_output.prepared.alpha.get_frame_async(int(frame))
                 )
 
         self.last_frame = Frame(stop_at_frame or self.main.current_output.end_frame)

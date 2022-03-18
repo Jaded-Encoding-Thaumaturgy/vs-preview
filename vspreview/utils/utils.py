@@ -184,7 +184,6 @@ def try_load(
             raise TypeError
     except (KeyError, TypeError):
         logging.warning(error_msg)
-        print('aaaa')
     else:
         if isinstance(receiver, ty):
             receiver = value
@@ -197,5 +196,4 @@ def try_load(
             try:
                 receiver.__setattr__(name, value)
             except AttributeError:
-                print('bbbb')
                 logging.warning(error_msg)

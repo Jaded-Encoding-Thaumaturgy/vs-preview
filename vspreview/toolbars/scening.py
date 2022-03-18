@@ -2,24 +2,25 @@ from __future__ import annotations
 
 import re
 import logging
-from PyQt5 import Qt
 from pathlib import Path
 from typing import Any, Callable, cast, List, Mapping, Optional, Set, Union
 
+from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt, QModelIndex, QItemSelection, QItemSelectionModel
+from PyQt5.QtWidgets import (
+    QDialog, QPushButton, QVBoxLayout, QLineEdit, QTableView, QHBoxLayout, QFrame, QLabel, QFileDialog
+)
 
 from vspreview.models import SceningList, SceningLists
 from vspreview.widgets import ComboBox, Notches, TimeEdit, FrameEdit
-from vspreview.utils import (
-    add_shortcut, fire_and_forget, qt_silent_call,
-    set_qobject_names, set_status_label, try_load
-)
 from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval
+from vspreview.utils import add_shortcut, fire_and_forget, qt_silent_call, set_qobject_names, set_status_label, try_load
 
 
 # TODO: import all lwi video streams as separate scening lists
 
 
-class SceningListDialog(Qt.QDialog):
+class SceningListDialog(QDialog):
     __slots__ = (
         'main', 'scening_list',
         'name_lineedit', 'tableview',
@@ -37,30 +38,30 @@ class SceningListDialog(Qt.QDialog):
         self.setWindowTitle('Scening List View')
         self.setup_ui()
 
-        self.end_frame_control  .valueChanged.connect(self.on_end_frame_changed)  # type: ignore
-        self.end_time_control   .valueChanged.connect(self.on_end_time_changed)
-        self.label_lineedit      .textChanged.connect(self.on_label_changed)  # type: ignore
-        self.name_lineedit       .textChanged.connect(self.on_name_changed)  # type: ignore
-        self.start_frame_control.valueChanged.connect(self.on_start_frame_changed)  # type: ignore
-        self.start_time_control .valueChanged.connect(self.on_start_time_changed)
-        self.tableview         .doubleClicked.connect(self.on_tableview_clicked)  # type: ignore
+        self.end_frame_control.valueChanged.connect(self.on_end_frame_changed)
+        self.end_time_control.valueChanged.connect(self.on_end_time_changed)
+        self.label_lineedit.textChanged.connect(self.on_label_changed)
+        self.name_lineedit.textChanged.connect(self.on_name_changed)
+        self.start_frame_control.valueChanged.connect(self.on_start_frame_changed)
+        self.start_time_control.valueChanged.connect(self.on_start_time_changed)
+        self.tableview.doubleClicked.connect(self.on_tableview_clicked)
 
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = Qt.QVBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setObjectName('SceningListDialog.setup_ui.layout')
 
-        self.name_lineedit = Qt.QLineEdit(self)
+        self.name_lineedit = QLineEdit(self)
         layout.addWidget(self.name_lineedit)
 
-        self.tableview = Qt.QTableView(self)
-        self.tableview.setSelectionMode(Qt.QTableView.SingleSelection)
-        self.tableview.setSelectionBehavior(Qt.QTableView.SelectRows)
-        self.tableview.setSizeAdjustPolicy(Qt.QTableView.AdjustToContents)
+        self.tableview = QTableView(self)
+        self.tableview.setSelectionMode(QTableView.SingleSelection)
+        self.tableview.setSelectionBehavior(QTableView.SelectRows)
+        self.tableview.setSizeAdjustPolicy(QTableView.AdjustToContents)
         layout.addWidget(self.tableview)
 
-        scene_layout = Qt.QHBoxLayout()
+        scene_layout = QHBoxLayout()
         scene_layout.setObjectName('SceningListDialog.setup_ui.scene_layout')
         layout.addLayout(scene_layout)
 
@@ -76,14 +77,14 @@ class SceningListDialog(Qt.QDialog):
         self.end_time_control = TimeEdit[Time](self)
         scene_layout.addWidget(self.end_time_control)
 
-        self.label_lineedit = Qt.QLineEdit(self)
+        self.label_lineedit = QLineEdit(self)
         self.label_lineedit.setPlaceholderText('Label')
         scene_layout.addWidget(self.label_lineedit)
 
-        # self.add_button = Qt.QPushButton(self)
-        # self.add_button.setText('Add')
-        # self.add_button.setEnabled(False)
-        # scene_layout.addWidget(self.add_button)
+        self.add_button = QPushButton(self)
+        self.add_button.setText('Add')
+        self.add_button.setEnabled(False)
+        scene_layout.addWidget(self.add_button)
 
     def on_add_clicked(self, checked: Optional[bool] = None) -> None:
         pass
@@ -93,15 +94,17 @@ class SceningListDialog(Qt.QDialog):
             return
         if self.tableview.selectionModel() is None:
             return
-        selection = Qt.QItemSelection()
+        selection = QItemSelection()
         for i, scene in enumerate(self.scening_list):
             if frame in scene:
                 index = self.scening_list.index(i, 0)
                 selection.select(index, index)
         self.tableview.selectionModel().select(
             selection,
-            Qt.QItemSelectionModel.SelectionFlags(
-                Qt.QItemSelectionModel.Rows + Qt.QItemSelectionModel.ClearAndSelect))
+            QItemSelectionModel.SelectionFlags(
+                QItemSelectionModel.Rows + QItemSelectionModel.ClearAndSelect
+            )
+        )
 
     def on_current_list_changed(self, scening_list: Optional[SceningList] = None) -> None:
         if scening_list is not None:
@@ -109,13 +112,13 @@ class SceningListDialog(Qt.QDialog):
         else:
             self.scening_list = self.main.toolbars.scening.current_list
 
-        self.scening_list.rowsMoved.connect(self.on_tableview_rows_moved)  # type: ignore
+        self.scening_list.rowsMoved.connect(self.on_tableview_rows_moved)
 
         self.name_lineedit.setText(self.scening_list.name)
 
         self.tableview.setModel(self.scening_list)
         self.tableview.resizeColumnsToContents()
-        self.tableview.selectionModel().selectionChanged.connect(self.on_tableview_selection_changed)  # type: ignore
+        self.tableview.selectionModel().selectionChanged.connect(self.on_tableview_selection_changed)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         self.start_frame_control.setMaximum(self.main.current_output.end_frame)
@@ -131,7 +134,7 @@ class SceningListDialog(Qt.QDialog):
         index = index.siblingAtColumn(SceningList.END_FRAME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, frame, Qt.Qt.UserRole)
+        self.scening_list.setData(index, frame, Qt.UserRole)
 
     def on_end_time_changed(self, time: Time) -> None:
         index = self.tableview.selectionModel().selectedRows()[0]
@@ -140,7 +143,7 @@ class SceningListDialog(Qt.QDialog):
         index = index.siblingAtColumn(SceningList.END_TIME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, time, Qt.Qt.UserRole)
+        self.scening_list.setData(index, time, Qt.UserRole)
 
     def on_label_changed(self, text: str) -> None:
         index = self.tableview.selectionModel().selectedRows()[0]
@@ -149,12 +152,12 @@ class SceningListDialog(Qt.QDialog):
         index = self.scening_list.index(index.row(), SceningList.LABEL_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, text, Qt.Qt.UserRole)
+        self.scening_list.setData(index, text, Qt.UserRole)
 
     def on_name_changed(self, text: str) -> None:
         i = self.main.current_output.scening_lists.index_of(self.scening_list)
         index = self.main.current_output.scening_lists.index(i)
-        self.main.current_output.scening_lists.setData(index, text, Qt.Qt.UserRole)
+        self.main.current_output.scening_lists.setData(index, text, Qt.UserRole)
 
     def on_start_frame_changed(self, value: Union[Frame, int]) -> None:
         frame = Frame(value)
@@ -164,7 +167,7 @@ class SceningListDialog(Qt.QDialog):
         index = index.siblingAtColumn(SceningList.START_FRAME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, frame, Qt.Qt.UserRole)
+        self.scening_list.setData(index, frame, Qt.UserRole)
 
     def on_start_time_changed(self, time: Time) -> None:
         index = self.tableview.selectionModel().selectedRows()[0]
@@ -173,10 +176,10 @@ class SceningListDialog(Qt.QDialog):
         index = index.siblingAtColumn(SceningList.START_TIME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, time, Qt.Qt.UserRole)
+        self.scening_list.setData(index, time, Qt.UserRole)
 
-    def on_tableview_clicked(self, index: Qt.QModelIndex) -> None:
-        if index.column() in (SceningList.START_FRAME_COLUMN, SceningList.END_FRAME_COLUMN):
+    def on_tableview_clicked(self, index: QModelIndex) -> None:
+        if index.column() in {SceningList.START_FRAME_COLUMN, SceningList.END_FRAME_COLUMN}:
             self.main.current_frame = self.scening_list.data(index)
         if index.column() == SceningList.START_TIME_COLUMN:
             self.main.current_frame = self.scening_list.data(index.siblingAtColumn(SceningList.START_FRAME_COLUMN))
@@ -184,15 +187,15 @@ class SceningListDialog(Qt.QDialog):
             self.main.current_frame = self.scening_list.data(index.siblingAtColumn(SceningList.END_FRAME_COLUMN))
 
     def on_tableview_rows_moved(
-        self, parent_index: Qt.QModelIndex, start_i: int, end_i: int, dest_index: Qt.QModelIndex, dest_i: int
+        self, parent_index: QModelIndex, start_i: int, end_i: int, dest_index: QModelIndex, dest_i: int
     ) -> None:
         index = self.scening_list.index(dest_i, 0)
         self.tableview.selectionModel().select(
             index,
-            Qt.QItemSelectionModel.SelectionFlags(
-                Qt.QItemSelectionModel.Rows + Qt.QItemSelectionModel.ClearAndSelect))
+            QItemSelectionModel.SelectionFlags(
+                QItemSelectionModel.Rows + QItemSelectionModel.ClearAndSelect))
 
-    def on_tableview_selection_changed(self, selected: Qt.QItemSelection, deselected: Qt.QItemSelection) -> None:
+    def on_tableview_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         if len(selected.indexes()) == 0:
             return
         index = selected.indexes()[0]
@@ -244,40 +247,40 @@ class SceningToolbar(AbstractToolbar):
             'XviD Log (*.txt)': self.import_xvid,
         }
 
-        self.add_list_button.clicked.connect(self.on_add_list_clicked)  # type: ignore
-        self.add_single_frame_button.clicked.connect(self.on_add_single_frame_clicked)  # type: ignore
-        self.add_to_list_button.clicked.connect(self.on_add_to_list_clicked)  # type: ignore
-        self.export_multiline_button.clicked.connect(self.export_multiline)  # type: ignore
-        self.export_single_line_button.clicked.connect(self.export_single_line)  # type: ignore
-        self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)  # type: ignore
-        self.import_file_button.clicked.connect(self.on_import_file_clicked)  # type: ignore
+        self.add_list_button.clicked.connect(self.on_add_list_clicked)
+        self.add_single_frame_button.clicked.connect(self.on_add_single_frame_clicked)
+        self.add_to_list_button.clicked.connect(self.on_add_to_list_clicked)
+        self.export_multiline_button.clicked.connect(self.export_multiline)
+        self.export_single_line_button.clicked.connect(self.export_single_line)
+        self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)
+        self.import_file_button.clicked.connect(self.on_import_file_clicked)
         self.items_combobox.valueChanged.connect(self.on_current_list_changed)
-        self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)  # type: ignore
-        self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)  # type: ignore
-        self.remove_list_button.clicked.connect(self.on_remove_list_clicked)  # type: ignore
-        self.seek_to_next_button.clicked.connect(self.on_seek_to_next_clicked)  # type: ignore
-        self.seek_to_prev_button.clicked.connect(self.on_seek_to_prev_clicked)  # type: ignore
-        self.toggle_first_frame_button.clicked.connect(self.on_first_frame_clicked)  # type: ignore
-        self.toggle_second_frame_button.clicked.connect(self.on_second_frame_clicked)  # type: ignore
-        self.view_list_button.clicked.connect(self.on_view_list_clicked)  # type: ignore
+        self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
+        self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)
+        self.remove_list_button.clicked.connect(self.on_remove_list_clicked)
+        self.seek_to_next_button.clicked.connect(self.on_seek_to_next_clicked)
+        self.seek_to_prev_button.clicked.connect(self.on_seek_to_prev_clicked)
+        self.toggle_first_frame_button.clicked.connect(self.on_first_frame_clicked)
+        self.toggle_second_frame_button.clicked.connect(self.on_second_frame_clicked)
+        self.view_list_button.clicked.connect(self.on_view_list_clicked)
 
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_1, lambda: self.switch_list(0))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_2, lambda: self.switch_list(1))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_3, lambda: self.switch_list(2))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_4, lambda: self.switch_list(3))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_5, lambda: self.switch_list(4))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_6, lambda: self.switch_list(5))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_7, lambda: self.switch_list(6))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_8, lambda: self.switch_list(7))
-        add_shortcut(Qt.Qt.SHIFT + Qt.Qt.Key_9, lambda: self.switch_list(8))
+        add_shortcut(Qt.SHIFT + Qt.Key_1, lambda: self.switch_list(0))
+        add_shortcut(Qt.SHIFT + Qt.Key_2, lambda: self.switch_list(1))
+        add_shortcut(Qt.SHIFT + Qt.Key_3, lambda: self.switch_list(2))
+        add_shortcut(Qt.SHIFT + Qt.Key_4, lambda: self.switch_list(3))
+        add_shortcut(Qt.SHIFT + Qt.Key_5, lambda: self.switch_list(4))
+        add_shortcut(Qt.SHIFT + Qt.Key_6, lambda: self.switch_list(5))
+        add_shortcut(Qt.SHIFT + Qt.Key_7, lambda: self.switch_list(6))
+        add_shortcut(Qt.SHIFT + Qt.Key_8, lambda: self.switch_list(7))
+        add_shortcut(Qt.SHIFT + Qt.Key_9, lambda: self.switch_list(8))
 
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Space, self.on_toggle_single_frame)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Left, self.seek_to_next_button.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_Right, self.seek_to_prev_button.click)
-        add_shortcut(Qt.Qt.Key_Q, self.toggle_first_frame_button.click)
-        add_shortcut(Qt.Qt.Key_W, self.toggle_second_frame_button.click)
-        add_shortcut(Qt.Qt.Key_E, self.add_to_list_button.click)
-        add_shortcut(Qt.Qt.Key_R, self.remove_last_from_list_button.click)
+        add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
+        add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_next_button.click)
+        add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_prev_button.click)
+        add_shortcut(Qt.Key_Q, self.toggle_first_frame_button.click)
+        add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
+        add_shortcut(Qt.Key_E, self.add_to_list_button.click)
+        add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
 
         # FIXME: get rid of workaround
         self._on_list_items_changed = lambda * arg: self.on_list_items_changed(
@@ -288,11 +291,11 @@ class SceningToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         self.setVisible(False)
 
-        layout = Qt.QVBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setObjectName('SceningToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout_line_1 = Qt.QHBoxLayout()
+        layout_line_1 = QHBoxLayout()
         layout_line_1.setObjectName('SceningToolbar.setup_ui.layout_line_1')
         layout.addLayout(layout_line_1)
 
@@ -301,94 +304,94 @@ class SceningToolbar(AbstractToolbar):
         self.items_combobox.setMinimumContentsLength(4)
         layout_line_1.addWidget(self.items_combobox)
 
-        self.add_list_button = Qt.QPushButton(self)
+        self.add_list_button = QPushButton(self)
         self.add_list_button.setText('Add List')
         layout_line_1.addWidget(self.add_list_button)
 
-        self.remove_list_button = Qt.QPushButton(self)
+        self.remove_list_button = QPushButton(self)
         self.remove_list_button.setText('Remove List')
         self.remove_list_button.setEnabled(False)
         layout_line_1.addWidget(self.remove_list_button)
 
-        self.view_list_button = Qt.QPushButton(self)
+        self.view_list_button = QPushButton(self)
         self.view_list_button.setText('View List')
         self.view_list_button.setEnabled(False)
         layout_line_1.addWidget(self.view_list_button)
 
-        self.import_file_button = Qt.QPushButton(self)
+        self.import_file_button = QPushButton(self)
         self.import_file_button.setText('Import List')
         layout_line_1.addWidget(self.import_file_button)
 
-        separator_line_1 = Qt.QFrame(self)
+        separator_line_1 = QFrame(self)
         separator_line_1.setObjectName(
             'SceningToolbar.setup_ui.separator_line_1')
-        separator_line_1.setFrameShape(Qt.QFrame.VLine)
-        separator_line_1.setFrameShadow(Qt.QFrame.Sunken)
+        separator_line_1.setFrameShape(QFrame.VLine)
+        separator_line_1.setFrameShadow(QFrame.Sunken)
         layout_line_1.addWidget(separator_line_1)
 
-        self.seek_to_prev_button = Qt.QPushButton(self)
+        self.seek_to_prev_button = QPushButton(self)
         self.seek_to_prev_button.setText('⏪')
         self.seek_to_prev_button.setEnabled(False)
         layout_line_1.addWidget(self.seek_to_prev_button)
 
-        self.seek_to_next_button = Qt.QPushButton(self)
+        self.seek_to_next_button = QPushButton(self)
         self.seek_to_next_button.setText('⏩')
         self.seek_to_next_button.setEnabled(False)
         layout_line_1.addWidget(self.seek_to_next_button)
 
         layout_line_1.addStretch()
 
-        layout_line_2 = Qt.QHBoxLayout()
+        layout_line_2 = QHBoxLayout()
         layout_line_2.setObjectName('SceningToolbar.setup_ui.layout_line_2')
         layout.addLayout(layout_line_2)
 
-        self.add_single_frame_button = Qt.QPushButton(self)
+        self.add_single_frame_button = QPushButton(self)
         # self.add_single_frame_button.setText('Add Single Frame')
         self.add_single_frame_button.setText('🆎')
         self.add_single_frame_button.setToolTip('Add Single Frame Scene')
         layout_line_2.addWidget(self.add_single_frame_button)
 
-        self.toggle_first_frame_button = Qt.QPushButton(self)
+        self.toggle_first_frame_button = QPushButton(self)
         # self.toggle_first_frame_button.setText('Frame 1')
         self.toggle_first_frame_button.setText('🅰️')
         self.toggle_first_frame_button.setToolTip('Toggle Start of New Scene')
         self.toggle_first_frame_button.setCheckable(True)
         layout_line_2.addWidget(self.toggle_first_frame_button)
 
-        self.toggle_second_frame_button = Qt.QPushButton(self)
+        self.toggle_second_frame_button = QPushButton(self)
         # self.toggle_second_frame_button.setText('Frame 2')
         self.toggle_second_frame_button.setText('🅱️')
         self.toggle_second_frame_button.setToolTip('Toggle End of New Scene')
         self.toggle_second_frame_button.setCheckable(True)
         layout_line_2.addWidget(self.toggle_second_frame_button)
 
-        self.label_lineedit = Qt.QLineEdit(self)
+        self.label_lineedit = QLineEdit(self)
         self.label_lineedit.setPlaceholderText('New Scene Label')
         layout_line_2.addWidget(self.label_lineedit)
 
-        self.add_to_list_button = Qt.QPushButton(self)
+        self.add_to_list_button = QPushButton(self)
         self.add_to_list_button.setText('Add to List')
         self.add_to_list_button.setEnabled(False)
         layout_line_2.addWidget(self.add_to_list_button)
 
-        self.remove_last_from_list_button = Qt.QPushButton(self)
+        self.remove_last_from_list_button = QPushButton(self)
         self.remove_last_from_list_button.setText('Remove Last')
         self.remove_last_from_list_button.setEnabled(False)
         layout_line_2.addWidget(self.remove_last_from_list_button)
 
-        self.remove_at_current_frame_button = Qt.QPushButton(self)
+        self.remove_at_current_frame_button = QPushButton(self)
         self.remove_at_current_frame_button.setText('Remove at Current Frame')
         self.remove_at_current_frame_button.setEnabled(False)
         layout_line_2.addWidget(self.remove_at_current_frame_button)
 
-        separator_line_2 = Qt.QFrame(self)
+        separator_line_2 = QFrame(self)
         separator_line_2.setObjectName(
             'SceningToolbar.setup_ui.separator_line_2')
-        separator_line_2.setFrameShape(Qt.QFrame.VLine)
-        separator_line_2.setFrameShadow(Qt.QFrame.Sunken)
+        separator_line_2.setFrameShape(QFrame.VLine)
+        separator_line_2.setFrameShadow(QFrame.Sunken)
         layout_line_2.addWidget(separator_line_2)
 
-        self.export_template_lineedit = Qt.QLineEdit(self)
+        self.export_template_lineedit = QLineEdit(self)
         self.export_template_lineedit.setToolTip(
             r'Use {start} and {end} as placeholders.'
             r'Both are valid for single frame scenes. '
@@ -397,12 +400,12 @@ class SceningToolbar(AbstractToolbar):
         self.export_template_lineedit.setPlaceholderText('Export Template')
         layout_line_2.addWidget(self.export_template_lineedit)
 
-        self.export_multiline_button = Qt.QPushButton(self)
+        self.export_multiline_button = QPushButton(self)
         self.export_multiline_button.setText('Export Multiline')
         self.export_multiline_button.setEnabled(False)
         layout_line_2.addWidget(self.export_multiline_button)
 
-        self.export_single_line_button = Qt.QPushButton(self)
+        self.export_single_line_button = QPushButton(self)
         self.export_single_line_button.setText('Export Single Line')
         self.export_single_line_button.setEnabled(False)
         layout_line_2.addWidget(self.export_single_line_button)
@@ -412,7 +415,7 @@ class SceningToolbar(AbstractToolbar):
 
         # statusbar label
 
-        self.status_label = Qt.QLabel(self)
+        self.status_label = QLabel(self)
         self.status_label.setVisible(False)
         self.main.statusbar.addPermanentWidget(self.status_label)
 
@@ -429,7 +432,7 @@ class SceningToolbar(AbstractToolbar):
             for scening_list in self.main.outputs[prev_index].scening_lists:
                 try:
                     scening_list.rowsInserted.disconnect(self.on_list_items_changed)
-                    scening_list.rowsRemoved .disconnect(self.on_list_items_changed)
+                    scening_list.rowsRemoved.disconnect(self.on_list_items_changed)
                 except TypeError:
                     pass
 
@@ -446,7 +449,7 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             return marks
         for scene in self.current_list:
-            marks.add(scene, cast(Qt.QColor, Qt.Qt.green))
+            marks.add(scene, cast(QColor, Qt.green))
         return marks
 
     @property
@@ -480,18 +483,18 @@ class SceningToolbar(AbstractToolbar):
     def on_current_list_changed(self, new_value: SceningList | None, old_value: SceningList) -> None:
         if new_value is not None:
             self.remove_list_button.setEnabled(True)
-            self.  view_list_button.setEnabled(True)
-            new_value.rowsInserted.connect(self._on_list_items_changed)  # type: ignore
-            new_value.rowsRemoved .connect(self._on_list_items_changed)  # type: ignore
+            self.view_list_button.setEnabled(True)
+            new_value.rowsInserted.connect(self._on_list_items_changed)
+            new_value.rowsRemoved.connect(self._on_list_items_changed)
             self.scening_list_dialog.on_current_list_changed(new_value)
         else:
             self.remove_list_button.setEnabled(False)
-            self.  view_list_button.setEnabled(False)
+            self.view_list_button.setEnabled(False)
 
         if old_value is not None:
             try:
-                old_value.rowsInserted.disconnect(self._on_list_items_changed)  # type: ignore
-                old_value.rowsRemoved .disconnect(self._on_list_items_changed)  # type: ignore
+                old_value.rowsInserted.disconnect(self._on_list_items_changed)
+                old_value.rowsRemoved.disconnect(self._on_list_items_changed)
             except (IndexError, TypeError):
                 pass
 
@@ -499,7 +502,7 @@ class SceningToolbar(AbstractToolbar):
         self.check_remove_export_possibility()
         self.notches_changed.emit(self)
 
-    def on_list_items_changed(self, parent: Qt.QModelIndex, first: int, last: int) -> None:
+    def on_list_items_changed(self, parent: QModelIndex, first: int, last: int) -> None:
         self.notches_changed.emit(self)
 
     def on_remove_list_clicked(self, checked: Optional[bool] = None) -> None:
@@ -543,7 +546,7 @@ class SceningToolbar(AbstractToolbar):
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: Optional[bool] = None) -> None:
-        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())  # type: ignore
+        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())
 
         if self.toggle_first_frame_button.isChecked():
             self.toggle_first_frame_button.click()
@@ -605,7 +608,7 @@ class SceningToolbar(AbstractToolbar):
 
     def on_import_file_clicked(self, checked: Optional[bool] = None) -> None:
         filter_str = ';;'.join(self.supported_file_types.keys())
-        path_strs, file_type = Qt.QFileDialog.getOpenFileNames(
+        path_strs, file_type = QFileDialog.getOpenFileNames(
             self.main, caption='Open chapters file', filter=filter_str)
 
         paths = [Path(path_str) for path_str in path_strs]
@@ -915,7 +918,7 @@ class SceningToolbar(AbstractToolbar):
                 out_of_range_count += 1
                 continue
 
-            tfm_frames -= set(range(int(scene.start), int(scene.end) + 1))  # type: ignore
+            tfm_frames -= set(range(int(scene.start), int(scene.end) + 1))
 
         for tfm_frame in tfm_frames:
             try:
@@ -990,26 +993,26 @@ class SceningToolbar(AbstractToolbar):
     def check_remove_export_possibility(self, checked: Optional[bool] = None) -> None:
         if self.current_list is not None and len(self.current_list) > 0:
             self.remove_last_from_list_button.setEnabled(True)
-            self.seek_to_next_button         .setEnabled(True)
-            self.seek_to_prev_button         .setEnabled(True)
+            self.seek_to_next_button.setEnabled(True)
+            self.seek_to_prev_button.setEnabled(True)
         else:
             self.remove_last_from_list_button.setEnabled(False)
-            self.seek_to_next_button         .setEnabled(False)
-            self.seek_to_prev_button         .setEnabled(False)
+            self.seek_to_next_button.setEnabled(False)
+            self.seek_to_prev_button.setEnabled(False)
 
         if self.current_list is not None and self.main.current_frame in self.current_list:
-            self.       add_single_frame_button.setEnabled(False)
+            self.add_single_frame_button.setEnabled(False)
             self.remove_at_current_frame_button.setEnabled(True)
         else:
-            self.       add_single_frame_button.setEnabled(True)
+            self.add_single_frame_button.setEnabled(True)
             self.remove_at_current_frame_button.setEnabled(False)
 
         if self.export_template_pattern.fullmatch(self.export_template_lineedit.text()) is not None:
-            self.export_multiline_button  .setEnabled(True)
+            self.export_multiline_button.setEnabled(True)
             self.export_single_line_button.setEnabled(True)
         else:
             self.export_single_line_button.setEnabled(False)
-            self.export_multiline_button  .setEnabled(False)
+            self.export_multiline_button.setEnabled(False)
 
     def scening_update_status_label(self) -> None:
         first_frame_text = str(self.first_frame) if self.first_frame is not None else ''

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from PyQt5 import Qt
 from typing import Any, Iterator, Sequence
+from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex
 
 
-class ZoomLevels(Qt.QAbstractListModel):
+class ZoomLevels(QAbstractListModel):
     __slots__ = (
         'levels',
     )
@@ -25,15 +25,15 @@ class ZoomLevels(Qt.QAbstractListModel):
     def index_of(self, item: float) -> int:
         return self.levels.index(item)
 
-    def data(self, index: Qt.QModelIndex, role: int = Qt.Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
         if (not index.isValid() or index.row() >= len(self.levels)):
             return None
 
-        if role == Qt.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             return '{}%'.format(round(self.levels[index.row()] * 100))
-        if role == Qt.Qt.UserRole:
+        if role == Qt.UserRole:
             return self.levels[index.row()]
         return None
 
-    def rowCount(self, parent: Qt.QModelIndex = Qt.QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.levels)

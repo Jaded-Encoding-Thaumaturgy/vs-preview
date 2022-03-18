@@ -38,7 +38,7 @@ class Singleton(metaclass=SingletonMeta):
     def __new__(cls: Type[T], *args: Any, **kwargs: Any) -> T:
         if cls.instance is None:
             if hasattr(cls, '__default_new__'):
-                cls.instance = cls.__default_new__(cls, *args, **kwargs)  # pylint: disable=no-member
+                cls.instance = cls.__default_new__(cls, *args, **kwargs)
             else:
                 cls.instance = super(Singleton, cls).__new__(cls)
         return cls.instance
@@ -60,7 +60,7 @@ class AbstractYAMLObjectSingleton(AbstractYAMLObject, Singleton, metaclass=Abstr
     pass
 
 
-class QABCMeta(sip.wrappertype, ABCMeta):  # type: ignore
+class QABCMeta(sip.wrappertype, ABCMeta):
     pass
 
 
@@ -68,7 +68,7 @@ class QABC(metaclass=QABCMeta):
     pass
 
 
-class QSingletonMeta(SingletonMeta, sip.wrappertype):  # type: ignore
+class QSingletonMeta(SingletonMeta, sip.wrappertype):
     pass
 
 
@@ -76,7 +76,7 @@ class QSingleton(Singleton, metaclass=QSingletonMeta):
     pass
 
 
-class QAbstractSingletonMeta(QSingletonMeta, QABCMeta):
+class QAbstractSingletonMeta(QSingletonMeta):
     pass
 
 
@@ -84,7 +84,7 @@ class QAbstractSingleton(Singleton, metaclass=QAbstractSingletonMeta):
     pass
 
 
-class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):  # type: ignore
+class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):
     pass
 
 
@@ -108,7 +108,7 @@ class QYAMLObjectSingleton(QYAMLObject, Singleton, metaclass=QYAMLObjectSingleto
     pass
 
 
-class QAbstractYAMLObjectSingletonMeta(QYAMLObjectSingletonMeta, QABCMeta):
+class QAbstractYAMLObjectSingletonMeta(QYAMLObjectSingletonMeta):
     pass
 
 

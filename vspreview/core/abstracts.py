@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from PyQt5 import Qt
 from pathlib import Path
 from abc import abstractmethod
 from typing import Any, cast, Mapping, Optional, Union, Iterator, TYPE_CHECKING, Tuple, List
@@ -9,8 +8,12 @@ from .types import Frame, Output, Time
 from .better_abc import abstract_attribute
 from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
 
+from PyQt5.QtGui import QClipboard
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QGraphicsView, QStatusBar
 
-class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
+
+class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
     if TYPE_CHECKING:
         from vspreview.models import Outputs
         from vspreview.widgets import Timeline
@@ -44,46 +47,46 @@ class AbstractMainWindow(Qt.QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     app_settings: AbstractAppSettings = abstract_attribute()
-    central_widget: Qt.QWidget = abstract_attribute()
-    clipboard: Qt.QClipboard = abstract_attribute()
+    central_widget: QWidget = abstract_attribute()
+    clipboard: QClipboard = abstract_attribute()
     current_frame: Frame = abstract_attribute()
     current_output: Output = abstract_attribute()
     display_scale: float = abstract_attribute()
-    graphics_scene: Qt.QGraphicsScene = abstract_attribute()
-    graphics_view: Qt.QGraphicsView = abstract_attribute()
-    outputs: Outputs[Output] = abstract_attribute()
+    graphics_scene: QGraphicsScene = abstract_attribute()
+    graphics_view: QGraphicsView = abstract_attribute()
+    outputs: Outputs[Output] = abstract_attribute()  # type: ignore
     timeline: Timeline = abstract_attribute()
     toolbars: AbstractToolbars = abstract_attribute()
     save_on_exit: bool = abstract_attribute()
     script_path: Path = abstract_attribute()
-    statusbar: Qt.QStatusBar = abstract_attribute()
+    statusbar: QStatusBar = abstract_attribute()
 
 
-class AbstractToolbar(Qt.QWidget, QABC):
+class AbstractToolbar(QWidget, QABC):
     if TYPE_CHECKING:
         from vspreview.widgets import Notches
 
     __slots__ = ('main', 'toggle_button',)
 
     if TYPE_CHECKING:
-        notches_changed = Qt.pyqtSignal(AbstractToolbar)  # noqa: F821
+        notches_changed = pyqtSignal(AbstractToolbar)  # noqa: F821
     else:
-        notches_changed = Qt.pyqtSignal(object)
+        notches_changed = pyqtSignal(object)
 
-    def __init__(self, main: AbstractMainWindow, name: str, settings: Optional[Qt.QWidget] = None) -> None:
+    def __init__(self, main: AbstractMainWindow, name: str, settings: Optional[QWidget] = None) -> None:
         super().__init__(main.central_widget)
         self.main = main
-        self.settings = settings if settings is not None else Qt.QWidget()
+        self.settings = settings if settings is not None else QWidget()
 
         self.main.app_settings.addTab(self.settings, name)
-        self.setFocusPolicy(Qt.Qt.ClickFocus)
+        self.setFocusPolicy(Qt.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 
-        self.toggle_button = Qt.QPushButton(self)
+        self.toggle_button = QPushButton(self)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setText(name)
-        self.toggle_button.clicked.connect(self.on_toggle)  # type: ignore
+        self.toggle_button.clicked.connect(self.on_toggle)
 
         self.setVisible(False)
 
@@ -107,7 +110,7 @@ class AbstractToolbar(Qt.QWidget, QABC):
         return self.isVisible()
 
     def resize_main_window(self, expanding: bool) -> None:
-        if self.main.windowState() in (Qt.Qt.WindowMaximized, Qt.Qt.WindowFullScreen):
+        if self.main.windowState() in map(Qt.WindowStates, {Qt.WindowMaximized, Qt.WindowFullScreen}):
             return
 
         if expanding:
@@ -123,9 +126,9 @@ class AbstractToolbar(Qt.QWidget, QABC):
         pass
 
 
-class AbstractAppSettings(Qt.QDialog, QABC):
+class AbstractAppSettings(QDialog, QABC):
     @abstractmethod
-    def addTab(self, widget: Qt.QWidget, label: str) -> int:
+    def addTab(self, widget: QWidget, label: str) -> int:
         raise NotImplementedError
 
 

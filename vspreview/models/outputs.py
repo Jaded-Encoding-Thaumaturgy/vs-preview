@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from PyQt5 import Qt
 import vapoursynth as vs
 from functools import partial
 from yaml import YAMLObjectMetaclass
-from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict
-
+from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING
 
 from vspreview.core import QYAMLObject, Output, AudioOutput
+
+from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
 T = TypeVar('T', Output, AudioOutput)
 
 
-class Outputs(Qt.QAbstractListModel, QYAMLObject):
+class Outputs(QAbstractListModel, QYAMLObject):
     yaml_tag = '!Outputs'
 
     __slots__ = (
@@ -67,44 +67,44 @@ class Outputs(Qt.QAbstractListModel, QYAMLObject):
 
     def append(self, item: T) -> int:
         index = len(self.items)
-        self.beginInsertRows(Qt.QModelIndex(), index, index)
+        self.beginInsertRows(QModelIndex(), index, index)
         self.items.append(item)
         self.endInsertRows()
 
         return len(self.items) - 1
 
     def clear(self) -> None:
-        self.beginRemoveRows(Qt.QModelIndex(), 0, len(self.items))
+        self.beginRemoveRows(QModelIndex(), 0, len(self.items))
         self.items.clear()
         self.endRemoveRows()
 
-    def data(self, index: Qt.QModelIndex, role: int = Qt.Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
         if not index.isValid():
             return None
         if index.row() >= len(self.items):
             return None
 
-        if role == Qt.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             return self.items[index.row()].name
-        if role == Qt.Qt.EditRole:
+        if role == Qt.EditRole:
             return self.items[index.row()].name
-        if role == Qt.Qt.UserRole:
+        if role == Qt.UserRole:
             return self.items[index.row()]
         return None
 
-    def rowCount(self, parent: Qt.QModelIndex = Qt.QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.items)
 
-    def flags(self, index: Qt.QModelIndex) -> Qt.Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         if not index.isValid():
-            return cast(Qt.Qt.ItemFlags, Qt.Qt.ItemIsEnabled)
+            return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
 
-        return cast(Qt.Qt.ItemFlags, super().flags(index) | Qt.Qt.ItemIsEditable)
+        return cast(Qt.ItemFlags, super().flags(index) | Qt.ItemIsEditable)  # type: ignore
 
-    def setData(self, index: Qt.QModelIndex, value: Any, role: int = Qt.Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid():
             return False
-        if not role == Qt.Qt.EditRole:
+        if not role == Qt.EditRole:
             return False
         if not isinstance(value, str):
             return False
@@ -128,7 +128,7 @@ class Outputs(Qt.QAbstractListModel, QYAMLObject):
 
         except KeyError:
             raise KeyError('Storage loading: Outputs: key "type" is missing') from KeyError
-    
+
         ty = dict(zip(self.supported_types.values(), self.supported_types.keys()))[type_string]
 
         for key, value in state.items():
@@ -140,3 +140,7 @@ class Outputs(Qt.QAbstractListModel, QYAMLObject):
                 raise TypeError(f'Storage loading: Outputs: value of key {key} is not an Output')
 
         self.__init__(ty, state)  # type: ignore
+
+    if TYPE_CHECKING:
+        # https://github.com/python/mypy/issues/2220
+        def __iter__(self) -> Iterator[T]: ...

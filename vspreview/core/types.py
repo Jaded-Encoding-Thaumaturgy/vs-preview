@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import ctypes
 import logging
-from PyQt5 import Qt
 import vapoursynth as vs
 from yaml import YAMLObject
 from datetime import timedelta
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, overload, TypeVar, Union, cast
+
+from PyQt5 import sip
+from PyQt5.QtGui import QImage, QPixmap, QPainter
+from PyQt5.QtMultimedia import QAudioFormat, QAudioOutput, QAudioDeviceInfo
 
 
 core = vs.core
@@ -243,7 +246,7 @@ class Time(YAMLObjectWrapper):
         return strfdelta(self, '%h:%M:%S.%Z')
 
     def __float__(self) -> float:
-        return self.value.total_seconds()  # type: ignore
+        return cast(float, self.value.total_seconds())
 
     def __repr__(self) -> str:
         return f'Time({self.value})'
@@ -317,7 +320,7 @@ class TimeInterval(YAMLObjectWrapper):
         return strfdelta(self, '%h:%M:%S.%Z')
 
     def __float__(self) -> float:
-        return self.value.total_seconds()  # type: ignore
+        return cast(float, self.value.total_seconds())
 
     def __repr__(self) -> str:
         return f'TimeInterval({self.value})'
@@ -575,6 +578,7 @@ class Output(YAMLObject):
         self.source = self.prepared = self.props = None  # type: ignore
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
+        from vspreview.widgets import GraphicsImageItem
         from vspreview.models import SceningLists
         from vspreview.utils import main_window
 
@@ -611,7 +615,7 @@ class Output(YAMLObject):
             self.checkerboard = self._generate_checkerboard()
 
         # set by load_script() when it prepares graphics scene item based on last showed frame
-        self.graphics_scene_item: Qt.QGraphicsPixmapItem
+        self.graphics_scene_item: GraphicsImageItem
 
         # storable attributes
         if 'Name' in self.props:
@@ -657,18 +661,18 @@ class Output(YAMLObject):
 
         clip = resizer(clip, **resizer_kwargs, **self.main.VS_OUTPUT_RESIZER_KWARGS)
 
-        if not is_alpha:
-            if hasattr(core, 'libp2p'):
-                clip = core.libp2p.Pack(clip)  # type: ignore
-            else:
-                clip = core.akarin.Expr(
-                    core.std.SplitPlanes(clip),
-                    'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1
-                )
+        if is_alpha:
+            return clip
 
-        return clip
+        if hasattr(core, 'libp2p'):
+            return core.libp2p.Pack(clip)  # type: ignore
+        else:
+            return core.akarin.Expr(
+                core.std.SplitPlanes(clip),
+                'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1
+            )
 
-    def render_frame(self, frame: Frame) -> Qt.QImage:
+    def render_frame(self, frame: Frame) -> QPixmap:
         if self.prepared.alpha:
             return self.render_raw_videoframe(
                 self.prepared.clip.get_frame(int(frame)),
@@ -681,59 +685,65 @@ class Output(YAMLObject):
 
     def render_raw_videoframe(
         self, vs_frame: vs.VideoFrame, vs_frame_alpha: Optional[vs.VideoFrame] = None
-    ) -> Qt.QImage:
+    ) -> QPixmap:
         self.cur_frame = (vs_frame, vs_frame_alpha)  # keep a reference to the current frame
 
         stride_length = vs_frame.format.bytes_per_sample * vs_frame.width * vs_frame.height
 
         # powerful spell. do not touch
-        frame_data_pointer = ctypes.cast(vs_frame.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length))
-        frame_image = Qt.QImage(
-            frame_data_pointer.contents, vs_frame.width, vs_frame.height,
-            vs_frame.get_stride(0), Qt.QImage.Format_RGB30
+        frame_data_pointer = cast(
+            sip.voidptr, ctypes.cast(vs_frame.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length)).contents
+        )
+        frame_image = QImage(
+            frame_data_pointer, vs_frame.width, vs_frame.height,
+            vs_frame.get_stride(0), QImage.Format_RGB30
         )
 
         if vs_frame_alpha is None:
-            return frame_image
+            return QPixmap.fromImage(frame_image)
 
         stride_length = vs_frame_alpha.format.bytes_per_sample * vs_frame_alpha.width * vs_frame_alpha.height
 
-        alpha_data_pointer = ctypes.cast(vs_frame_alpha.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length))
+        alpha_data_pointer = cast(
+            sip.voidptr, ctypes.cast(
+                vs_frame_alpha.get_read_ptr(0), ctypes.POINTER(ctypes.c_char * stride_length)
+            ).contents
+        )
 
-        alpha_image = Qt.QImage(
-            alpha_data_pointer.contents, vs_frame.width, vs_frame.height,
-            vs_frame_alpha.get_stride(0), Qt.QImage.Format_Alpha8)
+        alpha_image = QImage(
+            alpha_data_pointer, vs_frame.width, vs_frame.height,
+            vs_frame_alpha.get_stride(0), QImage.Format_Alpha8
+        )
 
-        result_image = Qt.QImage(vs_frame.width, vs_frame.height,
-                                 Qt.QImage.Format_ARGB32_Premultiplied)
-        painter = Qt.QPainter(result_image)
-        painter.setCompositionMode(Qt.QPainter.CompositionMode_Source)
+        result_image = QImage(vs_frame.width, vs_frame.height, QImage.Format_ARGB32_Premultiplied)
+        painter = QPainter(result_image)
+        painter.setCompositionMode(QPainter.CompositionMode_Source)
         painter.drawImage(0, 0, frame_image)
-        painter.setCompositionMode(
-            Qt.QPainter.CompositionMode_DestinationIn)
+        painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
         painter.drawImage(0, 0, alpha_image)
+
         if self.main.CHECKERBOARD_ENABLED:
-            painter.setCompositionMode(Qt.QPainter.CompositionMode_DestinationOver)
+            painter.setCompositionMode(QPainter.CompositionMode_DestinationOver)
             painter.drawImage(0, 0, self.checkerboard)
+
         painter.end()
 
-        return result_image
+        return QPixmap.fromImage(result_image)
 
-    def _generate_checkerboard(self) -> Qt.QImage:
+    def _generate_checkerboard(self) -> QImage:
         tile_size = self.main.CHECKERBOARD_TILE_SIZE
         tile_color_1 = self.main.CHECKERBOARD_TILE_COLOR_1
         tile_color_2 = self.main.CHECKERBOARD_TILE_COLOR_2
 
-        macrotile_pixmap = Qt.QPixmap(tile_size * 2, tile_size * 2)
-        painter = Qt.QPainter(macrotile_pixmap)
+        macrotile_pixmap = QPixmap(tile_size * 2, tile_size * 2)
+        painter = QPainter(macrotile_pixmap)
         painter.fillRect(macrotile_pixmap.rect(), tile_color_1)
         painter.fillRect(tile_size, 0, tile_size, tile_size, tile_color_2)
         painter.fillRect(0, tile_size, tile_size, tile_size, tile_color_2)
         painter.end()
 
-        result_image = Qt.QImage(self.width, self.height,
-                                 Qt.QImage.Format_ARGB32_Premultiplied)
-        painter = Qt.QPainter(result_image)
+        result_image = QImage(self.width, self.height, QImage.Format_ARGB32_Premultiplied)
+        painter = QPainter(result_image)
         painter.drawTiledPixmap(result_image.rect(), macrotile_pixmap)
         painter.end()
 
@@ -844,18 +854,18 @@ class AudioOutput(YAMLObject):
         if self.format.num_channels != 2:
             raise RuntimeError('Non-2-channel audio is not supported')
 
-        self.qformat = Qt.QAudioFormat()
+        self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.format.num_channels)
         self.qformat.setSampleRate(self.format.sample_rate)
-        self.qformat.setSampleType(Qt.QAudioFormat.Float)
+        self.qformat.setSampleType(QAudioFormat.Float)
         self.qformat.setSampleSize(self.format.bits_per_sample)
-        self.qformat.setByteOrder(Qt.QAudioFormat.LittleEndian)
+        self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')
 
-        if not Qt.QAudioDeviceInfo(Qt.QAudioDeviceInfo.defaultOutputDevice()).isFormatSupported(self.qformat):
+        if not QAudioDeviceInfo(QAudioDeviceInfo.defaultOutputDevice()).isFormatSupported(self.qformat):
             raise RuntimeError('Audio format not supported')
 
-        self.qoutput = Qt.QAudioOutput(self.qformat, self.main)
+        self.qoutput = QAudioOutput(self.qformat, self.main)
         self.qoutput.setBufferSize(self.format.bytes_per_sample * self.format.samples_per_frame * 5)
         self.iodevice = self.qoutput.start()
 
@@ -874,7 +884,7 @@ class AudioOutput(YAMLObject):
         self.source_vs_output = self.vs_output = self.format = None  # type: ignore
 
     def render_audio_frame(self, frame: Frame) -> None:
-        self.render_raw_audio_frame(self.vs_output.get_frame(frame))  # R58
+        self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))  # R58
 
     def render_raw_audio_frame(self, vs_frame: vs.AudioFrame) -> None:
         from array import array
@@ -932,11 +942,10 @@ class AudioOutput(YAMLObject):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try:
-            name = state['name']
-            if not isinstance(name, str):
-                raise TypeError
-            self.name = name
-        except (KeyError, TypeError):
-            logging.warning(
-                f'Storage loading: output {self.index}: failed to parse name.')
+        from vspreview.utils import try_load
+
+        self.name = ''
+        try_load(
+            state, 'name', str, self.name,
+            'Storage loading: Audio output failed to parse name.'
+        )

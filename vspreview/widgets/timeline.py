@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from PyQt5 import Qt
+from PyQt5.QtCore import Qt
 from yaml import YAMLObject
 from typing import cast, Dict, Iterator, List, Optional, Type, Union
 
+from PyQt5.QtWidgets import QWidget, QApplication, QToolTip
+from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
+from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QPalette, QPen, QMoveEvent, QMouseEvent, QResizeEvent
 
 from ..utils import strfdelta
 from ..core import (
@@ -19,8 +22,8 @@ from ..core import (
 
 class Notch:
     def __init__(
-        self, data: Union[Frame, Time], color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
-        label: str = '', line: Qt.QLineF = Qt.QLineF()
+        self, data: Union[Frame, Time], color: QColor = cast(QColor, Qt.white),
+        label: str = '', line: QLineF = QLineF()
     ) -> None:
         self.data = data
         self.color = color
@@ -43,7 +46,7 @@ class Notches:
 
     def add(
         self, data: Union[Frame, Scene, Time, Notch],
-        color: Qt.QColor = cast(Qt.QColor, Qt.Qt.white),
+        color: QColor = cast(QColor, Qt.white),
         label: str = ''
     ) -> None:
         if isinstance(data, Notch):
@@ -72,7 +75,7 @@ class Notches:
         return '{}({})'.format(type(self).__name__, repr(self.items))
 
 
-class Timeline(Qt.QWidget):
+class Timeline(QWidget):
     __slots__ = (
         'app', 'main',
         'rectF', 'prevRectF',
@@ -91,21 +94,20 @@ class Timeline(Qt.QWidget):
 
         @classmethod
         def is_valid(cls, value: str) -> bool:
-            return value in (cls.FRAME,
-                             cls.TIME)
+            return value in {cls.FRAME, cls.TIME}
 
-    clicked = Qt.pyqtSignal(Frame, Time)
+    clicked = pyqtSignal(Frame, Time)
 
-    def __init__(self, parent: Qt.QWidget) -> None:
+    def __init__(self, parent: QWidget) -> None:
         from vspreview.utils import main_window
 
         super().__init__(parent)
-        self.app = Qt.QApplication.instance()
+        self.app = QApplication.instance()
         self.main = main_window()
 
         self._mode = self.Mode.TIME
 
-        self.rect_f = Qt.QRectF()
+        self.rect_f = QRectF()
 
         self.end_t = Time(seconds=1)
         self.end_f = Frame(1)
@@ -133,22 +135,22 @@ class Timeline(Qt.QWidget):
 
         self.toolbars_notches: Dict[AbstractToolbar, Notches] = {}
 
-        self.setAttribute(Qt.Qt.WA_OpaquePaintEvent)
+        self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.setMouseTracking(True)
 
-    def paintEvent(self, event: Qt.QPaintEvent) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         super().paintEvent(event)
-        self.rect_f = Qt.QRectF(event.rect())
+        self.rect_f = QRectF(event.rect())
         # self.rectF.adjust(0, 0, -1, -1)
 
         if self.cursor_ftx is not None:
             self.set_position(self.cursor_ftx)
         self.cursor_ftx = None
 
-        painter = Qt.QPainter(self)
+        painter = QPainter(self)
         self.drawWidget(painter)
 
-    def drawWidget(self, painter: Qt.QPainter) -> None:
+    def drawWidget(self, painter: QPainter) -> None:
         from copy import deepcopy
 
         if self.need_full_repaint:
@@ -165,7 +167,7 @@ class Timeline(Qt.QWidget):
                 label_notch_t = Time()
 
                 while (label_notch_x < self.rect_f.right() and label_notch_t <= self.end_t):
-                    line = Qt.QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
+                    line = QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
                     labels_notches.add(Notch(deepcopy(label_notch_t), line=line))
                     label_notch_t += notch_interval_t
                     label_notch_x = self.t_to_x(label_notch_t)
@@ -175,12 +177,12 @@ class Timeline(Qt.QWidget):
                 label_notch_f = Frame(0)
 
                 while (label_notch_x < self.rect_f.right() and label_notch_f <= self.end_f):
-                    line = Qt.QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
+                    line = QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
                     labels_notches.add(Notch(deepcopy(label_notch_f), line=line))
                     label_notch_f += notch_interval_f
                     label_notch_x = self.f_to_x(label_notch_f)
 
-            self.scroll_rect = Qt.QRectF(
+            self.scroll_rect = QRectF(
                 self.rect_f.left(),
                 label_notch_bottom + self.notch_scroll_interval,
                 self.rect_f.width(), self.scroll_height
@@ -196,25 +198,25 @@ class Timeline(Qt.QWidget):
                     elif isinstance(notch.data, Time):
                         x = self.t_to_x(notch.data)
                     y = self.scroll_rect.top()
-                    notch.line = Qt.QLineF(x, y, x, y + self.scroll_rect.height() - 1)
+                    notch.line = QLineF(x, y, x, y + self.scroll_rect.height() - 1)
 
-        cursor_line = Qt.QLineF(
+        cursor_line = QLineF(
             self.cursor_x, self.scroll_rect.top(), self.cursor_x,
             self.scroll_rect.top() + self.scroll_rect.height() - 1)
 
         # drawing
 
         if self.need_full_repaint:
-            painter.fillRect(self.rect_f, self.palette().color(Qt.QPalette.Window))
+            painter.fillRect(self.rect_f, self.palette().color(QPalette.Window))
 
-            painter.setPen(Qt.QPen(self.palette().color(Qt.QPalette.WindowText)))
-            painter.setRenderHint(Qt.QPainter.Antialiasing, False)
+            painter.setPen(QPen(self.palette().color(QPalette.WindowText)))
+            painter.setRenderHint(QPainter.Antialiasing, False)
             painter.drawLines([notch.line for notch in labels_notches])
-            painter.setRenderHint(Qt.QPainter.Antialiasing)
+            painter.setRenderHint(QPainter.Antialiasing)
 
             for i, notch in enumerate(labels_notches):
                 line = notch.line
-                anchor_rect = Qt.QRectF(
+                anchor_rect = QRectF(
                     line.x2(), line.y2() - self.notch_label_interval, 0, 0)
 
                 if self.mode == self.Mode.TIME:
@@ -225,26 +227,26 @@ class Timeline(Qt.QWidget):
 
                 if i == 0:
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.Qt.AlignBottom + Qt.Qt.AlignLeft,
+                        anchor_rect, Qt.AlignBottom + Qt.AlignLeft,
                         label)
                     if self.mode == self.Mode.TIME:
                         rect.moveLeft(-2.5)
                 elif i == (len(labels_notches) - 1):
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.Qt.AlignBottom + Qt.Qt.AlignHCenter,
+                        anchor_rect, Qt.AlignBottom + Qt.AlignHCenter,
                         label)
                     if rect.right() > self.rect_f.right():
                         rect = painter.boundingRect(
-                            anchor_rect, Qt.Qt.AlignBottom + Qt.Qt.AlignRight,
+                            anchor_rect, Qt.AlignBottom + Qt.AlignRight,
                             label)
                 else:
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.Qt.AlignBottom + Qt.Qt.AlignHCenter,
+                        anchor_rect, Qt.AlignBottom + Qt.AlignHCenter,
                         label)
                 painter.drawText(rect, label)
 
-        painter.setRenderHint(Qt.QPainter.Antialiasing, False)
-        painter.fillRect(self.scroll_rect, Qt.Qt.gray)
+        painter.setRenderHint(QPainter.Antialiasing, False)
+        painter.fillRect(self.scroll_rect, Qt.gray)
 
         for toolbar, notches in self.toolbars_notches.items():
             if not toolbar.is_notches_visible():
@@ -254,7 +256,7 @@ class Timeline(Qt.QWidget):
                 painter.setPen(notch.color)
                 painter.drawLine(notch.line)
 
-        painter.setPen(Qt.Qt.black)
+        painter.setPen(Qt.black)
         painter.drawLine(cursor_line)
 
         self.need_full_repaint = False
@@ -263,19 +265,19 @@ class Timeline(Qt.QWidget):
         self.need_full_repaint = True
         self.update()
 
-    def moveEvent(self, event: Qt.QMoveEvent) -> None:
+    def moveEvent(self, event: QMoveEvent) -> None:
         super().moveEvent(event)
         self.full_repaint()
 
-    def mousePressEvent(self, event: Qt.QMouseEvent) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         super().mousePressEvent(event)
-        pos = Qt.QPoint(event.pos())
+        pos = QPoint(event.pos())
         if self.scroll_rect.contains(pos):
             self.set_position(pos.x())
             self.clicked.emit(self.x_to_f(self.cursor_x, Frame),
                               self.x_to_t(self.cursor_x, Time))
 
-    def mouseMoveEvent(self, event: Qt.QMouseEvent) -> None:
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
         for toolbar, notches in self.toolbars_notches.items():
             if not toolbar.is_notches_visible():
@@ -283,16 +285,15 @@ class Timeline(Qt.QWidget):
             for notch in notches:
                 line = notch.line
                 if line.x1() - 0.5 <= event.x() <= line.x1() + 0.5:
-                    Qt.QToolTip.showText(event.globalPos(), notch.label)
+                    QToolTip.showText(event.globalPos(), notch.label)
                     return
 
-    def resizeEvent(self, event: Qt.QResizeEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.full_repaint()
 
-    def event(self, event: Qt.QEvent) -> bool:
-        if event.type() in (Qt.QEvent.Polish,
-                            Qt.QEvent.ApplicationPaletteChange):
+    def event(self, event: QEvent) -> bool:
+        if event.type() in {QEvent.Polish, QEvent.ApplicationPaletteChange}:
             self.setPalette(self.main.palette())
             self.full_repaint()
             return True

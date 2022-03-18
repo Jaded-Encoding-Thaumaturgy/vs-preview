@@ -3,13 +3,21 @@ from __future__ import annotations
 import os
 import sys
 import shlex
+import ctypes
 import logging
-from PyQt5 import Qt
 import vapoursynth as vs
 from pathlib import Path
 from platform import python_version
 from pkg_resources import get_distribution
 from typing import Any, cast, List, Mapping, Optional, Union, Tuple
+
+from PyQt5 import sip
+from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent, QObject
+from PyQt5.QtGui import QImage, QCloseEvent, QPalette, QPixmap, QShowEvent
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QWidget, QHBoxLayout, QPushButton, QApplication, QGraphicsScene,
+    QOpenGLWidget, QTabWidget, QComboBox, QCheckBox, QSpinBox, QSizePolicy, QGraphicsView
+)
 
 from .models import Outputs
 from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit
@@ -37,11 +45,11 @@ from .core import (
 # TODO: respond to changed settings immediately
 
 
-class ScriptErrorDialog(Qt.QDialog):
+class ScriptErrorDialog(QDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
-        super().__init__(main_window, Qt.Qt.Dialog)
+        super().__init__(main_window, Qt.Dialog)
         self.main = main_window
 
         self.setWindowTitle('Script Loading Error')
@@ -49,30 +57,30 @@ class ScriptErrorDialog(Qt.QDialog):
 
         self.setup_ui()
 
-        self.reload_button.clicked.connect(self.on_reload_clicked)  # type: ignore
-        self.exit_button.clicked.connect(self.on_exit_clicked)  # type: ignore
+        self.reload_button.clicked.connect(self.on_reload_clicked)
+        self.exit_button.clicked.connect(self.on_exit_clicked)
 
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_button.click, self)
+        add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_button.click, self)
 
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        main_layout = Qt.QVBoxLayout(self)
+        main_layout = QVBoxLayout(self)
         main_layout.setObjectName('ScriptErrorDialog.setup_ui.main_layout')
 
-        self.label = Qt.QLabel()
+        self.label = QLabel()
         main_layout.addWidget(self.label)
 
-        buttons_widget = Qt.QWidget(self)
+        buttons_widget = QWidget(self)
         buttons_widget.setObjectName('ScriptErrorDialog.setup_ui.buttons_widget')
-        buttons_layout = Qt.QHBoxLayout(buttons_widget)
+        buttons_layout = QHBoxLayout(buttons_widget)
         buttons_layout.setObjectName('ScriptErrorDialog.setup_uibuttons_layout')
 
-        self.reload_button = Qt.QPushButton(self)
+        self.reload_button = QPushButton(self)
         self.reload_button.setText('Reload')
         buttons_layout.addWidget(self.reload_button)
 
-        self.exit_button = Qt.QPushButton(self)
+        self.exit_button = QPushButton(self)
         self.exit_button.setText('Exit')
         buttons_layout.addWidget(self.exit_button)
 
@@ -87,7 +95,7 @@ class ScriptErrorDialog(Qt.QDialog):
         self.main.save_on_exit = False
         self.main.app.exit()
 
-    def closeEvent(self, event: Qt.QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         self.on_exit_clicked()
 
 
@@ -107,13 +115,13 @@ class SettingsDialog(AbstractAppSettings):
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = Qt.QVBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setObjectName('SettingsDialog.setup_ui.layout')
 
-        self.tab_widget = Qt.QTabWidget(self)
+        self.tab_widget = QTabWidget(self)
         layout.addWidget(self.tab_widget)
 
-    def addTab(self, widget: Qt.QWidget, label: str) -> int:
+    def addTab(self, widget: QWidget, label: str) -> int:
         return self.tab_widget.addTab(widget, label)
 
 
@@ -131,7 +139,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs[Output]()
+        self.outputs = Outputs[Output]()  # type: ignore
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -141,32 +149,32 @@ class MainToolbar(AbstractToolbar):
         self.zoom_combobox.setModel(self.zoom_levels)
         self.zoom_combobox.setCurrentIndex(3)
 
-        self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)  # type: ignore
-        self.frame_control.valueChanged.connect(self.main.switch_frame)  # type: ignore
+        self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
+        self.frame_control.valueChanged.connect(self.main.switch_frame)
         self.time_control.valueChanged.connect(self.main.switch_frame)
-        self.copy_frame_button.clicked.connect(self.on_copy_frame_button_clicked)  # type: ignore
-        self.copy_timestamp_button.clicked.connect(self.on_copy_timestamp_button_clicked)  # type: ignore
-        self.zoom_combobox.currentTextChanged.connect(self.on_zoom_changed)  # type: ignore
-        self.switch_timeline_mode_button.clicked.connect(self.on_switch_timeline_mode_clicked)  # type: ignore
-        self.settings_button.clicked.connect(self.main.app_settings.show)  # type: ignore
+        self.copy_frame_button.clicked.connect(self.on_copy_frame_button_clicked)
+        self.copy_timestamp_button.clicked.connect(self.on_copy_timestamp_button_clicked)
+        self.zoom_combobox.currentTextChanged.connect(self.on_zoom_changed)
+        self.switch_timeline_mode_button.clicked.connect(self.on_switch_timeline_mode_clicked)
+        self.settings_button.clicked.connect(self.main.app_settings.show)
 
-        add_shortcut(Qt.Qt.Key_1, lambda: self.main.switch_output(0))
-        add_shortcut(Qt.Qt.Key_2, lambda: self.main.switch_output(1))
-        add_shortcut(Qt.Qt.Key_3, lambda: self.main.switch_output(2))
-        add_shortcut(Qt.Qt.Key_4, lambda: self.main.switch_output(3))
-        add_shortcut(Qt.Qt.Key_5, lambda: self.main.switch_output(4))
-        add_shortcut(Qt.Qt.Key_6, lambda: self.main.switch_output(5))
-        add_shortcut(Qt.Qt.Key_7, lambda: self.main.switch_output(6))
-        add_shortcut(Qt.Qt.Key_8, lambda: self.main.switch_output(7))
-        add_shortcut(Qt.Qt.Key_9, lambda: self.main.switch_output(8))
-        add_shortcut(Qt.Qt.Key_0, lambda: self.main.switch_output(9))
-        add_shortcut(Qt.Qt.Key_S, self.sync_outputs_checkbox.click)
+        add_shortcut(Qt.Key_1, lambda: self.main.switch_output(0))
+        add_shortcut(Qt.Key_2, lambda: self.main.switch_output(1))
+        add_shortcut(Qt.Key_3, lambda: self.main.switch_output(2))
+        add_shortcut(Qt.Key_4, lambda: self.main.switch_output(3))
+        add_shortcut(Qt.Key_5, lambda: self.main.switch_output(4))
+        add_shortcut(Qt.Key_6, lambda: self.main.switch_output(5))
+        add_shortcut(Qt.Key_7, lambda: self.main.switch_output(6))
+        add_shortcut(Qt.Key_8, lambda: self.main.switch_output(7))
+        add_shortcut(Qt.Key_9, lambda: self.main.switch_output(8))
+        add_shortcut(Qt.Key_0, lambda: self.main.switch_output(9))
+        add_shortcut(Qt.Key_S, self.sync_outputs_checkbox.click)
         add_shortcut(
-            Qt.Qt.CTRL + Qt.Qt.Key_Tab,
+            Qt.CTRL + Qt.Key_Tab,
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1)
         )
         add_shortcut(
-            Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_Tab,
+            Qt.CTRL + Qt.SHIFT + Qt.Key_Tab,
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
         )
 
@@ -174,31 +182,31 @@ class MainToolbar(AbstractToolbar):
 
     def setup_ui(self) -> None:
         self.setVisible(True)
-        layout = Qt.QHBoxLayout(self)
+        layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.outputs_combobox = ComboBox[Output](self)
         self.outputs_combobox.setEditable(True)
-        self.outputs_combobox.setInsertPolicy(Qt.QComboBox.InsertAtCurrent)
+        self.outputs_combobox.setInsertPolicy(QComboBox.InsertAtCurrent)
         self.outputs_combobox.setDuplicatesEnabled(True)
-        self.outputs_combobox.setSizeAdjustPolicy(Qt.QComboBox.AdjustToContents)
+        self.outputs_combobox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         layout.addWidget(self.outputs_combobox)
 
         self.frame_control = FrameEdit[Frame](self)
         layout.addWidget(self.frame_control)
 
-        self.copy_frame_button = Qt.QPushButton(self)
+        self.copy_frame_button = QPushButton(self)
         self.copy_frame_button.setText('⎘')
         layout.addWidget(self.copy_frame_button)
 
         self.time_control = TimeEdit[Time](self)
         layout.addWidget(self.time_control)
 
-        self.copy_timestamp_button = Qt.QPushButton(self)
+        self.copy_timestamp_button = QPushButton(self)
         self.copy_timestamp_button.setText('⎘')
         layout.addWidget(self.copy_timestamp_button)
 
-        self.sync_outputs_checkbox = Qt.QCheckBox(self)
+        self.sync_outputs_checkbox = QCheckBox(self)
         self.sync_outputs_checkbox.setText('Sync Outputs')
         self.sync_outputs_checkbox.setChecked(self.main.SYNC_OUTPUTS)
         layout.addWidget(self.sync_outputs_checkbox)
@@ -207,11 +215,11 @@ class MainToolbar(AbstractToolbar):
         self.zoom_combobox.setMinimumContentsLength(4)
         layout.addWidget(self.zoom_combobox)
 
-        self.switch_timeline_mode_button = Qt.QPushButton(self)
+        self.switch_timeline_mode_button = QPushButton(self)
         self.switch_timeline_mode_button.setText('Switch Timeline Mode')
         layout.addWidget(self.switch_timeline_mode_button)
 
-        self.settings_button = Qt.QPushButton(self)
+        self.settings_button = QPushButton(self)
         self.settings_button.setText('Settings')
         layout.addWidget(self.settings_button)
 
@@ -229,11 +237,11 @@ class MainToolbar(AbstractToolbar):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
-        qt_silent_call(self.   frame_control.setMaximum, self.main.current_output.end_frame)
-        qt_silent_call(self.    time_control.setMaximum, self.main.current_output.end_time)
+        qt_silent_call(self.frame_control.setMaximum, self.main.current_output.end_frame)
+        qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs[Output]()
+        self.outputs = Outputs[Output]()  # type: ignore
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
@@ -251,11 +259,11 @@ class MainToolbar(AbstractToolbar):
         elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
             self.main.timeline.mode = self.main.timeline.Mode.TIME
 
-    def on_sync_outputs_changed(self, state: Qt.Qt.CheckState) -> None:
-        if state == Qt.Qt.Checked:
+    def on_sync_outputs_changed(self, state: Qt.CheckState) -> None:
+        if state == Qt.Checked:
             for output in self.main.outputs:
                 output.frame_to_show = self.main.current_frame
-        if state == Qt.Qt.Unchecked:
+        if state == Qt.Unchecked:
             for output in self.main.outputs:
                 output.frame_to_show = None
 
@@ -310,12 +318,12 @@ class Toolbars(AbstractToolbars):
         self.benchmark = BenchmarkToolbar(main_window)
         self.debug = DebugToolbar(main_window)
 
-        self.misc     .setObjectName('Toolbars.misc')
-        self.playback .setObjectName('Toolbars.playback')
-        self.scening  .setObjectName('Toolbars.scening')
-        self.pipette  .setObjectName('Toolbars.pipette')
+        self.misc.setObjectName('Toolbars.misc')
+        self.playback.setObjectName('Toolbars.playback')
+        self.scening.setObjectName('Toolbars.scening')
+        self.pipette.setObjectName('Toolbars.pipette')
         self.benchmark.setObjectName('Toolbars.benchmark')
-        self.debug    .setObjectName('Toolbars.debug')
+        self.debug.setObjectName('Toolbars.debug')
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {
@@ -334,7 +342,7 @@ class Toolbars(AbstractToolbars):
                 logging.warning(f'Storage loading: failed to parse storage of {toolbar_name}.')
 
 
-class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
+class MainSettings(QWidget, QYAMLObjectSingleton):
     yaml_tag = '!MainSettings'
 
     __slots__ = (
@@ -354,14 +362,14 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = Qt.QVBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setObjectName('MainSettings.setup_ui.layout')
 
-        autosave_layout = Qt.QHBoxLayout()
+        autosave_layout = QHBoxLayout()
         autosave_layout.setObjectName('MainSettings.setup_ui.autosave_layout')
         layout.addLayout(autosave_layout)
 
-        autosave_label = Qt.QLabel(self)
+        autosave_label = QLabel(self)
         autosave_label.setObjectName('MainSettings.setup_ui.autosave_label')
         autosave_label.setText('Autosave interval (0 - disable)')
         autosave_layout.addWidget(autosave_label)
@@ -369,74 +377,74 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.autosave_control = TimeEdit[TimeInterval](self)
         autosave_layout.addWidget(self.autosave_control)
 
-        base_ppi_layout = Qt.QHBoxLayout()
+        base_ppi_layout = QHBoxLayout()
         base_ppi_layout.setObjectName('MainSettings.setup_ui.base_ppi_layout')
         layout.addLayout(base_ppi_layout)
 
-        base_ppi_label = Qt.QLabel(self)
+        base_ppi_label = QLabel(self)
         base_ppi_label.setObjectName('MainSettings.setup_ui.base_ppi_label')
         base_ppi_label.setText('Base PPI')
         base_ppi_layout.addWidget(base_ppi_label)
 
-        self.base_ppi_spinbox = Qt.QSpinBox(self)
+        self.base_ppi_spinbox = QSpinBox(self)
         self.base_ppi_spinbox.setMinimum(1)
         self.base_ppi_spinbox.setMaximum(9999)
         self.base_ppi_spinbox.setEnabled(False)
         base_ppi_layout.addWidget(self.base_ppi_spinbox)
 
-        self.dark_theme_checkbox = Qt.QCheckBox(self)
+        self.dark_theme_checkbox = QCheckBox(self)
         self.dark_theme_checkbox.setText('Dark theme')
         self.dark_theme_checkbox.setEnabled(False)
         layout.addWidget(self.dark_theme_checkbox)
 
-        self.opengl_rendering_checkbox = Qt.QCheckBox(self)
+        self.opengl_rendering_checkbox = QCheckBox(self)
         self.opengl_rendering_checkbox.setText('OpenGL rendering')
         self.opengl_rendering_checkbox.setEnabled(False)
         layout.addWidget(self.opengl_rendering_checkbox)
 
-        output_index_layout = Qt.QHBoxLayout()
+        output_index_layout = QHBoxLayout()
         output_index_layout.setObjectName(
             'MainSettings.setup_ui.output_index_layout'
         )
         layout.addLayout(output_index_layout)
 
-        output_index_label = Qt.QLabel(self)
+        output_index_label = QLabel(self)
         output_index_label.setObjectName(
             'MainSettings.setup_ui.output_index_label'
         )
         output_index_label.setText('Default output index')
         output_index_layout.addWidget(output_index_label)
 
-        self.output_index_spinbox = Qt.QSpinBox(self)
+        self.output_index_spinbox = QSpinBox(self)
         self.output_index_spinbox.setMinimum(0)
         self.output_index_spinbox.setMaximum(65535)
         output_index_layout.addWidget(self.output_index_spinbox)
 
-        png_compression_layout = Qt.QHBoxLayout()
+        png_compression_layout = QHBoxLayout()
         png_compression_layout.setObjectName(
             'MainSettings.setup_ui.png_compression_layout'
         )
         layout.addLayout(png_compression_layout)
 
-        png_compression_label = Qt.QLabel(self)
+        png_compression_label = QLabel(self)
         png_compression_label.setObjectName(
             'MainSettings.setup_ui.png_compression_label'
         )
         png_compression_label.setText('PNG compression level (0 - max)')
         png_compression_layout.addWidget(png_compression_label)
 
-        self.png_compressing_spinbox = Qt.QSpinBox(self)
+        self.png_compressing_spinbox = QSpinBox(self)
         self.png_compressing_spinbox.setMinimum(0)
         self.png_compressing_spinbox.setMaximum(100)
         png_compression_layout.addWidget(self.png_compressing_spinbox)
 
-        statusbar_timeout_layout = Qt.QHBoxLayout()
+        statusbar_timeout_layout = QHBoxLayout()
         statusbar_timeout_layout.setObjectName(
             'MainSettings.setup_ui.statusbar_timeout_layout'
         )
         layout.addLayout(statusbar_timeout_layout)
 
-        statusbar_timeout_label = Qt.QLabel(self)
+        statusbar_timeout_label = QLabel(self)
         statusbar_timeout_label.setObjectName(
             'MainSettings.setup_ui.statusbar_timeout_label'
         )
@@ -446,20 +454,20 @@ class MainSettings(Qt.QWidget, QYAMLObjectSingleton):
         self.statusbar_timeout_control = TimeEdit[TimeInterval](self)
         statusbar_timeout_layout.addWidget(self.statusbar_timeout_control)
 
-        timeline_notches_margin_layout = Qt.QHBoxLayout()
+        timeline_notches_margin_layout = QHBoxLayout()
         timeline_notches_margin_layout.setObjectName(
             'MainSettings.setup_ui.timeline_notches_margin_layout'
         )
         layout.addLayout(timeline_notches_margin_layout)
 
-        timeline_notches_margin_label = Qt.QLabel(self)
+        timeline_notches_margin_label = QLabel(self)
         timeline_notches_margin_label.setObjectName(
             'MainSettings.setup_ui.timeline_notches_margin_label'
         )
         timeline_notches_margin_label.setText('Timeline label notches margin')
         timeline_notches_margin_layout.addWidget(timeline_notches_margin_label)
 
-        self.timeline_notches_margin_spinbox = Qt.QSpinBox(self)
+        self.timeline_notches_margin_spinbox = QSpinBox(self)
         self.timeline_notches_margin_spinbox.setMinimum(1)
         self.timeline_notches_margin_spinbox.setMaximum(9999)
         self.timeline_notches_margin_spinbox.setSuffix('%')
@@ -573,8 +581,8 @@ class MainWindow(AbstractMainWindow):
     BENCHMARK_CLEAR_CACHE = False
     BENCHMARK_REFRESH_INTERVAL = 150  # ms
     CHECKERBOARD_ENABLED = True
-    CHECKERBOARD_TILE_COLOR_1 = Qt.Qt.white
-    CHECKERBOARD_TILE_COLOR_2 = Qt.Qt.lightGray
+    CHECKERBOARD_TILE_COLOR_1 = Qt.white
+    CHECKERBOARD_TILE_COLOR_2 = Qt.lightGray
     CHECKERBOARD_TILE_SIZE = 8  # px
     DARK_THEME = True
     FPS_AVERAGING_WINDOW_SIZE = FrameInterval(100)
@@ -629,7 +637,7 @@ class MainWindow(AbstractMainWindow):
     ]
 
     # emit when about to reload a script: clear all existing references to existing clips.
-    reload_signal = Qt.pyqtSignal()
+    reload_signal = pyqtSignal()
 
     def __init__(self, config_dir: Path) -> None:
         from qdarkstyle import load_stylesheet_pyqt5
@@ -647,7 +655,9 @@ class MainWindow(AbstractMainWindow):
 
         self.config_dir = config_dir / self.VSP_DIR_NAME
 
-        self.app = Qt.QApplication.instance()
+        self.app = QApplication.instance()
+        assert self.app
+
         if self.settings.dark_theme_enabled:
             self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
             self.ensurePolished()
@@ -658,7 +668,6 @@ class MainWindow(AbstractMainWindow):
         self.setup_ui()
 
         # global
-
         self.clipboard = self.app.clipboard()
         self.external_args: List[Tuple[str, str]] = []
         self.script_path = Path()
@@ -666,12 +675,12 @@ class MainWindow(AbstractMainWindow):
         self.script_exec_failed = False
 
         # graphics view
-
-        self.graphics_scene = Qt.QGraphicsScene(self)
+        self.graphics_scene = QGraphicsScene(self)
         self.graphics_view.setScene(self.graphics_scene)
         self.opengl_widget = None
+
         if self.settings.opengl_rendering_enabled:
-            self.opengl_widget = Qt.QOpenGLWidget()
+            self.opengl_widget = QOpenGLWidget()
             self.graphics_view.setViewport(self.opengl_widget)
 
         self.graphics_view.wheelScrolled.connect(self.on_wheel_scrolled)
@@ -694,14 +703,14 @@ class MainWindow(AbstractMainWindow):
     def setup_ui(self) -> None:
         from vspreview.widgets import GraphicsView
 
-        self.central_widget = Qt.QWidget(self)
-        self.main_layout = Qt.QVBoxLayout(self.central_widget)
+        self.central_widget = QWidget(self)
+        self.main_layout = QVBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
         self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(self.palette().brush(Qt.QPalette.Window))
-        self.graphics_view.setSizePolicy(Qt.QSizePolicy.Fixed, Qt.QSizePolicy.Fixed)
-        self.graphics_view.setDragMode(Qt.QGraphicsView.ScrollHandDrag)
+        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
+        self.graphics_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
         self.main_layout.addWidget(self.graphics_view)
 
         self.timeline = Timeline(self.central_widget)
@@ -711,31 +720,31 @@ class MainWindow(AbstractMainWindow):
 
         self.statusbar = StatusBar(self.central_widget)
 
-        self.statusbar.total_frames_label = Qt.QLabel(self.central_widget)
+        self.statusbar.total_frames_label = QLabel(self.central_widget)
         self.statusbar.total_frames_label.setObjectName('MainWindow.statusbar.total_frames_label')
         self.statusbar.addWidget(self.statusbar.total_frames_label)
 
-        self.statusbar.duration_label = Qt.QLabel(self.central_widget)
+        self.statusbar.duration_label = QLabel(self.central_widget)
         self.statusbar.duration_label.setObjectName('MainWindow.statusbar.duration_label')
         self.statusbar.addWidget(self.statusbar.duration_label)
 
-        self.statusbar.resolution_label = Qt.QLabel(self.central_widget)
+        self.statusbar.resolution_label = QLabel(self.central_widget)
         self.statusbar.resolution_label.setObjectName('MainWindow.statusbar.resolution_label')
         self.statusbar.addWidget(self.statusbar.resolution_label)
 
-        self.statusbar.pixel_format_label = Qt.QLabel(self.central_widget)
+        self.statusbar.pixel_format_label = QLabel(self.central_widget)
         self.statusbar.pixel_format_label.setObjectName('MainWindow.statusbar.pixel_format_label')
         self.statusbar.addWidget(self.statusbar.pixel_format_label)
 
-        self.statusbar.fps_label = Qt.QLabel(self.central_widget)
+        self.statusbar.fps_label = QLabel(self.central_widget)
         self.statusbar.fps_label.setObjectName('MainWindow.statusbar.fps_label')
         self.statusbar.addWidget(self.statusbar.fps_label)
 
-        self.statusbar.frame_props_label = Qt.QLabel(self.central_widget)
+        self.statusbar.frame_props_label = QLabel(self.central_widget)
         self.statusbar.frame_props_label.setObjectName('MainWindow.statusbar.frame_props_label')
         self.statusbar.addWidget(self.statusbar.frame_props_label)
 
-        self.statusbar.label = Qt.QLabel(self.central_widget)
+        self.statusbar.label = QLabel(self.central_widget)
         self.statusbar.label.setObjectName('MainWindow.statusbar.label')
         self.statusbar.addPermanentWidget(self.statusbar.label)
 
@@ -770,11 +779,10 @@ class MainWindow(AbstractMainWindow):
             pass
 
         try:
-            # pylint: disable=exec-used
             exec(
                 self.script_path.read_text(encoding='utf-8'), dict([('__file__', sys.argv[0])] + self.external_args)
             )
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             self.script_exec_failed = True
             logging.error(e)
 
@@ -849,11 +857,10 @@ class MainWindow(AbstractMainWindow):
         for output in self.outputs:
             frame_image = output.render_frame(output.last_showed_frame)
 
-            raw_frame_item = self.graphics_scene.addPixmap(Qt.QPixmap.fromImage(frame_image))
+            raw_frame_item = self.graphics_scene.addPixmap(frame_image)
             raw_frame_item.hide()
 
-            frame_item = GraphicsImageItem(raw_frame_item, frame_image)
-            output.graphics_scene_item = frame_item
+            output.graphics_scene_item = GraphicsImageItem(raw_frame_item, frame_image)
 
     def reload_script(self) -> None:
         import gc
@@ -881,27 +888,22 @@ class MainWindow(AbstractMainWindow):
 
         self.show_message('Reloaded successfully')
 
-    def render_frame(self, frame: Frame, output: Optional[Output] = None) -> Qt.QImage:
+    def render_frame(self, frame: Frame, output: Optional[Output] = None) -> QPixmap:
         if output is None:
             output = self.current_output
 
         return self.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
 
-    def render_raw_videoframe(self, vs_frame: vs.VideoFrame) -> Qt.QImage:
-        import ctypes
-
-        frame_pointer = vs_frame.get_read_ptr(0)
-        frame_stride = vs_frame.get_stride(0)
-        frame_itemsize = vs_frame.format.bytes_per_sample
-
+    def render_raw_videoframe(self, vs_frame: vs.VideoFrame) -> QPixmap:
         # powerful spell. do not touch
-        data_pointer = ctypes.cast(
-            frame_pointer,
-            ctypes.POINTER(ctypes.c_char * (frame_itemsize * vs_frame.width * vs_frame.height))
-        )[0]
-        frame_image = Qt.QImage(data_pointer, vs_frame.width, vs_frame.height, frame_stride, Qt.QImage.Format_RGB32)
+        data_pointer = cast(sip.voidptr, ctypes.cast(
+            vs_frame.get_read_ptr(0),
+            ctypes.POINTER(ctypes.c_char * (vs_frame.format.bytes_per_sample * vs_frame.width * vs_frame.height))
+        )[0])
 
-        return frame_image
+        frame_image = QImage(data_pointer, vs_frame.width, vs_frame.height, vs_frame.get_stride(0), QImage.Format_RGB32)
+
+        return QPixmap.fromImage(frame_image)
 
     def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool = True) -> None:
         if pos is None:
@@ -922,7 +924,7 @@ class MainWindow(AbstractMainWindow):
                 toolbar.on_current_frame_changed(frame)
 
         if render_frame:
-            self.current_output.graphics_scene_item.setImage(self.render_frame(frame))
+            self.current_output.graphics_scene_item.setPixmap(self.render_frame(frame))
 
         self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 
@@ -954,7 +956,7 @@ class MainWindow(AbstractMainWindow):
             output.graphics_scene_item.hide()
 
         self.current_output.graphics_scene_item.show()
-        self.graphics_scene.setSceneRect(Qt.QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
+        self.graphics_scene.setSceneRect(QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
         self.timeline.update_notches()
 
         for toolbar in self.toolbars:
@@ -982,7 +984,7 @@ class MainWindow(AbstractMainWindow):
 
     @property
     def outputs(self) -> Outputs[Output]:  # type: ignore
-        return cast(Outputs[Output], self.toolbars.main.outputs)
+        return cast(Outputs[Output], self.toolbars.main.outputs)  # type: ignore
 
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)
@@ -1011,28 +1013,28 @@ class MainWindow(AbstractMainWindow):
         assert fmt
 
         self.statusbar.total_frames_label.setText('{} frames '.format(output.total_frames))
-        self.    statusbar.duration_label.setText('{} '       .format(output.total_time))
-        self.  statusbar.resolution_label.setText('{}x{} '    .format(output.width, output.height))
-        self.statusbar.pixel_format_label.setText('{} '       .format(fmt.name))
+        self.statusbar.duration_label.setText('{} '.format(output.total_time))
+        self.statusbar.resolution_label.setText('{}x{} '.format(output.width, output.height))
+        self.statusbar.pixel_format_label.setText('{} '.format(fmt.name))
         if output.fps_den != 0:
             self.statusbar.fps_label.setText('{}/{} = {:.3f} fps '.format(output.fps_num,
                                              output.fps_den, output.fps_num / output.fps_den))
         else:
-            self.statusbar.fps_label.setText('{}/{} fps '         .format(output.fps_num, output.fps_den))
+            self.statusbar.fps_label.setText('{}/{} fps '.format(output.fps_num, output.fps_den))
 
-    def event(self, event: Qt.QEvent) -> bool:
-        if event.type() == Qt.QEvent.LayoutRequest:
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.LayoutRequest:
             self.timeline.full_repaint()
 
         return super().event(event)
 
     # misc methods
 
-    def showEvent(self, event: Qt.QShowEvent) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
-        self.graphics_view.setSizePolicy(Qt.QSizePolicy(Qt.QSizePolicy.Expanding, Qt.QSizePolicy.Expanding))
+        self.graphics_view.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
 
-    def closeEvent(self, event: Qt.QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         if self.settings.autosave_control.value() != TimeInterval(seconds=0) and self.save_on_exit:
             self.toolbars.misc.save()
 
@@ -1045,8 +1047,8 @@ class MainWindow(AbstractMainWindow):
         }
         state.update({
             'timeline_mode': self.timeline.mode,
-            'window_geometry': bytes(self.saveGeometry()),
-            'window_state': bytes(self.saveState()),
+            'window_geometry': self.saveGeometry(),
+            'window_state': self.saveState(),
         })
         return state
 
@@ -1071,12 +1073,12 @@ class MainWindow(AbstractMainWindow):
         )
 
 
-class Application(Qt.QApplication):
-    def notify(self, obj: Qt.QObject, event: Qt.QEvent) -> bool:
+class Application(QApplication):
+    def notify(self, obj: QObject, event: QEvent) -> bool:
         isex = False
         try:
-            return Qt.QApplication.notify(self, obj, event)
-        except Exception:  # pylint: disable=broad-except
+            return QApplication.notify(self, obj, event)
+        except Exception:
             isex = True
             logging.error('Application: unexpected error')
             print(*sys.exc_info())
@@ -1124,7 +1126,7 @@ def main() -> None:
 
     try:
         app.exec_()
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         logging.error('app.exec_() exception')
 
 

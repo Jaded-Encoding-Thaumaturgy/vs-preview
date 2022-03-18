@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from vspreview.utils import strfdelta
+import vapoursynth as vs
+from time import perf_counter
 from collections import deque
 from concurrent.futures import Future
-from time import perf_counter
 from typing import Any, Deque, Mapping, Optional
 
-from PyQt5 import Qt
+from PyQt5.QtCore import Qt, QTimer, QMetaObject
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QPushButton
 
 from vspreview.core import (
     AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time,
@@ -14,7 +15,7 @@ from vspreview.core import (
 )
 from vspreview.utils import (
     get_usable_cpus_count, qt_silent_call, set_qobject_names,
-    vs_clear_cache, try_load,
+    vs_clear_cache, try_load, strfdelta
 )
 from vspreview.widgets import FrameEdit, TimeEdit
 
@@ -22,7 +23,7 @@ from vspreview.widgets import FrameEdit, TimeEdit
 # TODO: think of proper fix for frame data sharing issue
 
 
-class BenchmarkSettings(Qt.QWidget, QYAMLObjectSingleton):
+class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
     yaml_tag = '!BenchmarkSettings'
 
     __slots__ = (
@@ -40,29 +41,29 @@ class BenchmarkSettings(Qt.QWidget, QYAMLObjectSingleton):
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = Qt.QVBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setObjectName('BenchmarkSettings.setup_ui.layout')
 
-        self.clear_cache_checkbox = Qt.QCheckBox(self)
+        self.clear_cache_checkbox = QCheckBox(self)
         self.clear_cache_checkbox.setText(
             'Clear VS frame caches before each run'
         )
         layout.addWidget(self.clear_cache_checkbox)
 
-        refresh_interval_layout = Qt.QHBoxLayout()
+        refresh_interval_layout = QHBoxLayout()
         refresh_interval_layout.setObjectName(
             'BenchmarkSettings.setup_ui.refresh_interval_layout'
         )
         layout.addLayout(refresh_interval_layout)
 
-        self.refresh_interval_label = Qt.QLabel(self)
+        self.refresh_interval_label = QLabel(self)
         self.refresh_interval_label.setText('Refresh interval')
         refresh_interval_layout.addWidget(self.refresh_interval_label)
 
         self.refresh_interval_control = TimeEdit[TimeInterval](self)
         refresh_interval_layout.addWidget(self.refresh_interval_control)
 
-        self.frame_data_sharing_fix_checkbox = Qt.QCheckBox(self)
+        self.frame_data_sharing_fix_checkbox = QCheckBox(self)
         self.frame_data_sharing_fix_checkbox.setText(
             '(Debug) Enable frame data sharing fix'
         )
@@ -137,40 +138,40 @@ class BenchmarkToolbar(AbstractToolbar):
         self.buffer: Deque[Future[vs.VideoFrame]] = deque()
         self.run_start_time = 0.0
         self.start_frame = Frame(0)
-        self.  end_frame = Frame(0)
+        self.end_frame = Frame(0)
         self.total_frames = FrameInterval(0)
         self.frames_left = FrameInterval(0)
 
-        self.sequenced_timer = Qt.QTimer()
-        self.sequenced_timer.setTimerType(Qt.Qt.PreciseTimer)
+        self.sequenced_timer = QTimer()
+        self.sequenced_timer.setTimerType(Qt.PreciseTimer)
         self.sequenced_timer.setInterval(0)
 
-        self.update_info_timer = Qt.QTimer()
-        self.update_info_timer.setTimerType(Qt.Qt.PreciseTimer)
+        self.update_info_timer = QTimer()
+        self.update_info_timer.setTimerType(Qt.PreciseTimer)
 
-        self.start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))  # type: ignore
+        self.start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))
         self.start_time_control.valueChanged.connect(
             lambda value: self.update_controls(start=Frame(value))
         )
-        self.end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))  # type: ignore
+        self.end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))
         self.end_time_control.valueChanged.connect(lambda value: self.update_controls(end=Frame(value)))
-        self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))  # type: ignore
+        self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
         self.total_time_control.valueChanged.connect(
             lambda value: self.update_controls(total=FrameInterval(value))
         )
-        self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)  # type: ignore
-        self.run_abort_button.clicked.connect(self.on_run_abort_pressed)  # type: ignore
-        self.sequenced_timer.timeout.connect(self._request_next_frame_sequenced)  # type: ignore
-        self.update_info_timer.timeout.connect(self.update_info)  # type: ignore
+        self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
+        self.run_abort_button.clicked.connect(self.on_run_abort_pressed)
+        self.sequenced_timer.timeout.connect(self._request_next_frame_sequenced)
+        self.update_info_timer.timeout.connect(self.update_info)
 
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = Qt.QHBoxLayout(self)
+        layout = QHBoxLayout(self)
         layout.setObjectName('BenchmarkToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
 
-        start_label = Qt.QLabel(self)
+        start_label = QLabel(self)
         start_label.setObjectName('BenchmarkToolbar.setup_ui.start_label')
         start_label.setText('Start:')
         layout.addWidget(start_label)
@@ -181,7 +182,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.start_time_control = TimeEdit[Time](self)
         layout.addWidget(self.start_time_control)
 
-        end_label = Qt.QLabel(self)
+        end_label = QLabel(self)
         end_label.setObjectName('BenchmarkToolbar.setup_ui.end_label')
         end_label.setText('End:')
         layout.addWidget(end_label)
@@ -192,7 +193,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.end_time_control = TimeEdit[Time](self)
         layout.addWidget(self.end_time_control)
 
-        total_label = Qt.QLabel(self)
+        total_label = QLabel(self)
         total_label.setObjectName('BenchmarkToolbar.setup_ui.total_label')
         total_label.setText('Total:')
         layout.addWidget(total_label)
@@ -204,7 +205,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_time_control = TimeEdit[TimeInterval](self)
         layout.addWidget(self.total_time_control)
 
-        self.prefetch_checkbox = Qt.QCheckBox(self)
+        self.prefetch_checkbox = QCheckBox(self)
         self.prefetch_checkbox.setText('Prefetch')
         self.prefetch_checkbox.setChecked(True)
         self.prefetch_checkbox.setToolTip(
@@ -212,7 +213,7 @@ class BenchmarkToolbar(AbstractToolbar):
         )
         layout.addWidget(self.prefetch_checkbox)
 
-        self.unsequenced_checkbox = Qt.QCheckBox(self)
+        self.unsequenced_checkbox = QCheckBox(self)
         self.unsequenced_checkbox.setText('Unsequenced')
         self.unsequenced_checkbox.setChecked(True)
         self.unsequenced_checkbox.setToolTip(
@@ -223,12 +224,12 @@ class BenchmarkToolbar(AbstractToolbar):
         )
         layout.addWidget(self.unsequenced_checkbox)
 
-        self.run_abort_button = Qt.QPushButton(self)
+        self.run_abort_button = QPushButton(self)
         self.run_abort_button.setText('Run')
         self.run_abort_button.setCheckable(True)
         layout.addWidget(self.run_abort_button)
 
-        self.info_label = Qt.QLabel(self)
+        self.info_label = QLabel(self)
         layout.addWidget(self.info_label)
 
         layout.addStretch()
@@ -249,12 +250,12 @@ class BenchmarkToolbar(AbstractToolbar):
             vs_clear_cache()
 
         if self.settings.frame_data_sharing_fix_enabled:
-            self.main.current_output.graphics_scene_item.setImage(
-                self.main.current_output.graphics_scene_item.image().copy()
+            self.main.current_output.graphics_scene_item.setPixmap(
+                self.main.current_output.graphics_scene_item.pixmap().copy()
             )
 
-        self.start_frame = self.start_frame_control .value()
-        self.  end_frame = self.  end_frame_control .value()
+        self.start_frame = self.start_frame_control.value()
+        self.end_frame = self.end_frame_control.value()
         self.total_frames = self.total_frames_control.value()
         self.frames_left = deepcopy(self.total_frames)
         if self.prefetch_checkbox.isChecked():
@@ -276,7 +277,7 @@ class BenchmarkToolbar(AbstractToolbar):
             else:
                 frame = self.start_frame + FrameInterval(offset)
                 future = self.main.current_output.prepared.clip.get_frame_async(int(frame))
-                self.buffer.appendleft(future)  # type: ignore
+                self.buffer.appendleft(future)
 
         self.update_info_timer.setInterval(
             round(float(self.settings.refresh_interval) * 1000)
@@ -288,7 +289,7 @@ class BenchmarkToolbar(AbstractToolbar):
             self.update_info()
 
         self.running = False
-        Qt.QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.Qt.QueuedConnection)
+        QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.QueuedConnection)
 
         if self.run_abort_button.isChecked():
             self.run_abort_button.click()
@@ -305,7 +306,7 @@ class BenchmarkToolbar(AbstractToolbar):
             new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
-            self.buffer.appendleft(new_future)  # type: ignore
+            self.buffer.appendleft(new_future)
 
         self.frames_left -= FrameInterval(1)
 
@@ -319,7 +320,7 @@ class BenchmarkToolbar(AbstractToolbar):
             new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
-            new_future.add_done_callback(self._request_next_frame_unsequenced)  # type: ignore
+            new_future.add_done_callback(self._request_next_frame_unsequenced)
 
         if future is not None:
             future.result()
@@ -334,27 +335,27 @@ class BenchmarkToolbar(AbstractToolbar):
             self.abort()
 
     def on_prefetch_changed(self, new_state: int) -> None:
-        if new_state == Qt.Qt.Checked:
+        if new_state == Qt.Checked:
             self.unsequenced_checkbox.setEnabled(True)
-        elif new_state == Qt.Qt.Unchecked:
+        elif new_state == Qt.Unchecked:
             self.unsequenced_checkbox.setChecked(False)
             self.unsequenced_checkbox.setEnabled(False)
 
     def set_ui_editable(self, new_state: bool) -> None:
         self. start_frame_control.setEnabled(new_state)
-        self.  start_time_control.setEnabled(new_state)
-        self.   end_frame_control.setEnabled(new_state)
-        self.    end_time_control.setEnabled(new_state)
+        self.start_time_control.setEnabled(new_state)
+        self.end_frame_control.setEnabled(new_state)
+        self.end_time_control.setEnabled(new_state)
         self.total_frames_control.setEnabled(new_state)
-        self.  total_time_control.setEnabled(new_state)
-        self.   prefetch_checkbox.setEnabled(new_state)
+        self.total_time_control.setEnabled(new_state)
+        self.prefetch_checkbox.setEnabled(new_state)
         self. unsequenced_checkbox.setEnabled(new_state)
 
     def update_controls(
         self, start: Optional[Frame] = None, end: Optional[Frame] = None, total: Optional[FrameInterval] = None
     ) -> None:
         if start is not None:
-            end = self.   end_frame_control.value()
+            end = self.end_frame_control.value()
             total = self.total_frames_control.value()
 
             if start > end:
@@ -371,7 +372,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         elif total is not None:
             start = self.start_frame_control.value()
-            end = self.  end_frame_control.value()
+            end = self.end_frame_control.value()
             old_total = end - start + FrameInterval(1)
             delta = total - old_total
 
@@ -383,11 +384,11 @@ class BenchmarkToolbar(AbstractToolbar):
             return
 
         qt_silent_call(self. start_frame_control.setValue, start)
-        qt_silent_call(self.  start_time_control.setValue, Time(start))
-        qt_silent_call(self.   end_frame_control.setValue, end)
-        qt_silent_call(self.    end_time_control.setValue, Time(end))
+        qt_silent_call(self.start_time_control.setValue, Time(start))
+        qt_silent_call(self.end_frame_control.setValue, end)
+        qt_silent_call(self.end_time_control.setValue, Time(end))
         qt_silent_call(self.total_frames_control.setValue, total)
-        qt_silent_call(self.  total_time_control.setValue, TimeInterval(total))
+        qt_silent_call(self.total_time_control.setValue, TimeInterval(total))
 
     def update_info(self) -> None:
         run_time = TimeInterval(seconds=(perf_counter() - self.run_start_time))

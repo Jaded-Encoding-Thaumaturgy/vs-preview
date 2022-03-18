@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
-from PyQt5 import Qt
 from pathlib import Path
 from typing import Any, List, Mapping, Optional
 
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
 
 from vspreview.core import AbstractMainWindow, AbstractToolbar, TimeInterval
 from vspreview.utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
@@ -29,63 +30,63 @@ class MiscToolbar(AbstractToolbar):
 
         self.save_template_lineedit.setText(self.main.SAVE_TEMPLATE)
 
-        self.autosave_timer = Qt.QTimer()
-        self.autosave_timer.timeout.connect(self.save)  # type: ignore
+        self.autosave_timer = QTimer()
+        self.autosave_timer.timeout.connect(self.save)
 
         self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
-        self.reload_script_button.clicked.connect(lambda: self.main.reload_script())  # type: ignore
-        self.save_button.clicked.connect(lambda: self.save(manually=True))  # type: ignore
-        self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)  # type: ignore
-        self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)  # type: ignore
-        self.save_frame_as_button.clicked.connect(self.on_save_frame_as_clicked)  # type: ignore
-        self.show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)  # type: ignore
+        self.reload_script_button.clicked.connect(lambda: self.main.reload_script())
+        self.save_button.clicked.connect(lambda: self.save(manually=True))
+        self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)
+        self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)
+        self.save_frame_as_button.clicked.connect(self.on_save_frame_as_clicked)
+        self.show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)
         self.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_R, self.reload_script_button.click)
-        add_shortcut(Qt.Qt.ALT + Qt.Qt.Key_S, self.save_button.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.Key_S, self.copy_frame_button.click)
-        add_shortcut(Qt.Qt.CTRL + Qt.Qt.SHIFT + Qt.Qt.Key_S, self.save_frame_as_button.click)
+        add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_script_button.click)
+        add_shortcut(Qt.ALT + Qt.Key_S, self.save_button.click)
+        add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
+        add_shortcut(Qt.CTRL + Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
 
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = Qt.QHBoxLayout(self)
+        layout = QHBoxLayout(self)
         layout.setObjectName('MiscToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.reload_script_button = Qt.QPushButton(self)
+        self.reload_script_button = QPushButton(self)
         self.reload_script_button.setText('Reload Script')
         layout.addWidget(self.reload_script_button)
 
-        self.save_button = Qt.QPushButton(self)
+        self.save_button = QPushButton(self)
         self.save_button.setText('Save')
         layout.addWidget(self.save_button)
 
-        self.autosave_checkbox = Qt.QCheckBox(self)
+        self.autosave_checkbox = QCheckBox(self)
         self.autosave_checkbox.setText('Autosave')
         layout.addWidget(self.autosave_checkbox)
 
-        self.keep_on_top_checkbox = Qt.QCheckBox(self)
+        self.keep_on_top_checkbox = QCheckBox(self)
         self.keep_on_top_checkbox.setText('Keep on Top')
         self.keep_on_top_checkbox.setEnabled(False)
         layout.addWidget(self.keep_on_top_checkbox)
 
-        self.copy_frame_button = Qt.QPushButton(self)
+        self.copy_frame_button = QPushButton(self)
         self.copy_frame_button.setText('Copy Frame')
         layout.addWidget(self.copy_frame_button)
 
-        self.save_frame_as_button = Qt.QPushButton(self)
+        self.save_frame_as_button = QPushButton(self)
         self.save_frame_as_button.setText('Save Frame as')
         layout.addWidget(self.save_frame_as_button)
 
-        save_template_label = Qt.QLabel(self)
+        save_template_label = QLabel(self)
         save_template_label.setObjectName(
             'MiscToolbar.setup_ui.save_template_label')
         save_template_label.setText('Save file name template:')
         layout.addWidget(save_template_label)
 
-        self.save_template_lineedit = Qt.QLineEdit(self)
+        self.save_template_lineedit = QLineEdit(self)
         self.save_template_lineedit.setToolTip(
             r'Available placeholders: {format}, {fps_den}, {fps_num}, {frame},'
             r' {height}, {index}, {matrix}, {primaries}, {range},'
@@ -96,7 +97,7 @@ class MiscToolbar(AbstractToolbar):
         layout.addStretch()
         layout.addStretch()
 
-        self.show_debug_checkbox = Qt.QCheckBox(self)
+        self.show_debug_checkbox = QCheckBox(self)
         self.show_debug_checkbox.setText('Show Debug Toolbar')
         layout.addWidget(self.show_debug_checkbox)
 
@@ -107,8 +108,8 @@ class MiscToolbar(AbstractToolbar):
         self.autosave_timer.start(self.main.AUTOSAVE_INTERVAL)
 
     def copy_frame_to_clipboard(self) -> None:
-        frame_image = self.main.current_output.graphics_scene_item.image()
-        self.main.clipboard.setImage(frame_image)
+        frame_pixmap = self.main.current_output.graphics_scene_item.pixmap()
+        self.main.clipboard.setPixmap(frame_pixmap)
         self.main.show_message('Current frame successfully copied to clipboard')
 
     @fire_and_forget
@@ -146,13 +147,13 @@ class MiscToolbar(AbstractToolbar):
         else:
             self.autosave_timer.start(round(float(new_value) * 1000))
 
-    def on_keep_on_top_changed(self, state: Qt.Qt.CheckState) -> None:
-        if state == Qt.Qt.Checked:
+    def on_keep_on_top_changed(self, state: Qt.CheckState) -> None:
+        if state == Qt.Checked:
             pass
-            # self.main.setWindowFlag(Qt.Qt.X11BypassWindowManagerHint)
-            # self.main.setWindowFlag(Qt.Qt.WindowStaysOnTopHint, True)
-        elif state == Qt.Qt.Unchecked:
-            self.main.setWindowFlag(Qt.Qt.WindowStaysOnTopHint, False)
+            # self.main.setWindowFlag(Qt.X11BypassWindowManagerHint)
+            # self.main.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        elif state == Qt.Unchecked:
+            self.main.setWindowFlag(Qt.WindowStaysOnTopHint, False)
 
     def on_save_frame_as_clicked(self, checked: Optional[bool] = None) -> None:
         from vspreview.core.types import Output
@@ -188,24 +189,25 @@ class MiscToolbar(AbstractToolbar):
             suggested_path_str = self.main.SAVE_TEMPLATE.format(**substitutions)
             self.main.show_message('Save name template is invalid')
 
-        save_path_str, file_type = Qt.QFileDialog.getSaveFileName(
+        save_path_str, file_type = QFileDialog.getSaveFileName(
             self.main, 'Save as', suggested_path_str, filter_str)
         try:
             self.save_file_types[file_type](Path(save_path_str))
         except KeyError:
             pass
 
-    def on_show_debug_changed(self, state: Qt.Qt.CheckState) -> None:
-        if state == Qt.Qt.Checked:
+    def on_show_debug_changed(self, state: Qt.CheckState) -> None:
+        if state == Qt.Checked:
             self.main.toolbars.debug.toggle_button.setVisible(True)
-        elif state == Qt.Qt.Unchecked:
+        elif state == Qt.Unchecked:
             if self.main.toolbars.debug.toggle_button.isChecked():
                 self.main.toolbars.debug.toggle_button.click()
             self.main.toolbars.debug.toggle_button.setVisible(False)
 
     def save_as_png(self, path: Path) -> None:
-        image = self.main.current_output.graphics_scene_item.image()
-        image.save(str(path), 'PNG', self.main.PNG_COMPRESSION_LEVEL)
+        self.main.current_output.graphics_scene_item.pixmap().save(
+            str(path), 'PNG', self.main.PNG_COMPRESSION_LEVEL
+        )
 
     def __getstate__(self) -> Mapping[str, Any]:
         state = {

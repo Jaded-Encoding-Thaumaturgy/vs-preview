@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
-from PyQt5 import Qt
 from string import Template
 from functools import lru_cache, partial, wraps
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Type, TYPE_CHECKING, TypeVar, Union, cast
 
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtCore import QTime, QSignalBlocker, QObject
+from PyQt5.QtWidgets import QWidget, QApplication, QShortcut
 
 from vspreview.core import TimeType
 
@@ -13,15 +15,12 @@ from vspreview.core import TimeType
 T = TypeVar('T')
 
 
-def to_qtime(time: Union[TimeType]) -> Qt.QTime:
+def to_qtime(time: Union[TimeType]) -> QTime:
     td = time.value
-    return Qt.QTime(td.seconds // 3600,
-                    td.seconds // 60,
-                    td.seconds % 60,
-                    td.microseconds // 1000)
+    return QTime(td.seconds // 3600, td.seconds // 60, td.seconds % 60, td.microseconds // 1000)
 
 
-def from_qtime(qtime: Qt.QTime, t: Type[TimeType]) -> TimeType:
+def from_qtime(qtime: QTime, t: Type[TimeType]) -> TimeType:
     return t(milliseconds=qtime.msecsSinceStartOfDay())
 
 
@@ -29,9 +28,9 @@ def from_qtime(qtime: Qt.QTime, t: Type[TimeType]) -> TimeType:
 def qt_silent_call(qt_method: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     # https://github.com/python/typing/issues/213
     qobject = qt_method.__self__  # type: ignore
-    block = Qt.QSignalBlocker(qobject)
+    block = QSignalBlocker(qobject)
     ret = qt_method(*args, **kwargs)
-    del(block)
+    del block
     return ret
 
 
@@ -67,20 +66,23 @@ if TYPE_CHECKING:
 def main_window() -> AbstractMainWindow:
     from vspreview.core import AbstractMainWindow
 
-    app = Qt.QApplication.instance()
+    app = QApplication.instance()
+
     if app is not None:
         for widget in app.topLevelWidgets():
             if isinstance(widget, AbstractMainWindow):
                 return cast(AbstractMainWindow, widget)
+        app.exit()
+
     logging.critical('main_window() failed')
-    app.exit()
+
     raise RuntimeError
 
 
-def add_shortcut(key: int, handler: Callable[[], None], widget: Optional[Qt.QWidget] = None) -> None:
+def add_shortcut(key: int, handler: Callable[[], None], widget: Optional[QWidget] = None) -> None:
     if widget is None:
         widget = main_window()
-    Qt.QShortcut(Qt.QKeySequence(key), widget).activated.connect(handler)  # type: ignore
+    QShortcut(QKeySequence(key), widget).activated.connect(handler)
 
 
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
@@ -144,7 +146,7 @@ def set_qobject_names(obj: object) -> None:
 
     for attr_name in slots:
         attr = getattr(obj, attr_name)
-        if not isinstance(attr, Qt.QObject):
+        if not isinstance(attr, QObject):
             continue
         attr.setObjectName(type(obj).__name__ + '.' + attr_name)
 
@@ -182,6 +184,7 @@ def try_load(
             raise TypeError
     except (KeyError, TypeError):
         logging.warning(error_msg)
+        print('aaaa')
     else:
         if isinstance(receiver, ty):
             receiver = value
@@ -194,4 +197,5 @@ def try_load(
             try:
                 receiver.__setattr__(name, value)
             except AttributeError:
+                print('bbbb')
                 logging.warning(error_msg)

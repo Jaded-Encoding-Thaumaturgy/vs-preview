@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import cast, Generic, Mapping, Optional, Type, TYPE_CHECKING, TypeVar
 
-from PyQt5 import Qt
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QWidget, QComboBox
 
 from vspreview.core import Output, AudioOutput
 from vspreview.models import SceningList
@@ -10,7 +11,7 @@ from vspreview.models import SceningList
 T = TypeVar('T', Output, AudioOutput, SceningList, float)
 
 
-class ComboBox(Qt.QComboBox, Generic[T]):
+class ComboBox(QComboBox, Generic[T]):
     def __class_getitem__(cls, ty: Type[T]) -> Type:
         type_specializations: Mapping[Type, Type] = {
             Output: _ComboBox_Output,
@@ -24,19 +25,19 @@ class ComboBox(Qt.QComboBox, Generic[T]):
         except KeyError:
             raise TypeError
 
-    indexChanged = Qt.pyqtSignal(int, int)
+    indexChanged = pyqtSignal(int, int)
 
-    def __init__(self, parent: Optional[Qt.QWidget] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
 
         self.ty: Type[T]
 
         self.setSizeAdjustPolicy(
-            Qt.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            QComboBox.AdjustToMinimumContentsLengthWithIcon)
 
         self.oldValue = self.currentData()
         self.oldIndex = self.currentIndex()
-        self.currentIndexChanged.connect(self._currentIndexChanged)  # type: ignore
+        self.currentIndexChanged.connect(self._currentIndexChanged)
 
     def _currentIndexChanged(self, newIndex: int) -> None:
         newValue = self.currentData()
@@ -45,8 +46,8 @@ class ComboBox(Qt.QComboBox, Generic[T]):
         self.oldValue = newValue
         self.oldIndex = newIndex
 
-    def currentValue(self) -> Optional[T]:
-        return cast(Optional[T], self.currentData())
+    def currentValue(self) -> T:
+        return cast(T, self.currentData())
 
     def setCurrentValue(self, newValue: T) -> None:
         i = self.model().index_of(newValue)
@@ -57,30 +58,30 @@ class _ComboBox_Output(ComboBox):
     ty = Output
     T = Output
     if TYPE_CHECKING:
-        valueChanged = Qt.pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(ty, Optional[ty])
     else:
-        valueChanged = Qt.pyqtSignal(ty, object)
+        valueChanged = pyqtSignal(ty, object)
 
 
 class _ComboBox_AudioOutput(ComboBox):
     ty = AudioOutput
     if TYPE_CHECKING:
-        valueChanged = Qt.pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(ty, Optional[ty])
     else:
-        valueChanged = Qt.pyqtSignal(object, object)
+        valueChanged = pyqtSignal(object, object)
 
 
 class _ComboBox_SceningList(ComboBox):
     ty = SceningList
     if TYPE_CHECKING:
-        valueChanged = Qt.pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(ty, Optional[ty])
     else:
-        valueChanged = Qt.pyqtSignal(ty, object)
+        valueChanged = pyqtSignal(ty, object)
 
 
 class _ComboBox_float(ComboBox):
     ty = float
     if TYPE_CHECKING:
-        valueChanged = Qt.pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(ty, Optional[ty])
     else:
-        valueChanged = Qt.pyqtSignal(ty, object)
+        valueChanged = pyqtSignal(ty, object)

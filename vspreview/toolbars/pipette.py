@@ -2,8 +2,11 @@ import ctypes
 from weakref import WeakKeyDictionary
 from typing import cast, TypeVar, Union
 
-from PyQt5 import Qt
 import vapoursynth as vs
+
+from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtGui import QFont, QMouseEvent
+from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGraphicsView
 
 from vspreview.core import AbstractMainWindow, AbstractToolbar, Output
 from vspreview.utils import set_qobject_names
@@ -53,7 +56,7 @@ class PipetteToolbar(AbstractToolbar):
         self.outputs.clear()
 
     def setup_ui(self) -> None:
-        layout = Qt.QHBoxLayout(self)
+        layout = QHBoxLayout(self)
         layout.setObjectName('PipetteToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -61,112 +64,111 @@ class PipetteToolbar(AbstractToolbar):
         self.color_view.setFixedSize(self.height() // 2, self.height() // 2)
         layout.addWidget(self.color_view)
 
-        font = Qt.QFont('Consolas', 9)
-        font.setStyleHint(Qt.QFont.Monospace)
+        font = QFont('Consolas', 9)
+        font.setStyleHint(QFont.Monospace)
 
-        self.position = Qt.QLabel(self)
+        self.position = QLabel(self)
         self.position.setFont(font)
-        self.position.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.position.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.position)
 
-        self.rgb_label = Qt.QLabel(self)
+        self.rgb_label = QLabel(self)
         self.rgb_label.setText('Rendered (RGB):')
         layout.addWidget(self.rgb_label)
 
-        self.rgb_hex = Qt.QLabel(self)
+        self.rgb_hex = QLabel(self)
         self.rgb_hex.setFont(font)
-        self.rgb_hex.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.rgb_hex.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.rgb_hex)
 
-        self.rgb_dec = Qt.QLabel(self)
+        self.rgb_dec = QLabel(self)
         self.rgb_dec.setFont(font)
-        self.rgb_dec.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.rgb_dec.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.rgb_dec)
 
-        self.rgb_norm = Qt.QLabel(self)
+        self.rgb_norm = QLabel(self)
         self.rgb_norm.setFont(font)
-        self.rgb_norm.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.rgb_norm.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.rgb_norm)
 
-        self.src_label = Qt.QLabel(self)
+        self.src_label = QLabel(self)
         layout.addWidget(self.src_label)
 
-        self.src_hex = Qt.QLabel(self)
+        self.src_hex = QLabel(self)
         self.src_hex.setFont(font)
-        self.src_hex.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.src_hex.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.src_hex)
 
-        self.src_dec = Qt.QLabel(self)
+        self.src_dec = QLabel(self)
         self.src_dec.setFont(font)
-        self.src_dec.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.src_dec.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.src_dec)
 
-        self.src_norm = Qt.QLabel(self)
+        self.src_norm = QLabel(self)
         self.src_norm.setFont(font)
-        self.src_norm.setTextInteractionFlags(Qt.Qt.TextSelectableByMouse)
+        self.src_norm.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.src_norm)
 
         layout.addStretch()
 
     def subscribe_on_mouse_events(self) -> None:
-        self.main.graphics_view.mouseMoved   .connect(self.mouse_moved)
-        self.main.graphics_view.mousePressed .connect(self.mouse_pressed)
+        self.main.graphics_view.mouseMoved.connect(self.mouse_moved)
+        self.main.graphics_view.mousePressed.connect(self.mouse_pressed)
         self.main.graphics_view.mouseReleased.connect(self.mouse_released)
 
     def unsubscribe_from_mouse_events(self) -> None:
-        self.main.graphics_view.mouseMoved   .disconnect(self.mouse_moved)
-        self.main.graphics_view.mousePressed .disconnect(self.mouse_pressed)
+        self.main.graphics_view.mouseMoved.disconnect(self.mouse_moved)
+        self.main.graphics_view.mousePressed.disconnect(self.mouse_pressed)
         self.main.graphics_view.mouseReleased.disconnect(self.mouse_released)
 
     def on_script_unloaded(self) -> None:
         self.outputs.clear()
 
-    def mouse_moved(self, event: Qt.QMouseEvent) -> None:
+    def mouse_moved(self, event: QMouseEvent) -> None:
         if self.tracking and not event.buttons():
             self.update_labels(event.pos())
 
-    def mouse_pressed(self, event: Qt.QMouseEvent) -> None:
-        if event.buttons() == Qt.Qt.RightButton:
+    def mouse_pressed(self, event: QMouseEvent) -> None:
+        if event.buttons() == Qt.MouseButtons(Qt.RightButton):
             self.tracking = False
 
-    def mouse_released(self, event: Qt.QMouseEvent) -> None:
-        if event.buttons() == Qt.Qt.RightButton:
+    def mouse_released(self, event: QMouseEvent) -> None:
+        if event.buttons() == Qt.MouseButtons(Qt.RightButton):
             self.tracking = True
         self.update_labels(event.pos())
 
-    def update_labels(self, local_pos: Qt.QPoint) -> None:
+    def update_labels(self, local_pos: QPoint) -> None:
         from math import floor
         from struct import unpack
 
         pos_f = self.main.graphics_view.mapToScene(local_pos)
-        pos = Qt.QPoint(floor(pos_f.x()), floor(pos_f.y()))
+        pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
+
         if not self.main.current_output.graphics_scene_item.contains(pos_f):
             return
-        color = self.main.current_output.graphics_scene_item.image() \
-                    .pixelColor(pos)
+
+        color = self.main.current_output.graphics_scene_item.pixmap().toImage().pixelColor(pos)
         self.color_view.color = color
 
         self.position.setText(self.pos_fmt.format(pos.x(), pos.y()))
 
-        self.rgb_hex.setText('{:2X},{:2X},{:2X}'.format(
-            color.red(), color.green(), color.blue()))
-        self.rgb_dec.setText('{:3d},{:3d},{:3d}'.format(
-            color.red(), color.green(), color.blue()))
-        self.rgb_norm.setText('{:0.5f},{:0.5f},{:0.5f}'.format(
-            color.red() / 255, color.green() / 255, color.blue() / 255))
+        self.rgb_hex.setText('{:2X},{:2X},{:2X}'.format(color.red(), color.green(), color.blue()))
+        self.rgb_dec.setText('{:3d},{:3d},{:3d}'.format(color.red(), color.green(), color.blue()))
+        self.rgb_norm.setText(
+            '{:0.5f},{:0.5f},{:0.5f}'.format(color.red() / 255, color.green() / 255, color.blue() / 255)
+        )
 
         if not self.src_label.isVisible():
             return
 
-        def extract_value(vs_frame: vs.VideoFrame, plane: int,
-                          pos: Qt.QPoint) -> Union[int, float]:
+        def extract_value(vs_frame: vs.VideoFrame, plane: int, pos: QPoint) -> Union[int, float]:
             fmt = vs_frame.format
             stride = vs_frame.get_stride(plane)
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:
                 ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
                     ctypes.c_char * (stride * vs_frame.height)))
                 offset = pos.y() * stride + pos.x() * 2
-                val = unpack('e', ptr.contents[offset:(offset + 2)])[0]
+                val = unpack('e', cast(bytearray, ptr.contents[offset:(offset + 2)]))[0]
                 return cast(float, val)
             else:
                 ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
@@ -174,10 +176,9 @@ class PipetteToolbar(AbstractToolbar):
                         stride * vs_frame.height)))
                 logical_stride = stride // fmt.bytes_per_sample
                 idx = pos.y() * logical_stride + pos.x()
-                return ptr.contents[idx]
+                return cast(int, ptr.contents[idx])
 
-        vs_frame = self.outputs[self.main.current_output].get_frame(
-            int(self.main.current_frame))
+        vs_frame = self.outputs[self.main.current_output].get_frame(int(self.main.current_frame))
         fmt = vs_frame.format
 
         src_vals = [extract_value(vs_frame, i, pos) for i in range(fmt.num_planes)]
@@ -192,8 +193,7 @@ class PipetteToolbar(AbstractToolbar):
                 *[src_val / self.src_max_val for src_val in src_vals]))
         elif fmt.sample_type == vs.FLOAT:
             self.src_norm.setText(self.src_norm_fmt.format(*[
-                self.clip(val, 0.0, 1.0) if i in (0, 3) else
-                self.clip(val, -0.5, 0.5) + 0.5
+                self.clip(val, 0.0, 1.0) if i in {0, 3} else self.clip(val, -0.5, 0.5) + 0.5
                 for i, val in enumerate(src_vals)
             ]))
 
@@ -222,6 +222,7 @@ class PipetteToolbar(AbstractToolbar):
                 self.main.current_output.source.clip
             )
         src_fmt = self.outputs[self.main.current_output].format
+        assert src_fmt
 
         if src_fmt.sample_type == vs.INTEGER:
             self.src_max_val = 2**src_fmt.bits_per_sample - 1
@@ -230,28 +231,25 @@ class PipetteToolbar(AbstractToolbar):
             self.src_max_val = 1.0
 
         src_num_planes = src_fmt.num_planes + int(bool(self.main.current_output.source.alpha))
-        self.src_hex_fmt = ','.join(('{{:{w}X}}',) * src_num_planes) \
-                           .format(w=ceil(log(self.src_max_val, 16)))
+        self.src_hex_fmt = ','.join(('{{:{w}X}}',) * src_num_planes).format(w=ceil(log(self.src_max_val, 16)))
         if src_fmt.sample_type == vs.INTEGER:
-            self.src_dec_fmt = ','.join(('{{:{w}d}}',) * src_num_planes) \
-                               .format(w=ceil(log(self.src_max_val, 10)))
+            self.src_dec_fmt = ','.join(('{{:{w}d}}',) * src_num_planes).format(w=ceil(log(self.src_max_val, 10)))
         elif src_fmt.sample_type == vs.FLOAT:
             self.src_dec_fmt = ','.join(('{: 0.5f}',) * src_num_planes)
         self.src_norm_fmt = ','.join(('{:0.5f}',) * src_num_planes)
 
-        self.update_labels(self.main.graphics_view.mapFromGlobal(
-            self.main.cursor().pos()))
+        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))  # type: ignore
 
     def on_toggle(self, new_state: bool) -> None:
         super().on_toggle(new_state)
         self.main.graphics_view.setMouseTracking(new_state)
         if new_state is True:
             self.subscribe_on_mouse_events()
-            self.main.graphics_view.setDragMode(Qt.QGraphicsView.NoDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.NoDrag)
         else:
             self.unsubscribe_from_mouse_events()
             self.main.graphics_view.setDragMode(
-                Qt.QGraphicsView.ScrollHandDrag)
+                QGraphicsView.ScrollHandDrag)
         self.tracking = new_state
 
     @staticmethod

@@ -1,52 +1,53 @@
 from __future__ import annotations
 
-import logging
-from typing import cast, Optional
+from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF
+from PyQt5.QtWidgets import QWidget, QGraphicsView, QApplication, QGraphicsPixmapItem
+from PyQt5.QtGui import QMouseEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap
 
-from PyQt5 import Qt, QtCore
 
-
-class GraphicsView(Qt.QGraphicsView):
+class GraphicsView(QGraphicsView):
     WHEEL_STEP = 15 * 8  # degrees
 
     __slots__ = (
         'app', 'angleRemainder', 'zoomValue',
     )
 
-    mouseMoved = Qt.pyqtSignal(Qt.QMouseEvent)
-    mousePressed = Qt.pyqtSignal(Qt.QMouseEvent)
-    mouseReleased = Qt.pyqtSignal(Qt.QMouseEvent)
-    wheelScrolled = Qt.pyqtSignal(int)
-    drag_mode: Qt.DragMode
+    mouseMoved = pyqtSignal(QMouseEvent)
+    mousePressed = pyqtSignal(QMouseEvent)
+    mouseReleased = pyqtSignal(QMouseEvent)
+    wheelScrolled = pyqtSignal(int)
+    drag_mode: QGraphicsView.DragMode
 
-    def __init__(self, parent: Optional[Qt.QWidget] = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.app = Qt.QApplication.instance()
+        self.app = QApplication.instance()
         self.angleRemainder = 0
-        self.zoomValue = 0
+        self.zoomValue = 0.0
 
     def setZoom(self, value: int) -> None:
-        transform = Qt.QTransform()
+        transform = QTransform()
         transform.scale(value, value)
         self.setTransform(transform)
 
-    def event(self, event: Qt.QEvent) -> bool:
-        if isinstance(event, Qt.QNativeGestureEvent):
+    def event(self, event: QEvent) -> bool:
+        if isinstance(event, QNativeGestureEvent):
             typ = event.gestureType()
-            if typ == QtCore.Qt.BeginNativeGesture:
-                self.zoomValue = 0
-            elif typ == QtCore.Qt.ZoomNativeGesture:
+            if typ == Qt.BeginNativeGesture:
+                self.zoomValue = 0.0
+            elif typ == Qt.ZoomNativeGesture:
                 self.zoomValue += event.value()
-            if typ == QtCore.Qt.EndNativeGesture:
+            if typ == Qt.EndNativeGesture:
                 self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
         return super().event(event)
 
-    def wheelEvent(self, event: Qt.QWheelEvent) -> None:
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        assert self.app
+
         modifiers = self.app.keyboardModifiers()
         mouse = event.buttons()
 
-        if modifiers == Qt.Qt.ControlModifier or mouse == Qt.Qt.RightButton or mouse == Qt.Qt.MiddleButton:
+        if modifiers == Qt.ControlModifier or mouse in map(Qt.MouseButtons, {Qt.RightButton, Qt.MiddleButton}):
             angleDelta = event.angleDelta().y()
 
             # check if wheel wasn't rotated the other way since last rotation
@@ -58,64 +59,61 @@ class GraphicsView(Qt.QGraphicsView):
                 self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
                 self.angleRemainder %= self.WHEEL_STEP
             return
-        elif modifiers == Qt.Qt.NoModifier:
-            self.  verticalScrollBar().setValue(
-                self.  verticalScrollBar().value() - event.angleDelta().y())
+        elif modifiers == Qt.NoModifier:
+            self.verticalScrollBar().setValue(
+                self.verticalScrollBar().value() - event.angleDelta().y())
             self.horizontalScrollBar().setValue(
                 self.horizontalScrollBar().value() - event.angleDelta().x())
             return
-        elif modifiers == Qt.Qt.ShiftModifier:
-            self.  verticalScrollBar().setValue(
-                self.  verticalScrollBar().value() - event.angleDelta().x())
+        elif modifiers == Qt.ShiftModifier:
+            self.verticalScrollBar().setValue(
+                self.verticalScrollBar().value() - event.angleDelta().x())
             self.horizontalScrollBar().setValue(
                 self.horizontalScrollBar().value() - event.angleDelta().y())
             return
 
         event.ignore()
 
-    def mouseMoveEvent(self, event: Qt.QMouseEvent) -> None:
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
         if self.hasMouseTracking():
             self.mouseMoved.emit(event)
 
-    def mousePressEvent(self, event: Qt.QMouseEvent) -> None:
-        if event.button() == Qt.Qt.LeftButton:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.LeftButton:
             self.drag_mode = self.dragMode()
-            self.setDragMode(Qt.QGraphicsView.ScrollHandDrag)
+            self.setDragMode(QGraphicsView.ScrollHandDrag)
         super().mousePressEvent(event)
         self.mousePressed.emit(event)
 
-    def mouseReleaseEvent(self, event: Qt.QMouseEvent) -> None:
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         super().mouseReleaseEvent(event)
-        if event.button() == Qt.Qt.LeftButton:
+        if event.button() == Qt.LeftButton:
             self.setDragMode(self.drag_mode)
         self.mouseReleased.emit(event)
 
 
 class GraphicsImageItem:
     __slots__ = (
-        '_image', '_graphics_item'
+        '_pixmap', '_graphics_item'
     )
 
-    def __init__(self, graphics_item: Qt.QGraphicsItem, image: Qt.QImage) -> None:
+    def __init__(self, graphics_item: QGraphicsPixmapItem, pixmap: QPixmap) -> None:
         self._graphics_item = graphics_item
-        self._image = image
+        self._pixmap = pixmap
 
-    def contains(self, point: Qt.QPointF) -> bool:
+    def contains(self, point: QPointF) -> bool:
         return self._graphics_item.contains(point)
 
     def hide(self) -> None:
         self._graphics_item.hide()
 
-    def image(self) -> Qt.QImage:
-        return self._image
+    def pixmap(self) -> QPixmap:
+        return self._graphics_item.pixmap()
 
-    def pixmap(self) -> Qt.QPixmap:
-        return cast(Qt.QPixmap, self._graphics_item.pixmap())
-
-    def setImage(self, value: Qt.QImage) -> None:
-        self._image = value
-        self._graphics_item.setPixmap(Qt.QPixmap.fromImage(self._image, Qt.Qt.NoFormatConversion))
+    def setPixmap(self, value: QPixmap) -> None:
+        self._pixmap = value
+        self._graphics_item.setPixmap(self._pixmap)
 
     def show(self) -> None:
         self._graphics_item.show()

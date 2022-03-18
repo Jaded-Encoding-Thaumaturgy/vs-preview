@@ -123,6 +123,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.seek_frame_control = FrameEdit[FrameInterval](self)
         self.seek_frame_control.setMinimum(FrameInterval(1))
         self.seek_frame_control.setToolTip('Seek N Frames Step')
+        self.seek_frame_control.setValue(FrameInterval(self.main.SEEK_STEP))
+
         layout.addWidget(self.seek_frame_control)
 
         self.play_n_frames_button = QPushButton(self)
@@ -173,6 +175,7 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)
         qt_silent_call(self.seek_time_control.setMaximum, self.main.current_output.total_time)
         qt_silent_call(self.seek_time_control.setMinimum, TimeInterval(FrameInterval(1)))
+        qt_silent_call(self.seek_time_control.setValue, TimeInterval(self.seek_frame_control.value()))
         qt_silent_call(self.fps_spinbox.setValue, self.main.current_output.play_fps)
 
     def rescan_outputs(self) -> None:
@@ -186,19 +189,34 @@ class PlaybackToolbar(AbstractToolbar):
         if self.main.statusbar.label.text() == 'Ready':
             self.main.statusbar.label.setText('Playing')
 
-        play_buffer_size = int(min(
-            self.main.PLAY_BUFFER_SIZE,
-            self.main.current_output.end_frame - self.main.current_frame
-        ))
-        self.play_buffer = deque([], play_buffer_size)
-        for i in range(cast(int, self.play_buffer.maxlen)):
-            self.play_buffer.appendleft(
-                self.main.current_output.prepared.clip.get_frame_async(
-                    int(self.main.current_frame + FrameInterval(i) + FrameInterval(1))
-                )
+        if self.main.current_output.prepared.alpha is None:
+            play_buffer_size = int(
+                min(self.main.PLAY_BUFFER_SIZE, self.main.current_output.end_frame - self.main.current_frame)
             )
+            self.play_buffer = deque([], play_buffer_size)
+            for i in range(cast(int, self.play_buffer.maxlen)):
+                self.play_buffer.appendleft(
+                    self.main.current_output.prepared.clip.get_frame_async(
+                        int(self.main.current_frame + FrameInterval(i) + FrameInterval(1))
+                    )
+                )
+        else:
+            play_buffer_size = int(min(
+                self.main.PLAY_BUFFER_SIZE, (self.main.current_output.end_frame - self.main.current_frame) * 2
+            ))
+            play_buffer_size -= play_buffer_size % 2
+            self.play_buffer = deque([], play_buffer_size)
 
-        self.last_frame = Frame(stop_at_frame or 0)
+            for i in range(cast(int, self.play_buffer.maxlen) // 2):
+                frame = (self.main.current_frame + FrameInterval(i) + FrameInterval(1))
+                self.play_buffer.appendleft(
+                    self.main.current_output.prepared.clip.get_frame_async(frame)
+                )
+                self.play_buffer.appendleft(
+                    self.main.current_output.prepared.alpha.get_frame_async(frame)
+                )
+
+        self.last_frame = Frame(stop_at_frame or self.main.current_output.end_frame)
 
         if self.fps_unlimited_checkbox.isChecked() or self.main.DEBUG_PLAY_FPS:
             self.mute_checkbox.setState(Qt.Checked)
@@ -212,7 +230,8 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_timer.start(floor(1000 / self.main.current_output.play_fps))
 
         self.current_audio_output = self.audio_outputs_combobox.currentValue()
-        if (not self.mute_checkbox.isChecked() and self.current_audio_output is not None):
+
+        if not self.mute_checkbox.isChecked() and self.current_audio_output is not None:
             self.play_audio()
 
     def play_audio(self) -> None:
@@ -241,11 +260,14 @@ class PlaybackToolbar(AbstractToolbar):
         )
 
     def _show_next_frame(self) -> None:
-        if self.last_frame == self.main.current_frame != Frame(0):
+        if not self.main.current_output.prepared:
+            return
+
+        if self.last_frame <= self.main.current_frame:
             self.play_n_frames_button.click()
             return
 
-        n_frames = 1 + int(self.main.current_output.prepared.alpha is not None)
+        n_frames = 1 if self.main.current_output.prepared.alpha is None else 2
         next_frame_for_buffer = self.main.current_frame + self.main.PLAY_BUFFER_SIZE // n_frames
 
         try:
@@ -255,17 +277,18 @@ class PlaybackToolbar(AbstractToolbar):
             return
 
         if next_frame_for_buffer <= self.main.current_output.end_frame:
-            for _ in range(n_frames):
+            self.play_buffer.appendleft(
+                self.main.current_output.prepared.clip.get_frame_async(next_frame_for_buffer)
+            )
+            if self.main.current_output.prepared.alpha is not None:
                 self.play_buffer.appendleft(
-                    self.main.current_output.prepared.clip.get_frame_async(next_frame_for_buffer)
+                    self.main.current_output.prepared.alpha.get_frame_async(next_frame_for_buffer)
                 )
 
-        print(self.main.current_frame, frames_futures[0].props['_AbsoluteTime'])
-
-        self.main.switch_frame(self.main.current_frame + FrameInterval(1), render_frame=False)
         self.main.current_output.graphics_scene_item.setPixmap(
             self.main.current_output.render_raw_videoframe(*frames_futures)
         )
+        self.main.switch_frame(self.main.current_frame + FrameInterval(1), render_frame=False)
 
         if not self.main.DEBUG_PLAY_FPS:
             self.update_fps_counter()
@@ -299,14 +322,13 @@ class PlaybackToolbar(AbstractToolbar):
             self.main.statusbar.label.setText('Ready')
 
         for future in self.play_buffer:
-            # future.cancel()
             future.add_done_callback(lambda future: future.result())
 
         self.play_buffer.clear()
 
         current_audio_output = self.audio_outputs_combobox.currentValue()
 
-        if (not self.mute_checkbox.isChecked() and current_audio_output is not None):
+        if not self.mute_checkbox.isChecked() and current_audio_output is not None:
             self.stop_audio()
 
         self.fps_history.clear()

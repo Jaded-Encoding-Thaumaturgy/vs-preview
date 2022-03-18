@@ -578,6 +578,7 @@ class MainWindow(AbstractMainWindow):
     SAVE_TEMPLATE = '{script_name}_{frame}'
     STORAGE_BACKUPS_COUNT = 2
     SYNC_OUTPUTS = True
+    SEEK_STEP = 1
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE = 'frame'
@@ -664,7 +665,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_view.wheelScrolled.connect(self.on_wheel_scrolled)
 
         # timeline
-        self.timeline.clicked.connect(self.switch_frame)
+        self.timeline.clicked.connect(self.on_timeline_clicked)
 
         # init toolbars and outputs
         self.app_settings = SettingsDialog(self)
@@ -873,7 +874,9 @@ class MainWindow(AbstractMainWindow):
 
         return output.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
 
-    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool | vs.VideoFrame = True) -> None:
+    def switch_frame(
+        self, pos: Frame | Time | FrameInterval | TimeInterval | int | None, *, render_frame: bool | vs.VideoFrame = True
+    ) -> None:
         if pos is None:
             logging.debug('switch_frame: position is None!')
             return
@@ -959,7 +962,6 @@ class MainWindow(AbstractMainWindow):
         return self.toolbars.main.outputs  # type: ignore
 
     def handle_script_error(self, message: str) -> None:
-        # logging.error(message)
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.open()
 
@@ -970,6 +972,14 @@ class MainWindow(AbstractMainWindow):
         elif new_index >= len(self.toolbars.main.zoom_levels):
             new_index = len(self.toolbars.main.zoom_levels) - 1
         self.toolbars.main.zoom_combobox.setCurrentIndex(new_index)
+
+    def on_timeline_clicked(self, start: int) -> None:
+        if self.toolbars.playback.play_timer.isActive():
+            self.toolbars.playback.stop()
+            self.switch_frame(start)
+            self.toolbars.playback.play()
+        else:
+            self.switch_frame(start)
 
     def show_message(self, message: str) -> None:
         self.statusbar.showMessage(

@@ -17,7 +17,6 @@ from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame, FrameInte
 from vspreview.utils import add_shortcut, fire_and_forget, qt_silent_call, set_qobject_names, set_status_label, try_load
 
 
-
 class SceningListDialog(QDialog):
     __slots__ = (
         'main', 'scening_list',
@@ -458,7 +457,7 @@ class SceningToolbar(AbstractToolbar):
         return marks
 
     @property
-    def current_list(self) -> SceningList | None:
+    def current_list(self) -> SceningList:
         return self.items_combobox.currentValue()
 
     @current_list.setter

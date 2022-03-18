@@ -840,7 +840,7 @@ class MainWindow(AbstractMainWindow):
             raw_frame_item = self.graphics_scene.addPixmap(frame_image)
             raw_frame_item.hide()
 
-            output.graphics_scene_item = GraphicsImageItem(raw_frame_item, frame_image)
+            output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
 
     def reload_script(self) -> None:
         import gc

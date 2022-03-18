@@ -47,8 +47,8 @@ class ComboBox(QComboBox, Generic[T]):
         self.oldValue = newValue
         self.oldIndex = newIndex
 
-    def currentValue(self) -> T | None:
-        return cast(Optional[T], self.currentData())
+    def currentValue(self) -> T:
+        return cast(T, self.currentData())
 
     def setCurrentValue(self, newValue: T) -> None:
         i = self.model().index_of(newValue)

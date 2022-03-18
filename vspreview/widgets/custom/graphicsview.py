@@ -94,13 +94,10 @@ class GraphicsView(QGraphicsView):
 
 
 class GraphicsImageItem:
-    __slots__ = (
-        '_pixmap', '_graphics_item'
-    )
+    __slots__ = ('_graphics_item',)
 
-    def __init__(self, graphics_item: QGraphicsPixmapItem, pixmap: QPixmap) -> None:
+    def __init__(self, graphics_item: QGraphicsPixmapItem) -> None:
         self._graphics_item = graphics_item
-        self._pixmap = pixmap
 
     def contains(self, point: QPointF) -> bool:
         return self._graphics_item.contains(point)
@@ -112,8 +109,7 @@ class GraphicsImageItem:
         return self._graphics_item.pixmap()
 
     def setPixmap(self, value: QPixmap) -> None:
-        self._pixmap = value
-        self._graphics_item.setPixmap(self._pixmap)
+        self._graphics_item.setPixmap(value)
 
     def show(self) -> None:
         self._graphics_item.show()

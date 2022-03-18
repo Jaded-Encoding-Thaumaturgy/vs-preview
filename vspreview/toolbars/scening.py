@@ -245,6 +245,7 @@ class SceningToolbar(AbstractToolbar):
             'TFM Log (*.txt)': self.import_tfm,
             'x264/x265 QP File (*.qp)': self.import_qp,
             'XviD Log (*.txt)': self.import_xvid,
+            'Simple Mappings (*.txt)' : self.import_simple,
         }
 
         self.add_list_button.clicked.connect(self.on_add_list_clicked)
@@ -935,6 +936,17 @@ class SceningToolbar(AbstractToolbar):
                 continue
             try:
                 scening_list.add(Frame(i - 3))
+            except ValueError:
+                out_of_range_count += 1
+
+    def import_simple(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Import simple frame mappings [Start End]
+        '''
+        for line in path.read_text().splitlines():
+            try:
+                fnumbers = [int(n) for n in line.split()]
+                scening_list.add(Frame(fnumbers[0]), Frame(fnumbers[1]))
             except ValueError:
                 out_of_range_count += 1
 

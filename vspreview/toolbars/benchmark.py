@@ -20,9 +20,6 @@ from vspreview.utils import (
 from vspreview.widgets import FrameEdit, TimeEdit
 
 
-# TODO: think of proper fix for frame data sharing issue
-
-
 class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
     yaml_tag = '!BenchmarkSettings'
 

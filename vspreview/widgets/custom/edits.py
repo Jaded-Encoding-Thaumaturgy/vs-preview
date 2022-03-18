@@ -9,9 +9,6 @@ from vspreview.utils import from_qtime, to_qtime
 from vspreview.core import Frame, FrameInterval, FrameType, Time, TimeInterval, TimeType
 
 
-# TODO: replace specialized Edit classes with some metaclasses magic or such
-
-
 class FrameEdit(QSpinBox, Generic[FrameType]):
     def __class_getitem__(cls, ty: Type[FrameType]) -> Type:
         type_specializations: Dict[Type, Type] = {

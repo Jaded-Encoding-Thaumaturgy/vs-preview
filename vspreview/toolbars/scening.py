@@ -17,8 +17,6 @@ from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame, FrameInte
 from vspreview.utils import add_shortcut, fire_and_forget, qt_silent_call, set_qobject_names, set_status_label, try_load
 
 
-# TODO: import all lwi video streams as separate scening lists
-
 
 class SceningListDialog(QDialog):
     __slots__ = (

@@ -15,11 +15,6 @@ from ..core import (
 )
 
 
-# TODO: store cursor pos as frame
-# TODO: consider moving from ints to floats
-# TODO: make Timeline.Mode a proper class instead of bunch of strings
-
-
 class Notch:
     def __init__(
         self, data: Frame | Time, color: QColor = cast(QColor, Qt.white),

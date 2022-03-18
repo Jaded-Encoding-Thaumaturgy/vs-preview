@@ -32,23 +32,6 @@ from .core import (
 )
 
 
-# TODO: design settings
-# TODO: deisgn keyboard layout
-# TODO: VFR support
-# TODO: move to pyside2, but it lacks single Qt namespace
-#       with everything imported and it isn't type annotated.
-#       See https://bugreports.qt.io/browse/PYSIDE-735
-# TODO: get rid of magical constants related to 'pixel' sizes
-#       (their actual units are yet to be discovered)
-# TODO: move from QGraphicsView to QLabel
-# TODO: utilize Qt's signals
-# TODO: save window position
-# TODO: make use of alpha channel of outputs
-# TODO: respect cursor position when zooming in and out
-# TODO: properly mark protected members with underscore
-# TODO: respond to changed settings immediately
-
-
 class ScriptErrorDialog(QDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 

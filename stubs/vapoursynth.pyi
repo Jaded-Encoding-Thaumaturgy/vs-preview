@@ -749,6 +749,11 @@ class _Plugin_akarin_Core_Unbound(Plugin):
     def Version(self) -> "VideoNode": ...
 
 
+class _Plugin_libp2p_Core_Unbound(Plugin):
+    def Pack(self, clip: "VideoNode") -> "VideoNode": ...
+    def Unpack(self, clip: "VideoNode") -> "VideoNode": ...
+
+
 class _Plugin_lsmas_Core_Unbound(Plugin):
     def LWLibavSource(self, source: typing.Union[str, bytes, bytearray], stream_index: typing.Optional[int] = None, cache: typing.Optional[int] = None, cachefile: typing.Union[str, bytes, bytearray, None] = None, threads: typing.Optional[int] = None, seek_mode: typing.Optional[int] = None, seek_threshold: typing.Optional[int] = None, dr: typing.Optional[int] = None, fpsnum: typing.Optional[int] = None, fpsden: typing.Optional[int] = None, variable: typing.Optional[int] = None, format: typing.Union[str, bytes, bytearray, None] = None, decoder: typing.Union[str, bytes, bytearray, None] = None, prefer_hw: typing.Optional[int] = None, repeat: typing.Optional[int] = None, dominance: typing.Optional[int] = None, ff_loglevel: typing.Optional[int] = None, cachedir: typing.Union[str, bytes, bytearray, None] = None, soft_reset: typing.Optional[int] = None) -> "VideoNode": ...
     def LibavSMASHSource(self, source: typing.Union[str, bytes, bytearray], track: typing.Optional[int] = None, threads: typing.Optional[int] = None, seek_mode: typing.Optional[int] = None, seek_threshold: typing.Optional[int] = None, dr: typing.Optional[int] = None, fpsnum: typing.Optional[int] = None, fpsden: typing.Optional[int] = None, variable: typing.Optional[int] = None, format: typing.Union[str, bytes, bytearray, None] = None, decoder: typing.Union[str, bytes, bytearray, None] = None, prefer_hw: typing.Optional[int] = None, ff_loglevel: typing.Optional[int] = None) -> "VideoNode": ...
@@ -860,6 +865,11 @@ class _Plugin_akarin_VideoNode_Bound(Plugin):
     def Expr(self, expr: typing.Union[str, bytes, bytearray, typing.Sequence[typing.Union[str, bytes, bytearray]]], format: typing.Optional[int] = None, opt: typing.Optional[int] = None, boundary: typing.Optional[int] = None) -> "VideoNode": ...
 
 
+class _Plugin_libp2p_VideoNode_Bound(Plugin):
+    def Pack(self) -> "VideoNode": ...
+    def Unpack(self) -> "VideoNode": ...
+
+
 class _Plugin_std_AudioNode_Bound(Plugin):
     def AssumeSampleRate(self, src: typing.Optional["AudioNode"] = None, samplerate: typing.Optional[int] = None) -> "AudioNode": ...
     def AudioGain(self, gain: typing.Union[float, typing.Sequence[float], None] = None) -> "AudioNode": ...
@@ -904,6 +914,11 @@ class VideoNode:
     def akarin(self) -> _Plugin_akarin_VideoNode_Bound:
         """
         Akarin's Experimental Filters
+        """
+    @property
+    def libp2p(self) -> _Plugin_libp2p_VideoNode_Bound:
+        """
+        libp2p rgb formats packer/unpacker
         """
 
     format: typing.Optional[VideoFormat]
@@ -1033,6 +1048,11 @@ class Core:
     def akarin(self) -> _Plugin_akarin_Core_Unbound:
         """
         Akarin's Experimental Filters
+        """
+    @property
+    def libp2p(self) -> _Plugin_libp2p_Core_Unbound:
+        """
+        libp2p rgb formats packer/unpacker
         """
     @property
     def lsmas(self) -> _Plugin_lsmas_Core_Unbound:

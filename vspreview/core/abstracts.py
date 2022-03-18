@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QPushButton, QGraphic
 
 class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
     if TYPE_CHECKING:
-        from vspreview.models import Outputs
+        from vspreview.models import VideoOutputs
         from vspreview.widgets import Timeline
 
     __slots__ = ()
@@ -55,7 +55,7 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
     display_scale: float = abstract_attribute()
     graphics_scene: QGraphicsScene = abstract_attribute()
     graphics_view: QGraphicsView = abstract_attribute()
-    outputs: Outputs[VideoOutput] = abstract_attribute()
+    outputs: VideoOutputs = abstract_attribute()
     timeline: Timeline = abstract_attribute()
     toolbars: AbstractToolbars = abstract_attribute()
     save_on_exit: bool = abstract_attribute()

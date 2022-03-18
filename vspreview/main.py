@@ -3,17 +3,15 @@ from __future__ import annotations
 import os
 import sys
 import shlex
-import ctypes
 import logging
 import vapoursynth as vs
 from pathlib import Path
 from platform import python_version
 from pkg_resources import get_distribution
-from typing import Any, cast, List, Mapping, Tuple, Type
+from typing import Any, cast, List, Mapping, Tuple
 
-from PyQt5 import sip
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent, QObject
-from PyQt5.QtGui import QImage, QCloseEvent, QPalette, QPixmap, QShowEvent
+from PyQt5.QtGui import QCloseEvent, QPalette, QPixmap, QShowEvent
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QWidget, QHBoxLayout, QPushButton, QApplication, QGraphicsScene,
     QOpenGLWidget, QTabWidget, QComboBox, QCheckBox, QSpinBox, QSizePolicy, QGraphicsView
@@ -23,7 +21,7 @@ from PyQt5.QtWidgets import (
 # This is so other modules cannot accidentally
 # use and lock us into a different policy.
 from .core.vsenv import get_policy
-from .models import Outputs
+from .models import VideoOutputs, Outputs
 from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit
 from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names, try_load
 from .core import (
@@ -126,7 +124,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
-        self.outputs = Outputs[VideoOutput](VideoOutput)
+        self.outputs = VideoOutputs()
 
         self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
@@ -232,7 +230,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self) -> None:
-        self.outputs = Outputs(VideoOutput)
+        self.outputs = VideoOutputs()
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 
@@ -273,7 +271,7 @@ class MainToolbar(AbstractToolbar):
             outputs = state['outputs']
             if not isinstance(outputs, Outputs):
                 raise TypeError
-            self.outputs = outputs
+            self.outputs = cast(VideoOutputs, outputs)
             self.main.init_outputs()
             self.outputs_combobox.setModel(self.outputs)
 
@@ -942,8 +940,7 @@ class MainWindow(AbstractMainWindow):
 
     @property  # type: ignore
     def current_output(self) -> VideoOutput:  # type: ignore
-        output = cast(VideoOutput, self.toolbars.main.outputs_combobox.currentData())
-        return output
+        return cast(VideoOutput, self.toolbars.main.outputs_combobox.currentData())
 
     @current_output.setter
     def current_output(self, value: VideoOutput) -> None:
@@ -958,8 +955,8 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def outputs(self) -> Type[Outputs[VideoOutput]]:  # type: ignore
-        return cast(Outputs[VideoOutput], self.toolbars.main.outputs)  # type: ignore
+    def outputs(self) -> VideoOutputs:  # type: ignore
+        return self.toolbars.main.outputs  # type: ignore
 
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)

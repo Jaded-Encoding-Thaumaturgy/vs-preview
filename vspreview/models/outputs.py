@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import vapoursynth as vs
-from functools import partial
-from yaml import YAMLObjectMetaclass
 from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING, Generic
 
 from vspreview.core import QYAMLObject, VideoOutput, AudioOutput
@@ -13,23 +11,17 @@ from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 T = TypeVar('T', VideoOutput, AudioOutput)
 
 
-class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
-    yaml_tag = '!Outputs'
+class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
+    ty: Type[T]
 
-    __slots__ = (
-        'items', 'T',
-    )
+    __slots__ = ('items')
 
     supported_types = {VideoOutput: 'video', AudioOutput: 'audio'}
 
-    def __class_getitem__(self, ty: Type[T]) -> partial[Outputs]:
-        return partial(Outputs, ty)
-
-    def __init__(self, ty: Type[T], local_storage: Mapping[str, T] | None = None) -> None:
+    def __init__(self, local_storage: Mapping[str, T] | None = None) -> None:
         from vspreview.utils import main_window
 
         super().__init__()
-        self.T: YAMLObjectMetaclass = ty
         self.items: List[T] = []
 
         local_storage = local_storage if local_storage is not None else {}
@@ -39,13 +31,13 @@ class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
         main_window().reload_signal.connect(self.clear_outputs)
 
         for i, vs_output in outputs.items():
-            if not isinstance(vs_output, ty.vs_type):
+            if not isinstance(vs_output, self.ty.vs_type):
                 continue
             try:
                 output = local_storage[str(i)]
                 output.__init__(vs_output, i)  # type: ignore
             except KeyError:
-                output = ty(vs_output, i)
+                output = self.ty(vs_output, i)
 
             self.items.append(output)
 
@@ -143,4 +135,14 @@ class Outputs(QAbstractListModel, QYAMLObject, Generic[T]):
 
     if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/2220
-        def __iter__(self) -> Iterator[Outputs]: ...
+        def __iter__(self) -> Iterator[T]: ...
+
+
+class VideoOutputs(Outputs[VideoOutput]):
+    yaml_tag = '!VideoOutputs'
+    ty = VideoOutput
+
+
+class AudioOutputs(Outputs[AudioOutput]):
+    yaml_tag = '!AudioOutputs'
+    ty = AudioOutput

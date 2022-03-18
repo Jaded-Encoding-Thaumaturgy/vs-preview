@@ -10,7 +10,7 @@ from typing import Any, cast, Deque, Mapping
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QFrame, QComboBox
 
-from vspreview.models import Outputs
+from vspreview.models import AudioOutputs
 from vspreview.widgets import ComboBox, FrameEdit, TimeEdit
 from vspreview.utils import (
     add_shortcut, debug, qt_silent_call, set_qobject_names, try_load
@@ -53,7 +53,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future] = deque()
 
-        self.audio_outputs = Outputs[AudioOutput](AudioOutput)
+        self.audio_outputs = AudioOutputs()
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
         self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
@@ -176,7 +176,7 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.fps_spinbox.setValue, self.main.current_output.play_fps)
 
     def rescan_outputs(self) -> None:
-        self.audio_outputs = Outputs[AudioOutput](AudioOutput)
+        self.audio_outputs = AudioOutputs()
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
@@ -259,6 +259,8 @@ class PlaybackToolbar(AbstractToolbar):
                 self.play_buffer.appendleft(
                     self.main.current_output.prepared.clip.get_frame_async(next_frame_for_buffer)
                 )
+
+        print(self.main.current_frame, frames_futures[0].props['_AbsoluteTime'])
 
         self.main.switch_frame(self.main.current_frame + FrameInterval(1), render_frame=False)
         self.main.current_output.graphics_scene_item.setPixmap(
@@ -471,7 +473,7 @@ class PlaybackToolbar(AbstractToolbar):
         )
 
         try_load(
-            state, 'audio_outputs', Outputs, self.audio_outputs,
+            state, 'audio_outputs', AudioOutputs, self.audio_outputs,
             'Storage loading: PlaybackToolbar: failed to parse audio_outputs'
         )
 

@@ -146,6 +146,8 @@ class SceningListDialog(QDialog):
         self.scening_list.setData(index, time, Qt.UserRole)
 
     def on_label_changed(self, text: str) -> None:
+        if self.tableview.selectionModel() is None:
+            return
         index = self.tableview.selectionModel().selectedRows()[0]
         if not index.isValid():
             return

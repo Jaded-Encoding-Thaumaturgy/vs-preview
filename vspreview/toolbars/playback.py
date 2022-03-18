@@ -353,10 +353,14 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
         self.main.current_frame = new_pos
 
-    def on_seek_frame_changed(self, frame: FrameInterval) -> None:
+    def on_seek_frame_changed(self, frame: FrameInterval | None) -> None:
+        if frame is None:
+            return
         qt_silent_call(self.seek_time_control.setValue, TimeInterval(frame))
 
-    def on_seek_time_changed(self, time: TimeInterval) -> None:
+    def on_seek_time_changed(self, time: TimeInterval | None) -> None:
+        if time is None:
+            return
         qt_silent_call(self.seek_frame_control.setValue, FrameInterval(time))
 
     def on_play_pause_clicked(self, checked: bool) -> None:

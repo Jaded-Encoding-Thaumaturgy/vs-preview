@@ -141,7 +141,9 @@ class MiscToolbar(AbstractToolbar):
         if manually:
             self.main.show_message('Saved successfully')
 
-    def on_autosave_interval_changed(self, new_value: TimeInterval) -> None:
+    def on_autosave_interval_changed(self, new_value: TimeInterval | None) -> None:
+        if new_value is None:
+            return
         if new_value == TimeInterval(seconds=0):
             self.autosave_timer.stop()
         else:

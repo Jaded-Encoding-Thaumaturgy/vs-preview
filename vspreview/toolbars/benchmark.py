@@ -149,7 +149,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.update_info_timer = QTimer()
         self.update_info_timer.setTimerType(Qt.PreciseTimer)
 
-        self.start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))
+        self.start_frame_control.valueChanged.connect(self.update_controls)
         self.start_time_control.valueChanged.connect(
             lambda value: self.update_controls(start=Frame(value))
         )

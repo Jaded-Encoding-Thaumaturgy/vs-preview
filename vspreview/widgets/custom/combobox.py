@@ -40,13 +40,15 @@ class ComboBox(QComboBox, Generic[T]):
 
     def _currentIndexChanged(self, newIndex: int) -> None:
         newValue = self.currentData()
+        if newValue is None:
+            return
         self.valueChanged.emit(newValue, self.oldValue)
         self.indexChanged.emit(newIndex, self.oldIndex)
         self.oldValue = newValue
         self.oldIndex = newIndex
 
-    def currentValue(self) -> T:
-        return cast(T, self.currentData())
+    def currentValue(self) -> T | None:
+        return cast(Optional[T], self.currentData())
 
     def setCurrentValue(self, newValue: T) -> None:
         i = self.model().index_of(newValue)

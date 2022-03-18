@@ -567,32 +567,22 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
 
 class MainWindow(AbstractMainWindow):
     # those are defaults that can be overriden at runtime or used as fallbacks
-    ALWAYS_SHOW_SCENE_MARKS = False
     AUTOSAVE_INTERVAL = 60 * 1000  # s
-    BASE_PPI = 96  # PPI
-    BENCHMARK_CLEAR_CACHE = False
-    BENCHMARK_REFRESH_INTERVAL = 150  # ms
     CHECKERBOARD_ENABLED = True
     CHECKERBOARD_TILE_COLOR_1 = Qt.white
     CHECKERBOARD_TILE_COLOR_2 = Qt.lightGray
     CHECKERBOARD_TILE_SIZE = 8  # px
-    DARK_THEME = True
     FPS_AVERAGING_WINDOW_SIZE = FrameInterval(100)
     FPS_REFRESH_INTERVAL = 150  # ms
-    LOG_LEVEL = logging.DEBUG
-    OPENGL_RENDERING = True
+    LOG_LEVEL = logging.INFO
     OUTPUT_INDEX = 0
     PLAY_BUFFER_SIZE = FrameInterval(get_usable_cpus_count())
-    PNG_COMPRESSION_LEVEL = 0  # 0 - 100
     SAVE_TEMPLATE = '{script_name}_{frame}'
-    SEEK_STEP = 1  # frames
-    STATUSBAR_MESSAGE_TIMEOUT = 1500  # s
     STORAGE_BACKUPS_COUNT = 2
     SYNC_OUTPUTS = True
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE = 'frame'
-    TOGGLE_TOOLBAR = True
     VSP_DIR_NAME = '.vspreview'
     # used for formats with subsampling
     VS_OUTPUT_RESIZER = VideoOutput.Resizer.Bicubic
@@ -609,7 +599,6 @@ class MainWindow(AbstractMainWindow):
     def STATUS_FRAME_PROP(prop: Any) -> str:
         return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
-    BENCHMARK_FRAME_DATA_SHARING_FIX = True
     DEBUG_PLAY_FPS = False
     DEBUG_TOOLBAR = False
     DEBUG_TOOLBAR_BUTTONS_PRINT_STATE = False

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import vapoursynth as vs
 from abc import abstractmethod
 from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List
 
@@ -39,7 +40,7 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     @abstractmethod
-    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool = True) -> None:
+    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool | vs.VideoFrame = True) -> None:
         raise NotImplementedError()
 
     @abstractmethod

@@ -873,22 +873,11 @@ class MainWindow(AbstractMainWindow):
         if output is None:
             output = self.current_output
 
-        return self.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
+        return output.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
 
-    def render_raw_videoframe(self, vs_frame: vs.VideoFrame) -> QPixmap:
-        # powerful spell. do not touch
-        data_pointer = cast(sip.voidptr, ctypes.cast(
-            vs_frame.get_read_ptr(0),
-            ctypes.POINTER(ctypes.c_char * (vs_frame.format.bytes_per_sample * vs_frame.width * vs_frame.height))
-        )[0])
-
-        frame_image = QImage(data_pointer, vs_frame.width, vs_frame.height, vs_frame.get_stride(0), QImage.Format_RGB32)
-
-        return QPixmap.fromImage(frame_image)
-
-    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool = True) -> None:
+    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool | vs.VideoFrame = True) -> None:
         if pos is None:
-            logging.debug('switch_frame(): position is None!')
+            logging.debug('switch_frame: position is None!')
             return
 
         frame = Frame(pos)
@@ -905,7 +894,12 @@ class MainWindow(AbstractMainWindow):
                 toolbar.on_current_frame_changed(frame)
 
         if render_frame:
-            self.current_output.graphics_scene_item.setPixmap(self.render_frame(frame))
+            if isinstance(render_frame, vs.VideoFrame):
+                rendered_frame = self.current_output.render_raw_videoframe(render_frame)
+            else:
+                rendered_frame = self.render_frame(frame)
+
+            self.current_output.graphics_scene_item.setPixmap(rendered_frame)
 
         self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 
@@ -965,7 +959,7 @@ class MainWindow(AbstractMainWindow):
 
     @property
     def outputs(self) -> Type[Outputs[VideoOutput]]:  # type: ignore
-        return cast(Outputs[VideoOutput], self.toolbars.main.outputs)
+        return cast(Outputs[VideoOutput], self.toolbars.main.outputs)  # type: ignore
 
     def handle_script_error(self, message: str) -> None:
         # logging.error(message)

@@ -306,7 +306,7 @@ class VideoOutput(YAMLObject):
         )
         frame_image = QImage(
             frame_data_pointer, vs_frame.width, vs_frame.height,
-            vs_frame.get_stride(0), QImage.Format_RGB30
+            vs_frame.get_stride(0), QImage.Format_RGB32
         )
 
         if vs_frame_alpha is None:

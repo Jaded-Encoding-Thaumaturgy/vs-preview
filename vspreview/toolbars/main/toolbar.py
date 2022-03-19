@@ -83,6 +83,8 @@ class MainToolbar(AbstractToolbar):
         layout.addWidget(self.outputs_combobox)
 
         self.frame_control = FrameEdit(self)
+        if not self.main.INSTANT_FRAME_UPDATE:
+            self.frame_control.setKeyboardTracking(False)
         layout.addWidget(self.frame_control)
 
         self.copy_frame_button = QPushButton(self)

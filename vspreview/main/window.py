@@ -42,6 +42,7 @@ class MainWindow(AbstractMainWindow):
     STORAGE_BACKUPS_COUNT = 2
     SYNC_OUTPUTS = True
     SEEK_STEP = 1
+    INSTANT_FRAME_UPDATE = False
     # it's allowed to stretch target interval betweewn notches by N% at most
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE = 'frame'

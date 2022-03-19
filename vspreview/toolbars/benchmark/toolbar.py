@@ -10,7 +10,7 @@ from typing import Any, Deque, Mapping
 from PyQt5.QtCore import Qt, QTimer, QMetaObject
 from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QLabel, QPushButton
 
-from ...widgets import FrameEdit, TimeEdit
+from ...widgets import FrameEdit
 from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load
 from ...utils import get_usable_cpus_count, qt_silent_call, set_qobject_names, vs_clear_cache, strfdelta
 
@@ -22,13 +22,11 @@ class BenchmarkToolbar(AbstractToolbar):
 
     __slots__ = (
         *_storable_attrs, 'start_frame_control',
-        'start_time_control', 'end_frame_control',
-        'end_time_control', 'total_frames_control',
-        'total_time_control', 'prefetch_checkbox',
-        'unsequenced_checkbox', 'run_abort_button',
-        'info_label', 'running', 'unsequenced',
-        'run_start_time', 'start_frame', 'end_frame',
-        'total_frames', 'frames_left', 'buffer',
+        'end_frame_control', 'total_frames_control',
+        'prefetch_checkbox', 'unsequenced_checkbox',
+        'run_abort_button', 'info_label', 'running',
+        'unsequenced', 'run_start_time', 'start_frame',
+        'end_frame', 'total_frames', 'frames_left', 'buffer',
         'update_info_timer', 'sequenced_timer'
     )
 
@@ -54,15 +52,9 @@ class BenchmarkToolbar(AbstractToolbar):
         self.update_info_timer.setTimerType(Qt.PreciseTimer)
 
         self.start_frame_control.valueChanged.connect(self.update_controls)
-        self.start_time_control.valueChanged.connect(
-            lambda value: self.update_controls(start=Frame(value))
-        )
         self.end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))
-        self.end_time_control.valueChanged.connect(lambda value: self.update_controls(end=Frame(value)))
         self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
-        self.total_time_control.valueChanged.connect(
-            lambda value: self.update_controls(total=Frame(value))
-        )
+
         self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
         self.run_abort_button.clicked.connect(self.on_run_abort_pressed)
         self.sequenced_timer.timeout.connect(self._request_next_frame_sequenced)
@@ -83,9 +75,6 @@ class BenchmarkToolbar(AbstractToolbar):
         self.start_frame_control = FrameEdit(self)
         layout.addWidget(self.start_frame_control)
 
-        self.start_time_control = TimeEdit(self)
-        layout.addWidget(self.start_time_control)
-
         end_label = QLabel(self)
         end_label.setObjectName('BenchmarkToolbar.setup_ui.end_label')
         end_label.setText('End:')
@@ -93,9 +82,6 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.end_frame_control = FrameEdit(self)
         layout.addWidget(self.end_frame_control)
-
-        self.end_time_control = TimeEdit(self)
-        layout.addWidget(self.end_time_control)
 
         total_label = QLabel(self)
         total_label.setObjectName('BenchmarkToolbar.setup_ui.total_label')
@@ -105,9 +91,6 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_frames_control = FrameEdit(self)
         self.total_frames_control.setMinimum(Frame(1))
         layout.addWidget(self.total_frames_control)
-
-        self.total_time_control = TimeEdit(self)
-        layout.addWidget(self.total_time_control)
 
         self.prefetch_checkbox = QCheckBox(self)
         self.prefetch_checkbox.setText('Prefetch')
@@ -140,12 +123,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         self.start_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.start_time_control.setMaximum(self.main.current_output.end_time)
         self.end_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.end_time_control.setMaximum(self.main.current_output.end_time)
         self.total_frames_control.setMaximum(self.main.current_output.total_frames)
-        self.total_time_control.setMaximum(self.main.current_output.total_time)
-        self.total_time_control.setMaximum(Time(Frame(1)))
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
@@ -245,11 +224,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
     def set_ui_editable(self, new_state: bool) -> None:
         self. start_frame_control.setEnabled(new_state)
-        self.start_time_control.setEnabled(new_state)
         self.end_frame_control.setEnabled(new_state)
-        self.end_time_control.setEnabled(new_state)
         self.total_frames_control.setEnabled(new_state)
-        self.total_time_control.setEnabled(new_state)
         self.prefetch_checkbox.setEnabled(new_state)
         self. unsequenced_checkbox.setEnabled(new_state)
 
@@ -286,11 +262,8 @@ class BenchmarkToolbar(AbstractToolbar):
             return
 
         qt_silent_call(self. start_frame_control.setValue, start)
-        qt_silent_call(self.start_time_control.setValue, Time(start))
         qt_silent_call(self.end_frame_control.setValue, end)
-        qt_silent_call(self.end_time_control.setValue, Time(end))
         qt_silent_call(self.total_frames_control.setValue, total)
-        qt_silent_call(self.total_time_control.setValue, Time(total))
 
     def update_info(self) -> None:
         run_time = Time(seconds=(perf_counter() - self.run_start_time))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import logging
+import pretty_traceback
 from pathlib import Path
 from argparse import ArgumentParser
 
@@ -15,6 +16,7 @@ from .core.vsenv import get_policy
 from .main import MainWindow
 from .utils import check_versions
 
+pretty_traceback.install()
 get_policy()
 
 
@@ -72,6 +74,7 @@ def main() -> None:
         app.exec_()
     except Exception:
         logging.error('app.exec_() exception')
+    app.exec_()
 
 
 if __name__ == '__main__':

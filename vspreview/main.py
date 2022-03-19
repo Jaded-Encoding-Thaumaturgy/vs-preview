@@ -8,8 +8,6 @@ import logging
 import vapoursynth as vs
 from pathlib import Path
 from argparse import ArgumentParser
-from platform import python_version
-from pkg_resources import get_distribution
 from typing import Any, cast, List, Mapping, Tuple
 from traceback import FrameSummary, TracebackException
 
@@ -25,8 +23,8 @@ from PyQt5.QtWidgets import (
 # use and lock us into a different policy.
 from .core.vsenv import get_policy
 from .models import VideoOutputs, Outputs, ZoomLevels
-from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names
 from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit, GraphicsView, GraphicsImageItem
+from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names, check_versions
 from .toolbars import DebugToolbar, MiscToolbar, PlaybackToolbar, SceningToolbar, BenchmarkToolbar, PipetteToolbar
 from .core import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
@@ -1042,30 +1040,6 @@ def main() -> None:
         app.exec_()
     except Exception:
         logging.error('app.exec_() exception')
-
-
-def check_versions() -> bool:
-    if sys.version_info < (3, 9, 0, 'final', 0):
-        logging.warning(
-            'VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
-            .format(python_version(), sys.version_info.releaselevel)
-        )
-        return False
-
-    if get_distribution('PyQt5').version < '5.15':
-        logging.warning(
-            'VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'
-            .format(get_distribution('PyQt5').version))
-        return False
-
-    if vs.core.version_number() < 53:
-        logging.warning(
-            'VSPreview is not tested on VapourSynth versions prior to 53, but you have {}. Use at your own risk.'
-            .format(vs.core.version_number())
-        )
-        return False
-
-    return True
 
 
 if __name__ == '__main__':

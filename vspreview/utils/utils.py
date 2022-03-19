@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import sys
+import logging
 import vapoursynth as vs
 from string import Template
+from platform import python_version
 from psutil import cpu_count, Process
+from pkg_resources import get_distribution
 from asyncio import get_running_loop, get_event_loop_policy
 from typing import Any, Callable, MutableMapping, Type, TypeVar
 from functools import partial, wraps, singledispatch, update_wrapper
@@ -141,3 +145,27 @@ def vs_clear_cache() -> None:
     if isinstance(output, vs.VideoOutputTuple):
         output.clip.get_frame(0)
     vs.core.max_cache_size = cache_size
+
+
+def check_versions() -> bool:
+    if sys.version_info < (3, 9, 0, 'final', 0):
+        logging.warning(
+            'VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
+            .format(python_version(), sys.version_info.releaselevel)
+        )
+        return False
+
+    if get_distribution('PyQt5').version < '5.15':
+        logging.warning(
+            'VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'
+            .format(get_distribution('PyQt5').version))
+        return False
+
+    if vs.core.version_number() < 53:
+        logging.warning(
+            'VSPreview is not tested on VapourSynth versions prior to 53, but you have {}. Use at your own risk.'
+            .format(vs.core.version_number())
+        )
+        return False
+
+    return True

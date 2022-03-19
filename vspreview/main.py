@@ -4,7 +4,6 @@ import gc
 import os
 import sys
 import yaml
-import shlex
 import logging
 import vapoursynth as vs
 from pathlib import Path
@@ -733,21 +732,21 @@ class MainWindow(AbstractMainWindow):
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | str = [], reloading: bool = False
+        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False
     ) -> None:
+        self.external_args = external_args or []
+
         self.toolbars.playback.stop()
-        self.setWindowTitle('VSPreview: %s %s' % (script_path, external_args))
+        self.setWindowTitle('VSPreview: %s %s' % (script_path, self.external_args))
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path
         sys.path.append(str(self.script_path.parent))
 
         # Rewrite args so external args will be forwarded correctly
-        if isinstance(external_args, str):
-            self.external_args = shlex.split(external_args)  # type: ignore
         try:
             argv_orig = sys.argv
-            sys.argv = [script_path.name] + self.external_args  # type: ignore
+            sys.argv = [script_path.name]
         except AttributeError:
             pass
 
@@ -1089,9 +1088,7 @@ def main() -> None:
         os.chdir(script_path.parent)
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
-    main_window.load_script(script_path, [
-        tuple(a.split('=', maxsplit=1)) for a in args.arg or []
-    ], False)
+    main_window.load_script(script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False)
     main_window.show()
 
     try:

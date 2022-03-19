@@ -30,7 +30,7 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | str = [], reloading: bool = False
+        self, script_path: Path, external_args: List[Tuple[str, str]] | None = [], reloading: bool = False
     ) -> None:
         raise NotImplementedError
 

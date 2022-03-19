@@ -16,7 +16,7 @@ class Frame(YAMLObjectWrapper):
 
     __slots__ = ('value',)
 
-    def __init__(self, init_value: Frame | int | Time) -> None:
+    def __init__(self, init_value: int | Frame | Time) -> None:
         if isinstance(init_value, int):
             if init_value < 0:
                 raise ValueError
@@ -61,9 +61,6 @@ class Frame(YAMLObjectWrapper):
         self.value = int(self.value // other)
         return self
 
-    def __repr__(self) -> str:
-        return f'Frame({self.value})'
-
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
             state, 'value', int, self.__init__,  # type: ignore
@@ -74,9 +71,7 @@ class Frame(YAMLObjectWrapper):
 class Time(YAMLObjectWrapper):
     yaml_tag = '!Time'
 
-    __slots__ = (
-        'value',
-    )
+    __slots__ = ('value',)
 
     def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
         if isinstance(init_value, timedelta):
@@ -134,9 +129,6 @@ class Time(YAMLObjectWrapper):
 
     def __float__(self) -> float:
         return cast(float, self.value.total_seconds())
-
-    def __repr__(self) -> str:
-        return f'Time({self.value})'
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(

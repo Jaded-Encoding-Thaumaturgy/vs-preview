@@ -12,7 +12,7 @@ T = TypeVar('T', VideoOutput, AudioOutput, SceningList, float)
 
 
 class ComboBox(QComboBox, Generic[T]):
-    def __class_getitem__(cls, ty: Type[T]) -> Type:
+    def __class_getitem__(cls, content_type: Type[T]) -> Type:
         type_specializations: Mapping[Type, Type] = {
             VideoOutput: _ComboBox_Output,
             AudioOutput: _ComboBox_AudioOutput,
@@ -21,16 +21,15 @@ class ComboBox(QComboBox, Generic[T]):
         }
 
         try:
-            return type_specializations[ty]
+            return type_specializations[content_type]
         except KeyError:
             raise TypeError
 
     indexChanged = pyqtSignal(int, int)
+    content_type: Type[T]
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-
-        self.ty: Type[T]
 
         self.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
 
@@ -56,34 +55,34 @@ class ComboBox(QComboBox, Generic[T]):
 
 
 class _ComboBox_Output(ComboBox):
-    ty = VideoOutput
+    content_type = VideoOutput
     T = VideoOutput
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:
-        valueChanged = pyqtSignal(ty, object)
+        valueChanged = pyqtSignal(content_type, object)
 
 
 class _ComboBox_AudioOutput(ComboBox):
-    ty = AudioOutput
+    content_type = AudioOutput
     T = AudioOutput
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:
         valueChanged = pyqtSignal(object, object)
 
 
 class _ComboBox_SceningList(ComboBox):
-    ty = SceningList
+    content_type = SceningList
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:
-        valueChanged = pyqtSignal(ty, object)
+        valueChanged = pyqtSignal(content_type, object)
 
 
 class _ComboBox_float(ComboBox):
-    ty = float
+    content_type = float
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(ty, Optional[ty])
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:
-        valueChanged = pyqtSignal(ty, object)
+        valueChanged = pyqtSignal(content_type, object)

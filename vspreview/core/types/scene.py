@@ -51,10 +51,14 @@ class Scene(YAMLObjectWrapper):
     def __repr__(self) -> str:
         return 'Scene({}, {}, \'{}\')'.format(self.start, self.end, self.label)
 
-    def __eq__(self, other: Scene) -> bool:  # type: ignore
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Scene):
+            raise NotImplementedError
         return self.start == other.start and self.end == other.end
 
-    def __gt__(self, other: Scene) -> bool:  # type: ignore
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, Scene):
+            raise NotImplementedError
         if self.start != other.start:
             return self.start > other.start
         else:

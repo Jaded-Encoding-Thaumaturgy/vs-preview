@@ -23,7 +23,6 @@ class VideoOutputNode():
 
 class VideoOutput(YAMLObject):
     yaml_tag = '!VideoOutput'
-    vs_type = vs.VideoOutputTuple
 
     class Resizer:
         Bilinear = core.resize.Bilinear

@@ -889,16 +889,16 @@ class MainWindow(AbstractMainWindow):
 
         self.update_statusbar_output_info()
 
-    @property  # type: ignore
-    def current_output(self) -> VideoOutput:  # type: ignore
+    @property
+    def current_output(self) -> VideoOutput:
         return cast(VideoOutput, self.toolbars.main.outputs_combobox.currentData())
 
     @current_output.setter
     def current_output(self, value: VideoOutput) -> None:
         self.switch_output(self.outputs.index_of(value))
 
-    @property  # type: ignore
-    def current_frame(self) -> Frame:  # type: ignore
+    @property
+    def current_frame(self) -> Frame:
         return self.current_output.last_showed_frame
 
     @current_frame.setter
@@ -906,8 +906,8 @@ class MainWindow(AbstractMainWindow):
         self.switch_frame(value)
 
     @property
-    def outputs(self) -> VideoOutputs:  # type: ignore
-        return self.toolbars.main.outputs  # type: ignore
+    def outputs(self) -> VideoOutputs:
+        return cast(VideoOutputs, self.toolbars.main.outputs)
 
     def handle_script_error(self, message: str) -> None:
         self.script_error_dialog.label.setText(message)

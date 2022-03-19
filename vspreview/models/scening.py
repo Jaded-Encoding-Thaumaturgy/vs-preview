@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from bisect import bisect_right
-from typing import Any, cast, Iterator, List, Mapping, Tuple
+from typing import Any, Iterator, List, Mapping, Tuple
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel, QAbstractListModel
 
@@ -309,9 +309,9 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         if not index.isValid():
-            return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
+            return Qt.ItemFlags(Qt.ItemIsEnabled)
 
-        return cast(Qt.ItemFlags, super().flags(index) | Qt.ItemIsEditable)  # type: ignore
+        return super().flags(index) | Qt.ItemIsEditable  # type: ignore
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid():

@@ -6,7 +6,7 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
-from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Callable, Type, TypeVar
+from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar
 
 from .better_abc import abstract_attribute
 from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
@@ -55,20 +55,76 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
     def show_message(self, message: str) -> None:
         raise NotImplementedError
 
-    app_settings: AbstractAppSettings = abstract_attribute()
-    central_widget: QWidget = abstract_attribute()
-    clipboard: QClipboard = abstract_attribute()
-    current_frame: Frame = abstract_attribute()
-    current_output: VideoOutput = abstract_attribute()
-    display_scale: float = abstract_attribute()
-    graphics_scene: QGraphicsScene = abstract_attribute()
-    graphics_view: QGraphicsView = abstract_attribute()
-    outputs: VideoOutputs = abstract_attribute()
-    timeline: Timeline = abstract_attribute()
-    toolbars: AbstractToolbars = abstract_attribute()
-    save_on_exit: bool = abstract_attribute()
-    script_path: Path = abstract_attribute()
-    statusbar: QStatusBar = abstract_attribute()
+    if TYPE_CHECKING:
+        @property
+        def app_settings(self) -> AbstractAppSettings: ...
+        @app_settings.setter
+        def app_settings(self) -> None: ...
+        @property
+        def central_widget(self) -> QWidget: ...
+        @central_widget.setter
+        def central_widget(self) -> None: ...
+        @property
+        def clipboard(self) -> QClipboard: ...
+        @clipboard.setter
+        def clipboard(self) -> None: ...
+        @property
+        def current_frame(self) -> Frame: ...
+        @current_frame.setter
+        def current_frame(self) -> None: ...
+        @property
+        def current_output(self) -> VideoOutput: ...
+        @current_output.setter
+        def current_output(self) -> None: ...
+        @property
+        def display_scale(self) -> float: ...
+        @display_scale.setter
+        def display_scale(self) -> None: ...
+        @property
+        def graphics_scene(self) -> QGraphicsScene: ...
+        @graphics_scene.setter
+        def graphics_scene(self) -> None: ...
+        @property
+        def graphics_view(self) -> QGraphicsView: ...
+        @graphics_view.setter
+        def graphics_view(self) -> None: ...
+        @property
+        def outputs(self) -> VideoOutputs: ...
+        @property
+        def timeline(self) -> Timeline: ...
+        @timeline.setter
+        def timeline(self) -> None: ...
+        @property
+        def toolbars(self) -> AbstractToolbars: ...
+        @toolbars.setter
+        def toolbars(self) -> None: ...
+        @property
+        def save_on_exit(self) -> bool: ...
+        @save_on_exit.setter
+        def save_on_exit(self) -> None: ...
+        @property
+        def script_path(self) -> Path: ...
+        @script_path.setter
+        def script_path(self) -> None: ...
+        @property
+        def statusbar(self) -> QStatusBar: ...
+        @statusbar.setter
+        def statusbar(self) -> None: ...
+    else:
+        app_settings: AbstractAppSettings = abstract_attribute()
+        central_widget: QWidget = abstract_attribute()
+        clipboard: QClipboard = abstract_attribute()
+        current_frame: Frame = abstract_attribute()
+        current_output: VideoOutput = abstract_attribute()
+        display_scale: float = abstract_attribute()
+        graphics_scene: QGraphicsScene = abstract_attribute()
+        graphics_view: QGraphicsView = abstract_attribute()
+        outputs: VideoOutputs = abstract_attribute()
+        timeline: Timeline = abstract_attribute()
+        toolbars: AbstractToolbars = abstract_attribute()
+        save_on_exit: bool = abstract_attribute()
+        script_path: Path = abstract_attribute()
+        statusbar: QStatusBar = abstract_attribute()
 
 
 class AbstractToolbar(QWidget, QABC):
@@ -197,31 +253,41 @@ def main_window() -> AbstractMainWindow:
     raise RuntimeError
 
 
+class _OneArgumentFunction():
+    def __call__(self, _arg0: T) -> Any:
+        ...
+
+
+class _SetterFunction():
+    def __call__(self, _arg0: str, _arg1: T) -> Any:
+        ...
+
+
 def try_load(
-    state: Mapping[str, Any], name: str, ty: Type[T],
-    receiver: T | Callable[[T], Any] | Callable[[str, T], Any],
+    state: Mapping[str, Any], name: str, expected_type: Type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction,
     error_msg: str | None = None
 ) -> None:
     if error_msg is None:
         pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
-        caller_name = inspect.stack()[1][0].f_locals["self"].__class__.__name__  # type: ignore
+        caller_name = inspect.stack()[1][0].f_locals['self'].__class__.__name__
         error_msg = f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
 
     try:
         value = state[name]
-        if not isinstance(value, ty):
+        if not isinstance(value, expected_type):
             raise TypeError
     except (KeyError, TypeError):
         logging.warning(error_msg)
     else:
-        if isinstance(receiver, ty):
+        if isinstance(receiver, expected_type):
             receiver = value
         elif callable(receiver):
             try:
-                receiver(name, value)  # type: ignore
+                cast(_SetterFunction, receiver)(name, value)
             except Exception:
-                receiver(value)  # type: ignore
-        elif hasattr(receiver, name) and isinstance(getattr(receiver, name), ty):
+                cast(_OneArgumentFunction, receiver)(value)
+        elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
             try:
                 receiver.__setattr__(name, value)
             except AttributeError:

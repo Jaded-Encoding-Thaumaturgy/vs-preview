@@ -18,7 +18,6 @@ core = vs.core
 
 class AudioOutput(YAMLObject):
     yaml_tag = '!AudioOutput'
-    vs_type = vs.AudioNode
 
     SAMPLES_PER_FRAME = 3000
 

@@ -10,7 +10,7 @@ core = vs.core
 
 class YAMLObjectWrapper(YAMLObject):
     yaml_tag: str
-    value: Any
+    value: int
 
     def __int__(self) -> int:
         return int(self.value)
@@ -24,13 +24,17 @@ class YAMLObjectWrapper(YAMLObject):
     def __str__(self) -> str:
         return str(self.value)
 
-    def __eq__(self, other: YAMLObjectWrapper) -> bool:  # type: ignore
-        return self.value == other.value  # type: ignore
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, YAMLObjectWrapper):
+            raise NotImplementedError
+        return self.value == other.value
 
-    def __gt__(self, other: YAMLObjectWrapper) -> bool:
-        return self.value > other.value  # type: ignore
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, YAMLObjectWrapper):
+            raise NotImplementedError
+        return self.value > other.value
 
-    def __ne__(self, other: YAMLObjectWrapper) -> bool:  # type: ignore
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __le__(self, other: YAMLObjectWrapper) -> bool:

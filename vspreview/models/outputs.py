@@ -12,11 +12,9 @@ T = TypeVar('T', VideoOutput, AudioOutput)
 
 
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
-    ty: Type[T]
+    out_type: Type[T]
 
     __slots__ = ('items')
-
-    supported_types = {VideoOutput: 'video', AudioOutput: 'audio'}
 
     def __init__(self, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
@@ -29,13 +27,13 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         main_window().reload_signal.connect(self.clear_outputs)
 
         for i, vs_output in outputs.items():
-            if not isinstance(vs_output, self.ty.vs_type):
+            if not isinstance(vs_output, self.vs_type):
                 continue
             try:
                 output = local_storage[str(i)]
                 output.__init__(vs_output, i)  # type: ignore
             except KeyError:
-                output = self.ty(vs_output, i)
+                output = self.out_type(vs_output, i)
 
             self.items.append(output)
 
@@ -89,7 +87,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         if not index.isValid():
             return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
 
-        return cast(Qt.ItemFlags, super().flags(index) | Qt.ItemIsEditable)  # type: ignore
+        return super().flags(index) | Qt.ItemIsEditable  # type: ignore
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid():
@@ -101,35 +99,30 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
         self.items[index.row()].name = value
         self.dataChanged.emit(index, index, [role])
+
         return True
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return dict(zip([
-            str(output.index) for output in self.items],
-            [output for output in self.items]
-        ), type=self.supported_types[self.T])
+        return dict(zip([str(x.index) for x in self.items], self.items), type=self.out_type)
 
     def __setstate__(self, state: Mapping[str, T | str]) -> None:
         try:
             type_string = state['type']
             if not isinstance(type_string, str):
-                raise TypeError(
-                    'Storage loading: Outputs: value of key "type" is not a string')
+                raise TypeError('Storage loading: Outputs: value of key "type" is not a string')
 
         except KeyError:
             raise KeyError('Storage loading: Outputs: key "type" is missing') from KeyError
-
-        ty = dict(zip(self.supported_types.values(), self.supported_types.keys()))[type_string]
 
         for key, value in state.items():
             if key == 'type':
                 continue
             if not isinstance(key, str):
                 raise TypeError(f'Storage loading: Outputs: key {key} is not a string')
-            if not isinstance(value, ty):
-                raise TypeError(f'Storage loading: Outputs: value of key {key} is not an Output')
+            if not isinstance(value, self.out_type):
+                raise TypeError(f'Storage loading: Outputs: value of key {key} is not {self.out_type.__name__}')
 
-        self.__init__(ty, state)  # type: ignore
+        self.__init__(state)  # type: ignore
 
     if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/2220
@@ -138,9 +131,11 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
 class VideoOutputs(Outputs[VideoOutput]):
     yaml_tag = '!VideoOutputs'
-    ty = VideoOutput
+    out_type = VideoOutput
+    vs_type = vs.VideoOutputTuple
 
 
 class AudioOutputs(Outputs[AudioOutput]):
     yaml_tag = '!AudioOutputs'
-    ty = AudioOutput
+    out_type = AudioOutput
+    vs_type = vs.AudioNode

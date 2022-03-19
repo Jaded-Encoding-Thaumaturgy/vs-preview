@@ -1,4 +1,4 @@
 #!/usr/bin/python3
-from vspreview import main
+from vspreview.init import main
 
 main()

@@ -18,20 +18,19 @@ from .settings import BenchmarkSettings
 
 
 class BenchmarkToolbar(AbstractToolbar):
-    _storable_attrs = [
-        'settings',
-    ]
-    __slots__ = _storable_attrs + [
-        'start_frame_control', 'start_time_control',
-        'end_frame_control', 'end_time_control',
-        'total_frames_control', 'total_time_control',
-        'prefetch_checkbox', 'unsequenced_checkbox',
-        'run_abort_button', 'info_label',
-        'running', 'unsequenced', 'run_start_time',
-        'start_frame', 'end_frame', 'total_frames',
-        'frames_left', 'buffer', 'update_info_timer',
-        'sequenced_timer', 'settings'
-    ]
+    _storable_attrs = ('settings',)
+
+    __slots__ = (
+        *_storable_attrs, 'start_frame_control',
+        'start_time_control', 'end_frame_control',
+        'end_time_control', 'total_frames_control',
+        'total_time_control', 'prefetch_checkbox',
+        'unsequenced_checkbox', 'run_abort_button',
+        'info_label', 'running', 'unsequenced',
+        'run_start_time', 'start_frame', 'end_frame',
+        'total_frames', 'frames_left', 'buffer',
+        'update_info_timer', 'sequenced_timer'
+    )
 
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, 'Benchmark', BenchmarkSettings())
@@ -308,7 +307,4 @@ class BenchmarkToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(
-            state, 'settings', BenchmarkSettings, self.settings,
-            'Storage loading: Benchmark toolbar: failed to parse settings.'
-        )
+        try_load(state, 'settings', BenchmarkSettings, self.settings)

@@ -20,10 +20,10 @@ from .settings import PlaybackSettings
 
 
 class PlaybackToolbar(AbstractToolbar):
-    yaml_tag = '!PlaybackToolbar'
+    _storable_attrs = ('settings',)
 
     __slots__ = (
-        'play_timer', 'fps_timer', 'fps_history', 'current_fps',
+        *_storable_attrs, 'play_timer', 'fps_timer', 'fps_history', 'current_fps',
         'seek_n_frames_b_button', 'seek_to_prev_button', 'play_pause_button',
         'seek_to_next_button', 'seek_n_frames_f_button', 'play_n_frames_button',
         'seek_frame_control', 'seek_time_control',
@@ -31,7 +31,7 @@ class PlaybackToolbar(AbstractToolbar):
         'play_start_time', 'play_start_frame', 'play_end_time',
         'play_end_frame', 'play_buffer', 'toggle_button', 'play_timer_audio',
         'current_audio_frame', 'play_buffer_audio', 'audio_outputs',
-        'audio_outputs_combobox', 'settings'
+        'audio_outputs_combobox'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -477,6 +477,9 @@ class PlaybackToolbar(AbstractToolbar):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {
+            attr_name: getattr(self, attr_name)
+            for attr_name in self._storable_attrs
+        } | {
             'seek_interval_frame': self.seek_frame_control.value(),
             'audio_outputs': self.audio_outputs,
             'current_audio_output_index': self.audio_outputs_combobox.currentIndex(),
@@ -484,25 +487,10 @@ class PlaybackToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(
-            state, 'seek_interval_frame', Frame,
-            self.seek_frame_control.setValue,
-            'Storage loading: PlaybackToolbar: failed to parse seek_interval_frame'
-        )
+        try_load(state, 'seek_interval_frame', Frame, self.seek_frame_control.setValue)
 
-        try_load(
-            state, 'audio_outputs', AudioOutputs, self.audio_outputs,
-            'Storage loading: PlaybackToolbar: failed to parse audio_outputs'
-        )
-
+        try_load(state, 'audio_outputs', AudioOutputs, self.audio_outputs)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-        try_load(
-            state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex,
-            'Storage loading: PlaybackToolbar: failed to parse current_audio_output_index'
-        )
-
-        try_load(
-            state, 'audio_muted', bool, self.mute_checkbox.setChecked,
-            'Storage loading: PlaybackToolbar: failed to parse audio_muted'
-        )
+        try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)
+        try_load(state, 'audio_muted', bool, self.mute_checkbox.setChecked)

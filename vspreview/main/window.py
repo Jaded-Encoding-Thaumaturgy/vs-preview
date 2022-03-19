@@ -480,8 +480,8 @@ class MainWindow(AbstractMainWindow):
             for attr_name in self.storable_attrs
         } | {
             'timeline_mode': self.timeline.mode,
-            'window_geometry': self.saveGeometry(),
-            'window_state': self.saveState(),
+            'window_geometry': cast(bytes, self.saveGeometry()),
+            'window_state': cast(bytes, self.saveState())
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:

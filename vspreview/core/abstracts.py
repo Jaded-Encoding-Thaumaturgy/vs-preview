@@ -135,10 +135,10 @@ class AbstractToolbar(QWidget, QABC):
     else:
         notches_changed = pyqtSignal(object)
 
-    def __init__(self, main: AbstractMainWindow, name: str, settings: QWidget | None = None) -> None:
+    def __init__(self, main: AbstractMainWindow, name: str, settings: QWidget) -> None:
         super().__init__(main.central_widget)
         self.main = main
-        self.settings = settings if settings is not None else QWidget()
+        self.settings = settings
 
         self.main.app_settings.addTab(self.settings, name)
         self.setFocusPolicy(Qt.ClickFocus)

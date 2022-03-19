@@ -20,17 +20,18 @@ from .settings import SceningSettings
 
 
 class SceningToolbar(AbstractToolbar):
+    _storable_attrs = (
+        'settings', 'first_frame', 'second_frame'
+    )
+
     __slots__ = (
-        'first_frame', 'second_frame',
-        'export_template_pattern', 'export_template_scenes_pattern',
-        'scening_list_dialog', 'supported_file_types',
-        'add_list_button', 'remove_list_button', 'view_list_button',
-        'toggle_first_frame_button', 'toggle_second_frame_button', 'add_single_frame_button',
-        'add_to_list_button', 'remove_last_from_list_button',
+        *_storable_attrs, 'export_template_pattern', 'export_template_scenes_pattern',
+        'scening_list_dialog', 'supported_file_types', 'add_list_button', 'remove_list_button',
+        'view_list_button', 'toggle_first_frame_button', 'toggle_second_frame_button',
+        'add_single_frame_button', 'add_to_list_button', 'remove_last_from_list_button',
         'export_single_line_button', 'export_template_lineedit', 'export_multiline_button',
         'status_label', 'import_file_button', 'items_combobox', 'remove_at_current_frame_button',
-        'seek_to_next_button', 'seek_to_prev_button',
-        'toggle_button', 'settings'
+        'seek_to_next_button', 'seek_to_prev_button', 'toggle_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -847,8 +848,9 @@ class SceningToolbar(AbstractToolbar):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {
-            'first_frame': self.first_frame,
-            'second_frame': self.second_frame,
+            attr_name: getattr(self, attr_name)
+            for attr_name in self._storable_attrs
+        } | {
             'label': self.label_lineedit.text(),
             'scening_export_template': self.export_template_lineedit.text(),
         }

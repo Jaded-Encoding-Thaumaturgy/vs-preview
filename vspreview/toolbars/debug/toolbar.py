@@ -11,10 +11,12 @@ from .settings import DebugSettings
 
 
 class DebugToolbar(AbstractToolbar):
+    _storable_attrs = ('settings',)
+
     __slots__ = (
-        'test_button',
+        *_storable_attrs, 'test_button',
         'exec_lineedit', 'exec_button',
-        'test_button', 'toggle_button', 'settings'
+        'test_button', 'toggle_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -73,6 +75,12 @@ class DebugToolbar(AbstractToolbar):
 
     def break_button_clicked(self, checked: bool | None = None) -> None:
         breakpoint()
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {
+            attr_name: getattr(self, attr_name)
+            for attr_name in self._storable_attrs
+        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'settings', DebugSettings, self.settings)

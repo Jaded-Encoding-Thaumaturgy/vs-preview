@@ -3,32 +3,32 @@ from __future__ import annotations
 import yaml
 import logging
 from pathlib import Path
-from typing import Any, List, Mapping
+from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
 
 from ...core.types import VideoOutput
-from ...core import AbstractMainWindow, AbstractToolbar, Time
+from ...core import AbstractMainWindow, AbstractToolbar, Time, try_load
 from ...utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
 
 from .settings import MiscSettings
 
 
 class MiscToolbar(AbstractToolbar):
-    storable_attrs: List[str] = []
-    __slots__ = storable_attrs + [
-        'autosave_timer', 'reload_script_button',
+    _storable_attrs = ('settings',)
+
+    __slots__ = (
+        *_storable_attrs, 'autosave_timer', 'reload_script_button',
         'save_button', 'autosave_checkbox',
         'keep_on_top_checkbox', 'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
-        'toggle_button', 'save_file_types', 'copy_frame_button', 'settings'
-    ]
+        'toggle_button', 'save_file_types', 'copy_frame_button'
+    )
 
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, 'Misc', MiscSettings())
         self.setup_ui()
-        self.settings = self.main.settings
 
         self.save_template_lineedit.setText(self.main.SAVE_TEMPLATE)
 
@@ -43,7 +43,7 @@ class MiscToolbar(AbstractToolbar):
         self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)
         self.save_frame_as_button.clicked.connect(self.on_save_frame_as_clicked)
         self.show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)
-        self.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
+        self.main.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
         add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_script_button.click)
         add_shortcut(Qt.ALT + Qt.Key_S, self.save_button.click)
@@ -84,8 +84,7 @@ class MiscToolbar(AbstractToolbar):
         layout.addWidget(self.save_frame_as_button)
 
         save_template_label = QLabel(self)
-        save_template_label.setObjectName(
-            'MiscToolbar.setup_ui.save_template_label')
+        save_template_label.setObjectName('MiscToolbar.setup_ui.save_template_label')
         save_template_label.setText('Save file name template:')
         layout.addWidget(save_template_label)
 
@@ -211,21 +210,17 @@ class MiscToolbar(AbstractToolbar):
         )
 
     def __getstate__(self) -> Mapping[str, Any]:
-        state = {
+        return {
             attr_name: getattr(self, attr_name)
-            for attr_name in self.storable_attrs
-        }
-        state.update({
+            for attr_name in self._storable_attrs
+        } | {
             'save_file_name_template': self.save_template_lineedit.text(),
             'show_debug': self.show_debug_checkbox.isChecked()
-        })
-        state.update(super().__getstate__())
-        return state
+        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try:
-            self.save_template_lineedit.setText(
-                state['save_file_name_template'])
+            self.save_template_lineedit.setText(state['save_file_name_template'])
         except (KeyError, TypeError):
             logging.warning(
                 'Storage loading: failed to parse save file name template.')
@@ -238,6 +233,6 @@ class MiscToolbar(AbstractToolbar):
             logging.warning('Storage loading: failed to parse show debug flag.')
             show_debug = self.main.DEBUG_TOOLBAR
 
-        self.show_debug_checkbox.setChecked(show_debug)
+        try_load(state, 'settings', MiscSettings, self.settings)
 
-        super().__setstate__(state)
+        self.show_debug_checkbox.setChecked(show_debug)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import vapoursynth as vs
-from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING, Generic
+from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, Generic
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 
@@ -52,6 +52,9 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
     def __getiter__(self) -> Iterator[T]:
         return iter(self.items)
+    
+    def __iter__(self) -> Iterator[T]:
+        return self.__getiter__()
 
     def append(self, item: T) -> int:
         index = len(self.items)
@@ -103,7 +106,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         return True
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return dict(zip([str(x.index) for x in self.items], self.items), type=self.out_type)
+        return dict(zip([str(x.index) for x in self.items], self.items), type=self.out_type.__name__)
 
     def __setstate__(self, state: Mapping[str, T | str]) -> None:
         try:
@@ -123,10 +126,6 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
                 raise TypeError(f'Storage loading: Outputs: value of key {key} is not {self.out_type.__name__}')
 
         self.__init__(state)  # type: ignore
-
-    if TYPE_CHECKING:
-        # https://github.com/python/mypy/issues/2220
-        def __iter__(self) -> Iterator[T]: ...
 
 
 class VideoOutputs(Outputs[VideoOutput]):

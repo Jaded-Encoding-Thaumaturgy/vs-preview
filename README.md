@@ -1,31 +1,21 @@
-Standalone preview for VapourSynth scripts. Meant to be paired with a code editor with integrated terminal like Visual Studio Code.
+## Standalone preview for VapourSynth scripts.
 
-Feel free to contact me in [Telegram chat](https://t.me/vspreview_chat). Any feedback is appreciated.
+This program is meant to be paired with a code editor with integrated terminal like Visual Studio Code.
 
 # Prerequisites
 
-* Python 3.8
-* Vapoursynth R49
-* pip modules in `requirements.txt`
+1. [Python](https://www.Python.org/downloads) (3.9+ required)
+    * Make sure to install Python to your `PATH`.
+1. [Vapoursynth](https://github.com/vapoursynth/vapoursynth/releases) (R57+ required)
 
-You can use the following command to install pip modules:
+# Installation and usage
 
-`pip install -r requirements.txt`
+```bash
+pip install -U git+https://github.com/Setsugennoao/vapoursynth-preview.git
+```
 
-# Usage
+It can then be used by running `python -m vspreview script.vpy` or your preferred way in your IDE.
 
-Assuming `script.vpy` is your VapourSynth script, there are two ways to run vspreview:
- * `python run.py script.vpy`
- * Add this directory (repository root) to your *PYTHONPATH*, and `python -m vspreview script.vpy`
+# IDE Integration
 
-# Note
-
-WIP, so there're some debug stuff among the logic, but not much.
-
-# Development
-
-pip modules:
-
-`mypy pycodestyle pylint pyqt5-stubs`
-
-PyQt5 stubs may be incomplete when it comes to signals.
+* [VSCode](docs/vscode_install.md)

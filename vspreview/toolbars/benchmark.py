@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel
 from ..widgets import FrameEdit, TimeEdit
 from ..utils import get_usable_cpus_count, qt_silent_call, set_qobject_names, vs_clear_cache, strfdelta
 from ..core import (
-    AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval, QYAMLObjectSingleton, try_load
+    AbstractMainWindow, AbstractToolbar, Frame, Time, QYAMLObjectSingleton, try_load
 )
 
 
@@ -54,7 +54,7 @@ class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
         self.refresh_interval_label.setText('Refresh interval')
         refresh_interval_layout.addWidget(self.refresh_interval_label)
 
-        self.refresh_interval_control = TimeEdit[TimeInterval](self)
+        self.refresh_interval_control = TimeEdit(self)
         refresh_interval_layout.addWidget(self.refresh_interval_control)
 
         self.frame_data_sharing_fix_checkbox = QCheckBox(self)
@@ -65,7 +65,7 @@ class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
 
     def set_defaults(self) -> None:
         self.clear_cache_checkbox.setChecked(False)
-        self.refresh_interval_control.setValue(TimeInterval(milliseconds=150))
+        self.refresh_interval_control.setValue(Time(milliseconds=150))
         self.frame_data_sharing_fix_checkbox.setChecked(True)
 
     @property
@@ -73,7 +73,7 @@ class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
         return self.clear_cache_checkbox.isChecked()
 
     @property
-    def refresh_interval(self) -> TimeInterval:
+    def refresh_interval(self) -> Time:
         return self.refresh_interval_control.value()
 
     @property
@@ -95,7 +95,7 @@ class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
             'Storage loading: Benchmark settings: failed to parse clear cache flag.'
         )
         try_load(
-            state, 'refresh_interval', TimeInterval,
+            state, 'refresh_interval', Time,
             self.refresh_interval_control.setValue,
             'Storage loading: Benchmark settings: failed to parse refresh interval.'
         )
@@ -133,8 +133,8 @@ class BenchmarkToolbar(AbstractToolbar):
         self.run_start_time = 0.0
         self.start_frame = Frame(0)
         self.end_frame = Frame(0)
-        self.total_frames = FrameInterval(0)
-        self.frames_left = FrameInterval(0)
+        self.total_frames = Frame(0)
+        self.frames_left = Frame(0)
 
         self.sequenced_timer = QTimer()
         self.sequenced_timer.setTimerType(Qt.PreciseTimer)
@@ -151,7 +151,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.end_time_control.valueChanged.connect(lambda value: self.update_controls(end=Frame(value)))
         self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
         self.total_time_control.valueChanged.connect(
-            lambda value: self.update_controls(total=FrameInterval(value))
+            lambda value: self.update_controls(total=Frame(value))
         )
         self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
         self.run_abort_button.clicked.connect(self.on_run_abort_pressed)
@@ -170,10 +170,10 @@ class BenchmarkToolbar(AbstractToolbar):
         start_label.setText('Start:')
         layout.addWidget(start_label)
 
-        self.start_frame_control = FrameEdit[Frame](self)
+        self.start_frame_control = FrameEdit(self)
         layout.addWidget(self.start_frame_control)
 
-        self.start_time_control = TimeEdit[Time](self)
+        self.start_time_control = TimeEdit(self)
         layout.addWidget(self.start_time_control)
 
         end_label = QLabel(self)
@@ -181,10 +181,10 @@ class BenchmarkToolbar(AbstractToolbar):
         end_label.setText('End:')
         layout.addWidget(end_label)
 
-        self.end_frame_control = FrameEdit[Frame](self)
+        self.end_frame_control = FrameEdit(self)
         layout.addWidget(self.end_frame_control)
 
-        self.end_time_control = TimeEdit[Time](self)
+        self.end_time_control = TimeEdit(self)
         layout.addWidget(self.end_time_control)
 
         total_label = QLabel(self)
@@ -192,11 +192,11 @@ class BenchmarkToolbar(AbstractToolbar):
         total_label.setText('Total:')
         layout.addWidget(total_label)
 
-        self.total_frames_control = FrameEdit[FrameInterval](self)
-        self.total_frames_control.setMinimum(FrameInterval(1))
+        self.total_frames_control = FrameEdit(self)
+        self.total_frames_control.setMinimum(Frame(1))
         layout.addWidget(self.total_frames_control)
 
-        self.total_time_control = TimeEdit[TimeInterval](self)
+        self.total_time_control = TimeEdit(self)
         layout.addWidget(self.total_time_control)
 
         self.prefetch_checkbox = QCheckBox(self)
@@ -235,7 +235,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.end_time_control.setMaximum(self.main.current_output.end_time)
         self.total_frames_control.setMaximum(self.main.current_output.total_frames)
         self.total_time_control.setMaximum(self.main.current_output.total_time)
-        self.total_time_control.setMaximum(TimeInterval(FrameInterval(1)))
+        self.total_time_control.setMaximum(Time(Frame(1)))
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
@@ -267,7 +267,7 @@ class BenchmarkToolbar(AbstractToolbar):
             if self.unsequenced:
                 self._request_next_frame_unsequenced()
             else:
-                frame = self.start_frame + FrameInterval(offset)
+                frame = self.start_frame + Frame(offset)
                 future = self.main.current_output.prepared.clip.get_frame_async(int(frame))
                 self.buffer.appendleft(future)
 
@@ -287,28 +287,28 @@ class BenchmarkToolbar(AbstractToolbar):
             self.run_abort_button.click()
 
     def _request_next_frame_sequenced(self) -> None:
-        if self.frames_left <= FrameInterval(0):
+        if self.frames_left <= Frame(0):
             self.abort()
             return
 
         self.buffer.pop().result()
 
-        next_frame = self.end_frame + FrameInterval(1) - self.frames_left
+        next_frame = self.end_frame + Frame(1) - self.frames_left
         if next_frame <= self.end_frame:
             new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
             self.buffer.appendleft(new_future)
 
-        self.frames_left -= FrameInterval(1)
+        self.frames_left -= Frame(1)
 
     def _request_next_frame_unsequenced(self, future: Future | None = None) -> None:
-        if self.frames_left <= FrameInterval(0):
+        if self.frames_left <= Frame(0):
             self.abort()
             return
 
         if self.running:
-            next_frame = self.end_frame + FrameInterval(1) - self.frames_left
+            next_frame = self.end_frame + Frame(1) - self.frames_left
             new_future = self.main.current_output.prepared.clip.get_frame_async(
                 int(next_frame)
             )
@@ -316,7 +316,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         if future is not None:
             future.result()
-        self.frames_left -= FrameInterval(1)
+        self.frames_left -= Frame(1)
 
     def on_run_abort_pressed(self, checked: bool) -> None:
         if checked:
@@ -344,7 +344,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self. unsequenced_checkbox.setEnabled(new_state)
 
     def update_controls(
-        self, start: Frame | None = None, end: Frame | None = None, total: FrameInterval | None = None
+        self, start: Frame | None = None, end: Frame | None = None, total: Frame | None = None
     ) -> None:
         if start is not None:
             end = self.end_frame_control.value()
@@ -352,7 +352,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
             if start > end:
                 end = start
-            total = end - start + FrameInterval(1)
+            total = end - start + Frame(1)
 
         elif end is not None:
             start = self. start_frame_control.value()
@@ -360,12 +360,12 @@ class BenchmarkToolbar(AbstractToolbar):
 
             if end < start:
                 start = end
-            total = end - start + FrameInterval(1)
+            total = end - start + Frame(1)
 
         elif total is not None:
             start = self.start_frame_control.value()
             end = self.end_frame_control.value()
-            old_total = end - start + FrameInterval(1)
+            old_total = end - start + Frame(1)
             delta = total - old_total
 
             end += delta
@@ -380,10 +380,10 @@ class BenchmarkToolbar(AbstractToolbar):
         qt_silent_call(self.end_frame_control.setValue, end)
         qt_silent_call(self.end_time_control.setValue, Time(end))
         qt_silent_call(self.total_frames_control.setValue, total)
-        qt_silent_call(self.total_time_control.setValue, TimeInterval(total))
+        qt_silent_call(self.total_time_control.setValue, Time(total))
 
     def update_info(self) -> None:
-        run_time = TimeInterval(seconds=(perf_counter() - self.run_start_time))
+        run_time = Time(seconds=(perf_counter() - self.run_start_time))
         frames_done = self.total_frames - self.frames_left
         fps = int(frames_done) / float(run_time)
 

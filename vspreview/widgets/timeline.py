@@ -10,7 +10,7 @@ from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
 from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QPalette, QPen, QMoveEvent, QMouseEvent, QResizeEvent
 
 from ..utils import strfdelta
-from ..core import AbstractToolbar, Frame, FrameInterval, Scene, Time, TimeInterval, TimeType, FrameType, main_window
+from ..core import AbstractToolbar, Frame, Scene, Time, Frame, main_window
 
 
 class Notch:
@@ -310,29 +310,29 @@ class Timeline(QWidget):
         self.full_repaint()
 
     notch_intervals_t = (
-        TimeInterval(seconds=1),
-        TimeInterval(seconds=2),
-        TimeInterval(seconds=5),
-        TimeInterval(seconds=10),
-        TimeInterval(seconds=15),
-        TimeInterval(seconds=30),
-        TimeInterval(seconds=60),
-        TimeInterval(seconds=90),
-        TimeInterval(seconds=120),
-        TimeInterval(seconds=300),
-        TimeInterval(seconds=600),
-        TimeInterval(seconds=900),
-        TimeInterval(seconds=1200),
-        TimeInterval(seconds=1800),
-        TimeInterval(seconds=2700),
-        TimeInterval(seconds=3600),
-        TimeInterval(seconds=5400),
-        TimeInterval(seconds=7200),
+        Time(seconds=1),
+        Time(seconds=2),
+        Time(seconds=5),
+        Time(seconds=10),
+        Time(seconds=15),
+        Time(seconds=30),
+        Time(seconds=60),
+        Time(seconds=90),
+        Time(seconds=120),
+        Time(seconds=300),
+        Time(seconds=600),
+        Time(seconds=900),
+        Time(seconds=1200),
+        Time(seconds=1800),
+        Time(seconds=2700),
+        Time(seconds=3600),
+        Time(seconds=5400),
+        Time(seconds=7200),
     )
 
-    def calculate_notch_interval_t(self, target_interval_x: int) -> TimeInterval:
+    def calculate_notch_interval_t(self, target_interval_x: int) -> Time:
         margin = 1 + self.main.TIMELINE_LABEL_NOTCHES_MARGIN / 100
-        target_interval_t = self.x_to_t(target_interval_x, TimeInterval)
+        target_interval_t = self.x_to_t(target_interval_x, Time)
         if target_interval_t >= self.notch_intervals_t[-1] * margin:
             return self.notch_intervals_t[-1]
         for interval in self.notch_intervals_t:
@@ -341,46 +341,46 @@ class Timeline(QWidget):
         raise RuntimeError
 
     notch_intervals_f = (
-        FrameInterval(1),
-        FrameInterval(5),
-        FrameInterval(10),
-        FrameInterval(20),
-        FrameInterval(25),
-        FrameInterval(50),
-        FrameInterval(75),
-        FrameInterval(100),
-        FrameInterval(200),
-        FrameInterval(250),
-        FrameInterval(500),
-        FrameInterval(750),
-        FrameInterval(1000),
-        FrameInterval(2000),
-        FrameInterval(2500),
-        FrameInterval(5000),
-        FrameInterval(7500),
-        FrameInterval(10000),
-        FrameInterval(20000),
-        FrameInterval(25000),
-        FrameInterval(50000),
-        FrameInterval(75000),
+        Frame(1),
+        Frame(5),
+        Frame(10),
+        Frame(20),
+        Frame(25),
+        Frame(50),
+        Frame(75),
+        Frame(100),
+        Frame(200),
+        Frame(250),
+        Frame(500),
+        Frame(750),
+        Frame(1000),
+        Frame(2000),
+        Frame(2500),
+        Frame(5000),
+        Frame(7500),
+        Frame(10000),
+        Frame(20000),
+        Frame(25000),
+        Frame(50000),
+        Frame(75000),
     )
 
-    def calculate_notch_interval_f(self, target_interval_x: int) -> FrameInterval:
+    def calculate_notch_interval_f(self, target_interval_x: int) -> Frame:
         margin = 1 + self.main.TIMELINE_LABEL_NOTCHES_MARGIN / 100
-        target_interval_f = self.x_to_f(target_interval_x, FrameInterval)
-        if target_interval_f >= FrameInterval(
+        target_interval_f = self.x_to_f(target_interval_x, Frame)
+        if target_interval_f >= Frame(
                 round(int(self.notch_intervals_f[-1]) * margin)):
             return self.notch_intervals_f[-1]
         for interval in self.notch_intervals_f:
-            if target_interval_f < FrameInterval(
+            if target_interval_f < Frame(
                     round(int(interval) * margin)):
                 return interval
         raise RuntimeError
 
-    def generate_label_format(self, notch_interval_t: TimeInterval, end_time: Time | TimeInterval) -> str:
-        if end_time >= TimeInterval(hours=1):
+    def generate_label_format(self, notch_interval_t: Time, end_time: Time | Time) -> str:
+        if end_time >= Time(hours=1):
             return '%h:%M:00'
-        elif notch_interval_t >= TimeInterval(minutes=1):
+        elif notch_interval_t >= Time(minutes=1):
             return '%m:00'
         else:
             return '%m:%S'
@@ -404,7 +404,7 @@ class Timeline(QWidget):
             raise TypeError
         self.update()
 
-    def t_to_x(self, t: TimeType) -> int:
+    def t_to_x(self, t: Time) -> int:
         width = self.rect_f.width()
         try:
             x = round(float(t) / float(self.end_t) * width)
@@ -412,11 +412,11 @@ class Timeline(QWidget):
             x = 0
         return x
 
-    def x_to_t(self, x: int, ty: Type[TimeType]) -> TimeType:
+    def x_to_t(self, x: int, ty: Type[Time]) -> Time:
         width = self.rect_f.width()
         return ty(seconds=(x * float(self.end_t) / width))
 
-    def f_to_x(self, f: FrameType) -> int:
+    def f_to_x(self, f: Frame) -> int:
         width = self.rect_f.width()
         try:
             x = round(int(f) / int(self.end_f) * width)
@@ -424,7 +424,7 @@ class Timeline(QWidget):
             x = 0
         return x
 
-    def x_to_f(self, x: int, ty: Type[FrameType]) -> FrameType:
+    def x_to_f(self, x: int, ty: Type[Frame]) -> Frame:
         width = self.rect_f.width()
         value = round(x / width * int(self.end_f))
         return ty(value)

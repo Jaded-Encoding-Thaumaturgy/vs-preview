@@ -4,7 +4,7 @@ import vapoursynth as vs
 from typing import Any, Mapping
 
 from .yaml import YAMLObjectWrapper
-from .units import Frame, FrameInterval
+from .units import Frame
 
 
 core = vs.core
@@ -60,7 +60,7 @@ class Scene(YAMLObjectWrapper):
         else:
             return self.end > other.end
 
-    def duration(self) -> FrameInterval:
+    def duration(self) -> Frame:
         return self.end - self.start
 
     def __contains__(self, frame: Frame) -> bool:

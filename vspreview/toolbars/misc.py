@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
 
 from ..core.types import VideoOutput
-from ..core import AbstractMainWindow, AbstractToolbar, TimeInterval
+from ..core import AbstractMainWindow, AbstractToolbar, Time
 from ..utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
 
 
@@ -141,10 +141,10 @@ class MiscToolbar(AbstractToolbar):
         if manually:
             self.main.show_message('Saved successfully')
 
-    def on_autosave_interval_changed(self, new_value: TimeInterval | None) -> None:
+    def on_autosave_interval_changed(self, new_value: Time | None) -> None:
         if new_value is None:
             return
-        if new_value == TimeInterval(seconds=0):
+        if new_value == Time(seconds=0):
             self.autosave_timer.stop()
         else:
             self.autosave_timer.start(round(float(new_value) * 1000))

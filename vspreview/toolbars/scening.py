@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
 from ..models import SceningList, SceningLists
 from ..widgets import ComboBox, Notches, TimeEdit, FrameEdit
 from ..utils import add_shortcut, fire_and_forget, qt_silent_call, set_qobject_names, set_status_label
-from ..core import AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval, try_load
+from ..core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load
 
 
 class SceningListDialog(QDialog):
@@ -63,16 +63,16 @@ class SceningListDialog(QDialog):
         scene_layout.setObjectName('SceningListDialog.setup_ui.scene_layout')
         layout.addLayout(scene_layout)
 
-        self.start_frame_control = FrameEdit[Frame](self)
+        self.start_frame_control = FrameEdit(self)
         scene_layout.addWidget(self.start_frame_control)
 
-        self.end_frame_control = FrameEdit[Frame](self)
+        self.end_frame_control = FrameEdit(self)
         scene_layout.addWidget(self.end_frame_control)
 
-        self.start_time_control = TimeEdit[Time](self)
+        self.start_time_control = TimeEdit(self)
         scene_layout.addWidget(self.start_time_control)
 
-        self.end_time_control = TimeEdit[Time](self)
+        self.end_time_control = TimeEdit(self)
         scene_layout.addWidget(self.end_time_control)
 
         self.label_lineedit = QLineEdit(self)
@@ -687,7 +687,7 @@ class SceningToolbar(AbstractToolbar):
 
             end = None
             if track.duration is not None:
-                end = Frame(offset + TimeInterval(track.duration))
+                end = Frame(offset + Time(track.duration))
 
             label = ''
             if track.title is not None:
@@ -725,11 +725,11 @@ class SceningToolbar(AbstractToolbar):
         frame = Frame(0)
         for match in pattern.finditer(path.read_text(), re.RegexFlag.MULTILINE):
             if int(match[1]) >= AV_CODEC_ID_FIRST_AUDIO:
-                frame += FrameInterval(1)
+                frame += Frame(1)
                 continue
 
             if not int(match[2]) == IS_KEY:
-                frame += FrameInterval(1)
+                frame += Frame(1)
                 continue
 
             try:
@@ -737,7 +737,7 @@ class SceningToolbar(AbstractToolbar):
             except ValueError:
                 out_of_range_count += 1
 
-            frame += FrameInterval(1)
+            frame += Frame(1)
 
     def import_matroska_xml_chapters(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''

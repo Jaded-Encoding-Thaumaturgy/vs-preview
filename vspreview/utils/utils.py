@@ -11,17 +11,17 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QWidget, QShortcut
 from PyQt5.QtCore import QTime, QSignalBlocker, QObject
 
-from ..core import main_window, TimeType, AbstractToolbar
+from ..core import main_window, Time, AbstractToolbar
 
 T = TypeVar('T')
 
 
-def to_qtime(time: TimeType) -> QTime:
+def to_qtime(time: Time) -> QTime:
     td = time.value
     return QTime(td.seconds // 3600, td.seconds // 60, td.seconds % 60, td.microseconds // 1000)
 
 
-def from_qtime(qtime: QTime, t: Type[TimeType]) -> TimeType:
+def from_qtime(qtime: QTime, t: Type[Time]) -> Time:
     return t(milliseconds=qtime.msecsSinceStartOfDay())
 
 
@@ -39,7 +39,7 @@ class DeltaTemplate(Template):
     delimiter = '%'
 
 
-def strfdelta(time: TimeType, output_format: str) -> str:
+def strfdelta(time: Time, output_format: str) -> str:
     d: MutableMapping[str, str] = {}
     td = time.value
     hours = td.seconds // 3600

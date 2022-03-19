@@ -8,7 +8,7 @@ from yaml import YAMLObject
 from typing import Any, Mapping
 
 from ..abstracts import main_window, try_load
-from .units import Frame, FrameInterval, Time, TimeInterval
+from .units import Frame, Time
 
 from PyQt5.QtMultimedia import QAudioFormat, QAudioOutput, QAudioDeviceInfo
 
@@ -78,8 +78,8 @@ class AudioOutput(YAMLObject):
         self.fps_num = self.format.sample_rate
         self.fps_den = self.format.samples_per_frame
         self.fps = self.fps_num / self.fps_den
-        self.total_frames = FrameInterval(self.vs_output.num_frames)
-        self.total_time = self.to_time_interval(self.total_frames - FrameInterval(1))
+        self.total_frames = Frame(self.vs_output.num_frames)
+        self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
 
@@ -120,13 +120,6 @@ class AudioOutput(YAMLObject):
 
     def to_time(self, frame: Frame) -> Time:
         return Time(seconds=self._calculate_seconds(int(frame)))
-
-    def to_frame_interval(self, time_interval: TimeInterval) -> FrameInterval:
-        return FrameInterval(self._calculate_frame(float(time_interval)))
-
-    def to_time_interval(self, frame_interval: FrameInterval) -> TimeInterval:
-        return TimeInterval(
-            seconds=self._calculate_seconds(int(frame_interval)))
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {

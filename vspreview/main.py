@@ -31,7 +31,7 @@ from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit, Graphic
 from .toolbars import DebugToolbar, MiscToolbar, PlaybackToolbar, SceningToolbar, BenchmarkToolbar, PipetteToolbar
 from .core import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
-    Frame, FrameInterval, VideoOutput, Time, TimeInterval, QYAMLObjectSingleton, try_load
+    Frame, VideoOutput, Time, QYAMLObjectSingleton, try_load
 )
 
 
@@ -184,14 +184,14 @@ class MainToolbar(AbstractToolbar):
         )
         layout.addWidget(self.outputs_combobox)
 
-        self.frame_control = FrameEdit[Frame](self)
+        self.frame_control = FrameEdit(self)
         layout.addWidget(self.frame_control)
 
         self.copy_frame_button = QPushButton(self)
         self.copy_frame_button.setText('⎘')
         layout.addWidget(self.copy_frame_button)
 
-        self.time_control = TimeEdit[Time](self)
+        self.time_control = TimeEdit(self)
         layout.addWidget(self.time_control)
 
         self.copy_timestamp_button = QPushButton(self)
@@ -362,7 +362,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         autosave_label.setText('Autosave interval (0 - disable)')
         autosave_layout.addWidget(autosave_label)
 
-        self.autosave_control = TimeEdit[TimeInterval](self)
+        self.autosave_control = TimeEdit(self)
         autosave_layout.addWidget(self.autosave_control)
 
         base_ppi_layout = QHBoxLayout()
@@ -439,7 +439,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         statusbar_timeout_label.setText('Status bar message timeout')
         statusbar_timeout_layout.addWidget(statusbar_timeout_label)
 
-        self.statusbar_timeout_control = TimeEdit[TimeInterval](self)
+        self.statusbar_timeout_control = TimeEdit(self)
         statusbar_timeout_layout.addWidget(self.statusbar_timeout_control)
 
         timeline_notches_margin_layout = QHBoxLayout()
@@ -464,17 +464,17 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         )
 
     def set_defaults(self) -> None:
-        self.autosave_control.setValue(TimeInterval(seconds=30))
+        self.autosave_control.setValue(Time(seconds=30))
         self.base_ppi_spinbox.setValue(96)
         self.dark_theme_checkbox.setChecked(True)
         self.opengl_rendering_checkbox.setChecked(False)
         self.output_index_spinbox.setValue(0)
         self.png_compressing_spinbox.setValue(0)
-        self.statusbar_timeout_control.setValue(TimeInterval(seconds=30))
+        self.statusbar_timeout_control.setValue(Time(seconds=30))
         self.timeline_notches_margin_spinbox.setValue(20)
 
     @property
-    def autosave_interval(self) -> TimeInterval:
+    def autosave_interval(self) -> Time:
         return self.autosave_control.value()
 
     @property
@@ -498,7 +498,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         return self.png_compressing_spinbox.value()
 
     @property
-    def statusbar_message_timeout(self) -> TimeInterval:
+    def statusbar_message_timeout(self) -> Time:
         return self.statusbar_timeout_control.value()
 
     @property
@@ -520,7 +520,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'autosave_interval', TimeInterval,
+            state, 'autosave_interval', Time,
             self.autosave_control.setValue,
             ''
         )
@@ -550,7 +550,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
             ''
         )
         try_load(
-            state, 'statusbar_message_timeout', TimeInterval,
+            state, 'statusbar_message_timeout', Time,
             self.statusbar_timeout_control.setValue,
             ''
         )
@@ -568,11 +568,11 @@ class MainWindow(AbstractMainWindow):
     CHECKERBOARD_TILE_COLOR_1 = Qt.white
     CHECKERBOARD_TILE_COLOR_2 = Qt.lightGray
     CHECKERBOARD_TILE_SIZE = 8  # px
-    FPS_AVERAGING_WINDOW_SIZE = FrameInterval(100)
+    FPS_AVERAGING_WINDOW_SIZE = Frame(100)
     FPS_REFRESH_INTERVAL = 150  # ms
     LOG_LEVEL = logging.INFO
     OUTPUT_INDEX = 0
-    PLAY_BUFFER_SIZE = FrameInterval(get_usable_cpus_count())
+    PLAY_BUFFER_SIZE = Frame(get_usable_cpus_count())
     SAVE_TEMPLATE = '{script_name}_{frame}'
     STORAGE_BACKUPS_COUNT = 2
     SYNC_OUTPUTS = True
@@ -840,7 +840,7 @@ class MainWindow(AbstractMainWindow):
 
         vs.clear_outputs()
 
-        if self.settings.autosave_control.value() != TimeInterval(seconds=0):
+        if self.settings.autosave_control.value() != Time(seconds=0):
             self.toolbars.misc.save()
 
         self.graphics_scene.clear()
@@ -1005,7 +1005,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_view.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self.settings.autosave_control.value() != TimeInterval(seconds=0) and self.save_on_exit:
+        if self.settings.autosave_control.value() != Time(seconds=0) and self.save_on_exit:
             self.toolbars.misc.save()
 
         self.reload_signal.emit()

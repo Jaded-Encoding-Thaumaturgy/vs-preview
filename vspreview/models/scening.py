@@ -6,7 +6,7 @@ from typing import Any, cast, Iterator, List, Mapping, Tuple
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel, QAbstractListModel
 
-from ..core import Frame, FrameInterval, QYAMLObject, Scene, Time, main_window
+from ..core import Frame, QYAMLObject, Scene, Time, main_window
 
 
 class SceningList(QAbstractTableModel, QYAMLObject):
@@ -216,12 +216,12 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
     def get_next_frame(self, initial: Frame) -> Frame | None:
         result = None
-        result_delta = FrameInterval(int(self.max_value))
+        result_delta = Frame(int(self.max_value))
         for scene in self.items:
-            if FrameInterval(0) < scene.start - initial < result_delta:
+            if Frame(0) < scene.start - initial < result_delta:
                 result = scene.start
                 result_delta = scene.start - initial
-            if FrameInterval(0) < scene.end - initial < result_delta:
+            if Frame(0) < scene.end - initial < result_delta:
                 result = scene.end
                 result_delta = scene.end - initial
 
@@ -229,12 +229,12 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
     def get_prev_frame(self, initial: Frame) -> Frame | None:
         result = None
-        result_delta = FrameInterval(int(self.max_value))
+        result_delta = Frame(int(self.max_value))
         for scene in self.items:
-            if FrameInterval(0) < initial - scene.start < result_delta:
+            if Frame(0) < initial - scene.start < result_delta:
                 result = scene.start
                 result_delta = scene.start - initial
-            if FrameInterval(0) < initial - scene.end < result_delta:
+            if Frame(0) < initial - scene.end < result_delta:
                 result = scene.end
                 result_delta = scene.end - initial
 

@@ -67,6 +67,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.autosave_checkbox = QCheckBox(self)
         self.autosave_checkbox.setText('Autosave')
+        self.autosave_checkbox.setEnabled(True)
         layout.addWidget(self.autosave_checkbox)
 
         self.keep_on_top_checkbox = QCheckBox(self)

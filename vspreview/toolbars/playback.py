@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox,
 from ..models import AudioOutputs
 from ..widgets import ComboBox, FrameEdit, TimeEdit
 from ..utils import add_shortcut, debug, qt_silent_call, set_qobject_names
-from ..core import AbstractMainWindow, AbstractToolbar, Frame, Time, AudioOutput, Time, try_load
+from ..core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load
 
 
 class PlaybackToolbar(AbstractToolbar):
@@ -119,7 +119,6 @@ class PlaybackToolbar(AbstractToolbar):
         self.seek_frame_control.setMinimum(Frame(1))
         self.seek_frame_control.setToolTip('Seek N Frames Step')
         self.seek_frame_control.setValue(Frame(self.main.SEEK_STEP))
-
         layout.addWidget(self.seek_frame_control)
 
         self.play_n_frames_button = QPushButton(self)

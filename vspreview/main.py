@@ -280,15 +280,8 @@ class MainToolbar(AbstractToolbar):
         except (KeyError, TypeError):
             logging.warning('Storage loading: Main toolbar: failed to parse outputs.')
 
-        try_load(
-            state, 'current_output_index', int, self.main.switch_output,
-            'Storage loading: Main toolbar: failed to parse output index.'
-        )
-
-        try_load(
-            state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked,
-            'Storage loading: Main toolbar: failed to parse sync outputs.'
-        )
+        try_load(state, 'current_output_index', int, self.main.switch_output)
+        try_load(state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked)
 
 
 class Toolbars(AbstractToolbars):
@@ -518,46 +511,14 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(
-            state, 'autosave_interval', Time,
-            self.autosave_control.setValue,
-            ''
-        )
-        try_load(
-            state, 'base_ppi', int,
-            self.base_ppi_spinbox.setValue,
-            ''
-        )
-        try_load(
-            state, 'dark_theme', bool,
-            self.dark_theme_checkbox.setChecked,
-            ''
-        )
-        try_load(
-            state, 'opengl_rendering', bool,
-            self.opengl_rendering_checkbox.setChecked,
-            ''
-        )
-        try_load(
-            state, 'output_index', int,
-            self.output_index_spinbox.setValue,
-            ''
-        )
-        try_load(
-            state, 'png_compression', int,
-            self.png_compressing_spinbox.setValue,
-            ''
-        )
-        try_load(
-            state, 'statusbar_message_timeout', Time,
-            self.statusbar_timeout_control.setValue,
-            ''
-        )
-        try_load(
-            state, 'timeline_label_notches_margin', int,
-            self.timeline_notches_margin_spinbox.setValue,
-            ''
-        )
+        try_load(state, 'autosave_interval', Time, self.autosave_control.setValue)
+        try_load(state, 'base_ppi', int, self.base_ppi_spinbox.setValue)
+        try_load(state, 'dark_theme', bool, self.dark_theme_checkbox.setChecked)
+        try_load(state, 'opengl_rendering', bool, self.opengl_rendering_checkbox.setChecked)
+        try_load(state, 'output_index', int, self.output_index_spinbox.setValue)
+        try_load(state, 'png_compression', int, self.png_compressing_spinbox.setValue)
+        try_load(state, 'statusbar_message_timeout', Time, self.statusbar_timeout_control.setValue)
+        try_load(state, 'timeline_label_notches_margin', int, self.timeline_notches_margin_spinbox.setValue)
 
 
 class MainWindow(AbstractMainWindow):
@@ -598,6 +559,8 @@ class MainWindow(AbstractMainWindow):
     DEBUG_PLAY_FPS = False
     DEBUG_TOOLBAR = False
     DEBUG_TOOLBAR_BUTTONS_PRINT_STATE = False
+
+    EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     yaml_tag = '!MainWindow'
 
@@ -970,14 +933,11 @@ class MainWindow(AbstractMainWindow):
 
     def show_message(self, message: str) -> None:
         self.statusbar.showMessage(
-            message,
-            round(float(self.settings.statusbar_message_timeout) * 1000)
+            message, round(float(self.settings.statusbar_message_timeout) * 1000)
         )
 
     def update_statusbar_output_info(self, output: VideoOutput | None = None) -> None:
-        if output is None:
-            output = self.current_output
-
+        output = output or self.current_output
         fmt = output.source.clip.format
         assert fmt
 
@@ -986,8 +946,9 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.resolution_label.setText('{}x{} '.format(output.width, output.height))
         self.statusbar.pixel_format_label.setText('{} '.format(fmt.name))
         if output.fps_den != 0:
-            self.statusbar.fps_label.setText('{}/{} = {:.3f} fps '.format(output.fps_num,
-                                             output.fps_den, output.fps_num / output.fps_den))
+            self.statusbar.fps_label.setText(
+                '{}/{} = {:.3f} fps '.format(output.fps_num, output.fps_den, output.fps_num / output.fps_den)
+            )
         else:
             self.statusbar.fps_label.setText('{}/{} fps '.format(output.fps_num, output.fps_den))
 
@@ -998,10 +959,9 @@ class MainWindow(AbstractMainWindow):
         return super().event(event)
 
     # misc methods
-
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
-        self.graphics_view.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+        self.graphics_view.setSizePolicy(self.EVENT_POLICY)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.settings.autosave_control.value() != Time(seconds=0) and self.save_on_exit:
@@ -1010,36 +970,22 @@ class MainWindow(AbstractMainWindow):
         self.reload_signal.emit()
 
     def __getstate__(self) -> Mapping[str, Any]:
-        state = {
+        return {
             attr_name: getattr(self, attr_name)
             for attr_name in self.storable_attrs
-        }
-        state.update({
+        } | {
             'timeline_mode': self.timeline.mode,
             'window_geometry': self.saveGeometry(),
             'window_state': self.saveState(),
-        })
-        return state
+        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         # toolbars is singleton, so it initialize itself right in its __setstate__()
-
         self.timeline.mode = self.TIMELINE_MODE
 
-        try_load(
-            state, 'timeline_mode', str, self.timeline.mode,
-            'Storage loading: failed to parse timeline mode. Using default.'
-        )
-
-        try_load(
-            state, 'window_geometry', bytes, self.restoreGeometry,
-            'Storage loading: failed to parse window geometry. Using default.'
-        )
-
-        try_load(
-            state, 'window_state', bytes, self.restoreState,
-            'Storage loading: failed to parse window state. Using default.'
-        )
+        try_load(state, 'timeline_mode', str, self.timeline.mode)
+        try_load(state, 'window_geometry', bytes, self.restoreGeometry)
+        try_load(state, 'window_state', bytes, self.restoreState)
 
 
 class Application(QApplication):
@@ -1086,6 +1032,7 @@ def main() -> None:
 
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
+
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     main_window.load_script(script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False)

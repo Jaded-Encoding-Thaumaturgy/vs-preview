@@ -11,10 +11,12 @@ from typing import Any, cast, Deque, Mapping
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QFrame, QComboBox
 
-from ..models import AudioOutputs
-from ..widgets import ComboBox, FrameEdit, TimeEdit
-from ..utils import add_shortcut, debug, qt_silent_call, set_qobject_names
-from ..core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load
+from ...models import AudioOutputs
+from ...widgets import ComboBox, FrameEdit, TimeEdit
+from ...utils import add_shortcut, debug, qt_silent_call, set_qobject_names
+from ...core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load
+
+from .settings import PlaybackSettings
 
 
 class PlaybackToolbar(AbstractToolbar):
@@ -29,11 +31,11 @@ class PlaybackToolbar(AbstractToolbar):
         'play_start_time', 'play_start_frame', 'play_end_time',
         'play_end_frame', 'play_buffer', 'toggle_button', 'play_timer_audio',
         'current_audio_frame', 'play_buffer_audio', 'audio_outputs',
-        'audio_outputs_combobox'
+        'audio_outputs_combobox', 'settings'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Playback')
+        super().__init__(main, 'Playback', PlaybackSettings())
         self.setup_ui()
 
         self.play_buffer: Deque[Future[vs.VideoFrame]] = deque()

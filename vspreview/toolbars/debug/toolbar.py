@@ -1,20 +1,24 @@
 from __future__ import annotations
 
+from typing import Mapping, Any
+
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton
 
-from ..utils import debug, set_qobject_names
-from ..core import AbstractMainWindow, AbstractToolbar
+from ...utils import debug, set_qobject_names
+from ...core import AbstractMainWindow, AbstractToolbar, try_load
+
+from .settings import DebugSettings
 
 
 class DebugToolbar(AbstractToolbar):
     __slots__ = (
         'test_button',
         'exec_lineedit', 'exec_button',
-        'test_button', 'toggle_button'
+        'test_button', 'toggle_button', 'settings'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Debug')
+        super().__init__(main, 'Debug', DebugSettings())
 
         self.setup_ui()
 
@@ -69,3 +73,6 @@ class DebugToolbar(AbstractToolbar):
 
     def break_button_clicked(self, checked: bool | None = None) -> None:
         breakpoint()
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(state, 'settings', DebugSettings, self.settings)

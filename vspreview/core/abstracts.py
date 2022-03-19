@@ -203,7 +203,7 @@ def try_load(
     error_msg: str | None = None
 ) -> None:
     if error_msg is None:
-        pretty_name = name.replace('current_', ' ').replace('_', ' ').strip()
+        pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
         caller_name = inspect.stack()[1][0].f_locals["self"].__class__.__name__  # type: ignore
         error_msg = f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
 

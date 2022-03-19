@@ -9,16 +9,18 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGraphicsView
 
-from ..widgets import ColorView
-from ..utils import set_qobject_names
-from ..core import AbstractMainWindow, AbstractToolbar, VideoOutput
+from ...widgets import ColorView
+from ...utils import set_qobject_names
+from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput
+
+from .settings import PipetteSettings
 
 
 class PipetteToolbar(AbstractToolbar):
     __slots__ = (
         'color_view', 'outputs', 'position', 'pos_fmt', 'tracking',
         'rgb_dec', 'rgb_hex', 'rgb_label',
-        'src_dec', 'src_dec_fmt', 'src_hex', 'src_hex_fmt', 'src_label',
+        'src_dec', 'src_dec_fmt', 'src_hex', 'src_hex_fmt', 'src_label', 'settings'
     )
 
     data_types = {
@@ -34,7 +36,7 @@ class PipetteToolbar(AbstractToolbar):
     }
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Pipette')
+        super().__init__(main, 'Pipette', PipetteSettings())
 
         self.setup_ui()
 

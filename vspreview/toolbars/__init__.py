@@ -1,8 +1,8 @@
 # flake8: noqa
 
-from .misc import MiscToolbar
+from .benchmark import BenchmarkToolbar
 from .debug import DebugToolbar
-from .scening import SceningToolbar
+from .misc import MiscToolbar
 from .pipette import PipetteToolbar
 from .playback import PlaybackToolbar
-from .benchmark import BenchmarkToolbar
+from .scening import SceningToolbar

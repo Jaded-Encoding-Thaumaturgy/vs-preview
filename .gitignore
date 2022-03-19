@@ -102,21 +102,3 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
-misc/
-
-tests/*
-!tests/script.vpy
-
-!tests/candy_boy_05_tfm.txt
-!tests/chapters.txt
-!tests/EP01.qp
-!tests/test.ass
-!tests/[Beatrice-Raws] Re：Creators 01 [BDRip 1920x1080 x264 FLAC]_chapters.cue
-!tests/[Beatrice-Raws] Re：Creators 01 [BDRip 1920x1080 x264 FLAC]_chapters.ogm.txt
-!tests/[Beatrice-Raws] Re：Creators 01 [BDRip 1920x1080 x264 FLAC]_chapters.xml
-!tests/jintai_01.scxvid.txt
-!tests/koizumi_tc.txt
-!tests/monte_01_tc_v2.txt
-!tests/monte_01_tc.txt
-!tests/timestamps v2.txt

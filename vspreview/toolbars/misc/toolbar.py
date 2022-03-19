@@ -8,25 +8,25 @@ from typing import Any, List, Mapping
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
 
-from ..core.types import VideoOutput
-from ..core import AbstractMainWindow, AbstractToolbar, Time
-from ..utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
+from ...core.types import VideoOutput
+from ...core import AbstractMainWindow, AbstractToolbar, Time
+from ...utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
+
+from .settings import MiscSettings
 
 
 class MiscToolbar(AbstractToolbar):
-    storable_attrs: List[str] = [
-        # 'autosave_enabled',
-    ]
+    storable_attrs: List[str] = []
     __slots__ = storable_attrs + [
         'autosave_timer', 'reload_script_button',
         'save_button', 'autosave_checkbox',
         'keep_on_top_checkbox', 'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
-        'toggle_button', 'save_file_types', 'copy_frame_button',
+        'toggle_button', 'save_file_types', 'copy_frame_button', 'settings'
     ]
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Misc')
+        super().__init__(main, 'Misc', MiscSettings())
         self.setup_ui()
         self.settings = self.main.settings
 

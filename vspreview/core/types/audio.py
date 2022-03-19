@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import ctypes
+from math import floor
+from array import array
 import vapoursynth as vs
 from yaml import YAMLObject
 from typing import Any, Mapping
 
+from ..abstracts import main_window, try_load
 from .units import Frame, FrameInterval, Time, TimeInterval
 
 from PyQt5.QtMultimedia import QAudioFormat, QAudioOutput, QAudioDeviceInfo
@@ -29,8 +32,6 @@ class AudioOutput(YAMLObject):
     )
 
     def __init__(self, vs_output: vs.AudioNode, index: int) -> None:
-        from vspreview.utils import main_window
-
         self.main = main_window()
         self.index = index
         self.source_vs_output = vs_output
@@ -92,8 +93,6 @@ class AudioOutput(YAMLObject):
         self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))  # R58
 
     def render_raw_audio_frame(self, vs_frame: vs.AudioFrame) -> None:
-        from array import array
-
         ptr_type = ctypes.POINTER(ctypes.c_float * self.format.samples_per_frame)
 
         barray_l = bytes(ctypes.cast(vs_frame.get_read_ptr(0), ptr_type).contents)
@@ -111,7 +110,6 @@ class AudioOutput(YAMLObject):
         self.iodevice.write(barray)
 
     def _calculate_frame(self, seconds: float) -> int:
-        from math import floor
         return floor(seconds * self.fps)
 
     def _calculate_seconds(self, frame_num: int) -> float:
@@ -137,8 +135,6 @@ class AudioOutput(YAMLObject):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from vspreview.utils import try_load
-
         self.name = ''
         try_load(
             state, 'name', str, self.name,

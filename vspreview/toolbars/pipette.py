@@ -1,19 +1,17 @@
 import ctypes
-from typing import cast, TypeVar
-from weakref import WeakKeyDictionary
-
+from typing import cast
 import vapoursynth as vs
+from struct import unpack
+from math import floor, ceil, log
+from weakref import WeakKeyDictionary
 
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGraphicsView
 
-from vspreview.core import AbstractMainWindow, AbstractToolbar, VideoOutput
-from vspreview.utils import set_qobject_names
-from vspreview.widgets import ColorView
-
-
-Number = TypeVar('Number', int, float)
+from ..widgets import ColorView
+from ..utils import set_qobject_names
+from ..core import AbstractMainWindow, AbstractToolbar, VideoOutput
 
 
 class PipetteToolbar(AbstractToolbar):
@@ -138,9 +136,6 @@ class PipetteToolbar(AbstractToolbar):
         self.update_labels(event.pos())
 
     def update_labels(self, local_pos: QPoint) -> None:
-        from math import floor
-        from struct import unpack
-
         pos_f = self.main.graphics_view.mapToScene(local_pos)
         pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
 
@@ -200,8 +195,6 @@ class PipetteToolbar(AbstractToolbar):
             ]))
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        from math import ceil, log
-
         super().on_current_output_changed(index, prev_index)
 
         fmt = self.main.current_output.source.clip.format
@@ -264,5 +257,5 @@ class PipetteToolbar(AbstractToolbar):
         return vs.core.resize.Bicubic(vs_output, format=non_subsampled_format(vs_output.format).id)
 
     @staticmethod
-    def clip(value: Number, lower_bound: Number, upper_bound: Number) -> Number:
+    def clip(value: float, lower_bound: float, upper_bound: float) -> float:
         return max(lower_bound, min(value, upper_bound))

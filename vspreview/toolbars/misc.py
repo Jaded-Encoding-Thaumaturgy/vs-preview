@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import yaml
 import logging
 from pathlib import Path
 from typing import Any, List, Mapping
@@ -7,8 +8,9 @@ from typing import Any, List, Mapping
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
 
-from vspreview.core import AbstractMainWindow, AbstractToolbar, TimeInterval
-from vspreview.utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
+from ..core.types import VideoOutput
+from ..core import AbstractMainWindow, AbstractToolbar, TimeInterval
+from ..utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
 
 
 class MiscToolbar(AbstractToolbar):
@@ -118,8 +120,6 @@ class MiscToolbar(AbstractToolbar):
         self.save_sync(path)
 
     def save_sync(self, path: Path | None = None, manually: bool = False) -> None:
-        import yaml
-
         yaml.Dumper.ignore_aliases = lambda *args: True
 
         if path is None:
@@ -158,8 +158,6 @@ class MiscToolbar(AbstractToolbar):
             self.main.setWindowFlag(Qt.WindowStaysOnTopHint, False)
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
-        from vspreview.core.types import VideoOutput
-
         fmt = self.main.current_output.source.clip.format
         assert fmt
 

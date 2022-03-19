@@ -5,19 +5,16 @@ from math import floor
 import vapoursynth as vs
 from collections import deque
 from time import perf_counter_ns
+from concurrent.futures import Future
 from typing import Any, cast, Deque, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QFrame, QComboBox
 
-from vspreview.models import AudioOutputs
-from vspreview.widgets import ComboBox, FrameEdit, TimeEdit
-from vspreview.utils import (
-    add_shortcut, debug, qt_silent_call, set_qobject_names, try_load
-)
-from vspreview.core import (
-    AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, TimeInterval, AudioOutput, Time
-)
+from ..models import AudioOutputs
+from ..widgets import ComboBox, FrameEdit, TimeEdit
+from ..utils import add_shortcut, debug, qt_silent_call, set_qobject_names
+from ..core import AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, TimeInterval, AudioOutput, Time, try_load
 
 
 class PlaybackToolbar(AbstractToolbar):
@@ -36,8 +33,6 @@ class PlaybackToolbar(AbstractToolbar):
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        from concurrent.futures import Future
-
         super().__init__(main, 'Playback')
         self.setup_ui()
 

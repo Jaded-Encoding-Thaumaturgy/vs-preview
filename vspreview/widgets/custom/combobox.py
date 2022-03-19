@@ -5,8 +5,8 @@ from typing import cast, Generic, Mapping, Optional, Type, TYPE_CHECKING, TypeVa
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QComboBox
 
-from vspreview.core import VideoOutput, AudioOutput
-from vspreview.models import SceningList
+from ...core import VideoOutput, AudioOutput
+from ...models import SceningList
 
 T = TypeVar('T', VideoOutput, AudioOutput, SceningList, float)
 

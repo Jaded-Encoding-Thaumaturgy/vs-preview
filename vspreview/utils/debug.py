@@ -6,13 +6,11 @@ import logging
 import vapoursynth as vs
 from functools import wraps
 from time import perf_counter_ns
-from typing import Any, Callable, cast, Dict, Type, TypeVar, Tuple
+from typing import Any, Callable, cast, Dict, Type, TypeVar, Tuple, TYPE_CHECKING
 
 from PyQt5 import sip
 from PyQt5.QtCore import QObject, QEvent
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
-
-from vspreview.core import AbstractMainWindow
 
 
 T = TypeVar('T')
@@ -35,6 +33,9 @@ def print_func_name() -> None:
 
 
 class EventFilter(QObject):
+    if TYPE_CHECKING:
+        from ..core import AbstractMainWindow
+
     __slots__ = (
         'main',
     )

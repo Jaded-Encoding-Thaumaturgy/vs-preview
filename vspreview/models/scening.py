@@ -1,15 +1,12 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from bisect import bisect_right
 from typing import Any, cast, Iterator, List, Mapping, Tuple
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel, QAbstractListModel
 
-from ..utils import main_window
-from ..core import (
-    Frame, FrameInterval, QYAMLObject,
-    Scene, Time
-)
+from ..core import Frame, FrameInterval, QYAMLObject, Scene, Time, main_window
 
 
 class SceningList(QAbstractTableModel, QYAMLObject):
@@ -102,8 +99,6 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         return None
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
-        from copy import deepcopy
-
         if not index.isValid():
             return False
         if role not in {Qt.EditRole, Qt.UserRole}:

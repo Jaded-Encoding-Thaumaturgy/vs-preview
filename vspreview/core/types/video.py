@@ -8,6 +8,7 @@ from typing import Any, Mapping, cast
 
 from PyQt5.QtGui import QImage, QPixmap, QPainter
 
+from ..abstracts import main_window, try_load
 from .units import Frame, FrameInterval, Time, TimeInterval
 
 
@@ -185,9 +186,8 @@ class VideoOutput(YAMLObject):
         self.source = self.prepared = self.props = None  # type: ignore
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
-        from vspreview.widgets import GraphicsImageItem
-        from vspreview.models import SceningLists
-        from vspreview.utils import main_window
+        from ...widgets import GraphicsImageItem
+        from ...models import SceningLists
 
         self.main = main_window()
 
@@ -361,8 +361,7 @@ class VideoOutput(YAMLObject):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from vspreview.models import SceningLists
-        from vspreview.utils import try_load
+        from ...models import SceningLists
 
         self.name = ''
         try_load(

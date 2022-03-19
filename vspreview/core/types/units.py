@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any, Mapping, overload, TypeVar, cast
 
 from .yaml import YAMLObjectWrapper
+from ..abstracts import main_window, try_load
 
 
 core = vs.core
@@ -16,8 +17,6 @@ class Frame(YAMLObjectWrapper):
     __slots__ = ('value',)
 
     def __init__(self, init_value: Frame | int | Time) -> None:
-        from vspreview.utils import main_window
-
         if isinstance(init_value, int):
             if init_value < 0:
                 raise ValueError
@@ -61,8 +60,6 @@ class Frame(YAMLObjectWrapper):
         return f'Frame({self.value})'
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from vspreview.utils import try_load
-
         try_load(
             state, 'value', int, self.__init__,  # type: ignore
             'Failed to load Frame instance'
@@ -75,8 +72,6 @@ class FrameInterval(YAMLObjectWrapper):
     __slots__ = ('value',)
 
     def __init__(self, init_value: FrameInterval | int | TimeInterval) -> None:
-        from vspreview.utils import main_window
-
         if isinstance(init_value, int):
             self.value = init_value
         elif isinstance(init_value, FrameInterval):
@@ -121,8 +116,6 @@ class FrameInterval(YAMLObjectWrapper):
         return f'FrameInterval({self.value})'
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from vspreview.utils import try_load
-
         try_load(
             state, 'value', int, self.__init__,  # type: ignore
             'Failed to load FrameInterval instance'
@@ -137,8 +130,6 @@ class Time(YAMLObjectWrapper):
     )
 
     def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
-        from vspreview.utils import main_window
-
         if isinstance(init_value, timedelta):
             self.value = init_value
         elif isinstance(init_value, Time):
@@ -181,7 +172,7 @@ class Time(YAMLObjectWrapper):
         return self
 
     def __str__(self) -> str:
-        from vspreview.utils import strfdelta
+        from ...utils import strfdelta
 
         return strfdelta(self, '%h:%M:%S.%Z')
 
@@ -192,8 +183,6 @@ class Time(YAMLObjectWrapper):
         return f'Time({self.value})'
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from vspreview.utils import try_load
-
         try_load(
             state, 'value', timedelta, self.__init__,  # type: ignore
             'Failed to load Time instance'
@@ -208,8 +197,6 @@ class TimeInterval(YAMLObjectWrapper):
     )
 
     def __init__(self, init_value: TimeInterval | timedelta | FrameInterval | None = None, **kwargs: Any):
-        from vspreview.utils import main_window
-
         if isinstance(init_value, timedelta):
             self.value = init_value
         elif isinstance(init_value, TimeInterval):
@@ -255,7 +242,7 @@ class TimeInterval(YAMLObjectWrapper):
         return self
 
     def __str__(self) -> str:
-        from vspreview.utils import strfdelta
+        from ...utils import strfdelta
 
         return strfdelta(self, '%h:%M:%S.%Z')
 
@@ -266,8 +253,6 @@ class TimeInterval(YAMLObjectWrapper):
         return f'TimeInterval({self.value})'
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from vspreview.utils import try_load
-
         try_load(
             state, 'value', timedelta, self.__init__,  # type: ignore
             'Failed to load TimeInterval instance'

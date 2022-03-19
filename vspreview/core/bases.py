@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from PyQt5 import sip
 from yaml import YAMLObject, YAMLObjectMetaclass
 from typing import Any, Dict, no_type_check, Type, TypeVar, Tuple, cast

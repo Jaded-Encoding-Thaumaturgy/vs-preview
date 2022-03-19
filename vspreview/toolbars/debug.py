@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton
 
-from vspreview.utils import debug, set_qobject_names
-from vspreview.core import AbstractMainWindow, AbstractToolbar
+from ..utils import debug, set_qobject_names
+from ..core import AbstractMainWindow, AbstractToolbar
 
 
 class DebugToolbar(AbstractToolbar):

@@ -1,24 +1,31 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
-from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List
+from functools import lru_cache
+from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Callable, Type, TypeVar
 
-from .types import Frame, VideoOutput, Time
 from .better_abc import abstract_attribute
 from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
 
 from PyQt5.QtGui import QClipboard
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QGraphicsView, QStatusBar
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QGraphicsView, QStatusBar
+)
+
+if TYPE_CHECKING:
+    from ..models import VideoOutputs
+    from ..widgets import Timeline, Notches
+    from .types import Frame, VideoOutput, Time
+
+
+T = TypeVar('T')
 
 
 class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
-    if TYPE_CHECKING:
-        from vspreview.models import VideoOutputs
-        from vspreview.widgets import Timeline
-
     __slots__ = ()
 
     @abstractmethod
@@ -64,9 +71,6 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
 
 
 class AbstractToolbar(QWidget, QABC):
-    if TYPE_CHECKING:
-        from vspreview.widgets import Notches
-
     __slots__ = ('main', 'toggle_button',)
 
     if TYPE_CHECKING:
@@ -103,7 +107,7 @@ class AbstractToolbar(QWidget, QABC):
         pass
 
     def get_notches(self) -> Notches:
-        from vspreview.widgets import Notches
+        from ..widgets import Notches
 
         return Notches()
 
@@ -175,3 +179,44 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
     if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/2220
         def __iter__(self) -> Iterator[AbstractToolbar]: ...
+
+
+@lru_cache()
+def main_window() -> AbstractMainWindow:
+    app = QApplication.instance()
+
+    if app is not None:
+        for widget in app.topLevelWidgets():
+            if isinstance(widget, AbstractMainWindow):
+                return cast(AbstractMainWindow, widget)
+        app.exit()
+
+    logging.critical('main_window() failed')
+
+    raise RuntimeError
+
+
+def try_load(
+        state: Mapping[str, Any],
+        name: str, ty: Type[T],
+        receiver: T | Callable[[T], Any] | Callable[[str, T], Any],
+        error_msg: str) -> None:
+    try:
+        value = state[name]
+        if not isinstance(value, ty):
+            raise TypeError
+    except (KeyError, TypeError):
+        logging.warning(error_msg)
+    else:
+        if isinstance(receiver, ty):
+            receiver = value
+        elif callable(receiver):
+            try:
+                receiver(name, value)  # type: ignore
+            except Exception:
+                receiver(value)  # type: ignore
+        elif hasattr(receiver, name) and isinstance(getattr(receiver, name), ty):
+            try:
+                receiver.__setattr__(name, value)
+            except AttributeError:
+                logging.warning(error_msg)

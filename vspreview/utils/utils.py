@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-import logging
+import vapoursynth as vs
 from string import Template
-from functools import lru_cache, partial, wraps
-from typing import Any, Callable, Mapping, MutableMapping, Type, TYPE_CHECKING, TypeVar, cast
+from psutil import cpu_count, Process
+from asyncio import get_running_loop, get_event_loop_policy
+from typing import Any, Callable, MutableMapping, Type, TypeVar
+from functools import partial, wraps, singledispatch, update_wrapper
 
 from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QWidget, QShortcut
 from PyQt5.QtCore import QTime, QSignalBlocker, QObject
-from PyQt5.QtWidgets import QWidget, QApplication, QShortcut
 
-from vspreview.core import TimeType
-
+from ..core import main_window, TimeType, AbstractToolbar
 
 T = TypeVar('T')
 
@@ -58,27 +59,6 @@ def strfdelta(time: TimeType, output_format: str) -> str:
     return template.substitute(**d)
 
 
-if TYPE_CHECKING:
-    from vspreview.core import AbstractMainWindow
-
-
-@lru_cache()
-def main_window() -> AbstractMainWindow:
-    from vspreview.core import AbstractMainWindow
-
-    app = QApplication.instance()
-
-    if app is not None:
-        for widget in app.topLevelWidgets():
-            if isinstance(widget, AbstractMainWindow):
-                return cast(AbstractMainWindow, widget)
-        app.exit()
-
-    logging.critical('main_window() failed')
-
-    raise RuntimeError
-
-
 def add_shortcut(key: int, handler: Callable[[], None], widget: QWidget | None = None) -> None:
     if widget is None:
         widget = main_window()
@@ -86,8 +66,6 @@ def add_shortcut(key: int, handler: Callable[[], None], widget: QWidget | None =
 
 
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
-    from asyncio import get_running_loop, get_event_loop_policy
-
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
@@ -121,8 +99,6 @@ def method_dispatch(func: Callable[..., T]) -> Callable[..., T]:
     '''
     https://stackoverflow.com/a/24602374
     '''
-    from functools import singledispatch, update_wrapper
-
     dispatcher = singledispatch(func)
 
     def wrapper(*args: Any, **kwargs: Any) -> T:
@@ -134,8 +110,6 @@ def method_dispatch(func: Callable[..., T]) -> Callable[..., T]:
 
 
 def set_qobject_names(obj: object) -> None:
-    from vspreview.core import AbstractToolbar
-
     if not hasattr(obj, '__slots__'):
         return
 
@@ -152,8 +126,6 @@ def set_qobject_names(obj: object) -> None:
 
 
 def get_usable_cpus_count() -> int:
-    from psutil import cpu_count, Process
-
     try:
         count = len(Process().cpu_affinity())
     except AttributeError:
@@ -163,37 +135,9 @@ def get_usable_cpus_count() -> int:
 
 
 def vs_clear_cache() -> None:
-    import vapoursynth as vs
-
     cache_size = vs.core.max_cache_size
     vs.core.max_cache_size = 1
     output = list(vs.get_outputs().values())[0]
     if isinstance(output, vs.VideoOutputTuple):
         output.clip.get_frame(0)
     vs.core.max_cache_size = cache_size
-
-
-def try_load(
-        state: Mapping[str, Any],
-        name: str, ty: Type[T],
-        receiver: T | Callable[[T], Any] | Callable[[str, T], Any],
-        error_msg: str) -> None:
-    try:
-        value = state[name]
-        if not isinstance(value, ty):
-            raise TypeError
-    except (KeyError, TypeError):
-        logging.warning(error_msg)
-    else:
-        if isinstance(receiver, ty):
-            receiver = value
-        elif callable(receiver):
-            try:
-                receiver(name, value)  # type: ignore
-            except Exception:
-                receiver(value)  # type: ignore
-        elif hasattr(receiver, name) and isinstance(getattr(receiver, name), ty):
-            try:
-                receiver.__setattr__(name, value)
-            except AttributeError:
-                logging.warning(error_msg)

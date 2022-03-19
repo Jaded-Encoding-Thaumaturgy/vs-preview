@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from PyQt5.QtCore import Qt
 from yaml import YAMLObject
 from typing import cast, Dict, Iterator, List, Type
@@ -9,10 +10,7 @@ from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
 from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QPalette, QPen, QMoveEvent, QMouseEvent, QResizeEvent
 
 from ..utils import strfdelta
-from ..core import (
-    AbstractToolbar, Frame, FrameInterval, Scene, Time, TimeInterval,
-    TimeType, FrameType,
-)
+from ..core import AbstractToolbar, Frame, FrameInterval, Scene, Time, TimeInterval, TimeType, FrameType, main_window
 
 
 class Notch:
@@ -94,8 +92,6 @@ class Timeline(QWidget):
     clicked = pyqtSignal(Frame, Time)
 
     def __init__(self, parent: QWidget) -> None:
-        from vspreview.utils import main_window
-
         super().__init__(parent)
         self.app = QApplication.instance()
         self.main = main_window()
@@ -146,8 +142,6 @@ class Timeline(QWidget):
         self.drawWidget(painter)
 
     def drawWidget(self, painter: QPainter) -> None:
-        from copy import deepcopy
-
         if self.need_full_repaint:
             labels_notches = Notches()
             label_notch_bottom = (

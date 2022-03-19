@@ -3,9 +3,9 @@ from __future__ import annotations
 import vapoursynth as vs
 from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDict, TYPE_CHECKING, Generic
 
-from vspreview.core import QYAMLObject, VideoOutput, AudioOutput
-
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
+
+from ..core import main_window, QYAMLObject, VideoOutput, AudioOutput
 
 
 T = TypeVar('T', VideoOutput, AudioOutput)
@@ -19,8 +19,6 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     supported_types = {VideoOutput: 'video', AudioOutput: 'audio'}
 
     def __init__(self, local_storage: Mapping[str, T] | None = None) -> None:
-        from vspreview.utils import main_window
-
         super().__init__()
         self.items: List[T] = []
 

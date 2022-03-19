@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import logging
 from pathlib import Path
+from copy import deepcopy
 from typing import Any, Callable, cast, List, Mapping, Set
 
 from PyQt5.QtGui import QColor
@@ -11,10 +12,10 @@ from PyQt5.QtWidgets import (
     QDialog, QPushButton, QVBoxLayout, QLineEdit, QTableView, QHBoxLayout, QFrame, QLabel, QFileDialog
 )
 
-from vspreview.models import SceningList, SceningLists
-from vspreview.widgets import ComboBox, Notches, TimeEdit, FrameEdit
-from vspreview.core import AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval
-from vspreview.utils import add_shortcut, fire_and_forget, qt_silent_call, set_qobject_names, set_status_label, try_load
+from ..models import SceningList, SceningLists
+from ..widgets import ComboBox, Notches, TimeEdit, FrameEdit
+from ..utils import add_shortcut, fire_and_forget, qt_silent_call, set_qobject_names, set_status_label
+from ..core import AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval, try_load
 
 
 class SceningListDialog(QDialog):
@@ -713,8 +714,6 @@ class SceningToolbar(AbstractToolbar):
         Imports Key=1 frames as single-frame scenes.
         Ignores everything besides Index=0 video stream.
         '''
-        from copy import deepcopy
-
         AV_CODEC_ID_FIRST_AUDIO = 0x10000
         STREAM_INDEX = 0
         IS_KEY = 1

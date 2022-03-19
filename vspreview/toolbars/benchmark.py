@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import vapoursynth as vs
+from copy import deepcopy
 from time import perf_counter
 from collections import deque
 from concurrent.futures import Future
@@ -9,15 +10,11 @@ from typing import Any, Deque, Mapping
 from PyQt5.QtCore import Qt, QTimer, QMetaObject
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QPushButton
 
-from vspreview.core import (
-    AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time,
-    TimeInterval, QYAMLObjectSingleton,
+from ..widgets import FrameEdit, TimeEdit
+from ..utils import get_usable_cpus_count, qt_silent_call, set_qobject_names, vs_clear_cache, strfdelta
+from ..core import (
+    AbstractMainWindow, AbstractToolbar, Frame, FrameInterval, Time, TimeInterval, QYAMLObjectSingleton, try_load
 )
-from vspreview.utils import (
-    get_usable_cpus_count, qt_silent_call, set_qobject_names,
-    vs_clear_cache, try_load, strfdelta
-)
-from vspreview.widgets import FrameEdit, TimeEdit
 
 
 class BenchmarkSettings(QWidget, QYAMLObjectSingleton):
@@ -241,8 +238,6 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_time_control.setMaximum(TimeInterval(FrameInterval(1)))
 
     def run(self) -> None:
-        from copy import deepcopy
-
         if self.settings.clear_cache_enabled:
             vs_clear_cache()
 

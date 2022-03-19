@@ -5,8 +5,8 @@ from typing import Dict, Generic, Type
 from PyQt5.QtCore import pyqtSignal, QTime
 from PyQt5.QtWidgets import QWidget, QSpinBox, QTimeEdit
 
-from vspreview.utils import from_qtime, to_qtime
-from vspreview.core import Frame, FrameInterval, FrameType, Time, TimeInterval, TimeType
+from ...utils import from_qtime, to_qtime
+from ...core import Frame, FrameInterval, FrameType, Time, TimeInterval, TimeType
 
 
 class FrameEdit(QSpinBox, Generic[FrameType]):

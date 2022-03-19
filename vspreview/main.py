@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import gc
 import os
 import sys
+import yaml
 import shlex
 import logging
 import vapoursynth as vs
 from pathlib import Path
+from argparse import ArgumentParser
 from platform import python_version
 from pkg_resources import get_distribution
 from typing import Any, cast, List, Mapping, Tuple
+from traceback import FrameSummary, TracebackException
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent, QObject
 from PyQt5.QtGui import QCloseEvent, QPalette, QPixmap, QShowEvent
@@ -17,16 +21,17 @@ from PyQt5.QtWidgets import (
     QOpenGLWidget, QTabWidget, QComboBox, QCheckBox, QSpinBox, QSizePolicy, QGraphicsView
 )
 
-# import vspreview.cores as early as possible:
+# import vsenv as early as possible:
 # This is so other modules cannot accidentally
 # use and lock us into a different policy.
 from .core.vsenv import get_policy
-from .models import VideoOutputs, Outputs
-from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit
-from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names, try_load
+from .models import VideoOutputs, Outputs, ZoomLevels
+from .utils import add_shortcut, get_usable_cpus_count, qt_silent_call, set_qobject_names
+from .widgets import ComboBox, StatusBar, TimeEdit, Timeline, FrameEdit, GraphicsView, GraphicsImageItem
+from .toolbars import DebugToolbar, MiscToolbar, PlaybackToolbar, SceningToolbar, BenchmarkToolbar, PipetteToolbar
 from .core import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars, AbstractAppSettings,
-    Frame, FrameInterval, VideoOutput, Time, TimeInterval, QYAMLObjectSingleton,
+    Frame, FrameInterval, VideoOutput, Time, TimeInterval, QYAMLObjectSingleton, try_load
 )
 
 
@@ -119,8 +124,6 @@ class MainToolbar(AbstractToolbar):
     )
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
-        from vspreview.models import ZoomLevels
-
         super().__init__(main_window, 'Main', main_window.settings)
         self.setup_ui()
 
@@ -293,11 +296,6 @@ class Toolbars(AbstractToolbars):
     yaml_tag = '!Toolbars'
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
-        from vspreview.toolbars import (
-            DebugToolbar, MiscToolbar, PlaybackToolbar, SceningToolbar,
-            BenchmarkToolbar, PipetteToolbar
-        )
-
         self.main = MainToolbar(main_window)
         self.main.setObjectName('Toolbars.main')
 
@@ -680,8 +678,6 @@ class MainWindow(AbstractMainWindow):
         self.setObjectName('MainWindow')
 
     def setup_ui(self) -> None:
-        from vspreview.widgets import GraphicsView
-
         self.central_widget = QWidget(self)
         self.main_layout = QVBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
@@ -739,8 +735,6 @@ class MainWindow(AbstractMainWindow):
     def load_script(
         self, script_path: Path, external_args: List[Tuple[str, str]] | str = [], reloading: bool = False
     ) -> None:
-        from traceback import FrameSummary, TracebackException
-
         self.toolbars.playback.stop()
         self.setWindowTitle('VSPreview: %s %s' % (script_path, external_args))
 
@@ -806,8 +800,6 @@ class MainWindow(AbstractMainWindow):
             self.load_storage()
 
     def load_storage(self) -> None:
-        import yaml
-
         vsp_dir = self.config_dir
         storage_path = vsp_dir / (self.script_path.stem + '.yml')
 
@@ -830,8 +822,6 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.label.setText('Ready')
 
     def init_outputs(self) -> None:
-        from vspreview.widgets import GraphicsImageItem
-
         self.graphics_scene.clear()
         for output in self.outputs:
             frame_image = output.render_frame(output.last_showed_frame)
@@ -842,8 +832,6 @@ class MainWindow(AbstractMainWindow):
             output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
 
     def reload_script(self) -> None:
-        import gc
-
         if not self.script_exec_failed:
             self.toolbars.misc.save_sync()
         for toolbar in self.toolbars:
@@ -1071,21 +1059,21 @@ class Application(QApplication):
 
 
 def main() -> None:
-    from argparse import ArgumentParser
-
-    logging.basicConfig(format='{asctime}: {levelname}: {message}',
-                        style='{', level=MainWindow.LOG_LEVEL)
+    logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=MainWindow.LOG_LEVEL)
     logging.Formatter.default_msec_format = '%s.%03d'
 
     check_versions()
 
     parser = ArgumentParser()
-    parser.add_argument('script_path', help='Path to Vapoursynth script',
-                        type=Path, nargs='?')
-    parser.add_argument('-c', '--preserve-cwd', action='store_true',
-                        help='do not chdir to script parent directory')
-    parser.add_argument('-a', '--arg', type=str, action='append', metavar='key=value',
-                        help='Argument to pass to the script environment')
+    parser.add_argument(
+        'script_path', help='Path to Vapoursynth script', type=Path, nargs='?'
+    )
+    parser.add_argument(
+        '-c', '--preserve-cwd', action='store_true', help='do not chdir to script parent directory'
+    )
+    parser.add_argument(
+        '-a', '--arg', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
+    )
     args = parser.parse_args()
 
     if args.script_path is None:

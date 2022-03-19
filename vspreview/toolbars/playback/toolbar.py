@@ -20,7 +20,7 @@ from .settings import PlaybackSettings
 
 
 class PlaybackToolbar(AbstractToolbar):
-    _storable_attrs = ('settings',)
+    _storable_attrs = ('settings', 'visibility')
 
     __slots__ = (
         *_storable_attrs, 'play_timer', 'fps_timer', 'fps_history', 'current_fps',
@@ -494,3 +494,5 @@ class PlaybackToolbar(AbstractToolbar):
 
         try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)
         try_load(state, 'audio_muted', bool, self.mute_checkbox.setChecked)
+        try_load(state, 'visibility', bool, self.on_toggle)
+        try_load(state, 'settings', PlaybackSettings, self.settings)

@@ -18,7 +18,7 @@ from .settings import PipetteSettings
 
 
 class PipetteToolbar(AbstractToolbar):
-    _storable_attrs = ('settings',)
+    _storable_attrs = ('settings', 'visibility')
 
     __slots__ = (
         *_storable_attrs, 'color_view', 'outputs', 'position', 'pos_fmt', 'tracking',
@@ -272,4 +272,5 @@ class PipetteToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(state, 'visibility', bool, self.on_toggle)
         try_load(state, 'settings', PipetteSettings, self.settings)

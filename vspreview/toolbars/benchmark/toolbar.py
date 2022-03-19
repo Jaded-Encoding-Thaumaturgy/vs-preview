@@ -18,7 +18,7 @@ from .settings import BenchmarkSettings
 
 
 class BenchmarkToolbar(AbstractToolbar):
-    _storable_attrs = ('settings',)
+    _storable_attrs = ('settings', 'visibility')
 
     __slots__ = (
         *_storable_attrs, 'start_frame_control',
@@ -307,4 +307,5 @@ class BenchmarkToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(state, 'visibility', bool, self.on_toggle)
         try_load(state, 'settings', BenchmarkSettings, self.settings)

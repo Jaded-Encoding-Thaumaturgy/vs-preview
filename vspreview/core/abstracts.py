@@ -151,10 +151,13 @@ class AbstractToolbar(QWidget, QABC):
         self.toggle_button.clicked.connect(self.on_toggle)
 
         self.setVisible(False)
+        self.visibility = False
 
     def on_toggle(self, new_state: bool) -> None:
         # invoking order matters
         self.setVisible(new_state)
+        self.visibility = new_state
+        self.toggle_button.setChecked(new_state)
         self.resize_main_window(new_state)
 
     def on_current_frame_changed(self, frame: Frame) -> None:

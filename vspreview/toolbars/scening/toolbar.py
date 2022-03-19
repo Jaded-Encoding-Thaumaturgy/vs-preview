@@ -21,7 +21,7 @@ from .settings import SceningSettings
 
 class SceningToolbar(AbstractToolbar):
     _storable_attrs = (
-        'settings', 'first_frame', 'second_frame'
+        'settings', 'visibility', 'first_frame', 'second_frame'
     )
 
     __slots__ = (
@@ -107,8 +107,6 @@ class SceningToolbar(AbstractToolbar):
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        self.setVisible(False)
-
         layout = QVBoxLayout(self)
         layout.setObjectName('SceningToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
@@ -883,4 +881,5 @@ class SceningToolbar(AbstractToolbar):
 
         try_load(state, 'label', str, self.label_lineedit.setText)
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
+        try_load(state, 'visibility', bool, self.on_toggle)
         try_load(state, 'settings', SceningSettings, self.settings)

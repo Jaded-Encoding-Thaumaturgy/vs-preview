@@ -16,7 +16,7 @@ from .settings import MiscSettings
 
 
 class MiscToolbar(AbstractToolbar):
-    _storable_attrs = ('settings',)
+    _storable_attrs = ('settings', 'visibility')
 
     __slots__ = (
         *_storable_attrs, 'autosave_timer', 'reload_script_button',
@@ -233,6 +233,7 @@ class MiscToolbar(AbstractToolbar):
             logging.warning('Storage loading: failed to parse show debug flag.')
             show_debug = self.main.DEBUG_TOOLBAR
 
+        try_load(state, 'visibility', bool, self.on_toggle)
         try_load(state, 'settings', MiscSettings, self.settings)
 
         self.show_debug_checkbox.setChecked(show_debug)

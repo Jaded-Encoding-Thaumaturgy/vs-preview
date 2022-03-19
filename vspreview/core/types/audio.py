@@ -127,8 +127,4 @@ class AudioOutput(YAMLObject):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        self.name = ''
-        try_load(
-            state, 'name', str, self.name,
-            'Storage loading: Audio output failed to parse name.'
-        )
+        try_load(state, 'name', str, self.__setattr__)

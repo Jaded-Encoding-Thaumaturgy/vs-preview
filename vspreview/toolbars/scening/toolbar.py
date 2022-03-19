@@ -269,7 +269,7 @@ class SceningToolbar(AbstractToolbar):
         return marks
 
     @property
-    def current_list(self) -> SceningList:
+    def current_list(self) -> SceningList | None:
         return self.items_combobox.currentValue()
 
     @current_list.setter
@@ -854,25 +854,11 @@ class SceningToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try:
-            first_frame = state['first_frame']
-            if first_frame is not None and not isinstance(first_frame, Frame):
-                raise TypeError
-            self.first_frame = first_frame
-        except (KeyError, TypeError):
-            logging.warning('Storage loading: Scening: failed to parse Frame 1.')
+        try_load(state, 'first_frame', Frame, self.__setattr__, nullable=True)
+        try_load(state, 'second_frame', Frame, self.__setattr__, nullable=True)
 
         if self.first_frame is not None:
             self.toggle_first_frame_button.setChecked(True)
-
-        try:
-            second_frame = state['second_frame']
-            if second_frame is not None and not isinstance(second_frame, Frame):
-                raise TypeError
-            self.second_frame = second_frame
-        except (KeyError, TypeError):
-            logging.warning('Storage loading: Scening: failed to parse Frame 2.')
-
         if self.second_frame is not None:
             self.toggle_second_frame_button.setChecked(True)
 
@@ -882,4 +868,4 @@ class SceningToolbar(AbstractToolbar):
         try_load(state, 'label', str, self.label_lineedit.setText)
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
         try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', SceningSettings, self.settings)
+        try_load(state, 'settings', SceningSettings, self.__setattr__)

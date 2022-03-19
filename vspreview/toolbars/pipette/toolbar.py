@@ -124,9 +124,6 @@ class PipetteToolbar(AbstractToolbar):
         self.main.graphics_view.mousePressed.disconnect(self.mouse_pressed)
         self.main.graphics_view.mouseReleased.disconnect(self.mouse_released)
 
-    def on_script_unloaded(self) -> None:
-        self.outputs.clear()
-
     def mouse_moved(self, event: QMouseEvent) -> None:
         if self.tracking and not event.buttons():
             self.update_labels(event.pos())
@@ -273,4 +270,4 @@ class PipetteToolbar(AbstractToolbar):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', PipetteSettings, self.settings)
+        try_load(state, 'settings', PipetteSettings, self.__setattr__)

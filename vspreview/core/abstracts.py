@@ -266,15 +266,20 @@ class _SetterFunction():
         ...
 
 
+def storage_err_msg(name: str, level: int = 0) -> str:
+    pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
+    caller_name = inspect.stack()[level + 1][0].f_locals['self'].__class__.__name__
+
+    return f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
+
+
 def try_load(
     state: Mapping[str, Any], name: str, expected_type: Type[T],
     receiver: T | _OneArgumentFunction | _SetterFunction,
-    error_msg: str | None = None
+    error_msg: str | None = None, nullable: bool = False
 ) -> None:
     if error_msg is None:
-        pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
-        caller_name = inspect.stack()[1][0].f_locals['self'].__class__.__name__
-        error_msg = f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
+        error_msg = storage_err_msg(name, 1)
 
     try:
         value = state[name]

@@ -50,8 +50,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future] = deque()
 
-        self.audio_outputs = AudioOutputs()
-        self.audio_outputs_combobox.setModel(self.audio_outputs)
+        self.rescan_outputs()
 
         self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
@@ -174,9 +173,12 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.seek_time_control.setValue, Time(self.seek_frame_control.value()))
         qt_silent_call(self.fps_spinbox.setValue, self.main.current_output.play_fps)
 
-    def rescan_outputs(self) -> None:
-        self.audio_outputs = AudioOutputs()
+    def update_outputs(self, outputs: AudioOutputs) -> None:
+        self.audio_outputs = outputs
         self.audio_outputs_combobox.setModel(self.audio_outputs)
+
+    def rescan_outputs(self) -> None:
+        self.update_outputs(AudioOutputs())
 
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if self.main.current_frame == self.main.current_output.end_frame:
@@ -215,7 +217,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.last_frame = Frame(stop_at_frame or self.main.current_output.end_frame)
 
         if self.fps_unlimited_checkbox.isChecked() or self.main.DEBUG_PLAY_FPS:
-            self.mute_checkbox.setState(Qt.Checked)
+            self.mute_checkbox.setChecked(True)
             self.play_timer.start(0)
             if self.main.DEBUG_PLAY_FPS:
                 self.play_start_time = debug.perf_counter_ns()
@@ -488,11 +490,8 @@ class PlaybackToolbar(AbstractToolbar):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'seek_interval_frame', Frame, self.seek_frame_control.setValue)
-
-        try_load(state, 'audio_outputs', AudioOutputs, self.audio_outputs)
-        self.audio_outputs_combobox.setModel(self.audio_outputs)
-
+        try_load(state, 'audio_outputs', AudioOutputs, self.update_outputs)
         try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)
         try_load(state, 'audio_muted', bool, self.mute_checkbox.setChecked)
         try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', PlaybackSettings, self.settings)
+        try_load(state, 'settings', PlaybackSettings, self.__setattr__)

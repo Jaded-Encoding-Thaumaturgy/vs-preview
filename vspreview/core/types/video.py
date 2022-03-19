@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import vapoursynth as vs
 from yaml import YAMLObject
 from dataclasses import dataclass
@@ -356,32 +355,7 @@ class VideoOutput(YAMLObject):
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from ...models import SceningLists
 
-        self.name = ''
-        try_load(
-            state, 'name', str, self.__setattr__,
-            'Storage loading: Video Output: failed to parse name.'
-        )
-
-        self.last_showed_frame = Frame(0)
-        try:
-            try_load(
-                state, 'last_showed_frame', Frame, self.__setattr__,
-                'Storage loading: Video Output: failed to parse last showed frame.'
-            )
-        except IndexError:
-            logging.warning('Storage loading: Video Output: last showed frame is out of range.')
-
-        self.scening_lists = SceningLists()
-        try_load(
-            state, 'scening_lists', SceningLists, self.__setattr__,
-            'Storage loading: Video Output: scening lists weren\'t parsed successfully.'
-        )
-
-        try:
-            play_fps = state['play_fps']
-            if not isinstance(play_fps, float):
-                raise TypeError
-            if play_fps > 0:
-                self.play_fps = play_fps
-        except (KeyError, TypeError):
-            logging.warning('Storage loading: Video Output: play fps weren\'t parsed successfully.')
+        try_load(state, 'name', str, self.__setattr__)
+        try_load(state, 'last_showed_frame', Frame, self.__setattr__)
+        try_load(state, 'scening_lists', SceningLists, self.__setattr__)
+        try_load(state, 'play_fps', float, self.__setattr__)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Mapping, Any
 
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton
@@ -71,7 +72,7 @@ class DebugToolbar(AbstractToolbar):
         try:
             exec(self.exec_lineedit.text())
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     def break_button_clicked(self, checked: bool | None = None) -> None:
         breakpoint()
@@ -83,4 +84,4 @@ class DebugToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'settings', DebugSettings, self.settings)
+        try_load(state, 'settings', DebugSettings, self.__setattr__)

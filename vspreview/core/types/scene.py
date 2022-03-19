@@ -3,8 +3,8 @@ from __future__ import annotations
 import vapoursynth as vs
 from typing import Any, Mapping
 
-from .yaml import YAMLObjectWrapper
 from .units import Frame
+from .yaml import YAMLObjectWrapper
 
 
 core = vs.core

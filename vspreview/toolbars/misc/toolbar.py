@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import yaml
-import logging
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -37,7 +36,9 @@ class MiscToolbar(AbstractToolbar):
 
         self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
-        self.reload_script_button.clicked.connect(lambda: self.main.reload_script())
+        main.reload_signal.connect(self.autosave_timer.stop)
+
+        self.reload_script_button.clicked.connect(self.main.reload_script)
         self.save_button.clicked.connect(lambda: self.save(manually=True))
         self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)
         self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)
@@ -45,7 +46,7 @@ class MiscToolbar(AbstractToolbar):
         self.show_debug_checkbox.stateChanged.connect(self.on_show_debug_changed)
         self.main.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
-        add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_script_button.click)
+        add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
         add_shortcut(Qt.ALT + Qt.Key_S, self.save_button.click)
         add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
         add_shortcut(Qt.CTRL + Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
@@ -103,12 +104,6 @@ class MiscToolbar(AbstractToolbar):
         self.show_debug_checkbox.setText('Show Debug Toolbar')
         layout.addWidget(self.show_debug_checkbox)
 
-    def on_script_unloaded(self) -> None:
-        self.autosave_timer.stop()
-
-    def on_script_loaded(self) -> None:
-        self.autosave_timer.start(self.main.AUTOSAVE_INTERVAL)
-
     def copy_frame_to_clipboard(self) -> None:
         frame_pixmap = self.main.current_output.graphics_scene_item.pixmap()
         self.main.clipboard.setPixmap(frame_pixmap)
@@ -138,6 +133,7 @@ class MiscToolbar(AbstractToolbar):
         with path.open(mode='w', newline='\n') as f:
             f.write(f'# VSPreview storage for {self.main.script_path}\n')
             yaml.dump(self.main, f, indent=4, default_flow_style=False)
+
         if manually:
             self.main.show_message('Saved successfully')
 
@@ -162,7 +158,8 @@ class MiscToolbar(AbstractToolbar):
         assert fmt
 
         filter_str = ''.join(
-            [file_type + ';;' for file_type in self.save_file_types.keys()])
+            [file_type + ';;' for file_type in self.save_file_types.keys()]
+        )
         filter_str = filter_str[0:-2]
 
         template = self.main.toolbars.misc.save_template_lineedit.text()
@@ -190,7 +187,8 @@ class MiscToolbar(AbstractToolbar):
             self.main.show_message('Save name template is invalid')
 
         save_path_str, file_type = QFileDialog.getSaveFileName(
-            self.main, 'Save as', suggested_path_str, filter_str)
+            self.main, 'Save as', suggested_path_str, filter_str
+        )
         try:
             self.save_file_types[file_type](Path(save_path_str))
         except KeyError:
@@ -219,21 +217,7 @@ class MiscToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try:
-            self.save_template_lineedit.setText(state['save_file_name_template'])
-        except (KeyError, TypeError):
-            logging.warning(
-                'Storage loading: failed to parse save file name template.')
-
-        try:
-            show_debug = state['show_debug']
-            if not isinstance(show_debug, bool):
-                raise TypeError
-        except (KeyError, TypeError):
-            logging.warning('Storage loading: failed to parse show debug flag.')
-            show_debug = self.main.DEBUG_TOOLBAR
-
+        try_load(state, 'save_file_name_template', str, self.save_template_lineedit.setText)
+        try_load(state, 'show_debug', bool, self.show_debug_checkbox.setChecked)
         try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', MiscSettings, self.settings)
-
-        self.show_debug_checkbox.setChecked(show_debug)
+        try_load(state, 'settings', MiscSettings, self.__setattr__)

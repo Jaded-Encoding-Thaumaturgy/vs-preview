@@ -3,6 +3,8 @@
 import logging
 from typing import Mapping, Any
 
+
+from ..core import storage_err_msg
 from ..core.abstracts import AbstractToolbars, AbstractMainWindow
 
 from .benchmark import BenchmarkToolbar
@@ -49,4 +51,4 @@ class Toolbars(AbstractToolbars):
                     raise TypeError
                 getattr(self, toolbar_name).__setstate__(storage)
             except (KeyError, TypeError):
-                logging.warning(f'Storage loading: failed to parse storage of {toolbar_name}.')
+                logging.warning(storage_err_msg(toolbar_name))

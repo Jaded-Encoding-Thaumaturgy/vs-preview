@@ -209,6 +209,7 @@ class MainWindow(AbstractMainWindow):
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path
+
         sys.path.append(str(self.script_path.parent))
 
         # Rewrite args so external args will be forwarded correctly
@@ -235,17 +236,19 @@ class MainWindow(AbstractMainWindow):
             # that we're not concerned with
             for i, frame in enumerate(te.stack):
                 if frame.filename == '<string>':
-                    te.stack[i] = FrameSummary(str(self.script_path),
-                                               frame.lineno, frame.name)
+                    te.stack[i] = FrameSummary(
+                        str(self.script_path), frame.lineno, frame.name
+                    )
                 else:
                     break
-            print(''.join(te.format()))
+            logging.error(''.join(te.format()))
 
-            self.handle_script_error(
-                f'''An error occured while evaluating script:
-                \n{str(e)}
-                \nSee console output for details.''')
-            return
+            return self.handle_script_error(
+                '\n'.join([
+                    'An error occured while evaluating script:',
+                    str(e), 'See console output for details.'
+                ])
+            )
         finally:
             sys.argv = argv_orig
             sys.path.pop()
@@ -301,24 +304,17 @@ class MainWindow(AbstractMainWindow):
     def reload_script(self) -> None:
         if not self.script_exec_failed:
             self.toolbars.misc.save_sync()
-        for toolbar in self.toolbars:
-            if hasattr(toolbar, 'on_script_unloaded'):
-                toolbar.on_script_unloaded()
-
-        vs.clear_outputs()
 
         if self.settings.autosave_control.value() != Time(seconds=0):
             self.toolbars.misc.save()
 
+        vs.clear_outputs()
         self.graphics_scene.clear()
 
         self.outputs.clear()
         get_policy().reload_core()
-        # make sure old filter graph is freed
         gc.collect()
 
-        vs.clear_outputs()
-        self.graphics_scene.clear()
         self.load_script(self.script_path, reloading=True)
 
         self.show_message('Reloaded successfully')
@@ -486,8 +482,6 @@ class MainWindow(AbstractMainWindow):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         # toolbars is singleton, so it initialize itself right in its __setstate__()
-        self.timeline.mode = self.TIMELINE_MODE
-
         try_load(state, 'timeline_mode', str, self.timeline.mode)
         try_load(state, 'window_geometry', bytes, self.restoreGeometry)
         try_load(state, 'window_state', bytes, self.restoreState)

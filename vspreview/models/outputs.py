@@ -5,7 +5,7 @@ from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDic
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 
-from ..core import main_window, QYAMLObject, VideoOutput, AudioOutput
+from ..core import main_window, QYAMLObject, VideoOutput, AudioOutput, try_load
 
 
 T = TypeVar('T', VideoOutput, AudioOutput)
@@ -50,11 +50,8 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     def index_of(self, item: T) -> int:
         return self.items.index(item)
 
-    def __getiter__(self) -> Iterator[T]:
-        return iter(self.items)
-    
     def __iter__(self) -> Iterator[T]:
-        return self.__getiter__()
+        return iter(self.items)
 
     def append(self, item: T) -> int:
         index = len(self.items)
@@ -109,21 +106,16 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         return dict(zip([str(x.index) for x in self.items], self.items), type=self.out_type.__name__)
 
     def __setstate__(self, state: Mapping[str, T | str]) -> None:
-        try:
-            type_string = state['type']
-            if not isinstance(type_string, str):
-                raise TypeError('Storage loading: Outputs: value of key "type" is not a string')
-
-        except KeyError:
-            raise KeyError('Storage loading: Outputs: key "type" is missing') from KeyError
+        type_string = ''
+        try_load(state, 'type', str, type_string)
 
         for key, value in state.items():
             if key == 'type':
                 continue
             if not isinstance(key, str):
-                raise TypeError(f'Storage loading: Outputs: key {key} is not a string')
+                raise TypeError(f'Storage loading (Outputs): key {key} is not a string')
             if not isinstance(value, self.out_type):
-                raise TypeError(f'Storage loading: Outputs: value of key {key} is not {self.out_type.__name__}')
+                raise TypeError(f'Storage loading (Outputs): value of key {key} is not {self.out_type.__name__}')
 
         self.__init__(state)  # type: ignore
 

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import logging
-from typing import Mapping, Any, cast
+from typing import Mapping, Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QComboBox, QCheckBox
 
+from ...models import VideoOutputs, ZoomLevels
 from ...widgets import ComboBox, TimeEdit, FrameEdit
-from ...models import VideoOutputs, Outputs, ZoomLevels
 from ...utils import add_shortcut, qt_silent_call, set_qobject_names
 from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load
 
@@ -172,16 +171,6 @@ class MainToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try:
-            outputs = state['outputs']
-            if not isinstance(outputs, Outputs):
-                raise TypeError
-            self.outputs = cast(VideoOutputs, outputs)
-            self.main.init_outputs()
-            self.outputs_combobox.setModel(self.outputs)
-
-        except (KeyError, TypeError):
-            logging.warning('Storage loading: Main toolbar: failed to parse outputs.')
-
+        try_load(state, 'outputs', VideoOutputs, self.rescan_outputs)
         try_load(state, 'current_output_index', int, self.main.switch_output)
         try_load(state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked)

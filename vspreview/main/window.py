@@ -264,11 +264,14 @@ class MainWindow(AbstractMainWindow):
         if not reloading:
             self.toolbars.main.rescan_outputs()
             self.toolbars.playback.rescan_outputs()
+            self.toolbars.misc.autosave_timer.start(self.AUTOSAVE_INTERVAL)
             self.switch_output(self.OUTPUT_INDEX)
 
             self.load_storage()
         else:
             self.load_storage()
+
+            self.toolbars.misc.autosave_timer.start(self.AUTOSAVE_INTERVAL)
 
     def load_storage(self) -> None:
         vsp_dir = self.config_dir
@@ -305,8 +308,7 @@ class MainWindow(AbstractMainWindow):
     def reload_script(self) -> None:
         if not self.script_exec_failed:
             self.toolbars.misc.save_sync()
-
-        if self.settings.autosave_control.value() != Time(seconds=0):
+        elif self.settings.autosave_control.value() != Time(seconds=0):
             self.toolbars.misc.save()
 
         vs.clear_outputs()

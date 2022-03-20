@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import vapoursynth as vs
 from datetime import timedelta
-from typing import Any, Mapping, cast
+from typing import cast, Any, Mapping, Union, SupportsFloat, SupportsInt
 
 from .yaml import YAMLObjectWrapper
 from ..abstracts import main_window, try_load
@@ -10,16 +10,20 @@ from ..abstracts import main_window, try_load
 
 core = vs.core
 
+Number = Union[int, float, SupportsInt, SupportsFloat]
+
 
 class Frame(YAMLObjectWrapper):
     yaml_tag = '!Frame'
 
     __slots__ = ('value',)
 
-    def __init__(self, init_value: int | Frame | Time) -> None:
+    def __init__(self, init_value: Number | Frame | Time) -> None:
+        if isinstance(init_value, float):
+            init_value = int(init_value)
         if isinstance(init_value, int):
-            if init_value < 0:
-                raise ValueError
+            # if init_value < 0:
+            #     raise ValueError
             self.value = init_value
         elif isinstance(init_value, Frame):
             self.value = init_value.value
@@ -28,37 +32,53 @@ class Frame(YAMLObjectWrapper):
         else:
             raise TypeError
 
-    def __add__(self, other: Frame) -> Frame:
+    def __add__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
         return Frame(self.value + other.value)
 
-    def __iadd__(self, other: Frame) -> Frame:
+    def __iadd__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
         self.value += other.value
         return self
 
-    def __sub__(self, other: Frame) -> Frame:
+    def __sub__(self, other: Number | Frame) -> Frame:
         if isinstance(other, Frame):
             return Frame(self.value - other.value)
         raise TypeError
 
-    def __isub__(self, other: Frame) -> Frame:
+    def __isub__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
         self.value -= other.value
         return self
 
-    def __mul__(self, other: int) -> Frame:
-        return Frame(self.value * other)
+    def __mul__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
+        return Frame(self.value * other.value)
 
-    def __imul__(self, other: int) -> Frame:
-        self.value *= other
+    def __imul__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
+        self.value *= other.value
         return self
 
-    def __rmul__(self, other: int) -> Frame:
-        return Frame(other * self.value)
+    def __rmul__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
+        return Frame(other.value * self.value)
 
-    def __floordiv__(self, other: float) -> Frame:
-        return Frame(int(self.value // other))
+    def __floordiv__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
+        return Frame(int(self.value // other.value))
 
-    def __ifloordiv__(self, other: float) -> Frame:
-        self.value = int(self.value // other)
+    def __ifloordiv__(self, other: Number | Frame) -> Frame:
+        if not isinstance(other, Frame):
+            other = Frame(other)
+        self.value = int(self.value // other.value)
         return self
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -95,8 +115,6 @@ class Time(YAMLObjectWrapper):
         return self
 
     def __sub__(self, other: Time) -> Time:
-        if isinstance(other, Time):
-            return Time(self.value - other.value)
         if isinstance(other, Time):
             return Time(self.value - other.value)
         raise TypeError

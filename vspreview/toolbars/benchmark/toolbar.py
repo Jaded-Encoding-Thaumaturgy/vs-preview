@@ -54,7 +54,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))
         self.end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))
         self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
- 
+
         self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
         self.run_abort_button.clicked.connect(self.on_run_abort_pressed)
         self.sequenced_timer.timeout.connect(self._request_next_frame_sequenced)

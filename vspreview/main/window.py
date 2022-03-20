@@ -6,8 +6,8 @@ import yaml
 import logging
 import vapoursynth as vs
 from pathlib import Path
-from typing import Any, cast, List, Mapping, Tuple
 from traceback import FrameSummary, TracebackException
+from typing import Any, cast, List, Mapping, Tuple, Sequence
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent
 from PyQt5.QtGui import QCloseEvent, QPalette, QPixmap, QShowEvent
@@ -330,7 +330,7 @@ class MainWindow(AbstractMainWindow):
         return output.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
 
     def switch_frame(
-        self, pos: Frame | Time | int | None, *, render_frame: bool | vs.VideoFrame = True
+        self, pos: Frame | Time | int | None, *, render_frame: bool | Sequence[vs.VideoFrame | None] = True
     ) -> None:
         if pos is None:
             logging.debug('switch_frame: position is None!')
@@ -341,6 +341,14 @@ class MainWindow(AbstractMainWindow):
         if frame > self.current_output.end_frame:
             return
 
+        if render_frame:
+            if isinstance(render_frame, bool):
+                rendered_frame = self.render_frame(frame)
+            else:
+                rendered_frame = self.current_output.render_raw_videoframe(*render_frame)
+
+            self.current_output.graphics_scene_item.setPixmap(rendered_frame)
+
         self.current_output.last_showed_frame = frame
 
         self.timeline.set_position(frame)
@@ -348,14 +356,6 @@ class MainWindow(AbstractMainWindow):
         for toolbar in self.toolbars:
             if hasattr(toolbar, 'on_current_frame_changed'):
                 toolbar.on_current_frame_changed(frame)
-
-        if render_frame:
-            if isinstance(render_frame, vs.VideoFrame):
-                rendered_frame = self.current_output.render_raw_videoframe(render_frame)
-            else:
-                rendered_frame = self.render_frame(frame)
-
-            self.current_output.graphics_scene_item.setPixmap(rendered_frame)
 
         self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 

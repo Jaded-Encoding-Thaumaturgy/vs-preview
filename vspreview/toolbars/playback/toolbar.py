@@ -304,10 +304,7 @@ class PlaybackToolbar(AbstractToolbar):
                     self.main.current_output.prepared.alpha.get_frame_async(next_frame_for_buffer)
                 )
 
-        self.main.current_output.graphics_scene_item.setPixmap(
-            self.main.current_output.render_raw_videoframe(*frames_futures)
-        )
-        self.main.switch_frame(self.main.current_frame + Frame(1), render_frame=False)
+        self.main.switch_frame(self.main.current_frame + Frame(1), render_frame=frames_futures)
 
         if self.fps_variable_checkbox.isChecked():
             self.current_fps = self.get_true_fps(frames_futures[0])

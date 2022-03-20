@@ -6,7 +6,7 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
-from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar
+from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence
 
 from .better_abc import abstract_attribute
 from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
@@ -48,7 +48,9 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     @abstractmethod
-    def switch_frame(self, pos: Frame | Time | None, *, render_frame: bool | vs.VideoFrame = True) -> None:
+    def switch_frame(
+        self, pos: Frame | Time | None, *, render_frame: bool | Sequence[vs.VideoFrame | None] = True
+    ) -> None:
         raise NotImplementedError()
 
     @abstractmethod

@@ -299,8 +299,7 @@ class VideoOutput(YAMLObject):
             return core.libp2p.Pack(clip)
         else:
             return core.akarin.Expr(
-                core.std.SplitPlanes(clip),
-                'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1
+                core.std.SplitPlanes(clip), 'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1
             )
 
     def render_frame(self, frame: Frame) -> QPixmap:
@@ -314,8 +313,11 @@ class VideoOutput(YAMLObject):
         return self.render_raw_videoframe(*rendered_frames)
 
     def render_raw_videoframe(
-        self, vs_frame: vs.VideoFrame, vs_frame_alpha: vs.VideoFrame | None = None
+        self, vs_frame: vs.VideoFrame | None = None, vs_frame_alpha: vs.VideoFrame | None = None
     ) -> QPixmap:
+        if vs_frame is None:
+            return QPixmap()
+
         self.cur_frame = (vs_frame, vs_frame_alpha)
 
         frame_image = QImage(cast(bytes, vs_frame[0]), vs_frame.width, vs_frame.height, QImage.Format_RGB32)

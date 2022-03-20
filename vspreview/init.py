@@ -70,10 +70,6 @@ def main() -> None:
     main_window.load_script(script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False)
     main_window.show()
 
-    try:
-        app.exec_()
-    except Exception:
-        logging.error('app.exec_() exception')
     app.exec_()
 
 

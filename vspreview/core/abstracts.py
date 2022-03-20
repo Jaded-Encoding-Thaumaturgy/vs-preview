@@ -281,13 +281,21 @@ def try_load(
     if error_msg is None:
         error_msg = storage_err_msg(name, 1)
 
+    error = False
+
     try:
         value = state[name]
-        if not isinstance(value, expected_type):
+        if not isinstance(value, expected_type) and not (nullable and value is None):
             raise TypeError
     except (KeyError, TypeError):
+        error = True
         logging.warning(error_msg)
-    else:
+    finally:
+        if nullable:
+            error = False
+            value = None
+
+    if not error:
         if isinstance(receiver, expected_type):
             receiver = value
         elif callable(receiver):

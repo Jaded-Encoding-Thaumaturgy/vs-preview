@@ -50,6 +50,7 @@ class PipetteToolbar(AbstractToolbar):
         self.src_norm_fmt = '{:0.5f}'
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
+        self.IS_SUBSCRIBED_MOUSE_EVT = False
 
         main.reload_signal.connect(self.clear_outputs)
 
@@ -243,10 +244,11 @@ class PipetteToolbar(AbstractToolbar):
         if new_state is True:
             self.subscribe_on_mouse_events()
             self.main.graphics_view.setDragMode(QGraphicsView.NoDrag)
-        else:
+            self.IS_SUBSCRIBED_MOUSE_EVT = True
+        elif self.IS_SUBSCRIBED_MOUSE_EVT:
             self.unsubscribe_from_mouse_events()
-            self.main.graphics_view.setDragMode(
-                QGraphicsView.ScrollHandDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.IS_SUBSCRIBED_MOUSE_EVT = False
         self.tracking = new_state
 
     @staticmethod

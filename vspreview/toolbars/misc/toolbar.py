@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import yaml
 from pathlib import Path
+from functools import partial
 from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
@@ -39,7 +40,7 @@ class MiscToolbar(AbstractToolbar):
         main.reload_signal.connect(self.autosave_timer.stop)
 
         self.reload_script_button.clicked.connect(self.main.reload_script)
-        self.save_button.clicked.connect(lambda: self.save(manually=True))
+        self.save_button.clicked.connect(partial(self.save, manually=True))
         self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)
         self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)
         self.save_frame_as_button.clicked.connect(self.on_save_frame_as_clicked)
@@ -69,6 +70,7 @@ class MiscToolbar(AbstractToolbar):
         self.autosave_checkbox = QCheckBox(self)
         self.autosave_checkbox.setText('Autosave')
         self.autosave_checkbox.setEnabled(True)
+        self.autosave_checkbox.setChecked(True)
         layout.addWidget(self.autosave_checkbox)
 
         self.keep_on_top_checkbox = QCheckBox(self)

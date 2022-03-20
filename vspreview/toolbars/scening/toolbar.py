@@ -139,8 +139,7 @@ class SceningToolbar(AbstractToolbar):
         layout_line_1.addWidget(self.import_file_button)
 
         separator_line_1 = QFrame(self)
-        separator_line_1.setObjectName(
-            'SceningToolbar.setup_ui.separator_line_1')
+        separator_line_1.setObjectName('SceningToolbar.setup_ui.separator_line_1')
         separator_line_1.setFrameShape(QFrame.VLine)
         separator_line_1.setFrameShadow(QFrame.Sunken)
         layout_line_1.addWidget(separator_line_1)
@@ -201,8 +200,7 @@ class SceningToolbar(AbstractToolbar):
         layout_line_2.addWidget(self.remove_at_current_frame_button)
 
         separator_line_2 = QFrame(self)
-        separator_line_2.setObjectName(
-            'SceningToolbar.setup_ui.separator_line_2')
+        separator_line_2.setObjectName('SceningToolbar.setup_ui.separator_line_2')
         separator_line_2.setFrameShape(QFrame.VLine)
         separator_line_2.setFrameShadow(QFrame.Sunken)
         layout_line_2.addWidget(separator_line_2)

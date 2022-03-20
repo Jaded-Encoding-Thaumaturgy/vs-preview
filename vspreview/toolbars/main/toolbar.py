@@ -132,8 +132,8 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.frame_control.setMaximum, self.main.current_output.end_frame)
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
 
-    def rescan_outputs(self) -> None:
-        self.outputs = VideoOutputs()
+    def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
+        self.outputs = outputs or VideoOutputs()
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 

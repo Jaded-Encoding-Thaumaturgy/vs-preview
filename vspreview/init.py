@@ -28,7 +28,7 @@ class Application(QApplication):
         except Exception:
             isex = True
             logging.error('Application: unexpected error')
-            print(*sys.exc_info())
+            logging.error(*sys.exc_info())
             return False
         finally:
             if isex:
@@ -54,12 +54,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.script_path is None:
-        print('Script path required.')
+        logging.error('Script path required.')
         sys.exit(1)
 
     script_path = args.script_path.resolve()
     if not script_path.exists():
-        print('Script path is invalid.')
+        logging.error('Script path is invalid.')
         sys.exit(1)
 
     if not args.preserve_cwd:

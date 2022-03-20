@@ -10,7 +10,7 @@ from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
 from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QPalette, QPen, QMoveEvent, QMouseEvent, QResizeEvent
 
 from ..utils import strfdelta
-from ..core import AbstractToolbar, Frame, Scene, Time, Frame, main_window
+from ..core import AbstractToolbar, Frame, Scene, Time, main_window
 
 
 class Notch:

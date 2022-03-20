@@ -154,6 +154,8 @@ class AbstractToolbar(QWidget, QABC):
         self.visibility = False
 
     def on_toggle(self, new_state: bool) -> None:
+        if new_state == self.visibility:
+            return
         # invoking order matters
         self.setVisible(new_state)
         self.visibility = new_state

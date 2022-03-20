@@ -28,8 +28,16 @@ class VSPreviewEnvironmentPolicy(EnvironmentPolicy):
         return environment is self._current
 
     def reload_core(self) -> None:
-        assert self._api
-        self._current = self._api.create_environment()
+        if self._api is None:
+            new_environment = VSPreviewEnvironmentPolicy()
+            self._api = new_environment._api
+        if self._current:
+            del self._current
+        try:
+            self._api.unregister_policy()
+            self._current = self._api.create_environment()
+        except Exception:
+            pass
 
 
 policy = VSPreviewEnvironmentPolicy()

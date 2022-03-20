@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import logging
 from math import floor
 import vapoursynth as vs
@@ -180,6 +181,19 @@ class PlaybackToolbar(AbstractToolbar):
     def rescan_outputs(self) -> None:
         self.update_outputs(AudioOutputs())
 
+    def allocate_buffer(self, is_alpha: bool = False) -> None:
+        if is_alpha:
+            play_buffer_size = int(min(
+                self.main.PLAY_BUFFER_SIZE, (self.main.current_output.end_frame - self.main.current_frame) * 2
+            ))
+            play_buffer_size -= play_buffer_size % 2
+            self.play_buffer = deque([], play_buffer_size)
+        else:
+            play_buffer_size = int(
+                min(self.main.PLAY_BUFFER_SIZE, self.main.current_output.end_frame - self.main.current_frame)
+            )
+            self.play_buffer = deque([], play_buffer_size)
+
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if self.main.current_frame == self.main.current_output.end_frame:
             return
@@ -188,10 +202,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.main.statusbar.label.setText('Playing')
 
         if self.main.current_output.prepared.alpha is None:
-            play_buffer_size = int(
-                min(self.main.PLAY_BUFFER_SIZE, self.main.current_output.end_frame - self.main.current_frame)
-            )
-            self.play_buffer = deque([], play_buffer_size)
+            self.allocate_buffer(False)
             for i in range(cast(int, self.play_buffer.maxlen)):
                 self.play_buffer.appendleft(
                     self.main.current_output.prepared.clip.get_frame_async(
@@ -199,12 +210,7 @@ class PlaybackToolbar(AbstractToolbar):
                     )
                 )
         else:
-            play_buffer_size = int(min(
-                self.main.PLAY_BUFFER_SIZE, (self.main.current_output.end_frame - self.main.current_frame) * 2
-            ))
-            play_buffer_size -= play_buffer_size % 2
-            self.play_buffer = deque([], play_buffer_size)
-
+            self.allocate_buffer(True)
             for i in range(cast(int, self.play_buffer.maxlen) // 2):
                 frame = (self.main.current_frame + Frame(i) + Frame(1))
                 self.play_buffer.appendleft(
@@ -319,10 +325,19 @@ class PlaybackToolbar(AbstractToolbar):
         if self.main.statusbar.label.text() == 'Playing':
             self.main.statusbar.label.setText('Ready')
 
+        def _del(f: Future[vs.VideoFrame]) -> None:
+            f0 = future.result()
+            del f, f0
+
         for future in self.play_buffer:
-            future.add_done_callback(lambda future: future.result())
+            future.add_done_callback(_del)
 
         self.play_buffer.clear()
+        del self.play_buffer
+
+        gc.collect(generation=2)
+
+        self.allocate_buffer()
 
         current_audio_output = self.audio_outputs_combobox.currentValue()
 

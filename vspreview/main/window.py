@@ -281,7 +281,8 @@ class MainWindow(AbstractMainWindow):
             storage_path = self.script_path.with_suffix('.yml')
         if storage_path.exists():
             try:
-                yaml.load(storage_path.open(), Loader=yaml.Loader)
+                with storage_path.open() as storage_file:
+                    yaml.load(storage_file, Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
                     logging.warning(
@@ -316,7 +317,7 @@ class MainWindow(AbstractMainWindow):
 
         self.outputs.clear()
         get_policy().reload_core()
-        gc.collect()
+        gc.collect(generation=2)
 
         self.load_script(self.script_path, reloading=True)
 

@@ -28,7 +28,7 @@ class PlaybackToolbar(AbstractToolbar):
         'seek_n_frames_b_button', 'seek_to_prev_button', 'play_pause_button',
         'seek_to_next_button', 'seek_n_frames_f_button', 'play_n_frames_button',
         'seek_frame_control', 'seek_time_control',
-        'fps_spinbox', 'fps_unlimited_checkbox', 'fps_reset_button',
+        'fps_spinbox', 'fps_unlimited_checkbox', 'fps_variable_checkbox', 'fps_reset_button',
         'play_start_time', 'play_start_frame', 'play_end_time',
         'play_end_frame', 'play_buffer', 'toggle_button', 'play_timer_audio',
         'current_audio_frame', 'play_buffer_audio', 'audio_outputs',
@@ -75,6 +75,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_spinbox.valueChanged.connect(self.on_fps_changed)
         self.fps_reset_button.clicked.connect(self.reset_fps)
         self.fps_unlimited_checkbox.stateChanged.connect(self.on_fps_unlimited_changed)
+        self.fps_variable_checkbox.stateChanged.connect(self.on_fps_variable_changed)
         self.mute_checkbox.stateChanged.connect(self.on_mute_changed)
         self.main.timeline.clicked.connect(self.on_timeline_clicked)
 
@@ -146,6 +147,10 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_unlimited_checkbox.setText('Unlimited FPS')
         layout.addWidget(self.fps_unlimited_checkbox)
 
+        self.fps_variable_checkbox = QCheckBox(self)
+        self.fps_variable_checkbox.setText('Variable FPS')
+        layout.addWidget(self.fps_variable_checkbox)
+
         separator = QFrame(self)
         separator.setObjectName('PlaybackToolbar.setup_ui.separator')
         separator.setFrameShape(QFrame.VLine)
@@ -180,6 +185,13 @@ class PlaybackToolbar(AbstractToolbar):
 
     def rescan_outputs(self) -> None:
         self.update_outputs(AudioOutputs())
+
+    def get_true_fps(self, frame: vs.VideoFrame) -> float:
+        if any({x not in frame.props for x in {'_DurationDen', '_DurationNum'}}):
+            raise RuntimeError(
+                'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
+            )
+        return cast(float, frame.props['_DurationDen']) / cast(float, frame.props['_DurationNum'])
 
     def allocate_buffer(self, is_alpha: bool = False) -> None:
         if is_alpha:
@@ -230,6 +242,9 @@ class PlaybackToolbar(AbstractToolbar):
                 self.play_start_frame = self.main.current_frame
             else:
                 self.fps_timer.start(self.main.FPS_REFRESH_INTERVAL)
+        elif self.fps_variable_checkbox.isChecked():
+            f = self.main.current_output.prepared.clip.get_frame(int(self.main.current_frame))
+            self.play_timer.start(floor(1000 / self.get_true_fps(f)))
         else:
             self.play_timer.start(floor(1000 / self.main.current_output.play_fps))
 
@@ -294,7 +309,11 @@ class PlaybackToolbar(AbstractToolbar):
         )
         self.main.switch_frame(self.main.current_frame + Frame(1), render_frame=False)
 
-        if not self.main.DEBUG_PLAY_FPS:
+        if self.fps_variable_checkbox.isChecked():
+            self.current_fps = self.get_true_fps(frames_futures[0])
+            self.play_timer.start(floor(1000 / self.current_fps))
+            self.fps_spinbox.setValue(self.current_fps)
+        elif not self.main.DEBUG_PLAY_FPS:
             self.update_fps_counter()
 
     def _play_next_audio_frame(self) -> None:
@@ -459,9 +478,28 @@ class PlaybackToolbar(AbstractToolbar):
         if state == Qt.Checked:
             self.fps_spinbox.setEnabled(False)
             self.fps_reset_button.setEnabled(False)
+            self.fps_variable_checkbox.setChecked(False)
+            self.fps_variable_checkbox.setEnabled(False)
         elif state == Qt.Unchecked:
             self.fps_spinbox.setEnabled(True)
             self.fps_reset_button.setEnabled(True)
+            self.fps_spinbox.setValue(self.main.current_output.play_fps)
+            self.fps_variable_checkbox.setEnabled(True)
+
+        if self.play_timer.isActive():
+            self.stop()
+            self.play()
+
+    def on_fps_variable_changed(self, state: int) -> None:
+        if state == Qt.Checked:
+            self.fps_spinbox.setEnabled(False)
+            self.fps_reset_button.setEnabled(False)
+            self.fps_unlimited_checkbox.setEnabled(False)
+            self.fps_unlimited_checkbox.setChecked(False)
+        elif state == Qt.Unchecked:
+            self.fps_spinbox.setEnabled(True)
+            self.fps_reset_button.setEnabled(True)
+            self.fps_unlimited_checkbox.setEnabled(True)
             self.fps_spinbox.setValue(self.main.current_output.play_fps)
 
         if self.play_timer.isActive():

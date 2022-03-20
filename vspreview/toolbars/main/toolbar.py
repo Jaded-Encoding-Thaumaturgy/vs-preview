@@ -35,6 +35,7 @@ class MainToolbar(AbstractToolbar):
         self.zoom_combobox.setModel(self.zoom_levels)
         self.zoom_combobox.setCurrentIndex(3)
 
+        self.sync_outputs_checkbox.clicked.connect(self.on_sync_outputs_clicked)
         self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
         self.frame_control.valueChanged.connect(self.main.switch_frame)
         self.time_control.valueChanged.connect(self.main.switch_frame)
@@ -119,13 +120,19 @@ class MainToolbar(AbstractToolbar):
 
         self.toggle_button.setVisible(False)
 
+    def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
+        if checked:
+            if not force_frame:
+                force_frame = self.main.current_frame
+            for output in self.main.outputs:
+                output.frame_to_show = force_frame
+
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
         qt_silent_call(self.time_control.setValue, Time(frame))
 
         if self.sync_outputs_checkbox.isChecked():
-            for output in self.main.outputs:
-                output.frame_to_show = frame
+            self.on_sync_outputs_clicked(True, force_frame=frame)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)

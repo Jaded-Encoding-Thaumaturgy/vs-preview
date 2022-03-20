@@ -1,4 +1,6 @@
-## Standalone preview for VapourSynth scripts.
+# Standalone previewer for VapourSynth scripts
+
+Fork of Endilll's [vapoursynth-preview](https://github.com/Endilll/vapoursynth-preview) (not maintained anymore)
 
 This program is meant to be paired with a code editor with integrated terminal like Visual Studio Code.
 
@@ -11,7 +13,7 @@ This program is meant to be paired with a code editor with integrated terminal l
 # Installation and usage
 
 ```bash
-pip install -U git+https://github.com/Setsugennoao/vapoursynth-preview.git
+pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git
 ```
 
 It can then be used by running `python -m vspreview script.vpy` or your preferred way in your IDE.

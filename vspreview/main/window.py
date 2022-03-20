@@ -337,6 +337,7 @@ class MainWindow(AbstractMainWindow):
             return
 
         frame = Frame(pos)
+        self.current_output.frame_to_show = Frame(frame)
 
         if frame > self.current_output.end_frame:
             return
@@ -434,7 +435,6 @@ class MainWindow(AbstractMainWindow):
             self.switch_frame(start)
             self.toolbars.playback.play()
         else:
-            self.current_output.frame_to_show = Frame(start)
             self.switch_frame(start)
 
     def show_message(self, message: str) -> None:

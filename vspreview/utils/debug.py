@@ -188,8 +188,8 @@ class GraphicsScene(QGraphicsScene, metaclass=DebugMeta):  # type: ignore
         t1 = perf_counter_ns()
         interval = t1 - t0
         if interval > 5_000_000:
-            print(self.__class__.__name__ + '.event()')
-            print(f'{interval / 1_000_000}: {event.type()}')
+            logging.debug(self.__class__.__name__ + '.event()')
+            logging.debug(f'{interval / 1_000_000}: {event.type()}')
 
         return ret
 
@@ -456,7 +456,7 @@ class Application(QApplication):
 
             recursive_indent = 2 * (self.enter_count - 1)
 
-            print(
+            logging.debug(
                 f'{time:7.3f} ms, receiver: {type(obj).__name__:>25}, event: {event.type():3d} '
                 f'{" " * recursive_indent + event_name:<30}, name: {obj_name}'
             )
@@ -465,7 +465,7 @@ class Application(QApplication):
         except Exception:  # pylint: disable=broad-except
             isex = True
             logging.error('Application: unexpected error')
-            print(*sys.exc_info())
+            logging.debug(*sys.exc_info())
             return False
         finally:
             if isex:

@@ -137,19 +137,20 @@ class AbstractToolbar(QWidget, QABC):
     else:
         notches_changed = pyqtSignal(object)
 
-    def __init__(self, main: AbstractMainWindow, name: str, settings: QWidget) -> None:
+    def __init__(self, main: AbstractMainWindow, settings: QWidget) -> None:
         super().__init__(main.central_widget)
         self.main = main
         self.settings = settings
+        self.name = self.__class__.__name__[:-7]
 
-        self.main.app_settings.addTab(self.settings, name)
+        self.main.app_settings.addTab(self.settings, self.name)
         self.setFocusPolicy(Qt.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 
         self.toggle_button = QPushButton(self)
         self.toggle_button.setCheckable(True)
-        self.toggle_button.setText(name)
+        self.toggle_button.setText(self.name)
         self.toggle_button.clicked.connect(self.on_toggle)
 
         self.setVisible(False)

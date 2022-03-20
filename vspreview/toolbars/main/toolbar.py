@@ -22,7 +22,7 @@ class MainToolbar(AbstractToolbar):
     )
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
-        super().__init__(main_window, 'Main', main_window.settings)
+        super().__init__(main_window, main_window.settings)
         self.setup_ui()
 
         self.outputs = VideoOutputs()

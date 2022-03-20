@@ -31,7 +31,7 @@ class BenchmarkToolbar(AbstractToolbar):
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Benchmark', BenchmarkSettings())
+        super().__init__(main, BenchmarkSettings())
 
         self.setup_ui()
 

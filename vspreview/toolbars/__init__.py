@@ -16,26 +16,21 @@ from .playback import PlaybackToolbar
 from .scening import SceningToolbar
 
 
+all_toolbars = [
+    MainToolbar, PlaybackToolbar, SceningToolbar, PipetteToolbar,
+    BenchmarkToolbar, MiscToolbar, DebugToolbar
+]
+
+
 class Toolbars(AbstractToolbars):
     yaml_tag = '!Toolbars'
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
-        self.main = MainToolbar(main_window)
-        self.main.setObjectName('Toolbars.main')
+        for name, toolbar in zip(self.all_toolbars_names, all_toolbars):
+            self.__setattr__(name, toolbar(main_window))
 
-        self.misc = MiscToolbar(main_window)
-        self.playback = PlaybackToolbar(main_window)
-        self.scening = SceningToolbar(main_window)
-        self.pipette = PipetteToolbar(main_window)
-        self.benchmark = BenchmarkToolbar(main_window)
-        self.debug = DebugToolbar(main_window)
-
-        self.misc.setObjectName('Toolbars.misc')
-        self.playback.setObjectName('Toolbars.playback')
-        self.scening.setObjectName('Toolbars.scening')
-        self.pipette.setObjectName('Toolbars.pipette')
-        self.benchmark.setObjectName('Toolbars.benchmark')
-        self.debug.setObjectName('Toolbars.debug')
+        for name in self.all_toolbars_names:
+            self.__getattribute__(name).setObjectName(f'Toolbars.{name}')
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {

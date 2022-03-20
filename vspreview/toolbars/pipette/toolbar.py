@@ -39,7 +39,7 @@ class PipetteToolbar(AbstractToolbar):
     }
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Pipette', PipetteSettings())
+        super().__init__(main, PipetteSettings())
 
         self.setup_ui()
 

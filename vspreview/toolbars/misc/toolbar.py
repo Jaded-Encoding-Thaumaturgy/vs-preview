@@ -27,7 +27,7 @@ class MiscToolbar(AbstractToolbar):
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Misc', MiscSettings())
+        super().__init__(main, MiscSettings())
         self.setup_ui()
 
         self.save_template_lineedit.setText(self.main.SAVE_TEMPLATE)

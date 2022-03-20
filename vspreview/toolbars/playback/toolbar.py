@@ -36,7 +36,7 @@ class PlaybackToolbar(AbstractToolbar):
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, 'Playback', PlaybackSettings())
+        super().__init__(main, PlaybackSettings())
         self.setup_ui()
 
         self.play_buffer: Deque[Future[vs.VideoFrame]] = deque()

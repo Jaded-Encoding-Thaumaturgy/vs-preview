@@ -1,7 +1,7 @@
 psutil==5.9.0
 PyYAML==6.0
-PyQt5==5.15.4
+PyQt5==5.15.6
 PyQt5-Qt5==5.15.2
 QDarkStyle==3.0.3
-VapourSynth==57
+VapourSynth>=57
 pretty-traceback==2021.1017

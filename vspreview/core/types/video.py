@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import logging
 import vapoursynth as vs
 from yaml import YAMLObject
 from dataclasses import dataclass
-from typing import Any, Mapping, cast
+from typing import Any, Mapping, cast, Tuple
 
 from PyQt5.QtGui import QImage, QPixmap, QPainter
 
@@ -165,27 +166,30 @@ class VideoOutput(YAMLObject):
         BOTTOM = values[5]
 
     storable_attrs = (
-        'name', 'last_showed_frame', 'play_fps',
+        'title', 'last_showed_frame', 'play_fps',
         'frame_to_show', 'scening_lists'
     )
     __slots__ = storable_attrs + (
         'index', 'width', 'height', 'fps_num', 'fps_den',
         'total_frames', 'total_time', 'graphics_scene_item',
-        'end_frame', 'end_time', 'fps', 'props', 'source', 'prepared',
-        'main', 'checkerboard', '__weakref__', 'cur_frame'
+        'end_frame', 'end_time', 'fps', 'source', 'prepared',
+        'main', 'checkerboard', '__weakref__', 'cur_frame', '_stateset'
     )
 
     source: VideoOutputNode
     prepared: VideoOutputNode
     format: vs.VideoFormat
-    props: vs.FrameProps
+    title: str
+    curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
 
     def clear(self) -> None:
-        self.source = self.prepared = self.props = None  # type: ignore
+        self.source = self.prepared = None  # type: ignore
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
         from ...widgets import GraphicsImageItem
         from ...models import SceningLists
+
+        self._stateset = False
 
         self.main = main_window()
 
@@ -198,7 +202,7 @@ class VideoOutput(YAMLObject):
 
         self.index = index
         if not hasattr(core, 'libp2p'):
-            print(Warning(
+            logging.warning(Warning(
                 "LibP2P is missing, it is reccomended to prepare output clips correctly!\n"
                 "You can get it here: https://github.com/DJATOM/LibP2P-Vapoursynth"
             ))
@@ -206,7 +210,6 @@ class VideoOutput(YAMLObject):
         self.prepared.clip = self.prepare_vs_output(self.source.clip)
         self.width = self.prepared.clip.width
         self.height = self.prepared.clip.height
-        self.props = self.source.clip.get_frame(0).props
         self.fps_num = self.prepared.clip.fps.numerator
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
@@ -214,17 +217,13 @@ class VideoOutput(YAMLObject):
         self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
-        self.name = 'Video Node ' + str(self.index)
+        self.title = 'Video Node ' + str(self.index)
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
         # set by load_script() when it prepares graphics scene item based on last showed frame
         self.graphics_scene_item: GraphicsImageItem
-
-        # storable attributes
-        if 'Name' in self.props:
-            self.name = 'Video Node %d: %s' % (index, cast(str, self.props['Name']))
 
         if (not hasattr(self, 'last_showed_frame') or self.last_showed_frame > self.end_frame):
             self.last_showed_frame: Frame = Frame(0)
@@ -237,6 +236,24 @@ class VideoOutput(YAMLObject):
 
         if not hasattr(self, 'frame_to_show'):
             self.frame_to_show: Frame | None = None
+
+    @property
+    def props(self) -> vs.FrameProps:
+        if not self._stateset:
+            return vs.FrameProps()
+        to_render = int(self.frame_to_show or self.last_showed_frame)
+        return vs.FrameProps() if to_render == 0 else self.source.clip.get_frame(to_render).props
+
+    @property
+    def name(self) -> str:
+        if not self.title:
+            if 'Name' in self.props:
+                self.title = 'Video Node %d: %s' % (self.index, cast(str, self.props['Name']))
+        return self.title
+
+    @name.setter
+    def name(self, newname: str) -> None:
+        self.title = newname
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         assert clip.format
@@ -278,15 +295,14 @@ class VideoOutput(YAMLObject):
             )
 
     def render_frame(self, frame: Frame) -> QPixmap:
-        if self.prepared.alpha:
-            return self.render_raw_videoframe(
-                self.prepared.clip.get_frame(int(frame)),
-                self.prepared.alpha.get_frame(int(frame))
-            )
-        else:
-            return self.render_raw_videoframe(
-                self.prepared.clip.get_frame(int(frame))
-            )
+        if not self._stateset:
+            return QPixmap()
+        rendered_frames = (
+            self.prepared.clip.get_frame(int(frame)),
+            *([self.prepared.alpha.get_frame(int(frame))] if self.prepared.alpha else [])
+        )
+
+        return self.render_raw_videoframe(*rendered_frames)
 
     def render_raw_videoframe(
         self, vs_frame: vs.VideoFrame, vs_frame_alpha: vs.VideoFrame | None = None
@@ -355,7 +371,8 @@ class VideoOutput(YAMLObject):
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from ...models import SceningLists
 
-        try_load(state, 'name', str, self.__setattr__)
+        try_load(state, 'title', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'scening_lists', SceningLists, self.__setattr__)
         try_load(state, 'play_fps', float, self.__setattr__)
+        self._stateset = True

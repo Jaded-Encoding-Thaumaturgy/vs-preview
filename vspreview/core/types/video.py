@@ -231,11 +231,20 @@ class VideoOutput(YAMLObject):
         if not hasattr(self, 'scening_lists'):
             self.scening_lists: SceningLists = SceningLists()
 
-        if not hasattr(self, 'play_fps'):
-            self.play_fps = self.fps_num / self.fps_den
-
         if not hasattr(self, 'frame_to_show'):
             self.frame_to_show: Frame | None = None
+
+        if not hasattr(self, 'play_fps'):
+            if self.fps_num == 0:
+                self.play_fps = self.main.toolbars.playback.get_true_fps(
+                    self.source.clip.get_frame(
+                        int(self.frame_to_show or self.last_showed_frame)
+                    )
+                )
+                if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
+                    self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
+            else:
+                self.play_fps = self.fps_num / self.fps_den
 
     @property
     def props(self) -> vs.FrameProps:

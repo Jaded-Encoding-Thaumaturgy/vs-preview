@@ -10,7 +10,7 @@ core = vs.core
 
 class YAMLObjectWrapper(YAMLObject):
     yaml_tag: str
-    value: int
+    value: Any
 
     def __int__(self) -> int:
         return int(self.value)

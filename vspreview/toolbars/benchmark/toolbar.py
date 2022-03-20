@@ -95,19 +95,15 @@ class BenchmarkToolbar(AbstractToolbar):
         self.prefetch_checkbox = QCheckBox(self)
         self.prefetch_checkbox.setText('Prefetch')
         self.prefetch_checkbox.setChecked(True)
-        self.prefetch_checkbox.setToolTip(
-            'Request multiple frames in advance.'
-        )
+        self.prefetch_checkbox.setToolTip('Request multiple frames in advance.')
         layout.addWidget(self.prefetch_checkbox)
 
         self.unsequenced_checkbox = QCheckBox(self)
         self.unsequenced_checkbox.setText('Unsequenced')
         self.unsequenced_checkbox.setChecked(True)
         self.unsequenced_checkbox.setToolTip(
-            "If enabled, next frame will be requested each time "
-            "frameserver returns completed frame. "
-            "If disabled, first frame that's currently processing "
-            "will be waited before requesting next. Like for playback. "
+            "If enabled, next frame will be requested each time frameserver returns completed frame. "
+            "If disabled, first frame that's currently processing will be waited before requesting next."
         )
         layout.addWidget(self.unsequenced_checkbox)
 
@@ -184,9 +180,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         next_frame = self.end_frame + Frame(1) - self.frames_left
         if next_frame <= self.end_frame:
-            new_future = self.main.current_output.prepared.clip.get_frame_async(
-                int(next_frame)
-            )
+            new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
             self.buffer.appendleft(new_future)
 
         self.frames_left -= Frame(1)
@@ -198,9 +192,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         if self.running:
             next_frame = self.end_frame + Frame(1) - self.frames_left
-            new_future = self.main.current_output.prepared.clip.get_frame_async(
-                int(next_frame)
-            )
+            new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
             new_future.add_done_callback(self._request_next_frame_unsequenced)
 
         if future is not None:
@@ -208,11 +200,10 @@ class BenchmarkToolbar(AbstractToolbar):
         self.frames_left -= Frame(1)
 
     def on_run_abort_pressed(self, checked: bool) -> None:
+        self.set_ui_editable(not checked)
         if checked:
-            self.set_ui_editable(False)
             self.run()
         else:
-            self.set_ui_editable(True)
             self.abort()
 
     def on_prefetch_changed(self, new_state: int) -> None:
@@ -239,15 +230,13 @@ class BenchmarkToolbar(AbstractToolbar):
             if start > end:
                 end = start
             total = end - start + Frame(1)
-
         elif end is not None:
-            start = self. start_frame_control.value()
+            start = self.start_frame_control.value()
             total = self.total_frames_control.value()
 
             if end < start:
                 start = end
             total = end - start + Frame(1)
-
         elif total is not None:
             start = self.start_frame_control.value()
             end = self.end_frame_control.value()
@@ -261,7 +250,7 @@ class BenchmarkToolbar(AbstractToolbar):
         else:
             return
 
-        qt_silent_call(self. start_frame_control.setValue, start)
+        qt_silent_call(self.start_frame_control.setValue, start)
         qt_silent_call(self.end_frame_control.setValue, end)
         qt_silent_call(self.total_frames_control.setValue, total)
 

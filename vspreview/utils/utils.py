@@ -15,7 +15,7 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QWidget, QShortcut
 from PyQt5.QtCore import QTime, QSignalBlocker, QObject
 
-from ..core import main_window, Time, AbstractToolbar
+from ..core import main_window, Frame, Time, AbstractToolbar
 
 T = TypeVar('T')
 
@@ -143,7 +143,7 @@ def vs_clear_cache() -> None:
     vs.core.max_cache_size = 1
     output = list(vs.get_outputs().values())[0]
     if isinstance(output, vs.VideoOutputTuple):
-        curr = main_window().toolbars.main.current_output
+        curr = main_window().current_output
         output.clip.get_frame(
             int(curr.frame_to_show or curr.last_showed_frame or Frame(0))
         )

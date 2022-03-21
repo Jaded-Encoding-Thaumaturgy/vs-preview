@@ -363,6 +363,9 @@ class MainWindow(AbstractMainWindow):
             if hasattr(toolbar, 'on_current_frame_changed'):
                 toolbar.on_current_frame_changed(frame)
 
+        if not self.current_output.cur_frame[0]:
+            return
+
         self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
 
     def switch_output(self, value: int | VideoOutput) -> None:

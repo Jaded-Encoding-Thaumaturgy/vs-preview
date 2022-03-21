@@ -217,7 +217,7 @@ class VideoOutput(YAMLObject):
         self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
-        self.title = 'Video Node ' + str(self.index)
+        self.title = None
         self.cur_frame = (None, None)
 
         if self.source.alpha:
@@ -249,16 +249,20 @@ class VideoOutput(YAMLObject):
 
     @property
     def props(self) -> vs.FrameProps:
+        if self.source.clip:
+            self._stateset = True
         if not self._stateset:
-            return vs.FrameProps()
+            return cast(vs.FrameProps, {})
         to_render = int(self.frame_to_show or self.last_showed_frame)
-        return vs.FrameProps() if to_render == 0 else self.source.clip.get_frame(to_render).props
+        return self.source.clip.get_frame(to_render).props
 
     @property
     def name(self) -> str:
-        if not self.title:
-            if 'Name' in self.props:
-                self.title = 'Video Node %d: %s' % (self.index, cast(str, self.props['Name']))
+        if 'Name' in self.props:
+            self.title = cast(str, self.props['Name'].decode('utf-8'))
+        else:
+            self.title = 'Video Node %d' % self.index
+
         return self.title
 
     @name.setter
@@ -304,8 +308,6 @@ class VideoOutput(YAMLObject):
             )
 
     def render_frame(self, frame: Frame) -> QPixmap:
-        if not self._stateset:
-            return QPixmap()
         rendered_frames = (
             self.prepared.clip.get_frame(int(frame)),
             *([self.prepared.alpha.get_frame(int(frame))] if self.prepared.alpha else [])

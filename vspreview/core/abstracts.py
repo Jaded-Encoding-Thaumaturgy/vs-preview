@@ -14,7 +14,7 @@ from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSinglet
 from PyQt5.QtGui import QClipboard
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QGraphicsView, QStatusBar
+    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QGraphicsView, QStatusBar, QFrame
 )
 
 if TYPE_CHECKING:
@@ -189,6 +189,12 @@ class AbstractToolbar(QWidget, QABC):
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
             self.main.timeline.full_repaint()
 
+    def get_separator(self) -> QFrame:
+        separator = QFrame(self)
+        separator.setFrameShape(QFrame.VLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        return separator
+
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
 
@@ -215,9 +221,10 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
     pipette: AbstractToolbar = abstract_attribute()
     benchmark: AbstractToolbar = abstract_attribute()
     misc: AbstractToolbar = abstract_attribute()
+    comp: AbstractToolbar = abstract_attribute()
     debug: AbstractToolbar = abstract_attribute()
 
-    toolbars_names = ('playback', 'scening', 'pipette', 'benchmark', 'misc', 'debug')
+    toolbars_names = ('playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug')
 
     # 'main' should be the first
     all_toolbars_names = ['main'] + list(toolbars_names)

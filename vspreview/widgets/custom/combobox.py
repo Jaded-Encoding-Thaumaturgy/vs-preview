@@ -5,10 +5,10 @@ from typing import cast, Generic, Optional, Type, TYPE_CHECKING, TypeVar
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QComboBox
 
-from ...core import VideoOutput, AudioOutput
+from ...core import VideoOutput, AudioOutput, PictureType
 from ...models import SceningList
 
-T = TypeVar('T', VideoOutput, AudioOutput, SceningList, float)
+T = TypeVar('T', VideoOutput, AudioOutput, SceningList, PictureType, float)
 
 
 class ComboBox(QComboBox, Generic[T]):
@@ -17,6 +17,7 @@ class ComboBox(QComboBox, Generic[T]):
             VideoOutput: _ComboBox_Output,
             AudioOutput: _ComboBox_AudioOutput,
             SceningList: _ComboBox_SceningList,
+            PictureType: _ComboBox_PictureType,
             float: _ComboBox_float,
         }[content_type]
 
@@ -69,6 +70,14 @@ class _ComboBox_AudioOutput(ComboBox):
 
 class _ComboBox_SceningList(ComboBox):
     content_type = SceningList
+    if TYPE_CHECKING:
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
+    else:
+        valueChanged = pyqtSignal(content_type, object)
+
+
+class _ComboBox_PictureType(ComboBox):
+    content_type = PictureType
     if TYPE_CHECKING:
         valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:

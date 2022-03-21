@@ -11,7 +11,5 @@ from .bases import (
     QYAMLObject, QYAMLObjectSingleton,
 )
 from .types import (
-    Frame,
-    Time,
-    Scene, VideoOutput, AudioOutput
+    Frame, Time, Scene, VideoOutput, AudioOutput, PictureType
 )

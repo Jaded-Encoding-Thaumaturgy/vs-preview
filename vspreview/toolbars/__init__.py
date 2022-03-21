@@ -8,6 +8,7 @@ from ..core import storage_err_msg
 from ..core.abstracts import AbstractToolbars, AbstractMainWindow
 
 from .benchmark import BenchmarkToolbar
+from .comp import CompToolbar
 from .debug import DebugToolbar
 from .main import MainToolbar
 from .misc import MiscToolbar
@@ -18,7 +19,7 @@ from .scening import SceningToolbar
 
 all_toolbars = [
     MainToolbar, PlaybackToolbar, SceningToolbar, PipetteToolbar,
-    BenchmarkToolbar, MiscToolbar, DebugToolbar
+    BenchmarkToolbar, MiscToolbar, CompToolbar, DebugToolbar
 ]
 
 

@@ -403,9 +403,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.main.current_frame = self.main.current_output.end_frame
 
     def seek_to_prev(self, checked: bool | None = None) -> None:
-        try:
-            new_pos = self.main.current_frame - Frame(1)
-        except ValueError:
+        new_pos = self.main.current_frame - Frame(1)
+        if new_pos < 0:
             return
 
         if self.play_timer.isActive():
@@ -422,9 +421,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.main.current_frame = new_pos
 
     def seek_n_frames_b(self, checked: bool | None = None) -> None:
-        try:
-            new_pos = self.main.current_frame - Frame(self.seek_frame_control.value())
-        except ValueError:
+        new_pos = self.main.current_frame - Frame(self.seek_frame_control.value())
+        if new_pos < 0:
             return
 
         if self.play_timer.isActive():

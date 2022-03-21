@@ -22,8 +22,6 @@ class Frame(YAMLObjectWrapper):
         if isinstance(init_value, float):
             init_value = int(init_value)
         if isinstance(init_value, int):
-            # if init_value < 0:
-            #     raise ValueError
             self.value = init_value
         elif isinstance(init_value, Frame):
             self.value = init_value.value

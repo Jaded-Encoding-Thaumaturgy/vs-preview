@@ -350,7 +350,6 @@ class SceningToolbar(AbstractToolbar):
         self.main.current_frame = new_pos
 
     # scene management
-
     def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()

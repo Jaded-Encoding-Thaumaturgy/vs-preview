@@ -26,24 +26,26 @@ class YAMLObjectWrapper(YAMLObject):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, YAMLObjectWrapper):
-            raise NotImplementedError
+            other = self.__class__(other)
         return self.value == other.value
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, YAMLObjectWrapper):
-            raise NotImplementedError
+            other = self.__class__(other)
         return self.value > other.value
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __le__(self, other: YAMLObjectWrapper) -> bool:
+    def __le__(self, other: object) -> bool:
         return not self.__gt__(other)
 
-    def __ge__(self, other: YAMLObjectWrapper) -> bool:
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, YAMLObjectWrapper):
+            other = self.__class__(other)
         return self.__eq__(other) or self.__gt__(other)
 
-    def __lt__(self, other: YAMLObjectWrapper) -> bool:
+    def __lt__(self, other: object) -> bool:
         return not self.__ge__(other)
 
     def __repr__(self) -> str:

@@ -32,7 +32,7 @@ class PlaybackToolbar(AbstractToolbar):
         'play_start_time', 'play_start_frame', 'play_end_time',
         'play_end_frame', 'play_buffer', 'toggle_button', 'play_timer_audio',
         'current_audio_frame', 'play_buffer_audio', 'audio_outputs',
-        'audio_outputs_combobox'
+        'audio_outputs_combobox', 'seek_to_start_button', 'seek_to_end_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -78,12 +78,18 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_variable_checkbox.stateChanged.connect(self.on_fps_variable_changed)
         self.mute_checkbox.stateChanged.connect(self.on_mute_changed)
         self.main.timeline.clicked.connect(self.on_timeline_clicked)
+        self.seek_to_start_button.clicked.connect(self.seek_to_start)
+        self.seek_to_end_button.clicked.connect(self.seek_to_end)
 
         add_shortcut(Qt.Key_Space, self.play_pause_button.click)
         add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
         add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
         add_shortcut(Qt.SHIFT + Qt.Key_Left, self.seek_n_frames_b_button.click)
         add_shortcut(Qt.SHIFT + Qt.Key_Right, self.seek_n_frames_f_button.click)
+        add_shortcut(Qt.Key_PageUp, self.seek_n_frames_b_button.click)
+        add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
+        add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
+        add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
 
         set_qobject_names(self)
 
@@ -92,8 +98,13 @@ class PlaybackToolbar(AbstractToolbar):
         layout.setObjectName('PlaybackToolbar.setup_ui.layout')
         layout.setContentsMargins(0, 0, 0, 0)
 
+        self.seek_to_start_button = QPushButton(self)
+        self.seek_to_start_button.setText('⏮')
+        self.seek_to_start_button.setToolTip('Seek to First Frame')
+        layout.addWidget(self.seek_to_start_button)
+
         self.seek_n_frames_b_button = QPushButton(self)
-        self.seek_n_frames_b_button.setText('⏮')
+        self.seek_n_frames_b_button.setText('⏪')
         self.seek_n_frames_b_button.setToolTip('Seek N Frames Backwards')
         layout.addWidget(self.seek_n_frames_b_button)
 
@@ -114,9 +125,14 @@ class PlaybackToolbar(AbstractToolbar):
         layout.addWidget(self.seek_to_next_button)
 
         self.seek_n_frames_f_button = QPushButton(self)
-        self.seek_n_frames_f_button.setText('⏭')
+        self.seek_n_frames_f_button.setText('⏩')
         self.seek_n_frames_f_button.setToolTip('Seek N Frames Forward')
         layout.addWidget(self.seek_n_frames_f_button)
+
+        self.seek_to_end_button = QPushButton(self)
+        self.seek_to_end_button.setText('⏭')
+        self.seek_to_end_button.setToolTip('Seek to Last Frame')
+        layout.addWidget(self.seek_to_end_button)
 
         self.seek_frame_control = FrameEdit(self)
         self.seek_frame_control.setMinimum(Frame(1))
@@ -379,6 +395,14 @@ class PlaybackToolbar(AbstractToolbar):
         current_audio_output.iodevice.reset()
         self.current_audio_frame = Frame(0)
         self.audio_outputs_combobox.setEnabled(True)
+
+    def seek_to_start(self, checked: bool | None = None) -> None:
+        self.stop()
+        self.main.current_frame = Frame(0)
+
+    def seek_to_end(self, checked: bool | None = None) -> None:
+        self.stop()
+        self.main.current_frame = self.main.current_output.end_frame
 
     def seek_to_prev(self, checked: bool | None = None) -> None:
         try:

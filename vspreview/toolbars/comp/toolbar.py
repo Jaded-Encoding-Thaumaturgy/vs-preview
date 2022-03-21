@@ -11,7 +11,6 @@ from functools import partial
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
 
-from PyQt5.QtGui import QImage
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox, QProgressBar
 
@@ -40,6 +39,7 @@ class WorkerConfiguration(NamedTuple):
     frames: List[int]
     compression: int
     path: Path
+    main: AbstractMainWindow
 
 
 class Worker(QObject):
@@ -78,7 +78,7 @@ class Worker(QObject):
                 def _save(n: int, f: vs.VideoFrame) -> vs.VideoFrame:
                     if self.is_finished:
                         raise StopIteration
-                    QImage(cast(bytes, f[0]), f.width, f.height, QImage.Format_RGB32).save(
+                    conf.main.current_output.frame_to_qimage(f).save(
                         str(path_images[n]), 'PNG', conf.compression
                     )
                     return f
@@ -394,7 +394,7 @@ class CompToolbar(AbstractToolbar):
         return WorkerConfiguration(
             self.main.outputs, 'Function Test',
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, None, sorted(set(samples)), -1, path
+            True, None, sorted(set(samples)), -1, path, self.main
         )
 
     def upload_to_slowpics(self) -> None:

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import ctypes
 import logging
 import vapoursynth as vs
 from yaml import YAMLObject
 from dataclasses import dataclass
 from typing import Any, Mapping, cast, Tuple
 
+from PyQt5 import sip
 from PyQt5.QtGui import QImage, QPixmap, QPainter
 
 from ..abstracts import main_window, try_load
@@ -179,8 +181,9 @@ class VideoOutput(YAMLObject):
     source: VideoOutputNode
     prepared: VideoOutputNode
     format: vs.VideoFormat
-    title: str
+    title: str | None
     curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
+    cur_frame: Tuple[vs.VideoFrame | None, vs.VideoFrame | None]
 
     def clear(self) -> None:
         self.source = self.prepared = None  # type: ignore
@@ -259,7 +262,7 @@ class VideoOutput(YAMLObject):
     @property
     def name(self) -> str:
         if 'Name' in self.props:
-            self.title = cast(str, self.props['Name'].decode('utf-8'))
+            self.title = cast(bytes, self.props['Name']).decode('utf-8')
         else:
             self.title = 'Video Node %d' % self.index
 
@@ -269,12 +272,19 @@ class VideoOutput(YAMLObject):
     def name(self, newname: str) -> None:
         self.title = newname
 
+    _FRAME_NORML_FMT = vs.core.get_format(vs.RGB24)
+    _FRAME_ALPHA_FMT = vs.core.get_format(vs.GRAY8)
+    _FRAME_CONV_INFO = {
+        False: ((f := _FRAME_NORML_FMT).bits_per_sample, ctypes.c_char * f.bytes_per_sample, QImage.Format_RGB32),
+        True: ((f := _FRAME_ALPHA_FMT).bits_per_sample, ctypes.c_char * f.bytes_per_sample, QImage.Format_Alpha8)
+    }
+
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         assert clip.format
 
         resizer = self.main.VS_OUTPUT_RESIZER
         resizer_kwargs = {
-            'format': vs.RGB24,
+            'format': self._FRAME_NORML_FMT.id,
             'matrix_in_s': self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s': self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
@@ -291,9 +301,9 @@ class VideoOutput(YAMLObject):
             del resizer_kwargs['matrix_in_s']
 
         if is_alpha:
-            if clip.format.id == vs.GRAY8:
+            if clip.format.id == self._FRAME_ALPHA_FMT.id:
                 return clip
-            resizer_kwargs['format'] = vs.GRAY8
+            resizer_kwargs['format'] = self._FRAME_ALPHA_FMT.id
 
         clip = resizer(clip, **resizer_kwargs, **self.main.VS_OUTPUT_RESIZER_KWARGS)
 
@@ -315,6 +325,21 @@ class VideoOutput(YAMLObject):
 
         return self.render_raw_videoframe(*rendered_frames)
 
+    def frame_to_qimage(self, vs_frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
+        width, height = vs_frame.width, vs_frame.height
+        mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
+
+        if width % mod:
+            frame_data_pointer = ctypes.cast(
+                vs_frame.get_read_ptr(0), ctypes.POINTER(point_size * width * height)
+            ).contents
+        else:
+            frame_data_pointer = cast(sip.voidptr, vs_frame[0])
+
+        return QImage(
+            frame_data_pointer, width, height, vs_frame.get_stride(0), qt_format
+        )
+
     def render_raw_videoframe(
         self, vs_frame: vs.VideoFrame | None = None, vs_frame_alpha: vs.VideoFrame | None = None
     ) -> QPixmap:
@@ -323,12 +348,12 @@ class VideoOutput(YAMLObject):
 
         self.cur_frame = (vs_frame, vs_frame_alpha)
 
-        frame_image = QImage(cast(bytes, vs_frame[0]), vs_frame.width, vs_frame.height, QImage.Format_RGB32)
+        frame_image = self.frame_to_qimage(vs_frame, False)
 
         if vs_frame_alpha is None:
             return QPixmap.fromImage(frame_image)
 
-        alpha_image = QImage(cast(bytes, vs_frame_alpha[0]), vs_frame.width, vs_frame.height, QImage.Format_Alpha8)
+        alpha_image = self.frame_to_qimage(vs_frame_alpha, True)
 
         result_image = QImage(vs_frame.width, vs_frame.height, QImage.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)

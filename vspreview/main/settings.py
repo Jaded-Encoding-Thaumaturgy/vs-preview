@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QWidget, QHBoxLayout, QCheckBox, QSpinBox
+from PyQt5.QtWidgets import QLabel, QHBoxLayout, QCheckBox, QSpinBox
 
 from ..widgets import TimeEdit
-from ..utils import set_qobject_names
-from ..core import Time, QYAMLObjectSingleton, try_load
+from ..core import Time, AbstractToolbarSettings, try_load
 
 
-class MainSettings(QWidget, QYAMLObjectSingleton):
+class MainSettings(AbstractToolbarSettings):
     yaml_tag = '!MainSettings'
 
     __slots__ = (
@@ -19,22 +18,12 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         'timeline_notches_margin_spinbox',
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-
-        self.setup_ui()
-
-        self.set_defaults()
-
-        set_qobject_names(self)
-
     def setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setObjectName('MainSettings.setup_ui.layout')
+        super().setup_ui()
 
         autosave_layout = QHBoxLayout()
         autosave_layout.setObjectName('MainSettings.setup_ui.autosave_layout')
-        layout.addLayout(autosave_layout)
+        self.vlayout.addLayout(autosave_layout)
 
         autosave_label = QLabel(self)
         autosave_label.setObjectName('MainSettings.setup_ui.autosave_label')
@@ -46,7 +35,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
 
         base_ppi_layout = QHBoxLayout()
         base_ppi_layout.setObjectName('MainSettings.setup_ui.base_ppi_layout')
-        layout.addLayout(base_ppi_layout)
+        self.vlayout.addLayout(base_ppi_layout)
 
         base_ppi_label = QLabel(self)
         base_ppi_label.setObjectName('MainSettings.setup_ui.base_ppi_label')
@@ -62,18 +51,18 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         self.dark_theme_checkbox = QCheckBox(self)
         self.dark_theme_checkbox.setText('Dark theme')
         self.dark_theme_checkbox.setEnabled(False)
-        layout.addWidget(self.dark_theme_checkbox)
+        self.vlayout.addWidget(self.dark_theme_checkbox)
 
         self.opengl_rendering_checkbox = QCheckBox(self)
         self.opengl_rendering_checkbox.setText('OpenGL rendering')
         self.opengl_rendering_checkbox.setEnabled(False)
-        layout.addWidget(self.opengl_rendering_checkbox)
+        self.vlayout.addWidget(self.opengl_rendering_checkbox)
 
         output_index_layout = QHBoxLayout()
         output_index_layout.setObjectName(
             'MainSettings.setup_ui.output_index_layout'
         )
-        layout.addLayout(output_index_layout)
+        self.vlayout.addLayout(output_index_layout)
 
         output_index_label = QLabel(self)
         output_index_label.setObjectName(
@@ -91,7 +80,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         png_compression_layout.setObjectName(
             'MainSettings.setup_ui.png_compression_layout'
         )
-        layout.addLayout(png_compression_layout)
+        self.vlayout.addLayout(png_compression_layout)
 
         png_compression_label = QLabel(self)
         png_compression_label.setObjectName(
@@ -109,7 +98,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         statusbar_timeout_layout.setObjectName(
             'MainSettings.setup_ui.statusbar_timeout_layout'
         )
-        layout.addLayout(statusbar_timeout_layout)
+        self.vlayout.addLayout(statusbar_timeout_layout)
 
         statusbar_timeout_label = QLabel(self)
         statusbar_timeout_label.setObjectName(
@@ -125,7 +114,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         timeline_notches_margin_layout.setObjectName(
             'MainSettings.setup_ui.timeline_notches_margin_layout'
         )
-        layout.addLayout(timeline_notches_margin_layout)
+        self.vlayout.addLayout(timeline_notches_margin_layout)
 
         timeline_notches_margin_label = QLabel(self)
         timeline_notches_margin_label.setObjectName(
@@ -149,7 +138,7 @@ class MainSettings(QWidget, QYAMLObjectSingleton):
         self.opengl_rendering_checkbox.setChecked(False)
         self.output_index_spinbox.setValue(0)
         self.png_compressing_spinbox.setValue(0)
-        self.statusbar_timeout_control.setValue(Time(seconds=30))
+        self.statusbar_timeout_control.setValue(Time(seconds=2.5))
         self.timeline_notches_margin_spinbox.setValue(20)
 
     @property

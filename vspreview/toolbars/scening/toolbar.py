@@ -20,9 +20,7 @@ from .settings import SceningSettings
 
 
 class SceningToolbar(AbstractToolbar):
-    _storable_attrs = (
-        'settings', 'visibility', 'first_frame', 'second_frame'
-    )
+    _storable_attrs = ('first_frame', 'second_frame')
 
     __slots__ = (
         *_storable_attrs, 'export_template_pattern', 'export_template_scenes_pattern',
@@ -843,10 +841,7 @@ class SceningToolbar(AbstractToolbar):
         self.status_label.setText('Scening: {} - {} '.format(first_frame_text, second_frame_text))
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        } | {
+        return super().__getstate__() | {
             'label': self.label_lineedit.text(),
             'scening_export_template': self.export_template_lineedit.text(),
         }
@@ -865,5 +860,4 @@ class SceningToolbar(AbstractToolbar):
 
         try_load(state, 'label', str, self.label_lineedit.setText)
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
-        try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', SceningSettings, self.__setattr__)
+        super().__setstate__(state)

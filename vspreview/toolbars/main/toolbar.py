@@ -12,10 +12,10 @@ from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutpu
 
 
 class MainToolbar(AbstractToolbar):
-    _storable_attrs = ('settings',)
+    _no_visibility_choice = True
 
     __slots__ = (
-        *_storable_attrs, 'outputs', 'zoom_levels',
+        'outputs', 'zoom_levels',
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button', 'settings_button'
@@ -170,10 +170,7 @@ class MainToolbar(AbstractToolbar):
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        } | {
+        return super().__getstate__() | {
             'current_output_index': self.outputs_combobox.currentIndex(),
             'outputs': self.outputs,
             'current_zoom_index': self.zoom_combobox.currentIndex(),

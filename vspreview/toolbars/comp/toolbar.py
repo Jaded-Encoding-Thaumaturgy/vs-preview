@@ -9,7 +9,7 @@ from pathlib import Path
 from requests import Session
 from functools import partial
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
-from typing import Any, Mapping, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
+from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
 
 from PyQt5.QtGui import QImage
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QCheckBox, QPushButt
 from ...utils import set_qobject_names
 from ...widgets import ComboBox, FrameEdit
 from ...models import PictureTypes, VideoOutputs
-from ...core import AbstractMainWindow, AbstractToolbar, PictureType, try_load, main_window
+from ...core import AbstractMainWindow, AbstractToolbar, PictureType, main_window
 
 from .settings import CompSettings
 
@@ -155,12 +155,10 @@ class Worker(QObject):
 
 
 class CompToolbar(AbstractToolbar):
-    _storable_attrs = ('settings', 'visibility')
-
     _thread_running = False
 
     __slots__ = (
-        *_storable_attrs, 'random_frames_control', 'manual_frames_lineedit',
+        'random_frames_control', 'manual_frames_lineedit',
         'current_frame_checkbox', 'is_public_checkbox', 'is_nsfw_checkbox',
         'output_url_lineedit', 'output_url_copy_button', 'start_upload_button', 'stop_upload_button',
         'upload_progressbar', 'upload_status_label', 'upload_status_elements'
@@ -417,13 +415,3 @@ class CompToolbar(AbstractToolbar):
 
         self.upload_thread.start()
         self._thread_running = True
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        }
-
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', CompSettings, self.__setattr__)

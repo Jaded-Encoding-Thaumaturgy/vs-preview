@@ -16,10 +16,8 @@ from .settings import MiscSettings
 
 
 class MiscToolbar(AbstractToolbar):
-    _storable_attrs = ('settings', 'visibility')
-
     __slots__ = (
-        *_storable_attrs, 'autosave_timer', 'reload_script_button',
+        'autosave_timer', 'reload_script_button',
         'save_button', 'autosave_checkbox',
         'keep_on_top_checkbox', 'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
@@ -210,10 +208,7 @@ class MiscToolbar(AbstractToolbar):
         )
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        } | {
+        return super().__getstate__() | {
             'save_file_name_template': self.save_template_lineedit.text(),
             'show_debug': self.show_debug_checkbox.isChecked()
         }
@@ -221,5 +216,4 @@ class MiscToolbar(AbstractToolbar):
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'save_file_name_template', str, self.save_template_lineedit.setText)
         try_load(state, 'show_debug', bool, self.show_debug_checkbox.setChecked)
-        try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', MiscSettings, self.__setattr__)
+        super().__setstate__(state)

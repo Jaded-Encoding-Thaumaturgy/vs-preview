@@ -4,7 +4,6 @@ import vapoursynth as vs
 from struct import unpack
 from math import floor, ceil, log
 from weakref import WeakKeyDictionary
-from typing import Mapping, Any
 
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QMouseEvent
@@ -12,16 +11,14 @@ from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGraphicsView
 
 from ...widgets import ColorView
 from ...utils import set_qobject_names
-from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput, try_load
+from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput
 
 from .settings import PipetteSettings
 
 
 class PipetteToolbar(AbstractToolbar):
-    _storable_attrs = ('settings', 'visibility')
-
     __slots__ = (
-        *_storable_attrs, 'color_view', 'outputs', 'position', 'pos_fmt', 'tracking',
+        'color_view', 'outputs', 'position', 'pos_fmt', 'tracking',
         'rgb_dec', 'rgb_hex', 'rgb_label',
         'src_dec', 'src_dec_fmt', 'src_hex', 'src_hex_fmt', 'src_label'
     )
@@ -263,13 +260,3 @@ class PipetteToolbar(AbstractToolbar):
     @staticmethod
     def clip(value: float, lower_bound: float, upper_bound: float) -> float:
         return max(lower_bound, min(value, upper_bound))
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        }
-
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', PipetteSettings, self.__setattr__)

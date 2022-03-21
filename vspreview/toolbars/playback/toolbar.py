@@ -21,10 +21,8 @@ from .settings import PlaybackSettings
 
 
 class PlaybackToolbar(AbstractToolbar):
-    _storable_attrs = ('settings', 'visibility')
-
     __slots__ = (
-        *_storable_attrs, 'play_timer', 'fps_timer', 'fps_history', 'current_fps',
+        'play_timer', 'fps_timer', 'fps_history', 'current_fps',
         'seek_n_frames_b_button', 'seek_to_prev_button', 'play_pause_button',
         'seek_to_next_button', 'seek_n_frames_f_button', 'play_n_frames_button',
         'seek_frame_control', 'seek_time_control',
@@ -550,10 +548,7 @@ class PlaybackToolbar(AbstractToolbar):
                 self.play_audio()
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        } | {
+        return super().__getstate__() | {
             'seek_interval_frame': self.seek_frame_control.value(),
             'audio_outputs': self.audio_outputs,
             'current_audio_output_index': self.audio_outputs_combobox.currentIndex(),
@@ -565,5 +560,4 @@ class PlaybackToolbar(AbstractToolbar):
         try_load(state, 'audio_outputs', AudioOutputs, self.update_outputs)
         try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)
         try_load(state, 'audio_muted', bool, self.mute_checkbox.setChecked)
-        try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', PlaybackSettings, self.__setattr__)
+        super().__setstate__(state)

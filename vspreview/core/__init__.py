@@ -2,7 +2,8 @@
 from . import vsenv
 from .abstracts import (
     AbstractMainWindow, AbstractToolbar, AbstractToolbars,
-    AbstractAppSettings, main_window, try_load, storage_err_msg
+    AbstractAppSettings, AbstractToolbarSettings,
+    main_window, try_load, storage_err_msg
 )
 from .bases import (
     AbstractYAMLObject, AbstractYAMLObjectSingleton,

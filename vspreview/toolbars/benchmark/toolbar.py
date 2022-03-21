@@ -1,27 +1,25 @@
 from __future__ import annotations
 
 import vapoursynth as vs
+from typing import Deque
 from copy import deepcopy
 from time import perf_counter
 from collections import deque
 from concurrent.futures import Future
-from typing import Any, Deque, Mapping
 
 from PyQt5.QtCore import Qt, QTimer, QMetaObject
 from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QLabel, QPushButton
 
 from ...widgets import FrameEdit
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load
+from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time
 from ...utils import get_usable_cpus_count, qt_silent_call, set_qobject_names, vs_clear_cache, strfdelta
 
 from .settings import BenchmarkSettings
 
 
 class BenchmarkToolbar(AbstractToolbar):
-    _storable_attrs = ('settings', 'visibility')
-
     __slots__ = (
-        *_storable_attrs, 'start_frame_control',
+        'start_frame_control',
         'end_frame_control', 'total_frames_control',
         'prefetch_checkbox', 'unsequenced_checkbox',
         'run_abort_button', 'info_label', 'running',
@@ -261,13 +259,3 @@ class BenchmarkToolbar(AbstractToolbar):
 
         info_str = (f"{frames_done}/{self.total_frames} frames in {strfdelta(run_time, '%M:%S.%Z')}, {fps:.4f} fps")
         self.info_label.setText(info_str)
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self._storable_attrs
-        }
-
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'visibility', bool, self.on_toggle)
-        try_load(state, 'settings', BenchmarkSettings, self.settings)

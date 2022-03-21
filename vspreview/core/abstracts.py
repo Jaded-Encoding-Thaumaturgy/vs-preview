@@ -9,12 +9,13 @@ from functools import lru_cache
 from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence
 
 from .better_abc import abstract_attribute
-from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton
+from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
 
 from PyQt5.QtGui import QClipboard
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QGraphicsView, QStatusBar, QFrame
+    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene,
+    QGraphicsView, QStatusBar, QFrame, QVBoxLayout, QHBoxLayout
 )
 
 if TYPE_CHECKING:
@@ -26,7 +27,51 @@ if TYPE_CHECKING:
 T = TypeVar('T')
 
 
-class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
+class QHelperClass():
+    def setup_ui(self) -> None:
+        ...
+
+
+class ExtendedWidget(QHelperClass, QWidget):
+    ...
+
+
+class ExtendedMainWindow(QHelperClass, QMainWindow):
+    vlayout: QVBoxLayout
+    hlayout: QHBoxLayout
+    ...
+
+
+class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
+    yaml_tag: str
+    vlayout: QVBoxLayout
+
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        from ..utils import set_qobject_names
+
+        super().__init__()
+
+        self.setup_ui()
+        self.set_defaults()
+
+        set_qobject_names(self)
+
+    def setup_ui(self) -> None:
+        self.vlayout = QVBoxLayout(self)
+
+    def set_defaults(self) -> None:
+        pass
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {}
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        pass
+
+
+class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     __slots__ = ()
 
     @abstractmethod
@@ -129,8 +174,12 @@ class AbstractMainWindow(QMainWindow, QAbstractYAMLObjectSingleton):
         statusbar: QStatusBar = abstract_attribute()
 
 
-class AbstractToolbar(QWidget, QABC):
-    __slots__ = ('main', 'toggle_button',)
+class AbstractToolbar(ExtendedWidget, QWidget, QABC):
+    _no_visibility_choice = False
+    _storable_attrs: Tuple[str, ...] = tuple()
+    _class_storable_attrs: Tuple[str, ...] = ('settings', 'visibility')
+
+    __slots__ = ('main', 'toggle_button', *_class_storable_attrs)
 
     if TYPE_CHECKING:
         notches_changed = pyqtSignal(AbstractToolbar)  # noqa: F821
@@ -195,11 +244,24 @@ class AbstractToolbar(QWidget, QABC):
         separator.setFrameShadow(QFrame.Sunken)
         return separator
 
+    def __get_storable_attr__(self) -> Tuple[str, ...]:
+        attributes = list(self._class_storable_attrs + self._storable_attrs)
+
+        if self._no_visibility_choice:
+            attributes.remove('visibility')
+
+        return tuple(attributes)
+
     def __getstate__(self) -> Mapping[str, Any]:
-        return {}
+        return {
+            attr_name: getattr(self, attr_name)
+            for attr_name in self.__get_storable_attr__()
+        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        pass
+        if not self._no_visibility_choice:
+            try_load(state, 'visibility', bool, self.on_toggle)
+        try_load(state, 'settings', AbstractToolbarSettings, self.__setattr__)
 
 
 class AbstractAppSettings(QDialog, QABC):

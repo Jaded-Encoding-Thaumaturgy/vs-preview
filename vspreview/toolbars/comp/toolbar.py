@@ -329,7 +329,7 @@ class CompToolbar(AbstractToolbar):
                 _rnum_checked.add(rnum)
 
                 if all(
-                    f.props['_PictType'].decode('utf-8') == str(picture_type)[0]
+                    cast(bytes, f.props['_PictType']).decode('utf-8') == str(picture_type)[0]
                     for f in vs.core.std.Splice(
                         [select_frames(out.prepared.clip, [rnum]) for out in self.main.outputs], True
                     ).frames()

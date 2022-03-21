@@ -105,7 +105,7 @@ class MiscToolbar(AbstractToolbar):
         layout.addWidget(self.show_debug_checkbox)
 
     def copy_frame_to_clipboard(self) -> None:
-        frame_pixmap = self.main.current_output.graphics_scene_item.pixmap()
+        frame_pixmap = QPixmap.fromImage(self.main.current_output.image)
         self.main.clipboard.setPixmap(frame_pixmap)
         self.main.show_message('Current frame successfully copied to clipboard')
 
@@ -205,7 +205,7 @@ class MiscToolbar(AbstractToolbar):
             self.main.toolbars.debug.toggle_button.setVisible(False)
 
     def save_as_png(self, path: Path) -> None:
-        self.main.current_output.graphics_scene_item.pixmap().save(
+        QPixmap.fromImage(self.main.current_output.image).save(
             str(path), 'PNG', self.settings.png_compression_level
         )
 

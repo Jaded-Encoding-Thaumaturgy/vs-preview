@@ -12,7 +12,7 @@ from typing import Any, Mapping, Tuple, List, cast
 
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPixmap, QPainter
+from PyQt5.QtGui import QImage, QPixmap, QPainter, QColorSpace
 
 from ..vsenv import __name__ as _venv  # noqa: F401
 from .units import Frame, Time
@@ -461,7 +461,8 @@ class VideoOutput(YAMLObject):
 
     def render_frame(
         self, frame: Frame | None, vs_frame: vs.VideoFrame | None = None,
-        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = False
+        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = False,
+        output_colorspace: QColorSpace | None = None
     ) -> QPixmap:
         if frame is None or not self._stateset:
             return QPixmap()
@@ -473,6 +474,10 @@ class VideoOutput(YAMLObject):
         self.props = cast(vs.FrameProps, vs_frame.props.copy())
 
         frame_image = self.frame_to_qimage(vs_frame, False)
+
+        if output_colorspace is not None:
+            frame_image.setColorSpace(QColorSpace(QColorSpace.SRgb))
+            frame_image.convertToColorSpace(output_colorspace)
 
         if not vs_frame.closed:
             vs_frame.close()

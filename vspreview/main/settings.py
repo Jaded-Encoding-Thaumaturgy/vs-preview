@@ -13,7 +13,7 @@ class MainSettings(AbstractToolbarSettings):
         'autosave_control', 'base_ppi_spinbox', 'dark_theme_checkbox',
         'opengl_rendering_checkbox', 'output_index_spinbox',
         'png_compressing_spinbox', 'statusbar_timeout_control',
-        'timeline_notches_margin_spinbox',
+        'timeline_notches_margin_spinbox', 'color_management_checkbox'
     )
 
     def setup_ui(self) -> None:
@@ -129,6 +129,10 @@ class MainSettings(AbstractToolbarSettings):
             self.timeline_notches_margin_spinbox
         )
 
+        self.color_management_checkbox = QCheckBox(self)
+        self.color_management_checkbox.setText('Color management')
+        self.vlayout.addWidget(self.color_management_checkbox)
+
     def set_defaults(self) -> None:
         self.autosave_control.setValue(Time(seconds=30))
         self.base_ppi_spinbox.setValue(96)
@@ -138,6 +142,7 @@ class MainSettings(AbstractToolbarSettings):
         self.png_compressing_spinbox.setValue(0)
         self.statusbar_timeout_control.setValue(Time(seconds=2.5))
         self.timeline_notches_margin_spinbox.setValue(20)
+        self.color_management_checkbox.setChecked(False)
 
     @property
     def autosave_interval(self) -> Time:
@@ -171,6 +176,10 @@ class MainSettings(AbstractToolbarSettings):
     def timeline_label_notches_margin(self) -> int:
         return self.timeline_notches_margin_spinbox.value()
 
+    @property
+    def color_management_enabled(self) -> bool:
+        return self.color_management_checkbox.isChecked()
+
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'autosave_interval': self.autosave_interval,
@@ -182,6 +191,7 @@ class MainSettings(AbstractToolbarSettings):
             'statusbar_message_timeout': self.statusbar_message_timeout,
             'timeline_label_notches_margin':
             self.timeline_label_notches_margin,
+            'color_management': self.color_management_enabled,
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -193,3 +203,4 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'png_compression', int, self.png_compressing_spinbox.setValue)
         try_load(state, 'statusbar_message_timeout', Time, self.statusbar_timeout_control.setValue)
         try_load(state, 'timeline_label_notches_margin', int, self.timeline_notches_margin_spinbox.setValue)
+        try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)

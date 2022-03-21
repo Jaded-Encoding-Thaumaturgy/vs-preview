@@ -142,7 +142,7 @@ class PipetteToolbar(AbstractToolbar):
         if not self.main.current_output.graphics_scene_item.contains(pos_f):
             return
 
-        color = self.main.current_output.graphics_scene_item.pixmap().toImage().pixelColor(pos)
+        color = self.main.current_output.image.pixelColor(pos)
         self.color_view.color = color
 
         self.position.setText(self.pos_fmt.format(pos.x(), pos.y()))

@@ -176,10 +176,12 @@ class MainToolbar(AbstractToolbar):
         } | {
             'current_output_index': self.outputs_combobox.currentIndex(),
             'outputs': self.outputs,
+            'current_zoom_index': self.zoom_combobox.currentIndex(),
             'sync_outputs': self.sync_outputs_checkbox.isChecked()
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'outputs', VideoOutputs, self.rescan_outputs)
+        try_load(state, 'current_zoom_index', int, self.zoom_combobox.setCurrentIndex)
         try_load(state, 'current_output_index', int, self.main.switch_output)
         try_load(state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked)

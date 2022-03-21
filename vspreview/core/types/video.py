@@ -218,6 +218,7 @@ class VideoOutput(YAMLObject):
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
         self.title = 'Video Node ' + str(self.index)
+        self.cur_frame = (None, None)
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()

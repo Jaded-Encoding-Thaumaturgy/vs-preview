@@ -353,8 +353,6 @@ class PlaybackToolbar(AbstractToolbar):
 
         gc.collect(generation=2)
 
-        self.allocate_buffer()
-
         current_audio_output = self.audio_outputs_combobox.currentValue()
 
         if not self.mute_checkbox.isChecked() and current_audio_output is not None:

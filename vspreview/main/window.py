@@ -229,7 +229,7 @@ class MainWindow(AbstractMainWindow):
             exec(
                 self.script_path.read_text(encoding='utf-8'), dict([('__file__', sys.argv[0])] + self.external_args)
             )
-        except Exception as e:
+        except BaseException as e:
             self.script_exec_failed = True
             logging.error(e)
 
@@ -286,7 +286,7 @@ class MainWindow(AbstractMainWindow):
             storage_path = self.script_path.with_suffix('.yml')
         if storage_path.exists():
             try:
-                with storage_path.open() as storage_file:
+                with storage_path.open('r', encoding='utf-8') as storage_file:
                     yaml.load(storage_file, Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):

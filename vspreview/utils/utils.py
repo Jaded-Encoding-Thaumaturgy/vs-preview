@@ -7,8 +7,8 @@ from string import Template
 from platform import python_version
 from psutil import cpu_count, Process
 from pkg_resources import get_distribution
+from typing import Any, Callable, Type, TypeVar
 from asyncio import get_running_loop, get_event_loop_policy
-from typing import Any, Callable, MutableMapping, Type, TypeVar
 from functools import partial, wraps, singledispatch, update_wrapper
 
 from PyQt5.QtGui import QKeySequence
@@ -21,8 +21,13 @@ T = TypeVar('T')
 
 
 def to_qtime(time: Time) -> QTime:
-    td = time.value
-    return QTime(td.seconds // 3600, td.seconds // 60, td.seconds % 60, td.microseconds // 1000)
+    seconds = time.value.seconds % (24 * 3600)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    milliseconds = time.value.microseconds // 1000
+    return QTime(hours, minutes, seconds, milliseconds)
 
 
 def from_qtime(qtime: QTime, t: Type[Time]) -> Time:
@@ -44,23 +49,25 @@ class DeltaTemplate(Template):
 
 
 def strfdelta(time: Time, output_format: str) -> str:
-    d: MutableMapping[str, str] = {}
-    td = time.value
-    hours = td.seconds // 3600
-    minutes = td.seconds // 60
-    seconds = td.seconds % 60
-    milliseconds = td.microseconds // 1000
-    d['D'] = '{:d}'.format(td.days)
-    d['H'] = '{:02d}'.format(hours)
-    d['M'] = '{:02d}'.format(minutes)
-    d['S'] = '{:02d}'.format(seconds)
-    d['Z'] = '{:03d}'.format(milliseconds)
-    d['h'] = '{:d}'.format(hours)
-    d['m'] = '{:2d}'.format(minutes)
-    d['s'] = '{:2d}'.format(seconds)
+    seconds = time.value.seconds % (24 * 3600)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    milliseconds = time.value.microseconds // 1000
 
     template = DeltaTemplate(output_format)
-    return template.substitute(**d)
+
+    return template.substitute(
+        D='{:d}'.format(time.value.days),
+        H='{:02d}'.format(hours),
+        M='{:02d}'.format(minutes),
+        S='{:02d}'.format(seconds),
+        Z='{:03d}'.format(milliseconds),
+        h='{:d}'.format(hours),
+        m='{:2d}'.format(minutes),
+        s='{:2d}'.format(seconds)
+    )
 
 
 def add_shortcut(key: int, handler: Callable[[], None], widget: QWidget | None = None) -> None:

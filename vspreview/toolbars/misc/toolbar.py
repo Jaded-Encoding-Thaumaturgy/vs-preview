@@ -164,10 +164,8 @@ class MiscToolbar(AbstractToolbar):
         filter_str = filter_str[0:-2]
 
         template = self.main.toolbars.misc.save_template_lineedit.text()
-        if self.main.current_output.cur_frame is None:
-            return
 
-        frame_props = self.main.current_output.cur_frame[1].props
+        frame_props = self.main.current_output.props
         substitutions = {
             **frame_props,
             'format': fmt.name,

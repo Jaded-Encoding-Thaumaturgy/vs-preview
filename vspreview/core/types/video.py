@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import ctypes
 import logging
 import itertools
@@ -41,6 +42,10 @@ class PackingTypeInfo():
         return int(self.id)
 
 
+_iled = (sys.byteorder == 'little')
+_default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
+
+
 class PackingType(PackingTypeInfo):
     libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
     libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
@@ -48,13 +53,15 @@ class PackingType(PackingTypeInfo):
     akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
     numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
     numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
+    NONE_numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
+    NONE_numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_RGB30, False)
 
 
 # From fastest to slowest
-if hasattr(core, 'akarin'):
-    PACKING_TYPE = PackingType.akarin_10bit
-elif hasattr(core, 'libp2p'):
-    PACKING_TYPE = PackingType.libp2p_10bit
+if hasattr(core, 'libp2p'):
+    PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+elif hasattr(core, 'akarin'):
+    PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
 else:
     logging.warning(Warning(
         "\n\tLibP2P and Akarin plugin are missing, they're recommended to prepare output clips correctly!\n"
@@ -64,10 +71,11 @@ else:
 
     try:
         import numpy  # noqa
-        if os.name != 'nt' and QPixmap.defaultDepth() == 30:
-            PACKING_TYPE = PackingType.numpy_10bit
+        # temp forced defaults until I have all the settings sorted out
+        if _default_10bits:
+            PACKING_TYPE = PackingType.NONE_numpy_10bit if True else PackingType.numpy_10bit
         else:
-            PACKING_TYPE = PackingType.numpy_8bit
+            PACKING_TYPE = PackingType.NONE_numpy_8bit if True else PackingType.numpy_8bit
     except ImportError:
         logging.error(RuntimeError("Numpy isn't installed either. Exiting..."))
         exit(1)
@@ -229,7 +237,7 @@ class VideoOutput(YAMLObject):
         'index', 'width', 'height', 'fps_num', 'fps_den',
         'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'source', 'prepared',
-        'main', 'checkerboard', '__weakref__', 'cur_frame', '_stateset'
+        'main', 'checkerboard', 'props', '__weakref__', '_stateset'
     )
 
     source: VideoOutputNode
@@ -237,7 +245,6 @@ class VideoOutput(YAMLObject):
     format: vs.VideoFormat
     title: str | None
     curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
-    cur_frame: None | Tuple[Frame, vs.VideoFrame, vs.VideoFrame | None]
     last_showed_frame: Frame | None
     _stateset: bool
 
@@ -272,7 +279,7 @@ class VideoOutput(YAMLObject):
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
         self.title = None
-        self.cur_frame = None
+        self.props = cast(vs.FrameProps, {})
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
@@ -280,7 +287,9 @@ class VideoOutput(YAMLObject):
         if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:  # type: ignore
             self.last_showed_frame = Frame(0)
 
-        if not hasattr(self, 'frame_to_show'):
+        if not hasattr(self, 'frame_to_show') or (
+            self.frame_to_show is not None and (0 > self.frame_to_show > self.end_frame)  # type: ignore
+        ):
             self.frame_to_show: Frame | None = None
 
         self.render_frame(self.frame_to_show or self.last_showed_frame)
@@ -292,18 +301,11 @@ class VideoOutput(YAMLObject):
 
         if not hasattr(self, 'play_fps'):
             if self.fps_num == 0:
-                self.play_fps = self.main.toolbars.playback.get_true_fps(self.cur_frame[1])  # type: ignore
+                self.play_fps = self.main.toolbars.playback.get_true_fps(self.props)
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
             else:
                 self.play_fps = self.fps_num / self.fps_den
-
-    @property
-    def props(self) -> vs.FrameProps:
-        if not self._stateset or not self.cur_frame:
-            return cast(vs.FrameProps, {})
-
-        return self.cur_frame[1].props
 
     @property
     def name(self) -> str:
@@ -324,6 +326,7 @@ class VideoOutput(YAMLObject):
         False: (_NORML_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, PACKING_TYPE.qt_format),
         True: (_ALPHA_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, QImage.Format_Alpha8)
     }
+    _curr_pointers: List[Any | sip.voidptr] = [None, None, None]
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         assert clip.format
@@ -402,45 +405,89 @@ class VideoOutput(YAMLObject):
 
         return clip
 
-    def frame_to_qimage(self, vs_frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
-        width, height = vs_frame.width, vs_frame.height
+    def frame_to_qimage(self, frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
+        width, height = frame.width, frame.height
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
-        if width % mod:
-            frame_data_pointer = cast(
-                sip.voidptr, ctypes.cast(
-                    vs_frame.get_read_ptr(0), ctypes.POINTER(point_size * width * height)
-                ).contents
+        stride = frame.get_stride(0)
+        ctype_pointer = ctypes.POINTER(point_size * width * height)
+
+        if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
+            import numpy as np
+
+            if self._curr_pointers[0] is None:
+                bytesps = PACKING_TYPE.vs_format.bytes_per_sample
+                self._curr_pointers[0] = np.empty(
+                    (height, width * 4 // bytesps), dtype=[np.uint8, np.uint16][bytesps - 1]
+                )
+                self._curr_pointers[1] = self._curr_pointers[0].ctypes.strides[0]
+
+            if PACKING_TYPE.vs_format.bits_per_sample == 8:
+                for i in range(1, 4):
+                    self._curr_pointers[0][:, (3 - i) if _iled else i::4] = np.ctypeslib.as_array(frame[i - 1])
+            else:
+                rPlane = np.ctypeslib.as_array(frame[0]).view(np.uint16)
+                gPlane = np.ctypeslib.as_array(frame[1]).view(np.uint16)
+                bPlane = np.ctypeslib.as_array(frame[2]).view(np.uint16)
+
+                if _iled:
+                    self._curr_pointers[0][:, 1::2] = 0xc000 | ((rPlane & 0x3ff) << 4) | ((gPlane & 0x3ff) >> 6)
+                    self._curr_pointers[0][:, 0::2] = ((gPlane & 0x3ff) << 10) | (bPlane & 0x3ff)
+                else:
+                    self._curr_pointers[0][:, 0::2] = ((bPlane & 0x3ff) << 6) | ((gPlane & 0x3ff) >> 4)
+                    self._curr_pointers[0][:, 1::2] = 0x0003 | ((rPlane & 0x3ff) << 2) | ((gPlane & 0x3ff) << 12)
+
+            stride = self._packed_stride[0]
+
+            self._curr_pointers[2] = cast(
+                sip.voidptr, self._curr_pointers[0].ctypes.data_as(ctype_pointer).contents
             )
         else:
-            frame_data_pointer = cast(sip.voidptr, vs_frame[0])
+            if width % mod:
+                self._curr_pointers[2] = cast(
+                    sip.voidptr, ctypes.cast(
+                        frame.get_read_ptr(0), ctype_pointer
+                    ).contents
+                )
+            else:
+                self._curr_pointers[2] = cast(sip.voidptr, frame[0])
 
-        return QImage(
-            frame_data_pointer, width, height, vs_frame.get_stride(0), qt_format
-        )
+        return QImage(self._curr_pointers[2], width, height, stride, qt_format)
 
-    def render_frame(self, frame: Frame | None) -> QPixmap:
+    def update_graphic_item(self, pixmap: QPixmap) -> QPixmap:
+        if hasattr(self, 'graphics_scene_item'):
+            self.graphics_scene_item.setPixmap(pixmap)
+        return pixmap
+
+    def render_frame(
+        self, frame: Frame | None, vs_frame: vs.VideoFrame | None = None,
+        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = False
+    ) -> QPixmap:
         if frame is None or not self._stateset:
             return QPixmap()
 
-        if not self.cur_frame or self.cur_frame[0] != frame:
-            self.cur_frame = (
-                frame, self.prepared.clip.get_frame(frame.value), (
-                    self.prepared.alpha.get_frame(frame.value)
-                    if self.prepared.alpha else cast(None, self.prepared.alpha)
-                )
-            )
+        frame = min(max(frame, Frame(0)), self.end_frame)
 
-        frame_image = self.frame_to_qimage(self.cur_frame[1], False)
+        vs_frame = vs_frame or self.prepared.clip.get_frame(frame.value)
+
+        self.props = cast(vs.FrameProps, vs_frame.props.copy())
+
+        frame_image = self.frame_to_qimage(vs_frame, False)
+
+        if not vs_frame.closed:
+            vs_frame.close()
+            del vs_frame
 
         if self.prepared.alpha is None:
-            return QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
+            return self.update_graphic_item(
+                QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
+            )
 
-        alpha_image = self.frame_to_qimage(self.cur_frame[2], True)  # type: ignore
-
-        result_image = QImage(
-            self.cur_frame[1].width, self.cur_frame[1].height, QImage.Format_ARGB32_Premultiplied
+        alpha_image = self.frame_to_qimage(
+            vs_alpha_frame or self.prepared.alpha.get_frame(frame.value), True
         )
+
+        result_image = QImage(frame_image.size(), QImage.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)
         painter.setCompositionMode(QPainter.CompositionMode_Source)
         painter.drawImage(0, 0, frame_image)
@@ -453,7 +500,9 @@ class VideoOutput(YAMLObject):
 
         painter.end()
 
-        return QPixmap.fromImage(result_image, Qt.NoFormatConversion)
+        return self.update_graphic_item(
+            QPixmap.fromImage(result_image, Qt.NoFormatConversion)
+        )
 
     def _generate_checkerboard(self) -> QImage:
         tile_size = self.main.CHECKERBOARD_TILE_SIZE

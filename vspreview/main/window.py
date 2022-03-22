@@ -10,7 +10,7 @@ from typing import Any, cast, List, Mapping, Tuple
 from traceback import FrameSummary, TracebackException
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent
-from PyQt5.QtGui import QCloseEvent, QPalette, QPixmap, QShowEvent
+from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent
 from PyQt5.QtWidgets import (
     QVBoxLayout, QLabel, QWidget, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
 )
@@ -327,17 +327,13 @@ class MainWindow(AbstractMainWindow):
 
         self.outputs.clear()
         get_policy().reload_core()
+        gc.collect(generation=0)
+        gc.collect(generation=1)
         gc.collect(generation=2)
 
         self.load_script(self.script_path, reloading=True)
 
         self.show_message('Reloaded successfully')
-
-    def render_frame(self, frame: Frame, output: VideoOutput | None = None) -> QPixmap:
-        if output is None:
-            output = self.current_output
-
-        return output.render_frame(frame)
 
     def switch_frame(
         self, pos: Frame | Time | int | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
@@ -354,11 +350,9 @@ class MainWindow(AbstractMainWindow):
 
         if render_frame:
             if not isinstance(render_frame, bool):
-                self.current_output.cur_frame = (frame, *render_frame)
-
-            rendered_frame = self.render_frame(frame)
-
-            self.current_output.graphics_scene_item.setPixmap(rendered_frame)
+                self.current_output.render_frame(frame, *render_frame)
+            else:
+                self.current_output.render_frame(frame)
 
         self.current_output.last_showed_frame = frame
 
@@ -368,10 +362,7 @@ class MainWindow(AbstractMainWindow):
             if hasattr(toolbar, 'on_current_frame_changed'):
                 toolbar.on_current_frame_changed(frame)
 
-        if self.current_output.cur_frame is None:
-            return
-
-        self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.cur_frame[1].props))
+        self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
         if len(self.outputs) == 0:

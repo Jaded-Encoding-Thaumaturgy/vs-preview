@@ -30,7 +30,7 @@ class AudioOutput(YAMLObject):
         'main', 'qformat', 'qoutput', 'iodevice', 'flags',
     )
 
-    def __init__(self, vs_output: vs.AudioNode, index: int) -> None:
+    def __init__(self, vs_output: vs.AudioNode, index: int, new_storage: bool = False) -> None:
         self.main = main_window()
         self.index = index
         self.source_vs_output = vs_output

@@ -25,9 +25,8 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, main_window.settings)
         self.setup_ui()
 
-        self.outputs = VideoOutputs()
+        self.outputs: VideoOutputs = []  # type: ignore
 
-        self.outputs_combobox.setModel(self.outputs)
         self.zoom_levels = ZoomLevels([
             0.25, 0.5, 0.68, 0.75, 0.85, 1.0, 1.5, 2.0,
             4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 32.0
@@ -140,7 +139,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
 
     def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
-        self.outputs = outputs or VideoOutputs()
+        self.outputs = outputs or VideoOutputs(self.main)
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 

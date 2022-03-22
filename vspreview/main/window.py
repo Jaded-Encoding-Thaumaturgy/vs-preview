@@ -6,8 +6,8 @@ import yaml
 import logging
 import vapoursynth as vs
 from pathlib import Path
+from typing import Any, cast, List, Mapping, Tuple
 from traceback import FrameSummary, TracebackException
-from typing import Any, cast, List, Mapping, Tuple, Sequence
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent
 from PyQt5.QtGui import QCloseEvent, QPalette, QPixmap, QShowEvent
@@ -59,7 +59,7 @@ class MainWindow(AbstractMainWindow):
     }
 
     # status bar
-    def STATUS_FRAME_PROP(prop: Any) -> str:
+    def STATUS_FRAME_PROP(self, prop: Any) -> str:
         return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
     DEBUG_PLAY_FPS = False
@@ -77,8 +77,8 @@ class MainWindow(AbstractMainWindow):
         'app', 'display_scale', 'clipboard',
         'script_path', 'save_on_exit', 'timeline', 'main_layout',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
-        'central_widget', 'statusbar',
-        'opengl_widget',
+        'central_widget', 'statusbar', 'storage_not_found',
+        'current_storage_path', 'opengl_widget'
     ]
 
     # emit when about to reload a script: clear all existing references to existing clips.
@@ -111,6 +111,7 @@ class MainWindow(AbstractMainWindow):
         self.setWindowTitle('VSPreview')
         self.move(400, 0)
         self.setup_ui()
+        self.storage_not_found = None
 
         # global
         self.clipboard = self.app.clipboard()
@@ -118,6 +119,7 @@ class MainWindow(AbstractMainWindow):
         self.script_path = Path()
         self.save_on_exit = True
         self.script_exec_failed = False
+        self.current_storage_path = Path()
 
         # graphics view
         self.graphics_scene = QGraphicsScene(self)
@@ -266,27 +268,34 @@ class MainWindow(AbstractMainWindow):
             self.handle_script_error('Script has no outputs set.')
             return
 
+        self.current_storage_path = self.config_dir / (self.script_path.stem + '.yml')
+
+        if not self.current_storage_path.exists():
+            self.current_storage_path = self.script_path.with_suffix('.yml')
+
+        self.storage_not_found = not self.current_storage_path.exists()
+
+        if self.storage_not_found:
+            self.load_storage()
+
         if not reloading:
             self.toolbars.main.rescan_outputs()
             self.toolbars.playback.rescan_outputs()
-            self.toolbars.misc.autosave_timer.start(self.AUTOSAVE_INTERVAL)
+
+        if not self.storage_not_found:
+            self.load_storage()
+
+        self.toolbars.misc.autosave_timer.start(self.AUTOSAVE_INTERVAL)
+
+        if not reloading:
             self.switch_output(self.OUTPUT_INDEX)
 
-            self.load_storage()
-        else:
-            self.load_storage()
-
-            self.toolbars.misc.autosave_timer.start(self.AUTOSAVE_INTERVAL)
-
     def load_storage(self) -> None:
-        vsp_dir = self.config_dir
-        storage_path = vsp_dir / (self.script_path.stem + '.yml')
-
-        if not storage_path.exists():
-            storage_path = self.script_path.with_suffix('.yml')
-        if storage_path.exists():
+        if self.storage_not_found:
+            logging.info('No storage found. Using defaults.')
+        else:
             try:
-                with storage_path.open('r', encoding='utf-8') as storage_file:
+                with self.current_storage_path.open('r', encoding='utf-8') as storage_file:
                     yaml.load(storage_file, Loader=yaml.Loader)
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
@@ -296,8 +305,6 @@ class MainWindow(AbstractMainWindow):
                     )
                 else:
                     logging.warning('Storage parsing failed. Using defaults.')
-        else:
-            logging.info('No storage found. Using defaults.')
 
         self.statusbar.label.setText('Ready')
 
@@ -332,10 +339,10 @@ class MainWindow(AbstractMainWindow):
         if output is None:
             output = self.current_output
 
-        return output.render_raw_videoframe(output.prepared.clip.get_frame(int(frame)))
+        return output.render_frame(frame)
 
     def switch_frame(
-        self, pos: Frame | Time | int | None, *, render_frame: bool | Sequence[vs.VideoFrame | None] = True
+        self, pos: Frame | Time | int | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
         if pos is None:
             logging.debug('switch_frame: position is None!')
@@ -348,10 +355,10 @@ class MainWindow(AbstractMainWindow):
             return
 
         if render_frame:
-            if isinstance(render_frame, bool):
-                rendered_frame = self.render_frame(frame)
-            else:
-                rendered_frame = self.current_output.render_raw_videoframe(*render_frame)
+            if not isinstance(render_frame, bool):
+                self.current_output.cur_frame = (frame, *render_frame)
+
+            rendered_frame = self.render_frame(frame)
 
             self.current_output.graphics_scene_item.setPixmap(rendered_frame)
 
@@ -363,10 +370,10 @@ class MainWindow(AbstractMainWindow):
             if hasattr(toolbar, 'on_current_frame_changed'):
                 toolbar.on_current_frame_changed(frame)
 
-        if not self.current_output.cur_frame[0]:
+        if self.current_output.cur_frame is None:
             return
 
-        self.statusbar.frame_props_label.setText(MainWindow.STATUS_FRAME_PROP(self.current_output.cur_frame[0].props))
+        self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.cur_frame[1].props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
         if len(self.outputs) == 0:
@@ -389,8 +396,10 @@ class MainWindow(AbstractMainWindow):
 
         if self.current_output.frame_to_show is not None:
             self.current_frame = self.current_output.frame_to_show
-        else:
+        elif self.current_output.last_showed_frame:
             self.current_frame = self.current_output.last_showed_frame
+        else:
+            self.current_frame = Frame(0)
 
         for output in self.outputs:
             output.graphics_scene_item.hide()
@@ -415,7 +424,7 @@ class MainWindow(AbstractMainWindow):
 
     @property
     def current_frame(self) -> Frame:
-        return self.current_output.last_showed_frame
+        return self.current_output.last_showed_frame or Frame(0)
 
     @current_frame.setter
     def current_frame(self, value: Frame) -> None:

@@ -5,7 +5,7 @@ from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDic
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 
-from ..core import main_window, QYAMLObject, VideoOutput, AudioOutput, try_load
+from ..core import AbstractMainWindow, QYAMLObject, VideoOutput, AudioOutput, try_load, main_window
 
 
 T = TypeVar('T', VideoOutput, AudioOutput)
@@ -16,24 +16,27 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
     __slots__ = ('items')
 
-    def __init__(self, local_storage: Mapping[str, T] | None = None) -> None:
+    def __init__(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
         self.items: List[T] = []
 
-        local_storage = local_storage if local_storage is not None else {}
+        local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
+
+        if main.storage_not_found:
+            newstorage = False
 
         outputs = OrderedDict(sorted(vs.get_outputs().items()))
 
-        main_window().reload_signal.connect(self.clear_outputs)
+        main.reload_signal.connect(self.clear_outputs)
 
         for i, vs_output in outputs.items():
             if not isinstance(vs_output, self.vs_type):
                 continue
             try:
                 output = local_storage[str(i)]
-                output.__init__(vs_output, i)  # type: ignore
+                output.__init__(vs_output, i, newstorage)  # type: ignore
             except KeyError:
-                output = self.out_type(vs_output, i)
+                output = self.out_type(vs_output, i, newstorage)
 
             self.items.append(output)
 
@@ -117,7 +120,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
             if not isinstance(value, self.out_type):
                 raise TypeError(f'Storage loading (Outputs): value of key {key} is not {self.out_type.__name__}')
 
-        self.__init__(state)  # type: ignore
+        self.__init__(main_window(), state)  # type: ignore
 
 
 class VideoOutputs(Outputs[VideoOutput]):

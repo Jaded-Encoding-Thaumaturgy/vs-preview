@@ -239,16 +239,18 @@ class VideoOutput(YAMLObject):
     format: vs.VideoFormat
     title: str | None
     curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
-    cur_frame: Tuple[vs.VideoFrame | None, vs.VideoFrame | None]
+    cur_frame: None | Tuple[Frame, vs.VideoFrame, vs.VideoFrame | None]
+    last_showed_frame: Frame | None
+    _stateset: bool
 
     def clear(self) -> None:
         self.source = self.prepared = None  # type: ignore
 
-    def __init__(self, vs_output: vs.VideoOutputTuple, index: int) -> None:
+    def __init__(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
         from ...widgets import GraphicsImageItem
         from ...models import SceningLists
 
-        self._stateset = False
+        self._stateset = not new_storage
 
         self.main = main_window()
 
@@ -272,30 +274,27 @@ class VideoOutput(YAMLObject):
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
         self.title = None
-        self.cur_frame = (None, None)
+        self.cur_frame = None
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        # set by load_script() when it prepares graphics scene item based on last showed frame
-        self.graphics_scene_item: GraphicsImageItem
-
-        if (not hasattr(self, 'last_showed_frame') or self.last_showed_frame > self.end_frame):
-            self.last_showed_frame: Frame = Frame(0)
-
-        if not hasattr(self, 'scening_lists'):
-            self.scening_lists: SceningLists = SceningLists()
+        if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:
+            self.last_showed_frame = Frame(0)
 
         if not hasattr(self, 'frame_to_show'):
             self.frame_to_show: Frame | None = None
 
+        self.render_frame(self.frame_to_show or self.last_showed_frame)
+
+        self.graphics_scene_item: GraphicsImageItem
+
+        if not hasattr(self, 'scening_lists'):
+            self.scening_lists: SceningLists = SceningLists()
+
         if not hasattr(self, 'play_fps'):
             if self.fps_num == 0:
-                self.play_fps = self.main.toolbars.playback.get_true_fps(
-                    self.source.clip.get_frame(
-                        int(self.frame_to_show or self.last_showed_frame)
-                    )
-                )
+                self.play_fps = self.main.toolbars.playback.get_true_fps(self.cur_frame[1])  # type: ignore
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
             else:
@@ -303,12 +302,10 @@ class VideoOutput(YAMLObject):
 
     @property
     def props(self) -> vs.FrameProps:
-        if self.source.clip:
-            self._stateset = True
-        if not self._stateset:
+        if not self._stateset or not self.cur_frame:
             return cast(vs.FrameProps, {})
-        to_render = int(self.frame_to_show or self.last_showed_frame)
-        return self.source.clip.get_frame(to_render).props
+
+        return self.cur_frame[1].props
 
     @property
     def name(self) -> str:
@@ -407,14 +404,6 @@ class VideoOutput(YAMLObject):
 
         return clip
 
-    def render_frame(self, frame: Frame) -> QPixmap:
-        rendered_frames = (
-            self.prepared.clip.get_frame(int(frame)),
-            *([self.prepared.alpha.get_frame(int(frame))] if self.prepared.alpha else [])
-        )
-
-        return self.render_raw_videoframe(*rendered_frames)
-
     def frame_to_qimage(self, vs_frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
         width, height = vs_frame.width, vs_frame.height
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
@@ -432,22 +421,28 @@ class VideoOutput(YAMLObject):
             frame_data_pointer, width, height, vs_frame.get_stride(0), qt_format
         )
 
-    def render_raw_videoframe(
-        self, vs_frame: vs.VideoFrame | None = None, vs_frame_alpha: vs.VideoFrame | None = None
-    ) -> QPixmap:
-        if vs_frame is None:
+    def render_frame(self, frame: Frame | None) -> QPixmap:
+        if frame is None or not self._stateset:
             return QPixmap()
 
-        self.cur_frame = (vs_frame, vs_frame_alpha)
+        if not self.cur_frame or self.cur_frame[0] != frame:
+            self.cur_frame = (
+                frame, self.prepared.clip.get_frame(frame.value), (
+                    self.prepared.alpha.get_frame(frame.value)
+                    if self.prepared.alpha else cast(None, self.prepared.alpha)
+                )
+            )
 
-        frame_image = self.frame_to_qimage(vs_frame, False)
+        frame_image = self.frame_to_qimage(self.cur_frame[1], False)
 
-        if vs_frame_alpha is None:
+        if self.prepared.alpha is None:
             return QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
 
-        alpha_image = self.frame_to_qimage(vs_frame_alpha, True)
+        alpha_image = self.frame_to_qimage(self.cur_frame[2], True)  # type: ignore
 
-        result_image = QImage(vs_frame.width, vs_frame.height, QImage.Format_ARGB32_Premultiplied)
+        result_image = QImage(
+            self.cur_frame[1].width, self.cur_frame[1].height, QImage.Format_ARGB32_Premultiplied
+        )
         painter = QPainter(result_image)
         painter.setCompositionMode(QPainter.CompositionMode_Source)
         painter.drawImage(0, 0, frame_image)
@@ -503,7 +498,9 @@ class VideoOutput(YAMLObject):
         from ...models import SceningLists
 
         try_load(state, 'title', str, self.__setattr__)
+        try_load(state, 'frame_to_show', Frame, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'scening_lists', SceningLists, self.__setattr__)
         try_load(state, 'play_fps', float, self.__setattr__)
+
         self._stateset = True

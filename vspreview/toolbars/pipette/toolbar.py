@@ -174,12 +174,12 @@ class PipetteToolbar(AbstractToolbar):
                 idx = pos.y() * logical_stride + pos.x()
                 return cast(int, ptr.contents[idx])
 
-        vs_frame = self.outputs[self.main.current_output].get_frame(int(self.main.current_frame))
+        vs_frame = self.main.current_output.cur_frame[1]
         fmt = vs_frame.format
 
         src_vals = [extract_value(vs_frame, i, pos) for i in range(fmt.num_planes)]
         if self.main.current_output.source.alpha:
-            vs_alpha = self.main.current_output.source.alpha.get_frame(int(self.main.current_frame))
+            vs_alpha = self.main.current_output.cur_frame[2]
             src_vals.append(extract_value(vs_alpha, 0, pos))
 
         self.src_dec.setText(self.src_dec_fmt.format(*src_vals))

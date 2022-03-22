@@ -115,8 +115,6 @@ class MiscToolbar(AbstractToolbar):
         self.save_sync(path)
 
     def save_sync(self, path: Path | None = None, manually: bool = False) -> None:
-        yaml.Dumper.ignore_aliases = lambda *args: True
-
         if path is None:
             vsp_dir = self.main.config_dir
             vsp_dir.mkdir(exist_ok=True)
@@ -132,7 +130,10 @@ class MiscToolbar(AbstractToolbar):
 
         with path.open(mode='w', newline='\n') as f:
             f.write(f'# VSPreview storage for {self.main.script_path}\n')
-            yaml.dump(self.main, f, indent=4, default_flow_style=False)
+            yaml.dump(
+                self.main, f, indent=4, encoding='utf-8', default_flow_style=False,
+                Dumper=yaml.CDumper  # type: ignore
+            )
 
         if manually:
             self.main.show_message('Saved successfully')

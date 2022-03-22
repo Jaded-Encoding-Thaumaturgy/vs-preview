@@ -10,8 +10,6 @@ from ..core import Frame, QYAMLObject, Scene, Time, main_window
 
 
 class SceningList(QAbstractTableModel, QYAMLObject):
-    yaml_tag = '!SceningList'
-
     __slots__ = (
         'name', 'items', 'max_value'
     )
@@ -269,8 +267,6 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
 
 class SceningLists(QAbstractListModel, QYAMLObject):
-    yaml_tag = '!SceningLists'
-
     __slots__ = ('items',)
 
     def __init__(self, items: List[SceningList] | None = None) -> None:

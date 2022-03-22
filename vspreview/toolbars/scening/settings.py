@@ -6,8 +6,6 @@ from ...core import AbstractToolbarSettings
 
 
 class SceningSettings(AbstractToolbarSettings):
-    yaml_tag = '!SceningSettings'
-
     __slots__ = ()
 
     def setup_ui(self) -> None:

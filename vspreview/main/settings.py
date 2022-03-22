@@ -9,8 +9,6 @@ from ..core import Time, AbstractToolbarSettings, try_load
 
 
 class MainSettings(AbstractToolbarSettings):
-    yaml_tag = '!MainSettings'
-
     __slots__ = (
         'autosave_control', 'base_ppi_spinbox', 'dark_theme_checkbox',
         'opengl_rendering_checkbox', 'output_index_spinbox',

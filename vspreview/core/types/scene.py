@@ -11,8 +11,6 @@ core = vs.core
 
 
 class Scene(YAMLObjectWrapper):
-    yaml_tag = '!Scene'
-
     __slots__ = (
         'start', 'end', 'label'
     )

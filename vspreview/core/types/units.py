@@ -14,8 +14,6 @@ Number = Union[int, float, SupportsInt, SupportsFloat]
 
 
 class Frame(YAMLObjectWrapper):
-    yaml_tag = '!Frame'
-
     __slots__ = ('value',)
 
     def __init__(self, init_value: Number | Frame | Time) -> None:
@@ -87,8 +85,6 @@ class Frame(YAMLObjectWrapper):
 
 
 class Time(YAMLObjectWrapper):
-    yaml_tag = '!Time'
-
     __slots__ = ('value',)
 
     def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):

@@ -24,8 +24,6 @@ all_toolbars = [
 
 
 class Toolbars(AbstractToolbars):
-    yaml_tag = '!Toolbars'
-
     def __init__(self, main_window: AbstractMainWindow) -> None:
         for name, toolbar in zip(self.all_toolbars_names, all_toolbars):
             self.__setattr__(name, toolbar(main_window))

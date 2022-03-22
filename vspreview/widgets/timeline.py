@@ -80,8 +80,6 @@ class Timeline(QWidget):
     )
 
     class Mode(YAMLObject):
-        yaml_tag = '!Timeline.Mode'
-
         FRAME = 'frame'
         TIME = 'time'
 

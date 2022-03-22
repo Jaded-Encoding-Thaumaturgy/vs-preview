@@ -80,8 +80,6 @@ class VideoOutputNode():
 
 
 class VideoOutput(YAMLObject):
-    yaml_tag = '!VideoOutput'
-
     class Resizer:
         Bilinear = core.resize.Bilinear
         Bicubic = core.resize.Bicubic

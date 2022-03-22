@@ -9,8 +9,6 @@ from ...core import Time, AbstractToolbarSettings, try_load
 
 
 class BenchmarkSettings(AbstractToolbarSettings):
-    yaml_tag = '!BenchmarkSettings'
-
     __slots__ = (
         'clear_cache_checkbox', 'refresh_interval_label',
         'refresh_interval_control', 'frame_data_sharing_fix_checkbox',

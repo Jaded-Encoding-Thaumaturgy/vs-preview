@@ -124,12 +124,10 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
 
 class VideoOutputs(Outputs[VideoOutput]):
-    yaml_tag = '!VideoOutputs'
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
 
 
 class AudioOutputs(Outputs[AudioOutput]):
-    yaml_tag = '!AudioOutputs'
     out_type = AudioOutput
     vs_type = vs.AudioNode

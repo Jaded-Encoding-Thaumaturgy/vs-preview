@@ -9,7 +9,6 @@ core = vs.core
 
 
 class YAMLObjectWrapper(YAMLObject):
-    yaml_tag: str
     value: Any
 
     def __int__(self) -> int:
@@ -55,7 +54,7 @@ class YAMLObjectWrapper(YAMLObject):
         return not self.__ge__(other)
 
     def __repr__(self) -> str:
-        return f'{self.yaml_tag[1:]}({self.value})'
+        return f'{self.__class__.__name__}({self.value})'
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {

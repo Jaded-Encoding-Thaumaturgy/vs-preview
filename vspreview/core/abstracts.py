@@ -43,7 +43,6 @@ class ExtendedMainWindow(QHelperClass, QMainWindow):
 
 
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
-    yaml_tag: str
     vlayout: QVBoxLayout
 
     __slots__ = ()
@@ -268,8 +267,6 @@ class AbstractAppSettings(QDialog, QABC):
 
 
 class AbstractToolbars(AbstractYAMLObjectSingleton):
-    yaml_tag: str = abstract_attribute()
-
     __slots__ = ()
 
     # special toolbar ignored by len() and not accessible via subscription and 'in' operator

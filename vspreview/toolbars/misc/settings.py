@@ -6,8 +6,6 @@ from ...core import AbstractToolbarSettings
 
 
 class MiscSettings(AbstractToolbarSettings):
-    yaml_tag = '!MiscSettings'
-
     __slots__ = ()
 
     def setup_ui(self) -> None:

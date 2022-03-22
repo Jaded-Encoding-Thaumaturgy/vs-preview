@@ -68,8 +68,6 @@ class MainWindow(AbstractMainWindow):
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    yaml_tag = '!MainWindow'
-
     storable_attrs = [
         'settings', 'toolbars',
     ]
@@ -296,7 +294,7 @@ class MainWindow(AbstractMainWindow):
         else:
             try:
                 with self.current_storage_path.open('r', encoding='utf-8') as storage_file:
-                    yaml.load(storage_file, Loader=yaml.Loader)
+                    yaml.load(storage_file, Loader=yaml.CLoader)  # type: ignore
             except yaml.YAMLError as exc:
                 if isinstance(exc, yaml.MarkedYAMLError):
                     logging.warning(

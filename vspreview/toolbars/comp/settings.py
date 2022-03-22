@@ -6,8 +6,6 @@ from ...core import AbstractToolbarSettings
 
 
 class CompSettings(AbstractToolbarSettings):
-    yaml_tag = '!CompSettings'
-
     __slots__ = ()
 
     def setup_ui(self) -> None:

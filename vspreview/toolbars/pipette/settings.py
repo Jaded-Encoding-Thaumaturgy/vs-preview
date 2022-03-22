@@ -6,8 +6,6 @@ from ...core import AbstractToolbarSettings
 
 
 class PipetteSettings(AbstractToolbarSettings):
-    yaml_tag = '!PipetteSettings'
-
     __slots__ = ()
 
     def setup_ui(self) -> None:

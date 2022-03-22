@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any, Mapping
 
 from PyQt5.QtWidgets import QLabel, QHBoxLayout, QCheckBox, QSpinBox
@@ -131,7 +132,9 @@ class MainSettings(AbstractToolbarSettings):
 
         self.color_management_checkbox = QCheckBox(self)
         self.color_management_checkbox.setText('Color management')
-        self.vlayout.addWidget(self.color_management_checkbox)
+
+        if sys.platform == 'win32':
+            self.vlayout.addWidget(self.color_management_checkbox)
 
     def set_defaults(self) -> None:
         self.autosave_control.setValue(Time(seconds=30))

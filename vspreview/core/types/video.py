@@ -1,20 +1,76 @@
 from __future__ import annotations
 
+import os
 import ctypes
 import logging
+import itertools
 import vapoursynth as vs
 from yaml import YAMLObject
 from dataclasses import dataclass
-from typing import Any, Mapping, cast, Tuple
+from typing import Any, Mapping, Tuple, List, cast
 
 from PyQt5 import sip
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap, QPainter
 
-from ..abstracts import main_window, try_load
+from ..vsenv import __name__ as _venv  # noqa: F401
 from .units import Frame, Time
+from ..abstracts import main_window, try_load
 
 
 core = vs.core
+
+
+class PackingTypeInfo():
+    _getid = itertools.count()
+
+    def __init__(
+        self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool
+    ):
+        self.id = next(self._getid)
+        self.vs_format = core.get_format(vs_format)
+        self.qt_format = qt_format
+        self.shuffle = shuffle
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PackingTypeInfo):
+            raise NotImplementedError
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return int(self.id)
+
+
+class PackingType(PackingTypeInfo):
+    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
+    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
+    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_BGR30, True)
+    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
+    numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
+    numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
+
+
+# From fastest to slowest
+if hasattr(core, 'akarin'):
+    PACKING_TYPE = PackingType.akarin_10bit
+elif hasattr(core, 'libp2p'):
+    PACKING_TYPE = PackingType.libp2p_10bit
+else:
+    logging.warning(Warning(
+        "\n\tLibP2P and Akarin plugin are missing, they're recommended to prepare output clips correctly!\n"
+        "\t  You can get them here: \n"
+        "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
+    ))
+
+    try:
+        import numpy  # noqa
+        if os.name != 'nt' and QPixmap.defaultDepth() == 30:
+            PACKING_TYPE = PackingType.numpy_10bit
+        else:
+            PACKING_TYPE = PackingType.numpy_8bit
+    except ImportError:
+        logging.error(RuntimeError("Numpy isn't installed either. Exiting..."))
+        exit(1)
 
 
 @dataclass
@@ -204,11 +260,6 @@ class VideoOutput(YAMLObject):
             self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True)
 
         self.index = index
-        if not hasattr(core, 'libp2p'):
-            logging.warning(Warning(
-                "LibP2P is missing, it is reccomended to prepare output clips correctly!\n"
-                "You can get it here: https://github.com/DJATOM/LibP2P-Vapoursynth"
-            ))
 
         self.prepared.clip = self.prepare_vs_output(self.source.clip)
         self.width = self.prepared.clip.width
@@ -272,11 +323,11 @@ class VideoOutput(YAMLObject):
     def name(self, newname: str) -> None:
         self.title = newname
 
-    _FRAME_NORML_FMT = vs.core.get_format(vs.RGB24)
-    _FRAME_ALPHA_FMT = vs.core.get_format(vs.GRAY8)
+    _NORML_FMT = PACKING_TYPE.vs_format
+    _ALPHA_FMT = core.get_format(vs.GRAY8)
     _FRAME_CONV_INFO = {
-        False: ((f := _FRAME_NORML_FMT).bits_per_sample, ctypes.c_char * f.bytes_per_sample, QImage.Format_RGB32),
-        True: ((f := _FRAME_ALPHA_FMT).bits_per_sample, ctypes.c_char * f.bytes_per_sample, QImage.Format_Alpha8)
+        False: (_NORML_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, PACKING_TYPE.qt_format),
+        True: (_ALPHA_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, QImage.Format_Alpha8)
     }
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
@@ -284,7 +335,7 @@ class VideoOutput(YAMLObject):
 
         resizer = self.main.VS_OUTPUT_RESIZER
         resizer_kwargs = {
-            'format': self._FRAME_NORML_FMT.id,
+            'format': self._NORML_FMT.id,
             'matrix_in_s': self.main.VS_OUTPUT_MATRIX,
             'transfer_in_s': self.main.VS_OUTPUT_TRANSFER,
             'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
@@ -301,21 +352,60 @@ class VideoOutput(YAMLObject):
             del resizer_kwargs['matrix_in_s']
 
         if is_alpha:
-            if clip.format.id == self._FRAME_ALPHA_FMT.id:
+            if clip.format.id == self._ALPHA_FMT.id:
                 return clip
-            resizer_kwargs['format'] = self._FRAME_ALPHA_FMT.id
+            resizer_kwargs['format'] = self._ALPHA_FMT.id
 
         clip = resizer(clip, **resizer_kwargs, **self.main.VS_OUTPUT_RESIZER_KWARGS)
 
         if is_alpha:
             return clip
 
-        if hasattr(core, 'libp2p'):
+        return self.pack_rgb_clip(clip)
+
+    def pack_rgb_clip(self, clip: vs.VideoNode) -> vs.VideoNode:
+        if PACKING_TYPE.shuffle:
+            clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
+
+        if PACKING_TYPE in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
             return core.libp2p.Pack(clip)
-        else:
+
+        if PACKING_TYPE in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
+            # x, y, z => b, g, r
+            # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
+            # R stays like it is + shift if it's 8 bits (gets applied to all clips), then G gets shifted
+            # by 10 bits, (we multiply by 2 ** 10) and same for B but by 20 bits and it all gets summed
             return core.akarin.Expr(
-                core.std.SplitPlanes(clip), 'x 0x100000 * y 0x400 * + z + 0xc0000000 +', vs.GRAY32, opt=1
+                clip.std.SplitPlanes(),
+                f'{2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)} s! x s@ 0x100000 * * '
+                'y s@ 0x400 * * + z s@ * + 0xc0000000 +', vs.GRAY32, True
             )
+
+        if PACKING_TYPE in {PackingType.numpy_8bit, PackingType.numpy_10bit}:
+            import numpy as np
+
+            bits = PACKING_TYPE.vs_format.bits_per_sample
+
+            def _numpack(n: int, f: List[vs.VideoFrame]) -> vs.VideoFrame:
+                dst_frame = f[1].copy()
+
+                rgb_data = np.asarray(f[0], np.uint32)
+
+                packed = np.einsum(
+                    'kji,k->ji', rgb_data, np.array(
+                        [2 ** (bits * 2), 2 ** bits, 1], np.uint32
+                    ), optimize='greedy'
+                )
+
+                np.copyto(np.asarray(dst_frame[0]), packed)
+
+                return dst_frame
+
+            contiguous_clip = core.std.BlankClip(clip, format=vs.GRAY32)
+
+            return contiguous_clip.std.ModifyFrame([clip, contiguous_clip], _numpack)
+
+        return clip
 
     def render_frame(self, frame: Frame) -> QPixmap:
         rendered_frames = (
@@ -330,9 +420,11 @@ class VideoOutput(YAMLObject):
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
         if width % mod:
-            frame_data_pointer = ctypes.cast(
-                vs_frame.get_read_ptr(0), ctypes.POINTER(point_size * width * height)
-            ).contents
+            frame_data_pointer = cast(
+                sip.voidptr, ctypes.cast(
+                    vs_frame.get_read_ptr(0), ctypes.POINTER(point_size * width * height)
+                ).contents
+            )
         else:
             frame_data_pointer = cast(sip.voidptr, vs_frame[0])
 
@@ -351,7 +443,7 @@ class VideoOutput(YAMLObject):
         frame_image = self.frame_to_qimage(vs_frame, False)
 
         if vs_frame_alpha is None:
-            return QPixmap.fromImage(frame_image)
+            return QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
 
         alpha_image = self.frame_to_qimage(vs_frame_alpha, True)
 
@@ -368,7 +460,7 @@ class VideoOutput(YAMLObject):
 
         painter.end()
 
-        return QPixmap.fromImage(result_image)
+        return QPixmap.fromImage(result_image, Qt.NoFormatConversion)
 
     def _generate_checkerboard(self) -> QImage:
         tile_size = self.main.CHECKERBOARD_TILE_SIZE

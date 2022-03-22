@@ -19,7 +19,7 @@ persistent=yes
 load-plugins=
 
 # Use multiple processes to speed up Pylint.
-jobs=1
+jobs=4
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -53,15 +53,10 @@ confidence=
 # --disable=
 
 disable=
-    C,
-    assigning-non-slot,
-    c-extension-no-member,
-    unused-argument,
     logging-fstring-interpolation,
     logging-format-interpolation,
-    unused-import,
-    protected-access,
-    fixme,
+    missing-function-docstring
+    missing-class-docstring,
     no-name-in-module,
     exec-used
 
@@ -135,7 +130,7 @@ additional-builtins=
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.
-callbacks=cb_,_cb
+callbacks=cb_,_cb,_eval,eval_
 
 
 [FORMAT]
@@ -154,7 +149,7 @@ single-line-if-stmt=no
 no-space-check=trailing-comma,dict-separator
 
 # Maximum number of lines in a module
-max-module-lines=2000
+max-module-lines=500
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
@@ -266,7 +261,7 @@ ignore-mixin-members=yes
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis
-ignored-modules=vapoursynth
+ignored-modules=
 
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set).
@@ -302,32 +297,32 @@ spelling-store-unknown-words=no
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=10
+max-args=12
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=25
+max-locals=30
 
 # Maximum number of return / yield for function / method body
-max-returns=11
+max-returns=15
 
 # Maximum number of branch for function / method body
-max-branches=26
+max-branches=20
 
 # Maximum number of statements in function / method body
-max-statements=100
+max-statements=150
 
 # Maximum number of parents for a class (see R0901).
-max-parents=7
+max-parents=25
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=11
+max-attributes=50
 
 # Minimum number of public methods for a class (see R0903).
-min-public-methods=2
+min-public-methods=0
 
 # Maximum number of public methods for a class (see R0904).
 max-public-methods=25

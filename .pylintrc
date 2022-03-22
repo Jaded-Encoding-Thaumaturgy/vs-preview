@@ -61,7 +61,9 @@ disable=
     logging-format-interpolation,
     unused-import,
     protected-access,
-    fixme
+    fixme,
+    no-name-in-module,
+    exec-used
 
 [REPORTS]
 

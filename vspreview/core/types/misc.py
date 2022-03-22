@@ -6,7 +6,7 @@ from typing import List
 
 class PictureType(bytes, Enum):
     UNSET = b'None'
-    I = b'I'  # noqa
+    I = b'I'
     P = b'P'
     B = b'B'
 

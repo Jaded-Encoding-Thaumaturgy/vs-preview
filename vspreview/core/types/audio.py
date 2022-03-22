@@ -87,7 +87,7 @@ class AudioOutput(YAMLObject):
         self.source_vs_output = self.vs_output = self.format = None  # type: ignore
 
     def render_audio_frame(self, frame: Frame) -> None:
-        self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))  # R58
+        self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))
 
     def render_raw_audio_frame(self, vs_frame: vs.AudioFrame) -> None:
         ptr_type = ctypes.POINTER(ctypes.c_float * self.format.samples_per_frame)

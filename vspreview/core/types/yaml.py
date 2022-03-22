@@ -25,11 +25,15 @@ class YAMLObjectWrapper(YAMLObject):
         return str(self.value)
 
     def __eq__(self, other: object) -> bool:
+        if other is None:
+            return False
         if not isinstance(other, YAMLObjectWrapper):
             other = self.__class__(other)
         return self.value == other.value
 
     def __gt__(self, other: object) -> bool:
+        if other is None:
+            return False
         if not isinstance(other, YAMLObjectWrapper):
             other = self.__class__(other)
         return self.value > other.value
@@ -41,6 +45,8 @@ class YAMLObjectWrapper(YAMLObject):
         return not self.__gt__(other)
 
     def __ge__(self, other: object) -> bool:
+        if other is None:
+            return False
         if not isinstance(other, YAMLObjectWrapper):
             other = self.__class__(other)
         return self.__eq__(other) or self.__gt__(other)

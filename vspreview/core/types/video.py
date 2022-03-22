@@ -279,7 +279,7 @@ class VideoOutput(YAMLObject):
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:
+        if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:  # type: ignore
             self.last_showed_frame = Frame(0)
 
         if not hasattr(self, 'frame_to_show'):

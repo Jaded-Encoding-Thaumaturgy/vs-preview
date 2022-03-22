@@ -6,7 +6,7 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
-from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence
+from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar
 
 from .better_abc import abstract_attribute
 from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
@@ -76,7 +76,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | None = [], reloading: bool = False
+        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False
     ) -> None:
         raise NotImplementedError
 
@@ -94,7 +94,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def switch_frame(
-        self, pos: Frame | Time | None, *, render_frame: bool | Sequence[vs.VideoFrame | None] = True
+        self, pos: Frame | Time | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
         raise NotImplementedError()
 
@@ -181,10 +181,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 
     __slots__ = ('main', 'toggle_button', *_class_storable_attrs)
 
-    if TYPE_CHECKING:
-        notches_changed = pyqtSignal(AbstractToolbar)  # noqa: F821
-    else:
-        notches_changed = pyqtSignal(object)
+    notches_changed = pyqtSignal(ExtendedWidget)
 
     def __init__(self, main: AbstractMainWindow, settings: QWidget) -> None:
         super().__init__(main.central_widget)
@@ -375,7 +372,7 @@ def try_load(
         elif callable(receiver):
             try:
                 cast(_SetterFunction, receiver)(name, value)
-            except Exception:
+            except BaseException:
                 cast(_OneArgumentFunction, receiver)(value)
         elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
             try:

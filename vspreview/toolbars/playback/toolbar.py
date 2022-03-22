@@ -49,8 +49,6 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future] = deque()
 
-        self.rescan_outputs()
-
         self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
         self.fps_timer = QTimer()
@@ -61,6 +59,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_start_frame = Frame(0)
         self.play_end_time = 0
         self.play_end_frame = Frame(0)
+        self.audio_outputs: AudioOutputs = []  # type: ignore
+        self.last_frame = Frame(0)
 
         self.play_pause_button.clicked.connect(self.on_play_pause_clicked)
         self.play_n_frames_button.clicked.connect(self.on_play_n_frames_clicked)
@@ -198,7 +198,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
     def rescan_outputs(self) -> None:
-        self.update_outputs(AudioOutputs())
+        self.update_outputs(AudioOutputs(self.main))
 
     def get_true_fps(self, frame: vs.VideoFrame) -> float:
         if any({x not in frame.props for x in {'_DurationDen', '_DurationNum'}}):
@@ -256,8 +256,8 @@ class PlaybackToolbar(AbstractToolbar):
                 self.play_start_frame = self.main.current_frame
             else:
                 self.fps_timer.start(self.main.FPS_REFRESH_INTERVAL)
-        elif self.fps_variable_checkbox.isChecked():
-            f = self.main.current_output.prepared.clip.get_frame(int(self.main.current_frame))
+        elif self.fps_variable_checkbox.isChecked() and self.main.current_output.cur_frame:
+            f = self.main.current_output.cur_frame[1]
             self.play_timer.start(floor(1000 / self.get_true_fps(f)))
         else:
             self.play_timer.start(floor(1000 / self.main.current_output.play_fps))
@@ -318,7 +318,9 @@ class PlaybackToolbar(AbstractToolbar):
                     self.main.current_output.prepared.alpha.get_frame_async(next_frame_for_buffer)
                 )
 
-        self.main.switch_frame(self.main.current_frame + Frame(1), render_frame=frames_futures)
+        self.main.switch_frame(
+            self.main.current_frame + Frame(1), render_frame=frames_futures  # type: ignore
+        )
 
         if self.fps_variable_checkbox.isChecked():
             self.current_fps = self.get_true_fps(frames_futures[0])
@@ -356,7 +358,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.main.statusbar.label.setText('Ready')
 
         def _del(f: Future[vs.VideoFrame]) -> None:
-            f0 = future.result()
+            f0 = f.result()
             del f, f0
 
         for future in self.play_buffer:
@@ -467,7 +469,8 @@ class PlaybackToolbar(AbstractToolbar):
 
         for i in range(0, cast(int, self.play_buffer_audio.maxlen)):
             future = self.current_audio_output.vs_output.get_frame_async(
-                int(self.current_audio_frame + Frame(i) + Frame(1)))
+                int(self.current_audio_frame + Frame(i) + Frame(1))
+            )
             self.play_buffer_audio.appendleft(future)
 
     def on_play_n_frames_clicked(self, checked: bool) -> None:

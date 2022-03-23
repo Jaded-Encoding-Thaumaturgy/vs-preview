@@ -206,7 +206,7 @@ class MiscToolbar(AbstractToolbar):
 
     def save_as_png(self, path: Path) -> None:
         self.main.current_output.graphics_scene_item.pixmap().save(
-            str(path), 'PNG', self.settings.png_compression_level
+            str(path), 'PNG', self.main.settings.png_compression_level
         )
 
     def __getstate__(self) -> Mapping[str, Any]:

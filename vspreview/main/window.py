@@ -229,9 +229,7 @@ class MainWindow(AbstractMainWindow):
         self.script_globals.clear()
         self.script_globals = dict([('__file__', sys.argv[0])] + self.external_args)
 
-        ast_compiled = compile(
-            self.script_path.read_text(encoding='utf-8'), sys.argv[0], 'exec', optimize=2
-        )
+        ast_compiled = compile(self.script_path.read_bytes(), sys.argv[0], 'exec', optimize=2)
 
         try:
             exec(ast_compiled, self.script_globals)

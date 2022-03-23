@@ -110,6 +110,7 @@ class MainWindow(AbstractMainWindow):
         self.move(400, 0)
         self.setup_ui()
         self.storage_not_found = None
+        self.script_globals: Dict[str, Any] = dict()
 
         # global
         self.clipboard = self.app.clipboard()
@@ -225,10 +226,15 @@ class MainWindow(AbstractMainWindow):
         except AttributeError:
             pass
 
+        self.script_globals.clear()
+        self.script_globals = dict([('__file__', sys.argv[0])] + self.external_args)
+
+        ast_compiled = compile(
+            self.script_path.read_text(encoding='utf-8'), sys.argv[0], 'exec', optimize=2
+        )
+
         try:
-            exec(
-                self.script_path.read_text(encoding='utf-8'), dict([('__file__', sys.argv[0])] + self.external_args)
-            )
+            exec(ast_compiled, self.script_globals)
         except BaseException as e:
             self.script_exec_failed = True
             logging.error(e)

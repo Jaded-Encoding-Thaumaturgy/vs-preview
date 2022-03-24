@@ -32,7 +32,7 @@ If you want to run the file we're currently working on, you first need to set up
     ```
 1. Congratulations, you can now write and preview beautiful filterchains!
 
-**Note:** Step 3 generates the `launch.json file` in the `~/.vscode` directory and will need to be completed for every new project. If you would rather not repeat this step for every new project you create, you can copy or move `launch.json` into the `~/.vscode` folder that comes as part of this repository.
+**Note:** Step 3 generates the `launch.json file` in the `~/.vscode` directory and will need to be completed for every new project. If you would rather not repeat this step for every new project you create, you can copy or move `launch.json` into the `~/.vscode` folder that comes as part of this repository. However, this will replace every debug option for every file type, so should not be used by those using VSCode for things other than VS Preview.
 
 ## Running scripts with VSPreview in VSCode
 

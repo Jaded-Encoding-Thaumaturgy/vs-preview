@@ -20,23 +20,19 @@ The following is a way to integrate VS-Preview into VSCode.
 
 ## Setting Up a `launch.json` File
 
-To be able to run the file you're currently working on,<br>you'll need to set up a launch.json file,
-which tells Visual Studio Code what to do to run it with VS Preview
-
-This is easier said then done
+If you want to run the file we're currently working on, you first need to set up a launch.json file that will tell VSCode what to do to run it with VS Preview. The procedure is as follows:
 
 1. Open VSCode.
-1. Open an existing or create a new folder where your project files will be saved and open it in VSCode.
+1. Either create a new folder or choose an existing folder in which your project files will later be saved. Open this folder in VSCode.
     * For "multi-episode" projects, you should select the top level directory that will contain all of your project files.<br>The rule of thumb is doing this in the folder you'll have open and work on.
-1. Add the `launch.json` to your project directory.<br>
-    Open the terminal by doing `Ctrl + Shift + P and typing "Terminal: Create New Terminal" and write the following:
+1. Open the VSCode terminal by pressing Ctrl+Shift+P and typing `Terminal: Create new Terminal`, then write the following:
 
     ```powershell
     vspreview --vs-code-setup
     ```
 1. Congratulations, you can now write and preview beautiful filterchains!
 
-**Note:** Step 3 will need to be completed for every new project unless you've saved your `launch.json` directly in `~/.vscode`.
+**Note:** Step 3 generates the `launch.json file` in the `~/.vscode` directory and will need to be completed for every new project. If you would rather not repeat this step for every new project you create, you can copy or move `launch.json` into the `~/.vscode` folder that comes as part of this repository.
 
 ## Running scripts with VSPreview in VSCode
 

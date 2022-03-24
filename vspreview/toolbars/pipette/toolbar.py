@@ -48,6 +48,8 @@ class PipetteToolbar(AbstractToolbar):
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
         self.IS_SUBSCRIBED_MOUSE_EVT = False
+        self._curr_frame_cache = None
+        self._curr_alphaframe_cache = None
 
         main.reload_signal.connect(self.clear_outputs)
 
@@ -135,6 +137,24 @@ class PipetteToolbar(AbstractToolbar):
             self.tracking = True
         self.update_labels(event.pos())
 
+    @property
+    def current_source_frame(self) -> vs.VideoFrame:
+        if self._curr_frame_cache is None or self._curr_frame_cache[0] != self.main.current_frame:
+            self._curr_frame_cache = (
+                self.main.current_frame, self.outputs[self.main.current_output].get_frame(int(self.main.current_frame))
+            )
+
+        return self._curr_frame_cache[1]
+
+    @property
+    def current_source_alpha_frame(self) -> vs.VideoFrame:
+        if self._curr_alphaframe_cache is None or self._curr_alphaframe_cache[0] != self.main.current_frame:
+            self._curr_alphaframe_cache = (
+                self.main.current_frame, self.main.current_output.source.alpha.get_frame(int(self.main.current_frame))
+            )
+
+        return self._curr_alphaframe_cache[1]
+
     def update_labels(self, local_pos: QPoint) -> None:
         pos_f = self.main.graphics_view.mapToScene(local_pos)
         pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
@@ -174,12 +194,12 @@ class PipetteToolbar(AbstractToolbar):
                 idx = pos.y() * logical_stride + pos.x()
                 return cast(int, ptr.contents[idx])
 
-        vs_frame = self.outputs[self.main.current_output].get_frame(int(self.main.current_frame))
+        vs_frame = self.current_source_frame
         fmt = vs_frame.format
 
         src_vals = [extract_value(vs_frame, i, pos) for i in range(fmt.num_planes)]
         if self.main.current_output.source.alpha:
-            vs_alpha = self.main.current_output.source.alpha.get_frame(int(self.main.current_frame))
+            vs_alpha = self.current_source_alpha_frame
             src_vals.append(extract_value(vs_alpha, 0, pos))
 
         self.src_dec.setText(self.src_dec_fmt.format(*src_vals))

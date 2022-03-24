@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import Mapping, Any
 
 from PyQt5.QtCore import Qt
@@ -44,16 +45,14 @@ class MainToolbar(AbstractToolbar):
         self.switch_timeline_mode_button.clicked.connect(self.on_switch_timeline_mode_clicked)
         self.settings_button.clicked.connect(self.main.app_settings.show)
 
-        add_shortcut(Qt.Key_1, lambda: self.main.switch_output(0))
-        add_shortcut(Qt.Key_2, lambda: self.main.switch_output(1))
-        add_shortcut(Qt.Key_3, lambda: self.main.switch_output(2))
-        add_shortcut(Qt.Key_4, lambda: self.main.switch_output(3))
-        add_shortcut(Qt.Key_5, lambda: self.main.switch_output(4))
-        add_shortcut(Qt.Key_6, lambda: self.main.switch_output(5))
-        add_shortcut(Qt.Key_7, lambda: self.main.switch_output(6))
-        add_shortcut(Qt.Key_8, lambda: self.main.switch_output(7))
-        add_shortcut(Qt.Key_9, lambda: self.main.switch_output(8))
-        add_shortcut(Qt.Key_0, lambda: self.main.switch_output(9))
+        num_keys = [
+            Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
+        ]
+
+        for i, key in enumerate(num_keys):
+            add_shortcut(key, partial(self.main.switch_output, value=i))
+            add_shortcut(Qt.CTRL + key, partial(self.main.switch_output, value=-(i + 1)))
+
         add_shortcut(Qt.Key_S, self.sync_outputs_checkbox.click)
         add_shortcut(
             Qt.CTRL + Qt.Key_Tab,

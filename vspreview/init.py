@@ -16,6 +16,7 @@ from PyQt5.QtCore import Qt, QEvent, QObject
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import get_policy
 from .main import MainWindow
+from .utils import check_versions, get_temp_screen_resolution
 
 pretty_traceback.install()
 get_policy()

@@ -494,6 +494,9 @@ class MainWindow(AbstractMainWindow):
         else:
             index = value
 
+        if index < 0:
+            index = len(self.outputs) + index
+
         if index < 0 or index >= len(self.outputs):
             return
 

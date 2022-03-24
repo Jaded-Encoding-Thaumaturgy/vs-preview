@@ -60,7 +60,7 @@ class AudioOutput(YAMLObject):
         self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.format.num_channels)
         self.qformat.setSampleRate(self.format.sample_rate)
-        self.qformat.setSampleType(QAudioFormat.Float)
+        self.qformat.setSampleType(QAudioFormat.UnSignedInt)
         self.qformat.setSampleSize(self.format.bits_per_sample)
         self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')

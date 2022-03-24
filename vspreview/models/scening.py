@@ -177,7 +177,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
             return item in self.items
         if isinstance(item, Frame):
             for scene in self.items:
-                if item in {scene.start, scene.end}:
+                if item in scene:
                     return True
             return False
         raise TypeError

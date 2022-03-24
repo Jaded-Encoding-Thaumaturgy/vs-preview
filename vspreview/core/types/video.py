@@ -479,9 +479,11 @@ class VideoOutput(YAMLObject):
             del vs_frame
 
         if self.prepared.alpha is None:
-            return self.update_graphic_item(
-                QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
-            )
+            qpixmap = QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
+            if do_painting:
+                return qpixmap
+
+            return self.update_graphic_item(qpixmap)
 
         alpha_image = self.frame_to_qimage(
             vs_alpha_frame or self.prepared.alpha.get_frame(frame.value), True
@@ -500,9 +502,11 @@ class VideoOutput(YAMLObject):
 
         painter.end()
 
-        return self.update_graphic_item(
-            QPixmap.fromImage(result_image, Qt.NoFormatConversion)
-        )
+        qpixmap = QPixmap.fromImage(result_image, Qt.NoFormatConversion)
+        if do_painting:
+            return qpixmap
+
+        return self.update_graphic_item(qpixmap)
 
     def _generate_checkerboard(self) -> QImage:
         tile_size = self.main.CHECKERBOARD_TILE_SIZE

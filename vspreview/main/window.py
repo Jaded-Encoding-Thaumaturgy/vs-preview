@@ -462,7 +462,8 @@ class MainWindow(AbstractMainWindow):
             return
 
         frame = Frame(pos)
-        self.current_output.frame_to_show = Frame(frame)
+
+        print('b', frame)
 
         if frame > self.current_output.end_frame:
             return
@@ -473,6 +474,7 @@ class MainWindow(AbstractMainWindow):
             else:
                 self.current_output.render_frame(frame)
 
+        self.current_output.frame_to_show = Frame(frame)
         self.current_output.last_showed_frame = frame
 
         self.timeline.set_position(frame)

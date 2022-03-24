@@ -308,6 +308,8 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_pause_button.click()
             return
 
+        print('c', next_frame_for_buffer)
+
         if next_frame_for_buffer <= self.main.current_output.end_frame:
             self.play_buffer.appendleft(
                 self.main.current_output.prepared.clip.get_frame_async(next_frame_for_buffer)
@@ -317,9 +319,13 @@ class PlaybackToolbar(AbstractToolbar):
                     self.main.current_output.prepared.alpha.get_frame_async(next_frame_for_buffer)
                 )
 
-        self.main.switch_frame(
-            self.main.current_frame + Frame(1), render_frame=frames_futures  # type: ignore
+        curr_frame = self.main.current_frame + Frame(1)
+
+        self.main.current_output.graphics_scene_item.setPixmap(
+            self.main.current_output.render_frame(curr_frame, *frames_futures, do_painting=False)
         )
+
+        self.main.switch_frame(curr_frame, render_frame=False)
 
         if self.fps_variable_checkbox.isChecked():
             self.current_fps = self.get_true_fps(frames_futures[0].props)

@@ -9,14 +9,13 @@ from pathlib import Path
 from typing import Literal
 from argparse import ArgumentParser
 
-from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import Qt, QEvent, QObject
 
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import get_policy
 from .main import MainWindow
-from .utils import check_versions
 
 pretty_traceback.install()
 get_policy()
@@ -91,6 +90,15 @@ def main() -> None:
 
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
+
+    width, height = get_temp_screen_resolution()
+
+    if width > 1920 and height > 1080:
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    else:
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, False)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, False)
 
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)

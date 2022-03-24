@@ -117,7 +117,10 @@ class MainWindow(AbstractMainWindow):
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')
-        self.move(400, 0)
+
+        desktop_size = self.app.primaryScreen().size()
+
+        self.move(int(desktop_size.width() * 0.15), int(desktop_size.width() * 0.075))
         self.setup_ui()
         self.storage_not_found = None
         self.script_globals: Dict[str, Any] = dict()
@@ -462,8 +465,6 @@ class MainWindow(AbstractMainWindow):
             return
 
         frame = Frame(pos)
-
-        print('b', frame)
 
         if frame > self.current_output.end_frame:
             return

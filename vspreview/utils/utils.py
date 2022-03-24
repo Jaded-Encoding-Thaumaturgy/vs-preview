@@ -7,13 +7,13 @@ from string import Template
 from platform import python_version
 from psutil import cpu_count, Process
 from pkg_resources import get_distribution
-from typing import Any, Callable, Type, TypeVar
+from typing import Any, Callable, Type, TypeVar, Tuple
 from asyncio import get_running_loop, get_event_loop_policy
 from functools import partial, wraps, singledispatch, update_wrapper
 
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QWidget, QShortcut
 from PyQt5.QtCore import QTime, QSignalBlocker, QObject
+from PyQt5.QtWidgets import QWidget, QShortcut, QApplication
 
 from ..core import main_window, Frame, Time, AbstractToolbar
 
@@ -177,3 +177,10 @@ def check_versions() -> bool:
         return False
 
     return True
+
+
+def get_temp_screen_resolution() -> Tuple[int, int]:
+    app = QApplication(sys.argv)
+
+    geometry = app.desktop().screenGeometry()
+    return (geometry.width(), geometry.height())

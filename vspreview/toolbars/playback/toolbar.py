@@ -308,8 +308,6 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_pause_button.click()
             return
 
-        print('c', next_frame_for_buffer)
-
         if next_frame_for_buffer <= self.main.current_output.end_frame:
             self.play_buffer.appendleft(
                 self.main.current_output.prepared.clip.get_frame_async(next_frame_for_buffer)

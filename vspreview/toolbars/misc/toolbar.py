@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import yaml
 from pathlib import Path
 from functools import partial
 from typing import Any, Mapping
@@ -9,8 +8,8 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton, QCheckBox, QLabel, QFileDialog
 
 from ...core.types import VideoOutput
+from ...utils import add_shortcut, set_qobject_names
 from ...core import AbstractMainWindow, AbstractToolbar, Time, try_load
-from ...utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
 
 from .settings import MiscSettings
 
@@ -31,14 +30,14 @@ class MiscToolbar(AbstractToolbar):
         self.save_template_lineedit.setText(self.main.SAVE_TEMPLATE)
 
         self.autosave_timer = QTimer()
-        self.autosave_timer.timeout.connect(self.save)
+        self.autosave_timer.timeout.connect(self.main.dump_storage_async)
 
         self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
         main.reload_signal.connect(self.autosave_timer.stop)
 
         self.reload_script_button.clicked.connect(self.main.reload_script)
-        self.save_button.clicked.connect(partial(self.save, manually=True))
+        self.save_button.clicked.connect(partial(self.main.dump_storage_async, manually=True))
         self.keep_on_top_checkbox.stateChanged.connect(self.on_keep_on_top_changed)
         self.copy_frame_button.clicked.connect(self.copy_frame_to_clipboard)
         self.save_frame_as_button.clicked.connect(self.on_save_frame_as_clicked)
@@ -108,35 +107,6 @@ class MiscToolbar(AbstractToolbar):
         frame_pixmap = self.main.current_output.graphics_scene_item.pixmap()
         self.main.clipboard.setPixmap(frame_pixmap)
         self.main.show_message('Current frame successfully copied to clipboard')
-
-    @fire_and_forget
-    @set_status_label(label='Saving')
-    def save(self, path: Path | None = None) -> None:
-        self.save_sync(path)
-
-    def save_sync(self, path: Path | None = None, manually: bool = False) -> None:
-        if path is None:
-            vsp_dir = self.main.config_dir
-            vsp_dir.mkdir(exist_ok=True)
-            path = vsp_dir / (self.main.script_path.stem + '.yml')
-
-        backup_paths = [
-            path.with_suffix(f'.old{i}.yml')
-            for i in range(self.main.STORAGE_BACKUPS_COUNT, 0, -1)
-        ] + [path]
-        for dest_path, src_path in zip(backup_paths[:-1], backup_paths[1:]):
-            if src_path.exists():
-                src_path.replace(dest_path)
-
-        with path.open(mode='w', newline='\n') as f:
-            f.write(f'# VSPreview storage for {self.main.script_path}\n')
-            yaml.dump(
-                self.main, f, indent=4, encoding='utf-8', default_flow_style=False,
-                Dumper=yaml.CDumper  # type: ignore
-            )
-
-        if manually:
-            self.main.show_message('Saved successfully')
 
     def on_autosave_interval_changed(self, new_value: Time | None) -> None:
         if new_value is None:

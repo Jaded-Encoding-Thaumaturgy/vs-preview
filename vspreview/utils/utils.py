@@ -93,13 +93,11 @@ def set_status_label(label: str) -> Callable[..., T]:
         def wrapped(*args: Any, **kwargs: Any) -> T:
             main = main_window()
 
-            if main.statusbar.label.text() == 'Ready':
-                main.statusbar.label.setText(label)
+            main.statusbar.label.setText(label)
 
             ret = func(*args, **kwargs)
 
-            if main.statusbar.label.text() == label:
-                main.statusbar.label.setText('Ready')
+            main.statusbar.label.setText('Ready')
 
             return ret
         return wrapped

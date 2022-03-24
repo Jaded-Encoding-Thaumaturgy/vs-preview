@@ -13,7 +13,7 @@ class MainSettings(AbstractToolbarSettings):
         'autosave_control', 'base_ppi_spinbox', 'dark_theme_checkbox',
         'opengl_rendering_checkbox', 'output_index_spinbox',
         'png_compressing_spinbox', 'statusbar_timeout_control',
-        'timeline_notches_margin_spinbox',
+        'timeline_notches_margin_spinbox'
     )
 
     def setup_ui(self) -> None:
@@ -55,6 +55,11 @@ class MainSettings(AbstractToolbarSettings):
         self.opengl_rendering_checkbox.setText('OpenGL rendering')
         self.opengl_rendering_checkbox.setEnabled(False)
         self.vlayout.addWidget(self.opengl_rendering_checkbox)
+
+        self.force_old_storages_removal_checkbox = QCheckBox(self)
+        self.force_old_storages_removal_checkbox.setText('Remove old storages')
+        self.force_old_storages_removal_checkbox.setEnabled(False)
+        self.vlayout.addWidget(self.force_old_storages_removal_checkbox)
 
         output_index_layout = QHBoxLayout()
         output_index_layout.setObjectName(
@@ -138,6 +143,7 @@ class MainSettings(AbstractToolbarSettings):
         self.png_compressing_spinbox.setValue(0)
         self.statusbar_timeout_control.setValue(Time(seconds=2.5))
         self.timeline_notches_margin_spinbox.setValue(20)
+        self.force_old_storages_removal_checkbox.setChecked(False)
 
     @property
     def autosave_interval(self) -> Time:
@@ -170,6 +176,10 @@ class MainSettings(AbstractToolbarSettings):
     @property
     def timeline_label_notches_margin(self) -> int:
         return self.timeline_notches_margin_spinbox.value()
+
+    @property
+    def force_old_storages_removal(self) -> int:
+        return self.force_old_storages_removal_checkbox.isChecked()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {

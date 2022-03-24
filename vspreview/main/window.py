@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import io
 import gc
 import sys
 import yaml
 import logging
 import vapoursynth as vs
 from pathlib import Path
-from typing import Any, cast, List, Mapping, Tuple
+from itertools import count
+from os.path import expandvars, expanduser
 from traceback import FrameSummary, TracebackException
+from typing import Any, cast, List, Mapping, Tuple, Dict
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent
 from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent
@@ -18,9 +21,9 @@ from PyQt5.QtWidgets import (
 from ..toolbars import Toolbars
 from ..models import VideoOutputs
 from ..core.vsenv import get_policy
-from ..utils import get_usable_cpus_count, set_qobject_names
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load
 from ..widgets import StatusBar, Timeline, GraphicsView, GraphicsImageItem
+from ..utils import get_usable_cpus_count, set_qobject_names, fire_and_forget, set_status_label
 
 from .settings import MainSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -47,6 +50,9 @@ class MainWindow(AbstractMainWindow):
     TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
     TIMELINE_MODE = 'frame'
     VSP_DIR_NAME = '.vspreview'
+    VSP_GLOBAL_DIR_NAME = Path(
+        expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
+    )
     # used for formats with subsampling
     VS_OUTPUT_RESIZER = VideoOutput.Resizer.Bicubic
     VS_OUTPUT_MATRIX = VideoOutput.Matrix.BT709
@@ -57,6 +63,8 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_RESIZER_KWARGS = {
         'dither_type': 'error_diffusion',
     }
+    VSP_VERSION = 2.0
+    BREAKING_CHANGES_VERSIONS = []
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -91,7 +99,9 @@ class MainWindow(AbstractMainWindow):
         logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.LOG_LEVEL)
         logging.Formatter.default_msec_format = '%s.%03d'
 
-        self.config_dir = config_dir / self.VSP_DIR_NAME
+        self.current_config_dir = config_dir / self.VSP_DIR_NAME
+        self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
+        self.global_storage_path = self.global_config_dir / '.global.yml'
 
         self.app = QApplication.instance()
         assert self.app
@@ -270,10 +280,7 @@ class MainWindow(AbstractMainWindow):
             self.handle_script_error('Script has no outputs set.')
             return
 
-        self.current_storage_path = self.config_dir / (self.script_path.stem + '.yml')
-
-        if not self.current_storage_path.exists():
-            self.current_storage_path = self.script_path.with_suffix('.yml')
+        self.current_storage_path = (self.current_config_dir / self.script_path.stem).with_suffix('.yml')
 
         self.storage_not_found = not self.current_storage_path.exists()
 
@@ -292,23 +299,131 @@ class MainWindow(AbstractMainWindow):
         if not reloading:
             self.switch_output(self.OUTPUT_INDEX)
 
+    @set_status_label('Loading...')
     def load_storage(self) -> None:
         if self.storage_not_found:
             logging.info('No storage found. Using defaults.')
-        else:
+            return
+
+        storage_contents = ''
+        broken_storage = False
+        for is_global, storage_path in ((True, self.global_storage_path), (False, self.current_storage_path)):
             try:
-                with self.current_storage_path.open('r', encoding='utf-8') as storage_file:
-                    yaml.load(storage_file, Loader=yaml.CLoader)  # type: ignore
-            except yaml.YAMLError as exc:
-                if isinstance(exc, yaml.MarkedYAMLError):
+                with io.open(storage_path, 'r', encoding='utf-8') as storage_file:
+                    version = storage_file.readline()
+                    if 'Version' not in version or any({
+                        version.endswith(f'@{v}') for v in self.BREAKING_CHANGES_VERSIONS
+                    }):
+                        raise FileNotFoundError
+
+                    storage_contents += storage_file.read()
+            except FileNotFoundError:
+                if self.settings.force_old_storages_removal:
+                    storage_path.unlink()
+                    broken_storage = True
+                else:
+                    logging.warning(
+                        '\n\tThe storage was created on an old version of VSPreview.'
+                        '\n\tSave any scening or other important info and delete it.'
+                        '\n\tIf you want the program to silently delete old storages, go into settings.'
+                    )
+                    sys.exit(1)
+
+        if broken_storage:
+            return
+
+        loader = yaml.CLoader(storage_contents)
+        try:
+            loader.get_single_data()
+        except yaml.YAMLError as exc:
+            if isinstance(exc, yaml.MarkedYAMLError):
+                if exc.problem_mark:
                     logging.warning(
                         'Storage parsing failed on line {} column {}. Using defaults.'
                         .format(exc.problem_mark.line + 1, exc.problem_mark.column + 1)
                     )
-                else:
-                    logging.warning('Storage parsing failed. Using defaults.')
+            else:
+                logging.warning('Storage parsing failed. Using defaults.')
+        finally:
+            loader.dispose()
 
-        self.statusbar.label.setText('Ready')
+    @fire_and_forget
+    @set_status_label('Saving...')
+    def dump_storage_async(self) -> None:
+        self.dump_storage()
+
+    def dump_storage(self, manually: bool = False) -> None:
+        self.current_config_dir.mkdir(0o777, True, True)
+        self.global_config_dir.mkdir(0o777, True, True)
+
+        backup_paths = [
+            self.current_storage_path.with_suffix(f'.old{i}.yml')
+            for i in range(self.STORAGE_BACKUPS_COUNT, 0, -1)
+        ] + [self.current_storage_path]
+
+        for src_path, dest_path in zip(backup_paths[1:], backup_paths[:-1]):
+            if src_path.exists():
+                src_path.replace(dest_path)
+
+        storage_dump = self._dump_serialize(self._serialize_data()).splitlines()
+
+        idx = next(idx for (line, idx) in zip(storage_dump[2:], count(2)) if not line.startswith(' '))
+
+        version = f'# Version@{self.VSP_VERSION}'
+
+        with io.open(self.global_storage_path, 'w', encoding='utf-8') as global_file:
+            global_file.writelines(
+                '\n'.join([version, '# Global VSPreview storage for settings'] + storage_dump[:idx])
+            )
+
+        with io.open(self.current_storage_path, 'w', encoding='utf-8') as current_file:
+            current_file.writelines(
+                '\n'.join([
+                    version,
+                    f'# VSPreview script storage for: {self.script_path}',
+                    f'# Global setting saved at path: {self.global_storage_path}'
+                ] + storage_dump[idx:])
+            )
+
+        if manually:
+            self.show_message('Saved successfully')
+
+    def _serialize_data(self) -> Any:
+        # idk how to explain how this work,
+        # but i'm referencing settings objects before in the dict
+        # so the yaml serializer will reference the same objects after (in toolbars),
+        # which really are the original objects, to those copied in _globals :poppo:
+        data = self.__getstate__()
+        data['_globals'] = {
+            'settings': data['settings']
+        }
+
+        data['_globals']['toolbars'] = data['toolbars'].__getstate__()
+        gtoolbars = data['_globals']['toolbars']
+
+        for toolbar_name in gtoolbars:
+            gtoolbars[toolbar_name].clear()
+            gtoolbars[toolbar_name]['settings'] = getattr(data['toolbars'], toolbar_name).settings
+
+        return data
+
+    def _dump_serialize(self, data: Any) -> str:
+        storage_dump = io.StringIO()
+
+        dumper = yaml.CDumper(
+            storage_dump, default_style=None, default_flow_style=False,
+            canonical=None, indent=4, width=120, allow_unicode=True,
+            line_break='\n', encoding='utf-8', version=None, tags=None,
+            explicit_start=None, explicit_end=None, sort_keys=True
+        )
+        try:
+            dumper.open()
+            dumper.represent(data)
+            dumper.close()
+        finally:
+            dumper.dispose()
+
+        return storage_dump.getvalue()
 
     def init_outputs(self) -> None:
         self.graphics_scene.clear()
@@ -322,9 +437,9 @@ class MainWindow(AbstractMainWindow):
 
     def reload_script(self) -> None:
         if not self.script_exec_failed:
-            self.toolbars.misc.save_sync()
+            self.dump_storage()
         elif self.settings.autosave_control.value() != Time(seconds=0):
-            self.toolbars.misc.save()
+            self.dump_storage_async()
 
         vs.clear_outputs()
         self.graphics_scene.clear()
@@ -481,7 +596,7 @@ class MainWindow(AbstractMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.settings.autosave_control.value() != Time(seconds=0) and self.save_on_exit:
-            self.toolbars.misc.save()
+            self.dump_storage_async()
 
         self.reload_signal.emit()
 

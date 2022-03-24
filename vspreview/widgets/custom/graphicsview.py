@@ -24,6 +24,7 @@ class GraphicsView(QGraphicsView):
         self.app = QApplication.instance()
         self.angleRemainder = 0
         self.zoomValue = 0.0
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
     def setZoom(self, value: int) -> None:
         transform = QTransform()
@@ -55,21 +56,18 @@ class GraphicsView(QGraphicsView):
                 self.angleRemainder = 0
 
             self.angleRemainder += angleDelta
+
             if abs(self.angleRemainder) >= self.WHEEL_STEP:
                 self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
                 self.angleRemainder %= self.WHEEL_STEP
             return
         elif modifiers == Qt.NoModifier:
-            self.verticalScrollBar().setValue(
-                self.verticalScrollBar().value() - event.angleDelta().y())
-            self.horizontalScrollBar().setValue(
-                self.horizontalScrollBar().value() - event.angleDelta().x())
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().y())
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().x())
             return
         elif modifiers == Qt.ShiftModifier:
-            self.verticalScrollBar().setValue(
-                self.verticalScrollBar().value() - event.angleDelta().x())
-            self.horizontalScrollBar().setValue(
-                self.horizontalScrollBar().value() - event.angleDelta().y())
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().x())
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().y())
             return
 
         event.ignore()

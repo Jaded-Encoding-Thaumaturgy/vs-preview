@@ -16,7 +16,7 @@ This program is meant to be paired with a code editor with integrated terminal l
 pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git
 ```
 
-It can then be used by running `python -m vspreview script.vpy` or your preferred way in your IDE.
+It can then be used by running `vspreview script.vpy` or your preferred way in your IDE.
 
 # IDE Integration
 

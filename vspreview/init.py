@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import os
 import sys
+import json
 import logging
 import pretty_traceback
 from pathlib import Path
+from typing import Literal
 from argparse import ArgumentParser
 
 from PyQt5.QtCore import QEvent, QObject
@@ -54,17 +56,29 @@ def main() -> None:
 
     check_versions()
 
-    parser = ArgumentParser()
+    parser = ArgumentParser(prog='VSPreview')
     parser.add_argument(
         'script_path', help='Path to Vapoursynth script', type=Path, nargs='?'
     )
     parser.add_argument(
-        '-c', '--preserve-cwd', action='store_true', help='do not chdir to script parent directory'
+        '--version', '-v', action='version', version='%(prog)s 0.2b'
     )
     parser.add_argument(
-        '-a', '--arg', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
+        '--preserve-cwd', '-c', action='store_true', help='do not chdir to script parent directory'
     )
+    parser.add_argument(
+        '--arg', '-a', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
+    )
+    parser.add_argument(
+        '--vscode-setup', type=str, choices=['override', 'append', 'ignore'], nargs='?', const='append',
+        help='Installs launch settings in cwd\'s .vscode'
+    )
+
     args = parser.parse_args()
+
+    if args.vscode_setup is not None:
+        install_vscode_launch(args.vscode_setup)
+        sys.exit(0)
 
     if args.script_path is None:
         logging.error('Script path required.')
@@ -84,6 +98,73 @@ def main() -> None:
     main_window.show()
 
     app.exec_()
+
+
+def install_vscode_launch(mode: Literal['override', 'append', 'ignore']):
+    vscode_settings_path = Path.cwd() / '.vscode'
+    vscode_settings_path.mkdir(0o777, True, True)
+
+    settings = {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "VS Preview Current File",
+                "type": "python",
+                "request": "launch",
+                "console": "integratedTerminal",
+                "module": "vspreview",
+                "args": ["${file}"],
+                "showReturnValue": True,
+                "subProcess": True
+            },
+            {
+                "name": "Run Current File",
+                "type": "python",
+                "request": "launch",
+                "console": "integratedTerminal",
+                "program": "${file}",
+                "showReturnValue": True,
+                "subProcess": True
+            }
+        ]
+    }
+
+    launch = vscode_settings_path / 'launch.json'
+
+    if launch.exists():
+        if mode == 'ignore':
+            return
+    else:
+        launch.touch()
+
+    current_settings = settings.copy()
+
+    def _write() -> None:
+        with open(launch, 'w') as f:
+            json.dump(current_settings, f, indent=4)
+        return
+
+    if mode != 'append':
+        return _write()
+
+    with open(launch, 'r+') as f:
+        try:
+            current_settings = json.loads(f.read())
+        except json.JSONDecodeError:
+            current_settings = {}
+
+    if 'configurations' not in current_settings or len(current_settings['configurations']) == 0:
+        current_settings['configurations'] = settings['configurations']
+        return _write()
+
+    current_settings['configurations'].extend(settings['configurations'])
+
+    current_settings['configurations'] = list({
+        ':'.join(str(row[column]) for column in row.keys()): row
+        for row in current_settings['configurations']
+    }.values())
+
+    return _write()
 
 
 if __name__ == '__main__':

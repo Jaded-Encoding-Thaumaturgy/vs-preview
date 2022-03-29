@@ -2,41 +2,37 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QLabel
+from PyQt5.QtWidgets import QLabel
 
 from ...widgets import TimeEdit
-from ...core import Time, AbstractToolbarSettings, try_load
+from ...core import Time, AbstractToolbarSettings, HBoxLayout, try_load, CheckBox
 
 
 class BenchmarkSettings(AbstractToolbarSettings):
     __slots__ = (
-        'clear_cache_checkbox', 'refresh_interval_label',
+        'clear_cache_checkbox',
         'refresh_interval_control', 'frame_data_sharing_fix_checkbox',
     )
 
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.clear_cache_checkbox = QCheckBox(self)
-        self.clear_cache_checkbox.setText(
-            'Clear VS frame caches before each run'
-        )
-        self.vlayout.addWidget(self.clear_cache_checkbox)
+        self.clear_cache_checkbox = CheckBox('Clear VS frame caches before each run', self)
 
-        refresh_interval_layout = QHBoxLayout()
-        refresh_interval_layout.setObjectName('BenchmarkSettings.setup_ui.refresh_interval_layout')
-        self.vlayout.addLayout(refresh_interval_layout)
-
-        self.refresh_interval_label = QLabel(self)
-        self.refresh_interval_label.setText('Refresh interval')
-        refresh_interval_layout.addWidget(self.refresh_interval_label)
+        self.frame_data_sharing_fix_checkbox = CheckBox('(Debug) Enable frame data sharing fix', self)
 
         self.refresh_interval_control = TimeEdit(self)
-        refresh_interval_layout.addWidget(self.refresh_interval_control)
 
-        self.frame_data_sharing_fix_checkbox = QCheckBox(self)
-        self.frame_data_sharing_fix_checkbox.setText('(Debug) Enable frame data sharing fix')
-        self.vlayout.addWidget(self.frame_data_sharing_fix_checkbox)
+        self.vlayout.addWidgets([
+            self.clear_cache_checkbox,
+            self.frame_data_sharing_fix_checkbox
+        ])
+        self.vlayout.addLayout(
+            HBoxLayout([
+                QLabel('Refresh interval', self),
+                self.refresh_interval_control
+            ])
+        )
 
     def set_defaults(self) -> None:
         self.clear_cache_checkbox.setChecked(False)

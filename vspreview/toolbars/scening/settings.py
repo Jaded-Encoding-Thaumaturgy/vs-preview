@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QVBoxLayout
-
 from ...core import AbstractToolbarSettings
 
 

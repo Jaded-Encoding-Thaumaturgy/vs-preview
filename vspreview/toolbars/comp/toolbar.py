@@ -12,12 +12,12 @@ from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox, QProgressBar
+from PyQt5.QtWidgets import QLabel, QComboBox, QProgressBar
 
 from ...utils import set_qobject_names
 from ...widgets import ComboBox, FrameEdit
 from ...models import PictureTypes, VideoOutputs
-from ...core import AbstractMainWindow, AbstractToolbar, PictureType, main_window
+from ...core import AbstractMainWindow, AbstractToolbar, PictureType, main_window, PushButton, LineEdit, CheckBox
 
 from .settings import CompSettings
 
@@ -57,8 +57,8 @@ class Worker(QObject):
             self.progress_bar.emit(int(100 * value / endvalue))
 
     def run(self, conf: WorkerConfiguration) -> None:
-        self.conf = conf
         all_images: List[List[Path]] = []
+        conf.path.mkdir(parents=True, exist_ok=False)
         try:
             for i, output in enumerate(conf.outputs):
                 if self.is_finished:
@@ -151,6 +151,7 @@ class Worker(QObject):
             )
 
         self.progress_status.emit(f'https://slow.pics/c/{response.text}', 0, 0)
+        conf.path.unlink()
         self.finished.emit()
 
 
@@ -158,9 +159,9 @@ class CompToolbar(AbstractToolbar):
     _thread_running = False
 
     __slots__ = (
-        'random_frames_control', 'manual_frames_lineedit',
+        'random_frames_control', 'manual_frames_lineedit', 'output_url_lineedit',
         'current_frame_checkbox', 'is_public_checkbox', 'is_nsfw_checkbox',
-        'output_url_lineedit', 'output_url_copy_button', 'start_upload_button', 'stop_upload_button',
+        'output_url_copy_button', 'start_upload_button', 'stop_upload_button',
         'upload_progressbar', 'upload_status_label', 'upload_status_elements'
     )
 
@@ -171,96 +172,66 @@ class CompToolbar(AbstractToolbar):
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        random_frames_label = QLabel('Num Random Frames:', self)
-        layout.addWidget(random_frames_label)
+        super().setup_ui()
 
         self.random_frames_control = FrameEdit(self)
-        layout.addWidget(self.random_frames_control)
 
-        manual_frames_label = QLabel('Additional Frames:', self)
-        layout.addWidget(manual_frames_label)
+        self.manual_frames_lineedit = LineEdit(self, placeholderText='frame,frame,frame')
 
-        self.manual_frames_lineedit = QLineEdit(self)
-        self.manual_frames_lineedit.setPlaceholderText('frame,frame,frame')
-        layout.addWidget(self.manual_frames_lineedit)
+        self.current_frame_checkbox = CheckBox('Current Frame', self, checked=True)
 
-        self.current_frame_checkbox = QCheckBox('Current Frame', self)
-        self.current_frame_checkbox.setChecked(True)
-        layout.addWidget(self.current_frame_checkbox)
+        self.pic_type_combox = ComboBox[PictureType](
+            self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents, currentIndex=0
+        )
 
-        layout.addWidget(self.get_separator())
-
-        picture_type_label = QLabel('Filter per Picture Type:', self)
-        layout.addWidget(picture_type_label)
-
-        self.pic_type_combox = ComboBox[PictureType](self)
-        self.pic_type_combox.setModel(PictureTypes())
-        self.pic_type_combox.setEditable(True)
-        self.pic_type_combox.setInsertPolicy(QComboBox.InsertAtCurrent)
-        self.pic_type_combox.setDuplicatesEnabled(True)
-        self.pic_type_combox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.pic_type_combox.view().setMinimumWidth(self.pic_type_combox.minimumSizeHint().width())
         temp_width = self.pic_type_combox.minimumSizeHint().width()
         self.pic_type_combox.setMinimumWidth(temp_width + temp_width // 10)
-        self.pic_type_combox.setCurrentIndex(0)
-        layout.addWidget(self.pic_type_combox)
 
-        layout.addWidget(self.get_separator())
+        self.is_public_checkbox = CheckBox('Public', self, checked=True)
 
-        self.is_public_checkbox = QCheckBox('Public', self)
-        self.is_public_checkbox.setChecked(True)
-        layout.addWidget(self.is_public_checkbox)
+        self.is_nsfw_checkbox = CheckBox('NSFW', self, checked=False)
 
-        self.is_nsfw_checkbox = QCheckBox('NSFW', self)
-        self.is_nsfw_checkbox.setChecked(False)
-        layout.addWidget(self.is_nsfw_checkbox)
+        self.output_url_lineedit = LineEdit('https://slow.pics/c/', self, enabled=False)
 
-        layout.addWidget(self.get_separator())
+        self.output_url_copy_button = PushButton('⎘', self, clicked=self.on_copy_output_url_clicked)
 
-        self.output_url_lineedit = QLineEdit('https://slow.pics/c/', self)
-        self.output_url_lineedit.setEnabled(False)
-        layout.addWidget(self.output_url_lineedit)
+        self.start_upload_button = PushButton('Upload to slow.pics', self, clicked=self.on_start_upload)
 
-        self.output_url_copy_button = QPushButton(self)
-        self.output_url_copy_button.clicked.connect(self.on_copy_output_url_clicked)
-        self.output_url_copy_button.setText('⎘')
-        layout.addWidget(self.output_url_copy_button)
+        self.stop_upload_button = PushButton('Stop Uploading', self, visible=False, clicked=self.on_stop_upload)
 
-        self.start_upload_button = QPushButton('Upload to slow.pics', self)
-        self.start_upload_button.clicked.connect(self.on_start_upload)
-        layout.addWidget(self.start_upload_button)
-
-        self.stop_upload_button = QPushButton('Stop Uploading', self)
-        self.stop_upload_button.clicked.connect(self.on_stop_upload)
-        self.stop_upload_button.setVisible(False)
-        layout.addWidget(self.stop_upload_button)
-
-        upload_separator = self.get_separator()
-
-        layout.addWidget(upload_separator)
-
-        self.upload_progressbar = QProgressBar(self)
+        self.upload_progressbar = QProgressBar(self, value=0)
         self.upload_progressbar.setGeometry(200, 80, 250, 20)
-        self.upload_progressbar.setValue(0)
-        layout.addWidget(self.upload_progressbar)
 
         self.upload_status_label = QLabel(self)
-        layout.addWidget(self.upload_status_label)
+
+        self.upload_status_elements = (
+            self.get_separator(), self.upload_progressbar, self.upload_status_label
+        )
+
+        self.hlayout.addWidgets([
+            QLabel('Num Random Frames:'), self.random_frames_control,
+            QLabel('Additional Frames:'), self.manual_frames_lineedit,
+            self.current_frame_checkbox,
+            self.get_separator(),
+            QLabel('Filter per Picture Type:'), self.pic_type_combox,
+            self.get_separator(),
+            self.is_public_checkbox,
+            self.is_nsfw_checkbox,
+            self.get_separator(),
+            self.output_url_lineedit,
+            self.output_url_copy_button,
+            self.start_upload_button,
+            self.stop_upload_button,
+            *self.upload_status_elements
+        ])
+
+        self.hlayout.addStretch(2)
 
         self.update_status_label('extract')
 
-        self.upload_status_elements = (
-            upload_separator, self.upload_progressbar,
-            self.upload_status_label
-        )
-
         self.update_upload_status_visibility(False)
-
-        layout.addStretch()
-        layout.addStretch()
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())
@@ -372,9 +343,9 @@ class CompToolbar(AbstractToolbar):
 
         lens_n = min(lens)
 
-        path = Path(main_window().config_dir) / ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-
-        path.mkdir(parents=True)
+        path = Path(main_window().current_config_dir) / ''.join(
+            random.choices(string.ascii_uppercase + string.digits, k=16)
+        )
 
         if num:
             if picture_type is PictureType.UNSET:
@@ -398,20 +369,20 @@ class CompToolbar(AbstractToolbar):
         )
 
     def upload_to_slowpics(self) -> None:
-        self.upload_thread = QThread()
+        self.upload_thread = QThread(
+            started=partial(self.upload_worker.run, conf=self.get_slowpics_conf()),
+            finished=self.on_end_upload
+        )
 
-        self.upload_worker = Worker()
+        self.upload_worker = Worker(
+            progress_bar=self.upload_progressbar.setValue,
+            progress_status=self.update_status_label,
+            finished=(
+                self.upload_thread.quit, self.upload_worker.deleteLater
+            )
+        )
 
         self.upload_worker.moveToThread(self.upload_thread)
-
-        self.upload_thread.started.connect(
-            partial(self.upload_worker.run, conf=self.get_slowpics_conf())
-        )
-        self.upload_worker.finished.connect(self.upload_thread.quit)
-        self.upload_worker.finished.connect(self.upload_worker.deleteLater)
-        self.upload_thread.finished.connect(self.on_end_upload)
-        self.upload_worker.progress_bar.connect(self.upload_progressbar.setValue)
-        self.upload_worker.progress_status.connect(self.update_status_label)
 
         self.upload_thread.start()
         self._thread_running = True

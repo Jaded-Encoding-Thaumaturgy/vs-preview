@@ -4,16 +4,17 @@ import re
 import logging
 from pathlib import Path
 from copy import deepcopy
+from functools import partial
 from typing import Any, Callable, cast, List, Mapping, Set
 
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QModelIndex
-from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QLineEdit, QHBoxLayout, QFrame, QLabel, QFileDialog
+from PyQt5.QtWidgets import QLabel, QFileDialog
 
 from ...widgets import ComboBox, Notches
 from ...models import SceningList, SceningLists
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load
 from ...utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
+from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load, HBoxLayout, PushButton, LineEdit
 
 from .dialog import SceningListDialog
 from .settings import SceningSettings
@@ -59,32 +60,107 @@ class SceningToolbar(AbstractToolbar):
             'Simple Mappings (*.txt)': self.import_simple,
         }
 
-        self.add_list_button.clicked.connect(self.on_add_list_clicked)
-        self.add_single_frame_button.clicked.connect(self.on_add_single_frame_clicked)
-        self.add_to_list_button.clicked.connect(self.on_add_to_list_clicked)
-        self.export_multiline_button.clicked.connect(self.export_multiline)
-        self.export_single_line_button.clicked.connect(self.export_single_line)
-        self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)
-        self.import_file_button.clicked.connect(self.on_import_file_clicked)
-        self.items_combobox.valueChanged.connect(self.on_current_list_changed)
-        self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
-        self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)
-        self.remove_list_button.clicked.connect(self.on_remove_list_clicked)
-        self.seek_to_next_button.clicked.connect(self.on_seek_to_next_clicked)
-        self.seek_to_prev_button.clicked.connect(self.on_seek_to_prev_clicked)
-        self.toggle_first_frame_button.clicked.connect(self.on_first_frame_clicked)
-        self.toggle_second_frame_button.clicked.connect(self.on_second_frame_clicked)
-        self.view_list_button.clicked.connect(self.on_view_list_clicked)
+        self.add_shortcuts()
 
-        add_shortcut(Qt.SHIFT + Qt.Key_1, lambda: self.switch_list(0))
-        add_shortcut(Qt.SHIFT + Qt.Key_2, lambda: self.switch_list(1))
-        add_shortcut(Qt.SHIFT + Qt.Key_3, lambda: self.switch_list(2))
-        add_shortcut(Qt.SHIFT + Qt.Key_4, lambda: self.switch_list(3))
-        add_shortcut(Qt.SHIFT + Qt.Key_5, lambda: self.switch_list(4))
-        add_shortcut(Qt.SHIFT + Qt.Key_6, lambda: self.switch_list(5))
-        add_shortcut(Qt.SHIFT + Qt.Key_7, lambda: self.switch_list(6))
-        add_shortcut(Qt.SHIFT + Qt.Key_8, lambda: self.switch_list(7))
-        add_shortcut(Qt.SHIFT + Qt.Key_9, lambda: self.switch_list(8))
+        # FIXME: get rid of workaround
+        self._on_list_items_changed = lambda *arg: self.on_list_items_changed(*arg)
+
+        set_qobject_names(self)
+
+    def setup_ui(self) -> None:
+        super().setup_ui()
+
+        self.items_combobox = ComboBox[SceningList](self, duplicatesEnabled=True, minimumContentsLength=4)
+        self.items_combobox.valueChanged.connect(self.on_current_list_changed)
+
+        self.add_list_button = PushButton('Add List', self, clicked=self.on_add_list_clicked)
+
+        self.remove_list_button = PushButton('Remove List', self, enabled=False, clicked=self.on_remove_list_clicked)
+
+        self.view_list_button = PushButton('View List', self, enabled=False, clicked=self.on_view_list_clicked)
+
+        self.import_file_button = PushButton('Import List', self, clicked=self.on_import_file_clicked)
+
+        self.seek_to_prev_button = PushButton('⏪', self, enabled=False, clicked=self.on_seek_to_prev_clicked)
+
+        self.seek_to_next_button = PushButton('⏩', self, enabled=False, clicked=self.on_seek_to_next_clicked)
+
+        # 'Add Single Frame'
+        self.add_single_frame_button = PushButton(
+            '🆎', self, tooltip='Add Single Frame Scene', clicked=self.on_add_single_frame_clicked
+        )
+
+        # 'Frame 1'
+        self.toggle_first_frame_button = PushButton(
+            '🅰️', self, tooltip='Toggle Start of New Scene', checkable=True, clicked=self.on_first_frame_clicked
+        )
+
+        # 'Frame 2'
+        self.toggle_second_frame_button = PushButton(
+            '🅱️', self, tooltip='Toggle End of New Scene', checkable=True, clicked=self.on_second_frame_clicked
+        )
+
+        self.label_lineedit = LineEdit(self, placeholder='New Scene Label')
+
+        self.add_to_list_button = PushButton('Add to List', self, enabled=False, clicked=self.on_add_to_list_clicked)
+
+        self.remove_last_from_list_button = PushButton(
+            'Remove Last', self, enabled=False, clicked=self.on_remove_last_from_list_clicked
+        )
+
+        self.remove_at_current_frame_button = PushButton(
+            'Remove at Current Frame', self, enabled=False, clicked=self.on_remove_at_current_frame_clicked
+        )
+
+        self.export_template_lineedit = LineEdit(
+            self, textChanged=self.check_remove_export_possibility, tooltip=(
+                r'Use {start} and {end} as placeholders.'
+                r'Both are valid for single frame scenes. '
+                r'{label} is available, too. '
+            ), placeholderText='Export Template'
+        )
+
+        self.export_multiline_button = PushButton(
+            'Export Multiline', self, clicked=self.export_multiline, enabled=False
+        )
+
+        self.export_single_line_button = PushButton(
+            'Export Single Line', self, clicked=self.export_single_line, enabled=False
+        )
+
+        HBoxLayout(self.hlayout, [
+            self.items_combobox,
+            self.add_list_button,
+            self.remove_list_button,
+            self.view_list_button,
+            self.import_file_button,
+            self.get_separator(),
+            self.seek_to_prev_button,
+            self.seek_to_next_button
+        ]).addStretch()
+
+        HBoxLayout(self.hlayout, [
+            self.add_single_frame_button,
+            self.toggle_first_frame_button,
+            self.toggle_second_frame_button,
+            self.label_lineedit,
+            self.add_to_list_button,
+            self.remove_last_from_list_button,
+            self.remove_at_current_frame_button,
+            self.get_separator(),
+            self.export_template_lineedit,
+            self.export_multiline_button,
+            self.export_single_line_button
+        ]).addStretch(2)
+
+        # statusbar label
+        self.status_label = QLabel(self)
+        self.status_label.setVisible(False)
+        self.main.statusbar.addPermanentWidget(self.status_label)
+
+    def add_shortcuts(self) -> None:
+        for i, key in enumerate(self.num_keys[:-2]):
+            add_shortcut(Qt.SHIFT + key, partial(self.switch_list, i))
 
         add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
         add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_next_button.click)
@@ -97,139 +173,6 @@ class SceningToolbar(AbstractToolbar):
             Qt.Key_B,
             lambda: self.scening_list_dialog.label_lineedit.setText(str(self.main.current_frame))
         )
-
-        # FIXME: get rid of workaround
-        self._on_list_items_changed = lambda * arg: self.on_list_items_changed(
-            *arg)  # pylint: disable=unnecessary-lambda, no-value-for-parameter
-
-        set_qobject_names(self)
-
-    def setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setObjectName('SceningToolbar.setup_ui.layout')
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        layout_line_1 = QHBoxLayout()
-        layout_line_1.setObjectName('SceningToolbar.setup_ui.layout_line_1')
-        layout.addLayout(layout_line_1)
-
-        self.items_combobox = ComboBox[SceningList](self)
-        self.items_combobox.setDuplicatesEnabled(True)
-        self.items_combobox.setMinimumContentsLength(4)
-        layout_line_1.addWidget(self.items_combobox)
-
-        self.add_list_button = QPushButton(self)
-        self.add_list_button.setText('Add List')
-        layout_line_1.addWidget(self.add_list_button)
-
-        self.remove_list_button = QPushButton(self)
-        self.remove_list_button.setText('Remove List')
-        self.remove_list_button.setEnabled(False)
-        layout_line_1.addWidget(self.remove_list_button)
-
-        self.view_list_button = QPushButton(self)
-        self.view_list_button.setText('View List')
-        self.view_list_button.setEnabled(False)
-        layout_line_1.addWidget(self.view_list_button)
-
-        self.import_file_button = QPushButton(self)
-        self.import_file_button.setText('Import List')
-        layout_line_1.addWidget(self.import_file_button)
-
-        separator_line_1 = QFrame(self)
-        separator_line_1.setObjectName('SceningToolbar.setup_ui.separator_line_1')
-        separator_line_1.setFrameShape(QFrame.VLine)
-        separator_line_1.setFrameShadow(QFrame.Sunken)
-        layout_line_1.addWidget(separator_line_1)
-
-        self.seek_to_prev_button = QPushButton(self)
-        self.seek_to_prev_button.setText('⏪')
-        self.seek_to_prev_button.setEnabled(False)
-        layout_line_1.addWidget(self.seek_to_prev_button)
-
-        self.seek_to_next_button = QPushButton(self)
-        self.seek_to_next_button.setText('⏩')
-        self.seek_to_next_button.setEnabled(False)
-        layout_line_1.addWidget(self.seek_to_next_button)
-
-        layout_line_1.addStretch()
-
-        layout_line_2 = QHBoxLayout()
-        layout_line_2.setObjectName('SceningToolbar.setup_ui.layout_line_2')
-        layout.addLayout(layout_line_2)
-
-        self.add_single_frame_button = QPushButton(self)
-        # self.add_single_frame_button.setText('Add Single Frame')
-        self.add_single_frame_button.setText('🆎')
-        self.add_single_frame_button.setToolTip('Add Single Frame Scene')
-        layout_line_2.addWidget(self.add_single_frame_button)
-
-        self.toggle_first_frame_button = QPushButton(self)
-        # self.toggle_first_frame_button.setText('Frame 1')
-        self.toggle_first_frame_button.setText('🅰️')
-        self.toggle_first_frame_button.setToolTip('Toggle Start of New Scene')
-        self.toggle_first_frame_button.setCheckable(True)
-        layout_line_2.addWidget(self.toggle_first_frame_button)
-
-        self.toggle_second_frame_button = QPushButton(self)
-        # self.toggle_second_frame_button.setText('Frame 2')
-        self.toggle_second_frame_button.setText('🅱️')
-        self.toggle_second_frame_button.setToolTip('Toggle End of New Scene')
-        self.toggle_second_frame_button.setCheckable(True)
-        layout_line_2.addWidget(self.toggle_second_frame_button)
-
-        self.label_lineedit = QLineEdit(self)
-        self.label_lineedit.setPlaceholderText('New Scene Label')
-        layout_line_2.addWidget(self.label_lineedit)
-
-        self.add_to_list_button = QPushButton(self)
-        self.add_to_list_button.setText('Add to List')
-        self.add_to_list_button.setEnabled(False)
-        layout_line_2.addWidget(self.add_to_list_button)
-
-        self.remove_last_from_list_button = QPushButton(self)
-        self.remove_last_from_list_button.setText('Remove Last')
-        self.remove_last_from_list_button.setEnabled(False)
-        layout_line_2.addWidget(self.remove_last_from_list_button)
-
-        self.remove_at_current_frame_button = QPushButton(self)
-        self.remove_at_current_frame_button.setText('Remove at Current Frame')
-        self.remove_at_current_frame_button.setEnabled(False)
-        layout_line_2.addWidget(self.remove_at_current_frame_button)
-
-        separator_line_2 = QFrame(self)
-        separator_line_2.setObjectName('SceningToolbar.setup_ui.separator_line_2')
-        separator_line_2.setFrameShape(QFrame.VLine)
-        separator_line_2.setFrameShadow(QFrame.Sunken)
-        layout_line_2.addWidget(separator_line_2)
-
-        self.export_template_lineedit = QLineEdit(self)
-        self.export_template_lineedit.setToolTip(
-            r'Use {start} and {end} as placeholders.'
-            r'Both are valid for single frame scenes. '
-            r'{label} is available, too. '
-        )
-        self.export_template_lineedit.setPlaceholderText('Export Template')
-        layout_line_2.addWidget(self.export_template_lineedit)
-
-        self.export_multiline_button = QPushButton(self)
-        self.export_multiline_button.setText('Export Multiline')
-        self.export_multiline_button.setEnabled(False)
-        layout_line_2.addWidget(self.export_multiline_button)
-
-        self.export_single_line_button = QPushButton(self)
-        self.export_single_line_button.setText('Export Single Line')
-        self.export_single_line_button.setEnabled(False)
-        layout_line_2.addWidget(self.export_single_line_button)
-
-        layout_line_2.addStretch()
-        layout_line_2.addStretch()
-
-        # statusbar label
-
-        self.status_label = QLabel(self)
-        self.status_label.setVisible(False)
-        self.main.statusbar.addPermanentWidget(self.status_label)
 
     def on_toggle(self, new_state: bool) -> None:
         # if new_state is True:
@@ -287,7 +230,6 @@ class SceningToolbar(AbstractToolbar):
         self.items_combobox.setCurrentIndex(index)
 
     # list management
-
     def on_add_list_clicked(self, checked: bool | None = None) -> None:
         _, i = self.current_lists.add()
         self.current_list_index = i
@@ -330,7 +272,6 @@ class SceningToolbar(AbstractToolbar):
             pass
 
     # seeking
-
     def on_seek_to_next_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
@@ -416,7 +357,6 @@ class SceningToolbar(AbstractToolbar):
             self.remove_at_current_frame_button.click()
 
     # import
-
     def on_import_file_clicked(self, checked: bool | None = None) -> None:
         filter_str = ';;'.join(self.supported_file_types.keys())
         path_strs, file_type = QFileDialog.getOpenFileNames(
@@ -472,11 +412,7 @@ class SceningToolbar(AbstractToolbar):
             match = pattern.match(offset)
             if match is None:
                 return None
-            return Time(
-                minutes=int(match[1]),
-                seconds=int(match[2]),
-                milliseconds=int(match[3]) / 75 * 1000
-            )
+            return Time(minutes=int(match[1]), seconds=int(match[2]), milliseconds=int(match[3]) / 75 * 1000)
 
         cue_sheet = CueSheet()
         cue_sheet.setOutputFormat('')
@@ -568,22 +504,14 @@ class SceningToolbar(AbstractToolbar):
             match = timestamp_pattern.match(start_element.text)
             if match is None:
                 continue
-            start = Frame(Time(
-                hours=int(match[1]),
-                minutes=int(match[2]),
-                seconds=float(match[3])
-            ))
+            start = Frame(Time(hours=int(match[1]), minutes=int(match[2]), seconds=float(match[3])))
 
             end = None
             end_element = chapter.find('ChapterTimeEnd')
             if end_element is not None and end_element.text is not None:
                 match = timestamp_pattern.match(end_element.text)
                 if match is not None:
-                    end = Frame(Time(
-                        hours=int(match[1]),
-                        minutes=int(match[2]),
-                        seconds=float(match[3])
-                    ))
+                    end = Frame(Time(hours=int(match[1]), minutes=int(match[2]), seconds=float(match[3])))
 
             label = ''
             label_element = chapter.find('ChapterDisplay/ChapterString')
@@ -605,11 +533,7 @@ class SceningToolbar(AbstractToolbar):
             re.RegexFlag.MULTILINE
         )
         for match in pattern.finditer(path.read_text()):
-            time = Time(
-                hours=int(match[2]),
-                minutes=int(match[3]),
-                seconds=float(match[4])
-            )
+            time = Time(hours=int(match[2]), minutes=int(match[3]), seconds=float(match[4]))
             try:
                 scening_list.add(Frame(time), label=match[5])
             except ValueError:
@@ -672,9 +596,7 @@ class SceningToolbar(AbstractToolbar):
             # TODO: investigate, why offset by -1 is necessary here
             scene_end = Frame(i - 1)
             try:
-                scening_list.add(
-                    scene_start, scene_end,
-                    '{:.3f} fps'.format(1 / float(scene_delta)))
+                scening_list.add(scene_start, scene_end, '{:.3f} fps'.format(1 / float(scene_delta)))
             except ValueError:
                 out_of_range_count += 1
             scene_start = Frame(i)
@@ -719,11 +641,7 @@ class SceningToolbar(AbstractToolbar):
 
         for match in tfm_group_pattern.finditer(log):
             try:
-                scene = scening_list.add(
-                    Frame(int(match[1])),
-                    Frame(int(match[2])),
-                    '{} combed'.format(match[3])
-                )
+                scene = scening_list.add(Frame(int(match[1])), Frame(int(match[2])), f'{match[3]} combed')
             except ValueError:
                 out_of_range_count += 1
                 continue
@@ -760,7 +678,6 @@ class SceningToolbar(AbstractToolbar):
                 out_of_range_count += 1
 
     # export
-
     def export_multiline(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
@@ -770,9 +687,7 @@ class SceningToolbar(AbstractToolbar):
 
         try:
             for scene in self.current_list:
-                export_str += template.format(
-                    start=scene.start, end=scene.end, label=scene.label
-                ) + '\n'
+                export_str += template.format(start=scene.start, end=scene.end, label=scene.label) + '\n'
         except KeyError:
             logging.warning('Scening: export template contains invalid placeholders.')
             self.main.show_message('Export template contains invalid placeholders.')
@@ -790,9 +705,7 @@ class SceningToolbar(AbstractToolbar):
 
         try:
             for scene in self.current_list:
-                export_str += template.format(
-                    start=scene.start, end=scene.end, label=scene.label
-                )
+                export_str += template.format(start=scene.start, end=scene.end, label=scene.label)
         except KeyError:
             logging.warning('Scening: export template contains invalid placeholders.')
             self.main.show_message('Export template contains invalid placeholders.')
@@ -811,33 +724,23 @@ class SceningToolbar(AbstractToolbar):
         self.add_to_list_button.setEnabled(True)
 
     def check_remove_export_possibility(self, checked: bool | None = None) -> None:
-        if self.current_list is not None and len(self.current_list) > 0:
-            self.remove_last_from_list_button.setEnabled(True)
-            self.seek_to_next_button.setEnabled(True)
-            self.seek_to_prev_button.setEnabled(True)
-        else:
-            self.remove_last_from_list_button.setEnabled(False)
-            self.seek_to_next_button.setEnabled(False)
-            self.seek_to_prev_button.setEnabled(False)
+        is_enabled = self.current_list is not None and len(self.current_list) > 0
+        self.remove_last_from_list_button.setEnabled(is_enabled)
+        self.seek_to_next_button.setEnabled(is_enabled)
+        self.seek_to_prev_button.setEnabled(is_enabled)
 
-        if self.current_list is not None and self.main.current_frame in self.current_list:
-            self.add_single_frame_button.setEnabled(False)
-            self.remove_at_current_frame_button.setEnabled(True)
-        else:
-            self.add_single_frame_button.setEnabled(True)
-            self.remove_at_current_frame_button.setEnabled(False)
+        is_enabled = self.current_list is not None and self.main.current_frame in self.current_list
+        self.add_single_frame_button.setEnabled(not is_enabled)
+        self.remove_at_current_frame_button.setEnabled(is_enabled)
 
-        if self.export_template_pattern.fullmatch(self.export_template_lineedit.text()) is not None:
-            self.export_multiline_button.setEnabled(True)
-            self.export_single_line_button.setEnabled(True)
-        else:
-            self.export_single_line_button.setEnabled(False)
-            self.export_multiline_button.setEnabled(False)
+        is_enabled = self.export_template_pattern.fullmatch(self.export_template_lineedit.text()) is not None
+        self.export_multiline_button.setEnabled(is_enabled)
+        self.export_single_line_button.setEnabled(is_enabled)
 
     def scening_update_status_label(self) -> None:
         first_frame_text = str(self.first_frame) if self.first_frame is not None else ''
         second_frame_text = str(self.second_frame) if self.second_frame is not None else ''
-        self.status_label.setText('Scening: {} - {} '.format(first_frame_text, second_frame_text))
+        self.status_label.setText(f'Scening: {first_frame_text} - {second_frame_text} ')
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {

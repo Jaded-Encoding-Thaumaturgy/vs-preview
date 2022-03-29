@@ -7,7 +7,7 @@ from weakref import WeakKeyDictionary
 
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QMouseEvent
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QGraphicsView
+from PyQt5.QtWidgets import QLabel, QGraphicsView
 
 from ...widgets import ColorView
 from ...utils import set_qobject_names
@@ -59,60 +59,43 @@ class PipetteToolbar(AbstractToolbar):
         self.outputs.clear()
 
     def setup_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setObjectName('PipetteToolbar.setup_ui.layout')
-        layout.setContentsMargins(0, 0, 0, 0)
+        super().setup_ui()
 
         self.color_view = ColorView(self)
         self.color_view.setFixedSize(self.height() // 2, self.height() // 2)
-        layout.addWidget(self.color_view)
 
         font = QFont('Consolas', 9)
         font.setStyleHint(QFont.Monospace)
 
         self.position = QLabel(self)
-        self.position.setFont(font)
-        self.position.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.position)
 
-        self.rgb_label = QLabel(self)
-        self.rgb_label.setText('Rendered (RGB):')
-        layout.addWidget(self.rgb_label)
+        self.rgb_label = QLabel('Rendered (RGB):', self)
 
         self.rgb_hex = QLabel(self)
-        self.rgb_hex.setFont(font)
-        self.rgb_hex.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.rgb_hex)
-
         self.rgb_dec = QLabel(self)
-        self.rgb_dec.setFont(font)
-        self.rgb_dec.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.rgb_dec)
-
         self.rgb_norm = QLabel(self)
-        self.rgb_norm.setFont(font)
-        self.rgb_norm.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.rgb_norm)
 
         self.src_label = QLabel(self)
-        layout.addWidget(self.src_label)
 
         self.src_hex = QLabel(self)
-        self.src_hex.setFont(font)
-        self.src_hex.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.src_hex)
-
         self.src_dec = QLabel(self)
-        self.src_dec.setFont(font)
-        self.src_dec.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.src_dec)
-
         self.src_norm = QLabel(self)
-        self.src_norm.setFont(font)
-        self.src_norm.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        layout.addWidget(self.src_norm)
 
-        layout.addStretch()
+        for label in [
+            self.position,
+            self.rgb_hex, self.rgb_dec, self.rgb_norm,
+            self.src_hex, self.src_dec, self.src_norm
+        ]:
+            label.setFont(font)
+            label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
+        self.hlayout.addWidgets([
+            self.color_view, self.position,
+            self.rgb_label, self.rgb_hex, self.rgb_dec, self.rgb_norm,
+            self.src_label, self.src_hex, self.src_dec, self.src_norm
+        ])
+
+        self.hlayout.addStretch()
 
     def subscribe_on_mouse_events(self) -> None:
         self.main.graphics_view.mouseMoved.connect(self.mouse_moved)
@@ -217,8 +200,7 @@ class PipetteToolbar(AbstractToolbar):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         super().on_current_output_changed(index, prev_index)
 
-        fmt = self.main.current_output.source.clip.format
-        assert fmt
+        assert (fmt := self.main.current_output.source.clip.format)
 
         src_label_text = ''
         if fmt.color_family == vs.RGB:
@@ -228,7 +210,7 @@ class PipetteToolbar(AbstractToolbar):
         elif fmt.color_family == vs.GRAY:
             src_label_text = 'Raw (Gray{}):'
 
-        self.src_label.setText(src_label_text.format(' + Alpha'if self.main.current_output.source.alpha else ''))
+        self.src_label.setText(src_label_text.format(' + Alpha' if self.main.current_output.source.alpha else ''))
 
         self.pos_fmt = '{:4d},{:4d}'
 
@@ -236,8 +218,8 @@ class PipetteToolbar(AbstractToolbar):
             self.outputs[self.main.current_output] = self.prepare_vs_output(
                 self.main.current_output.source.clip
             )
-        src_fmt = self.outputs[self.main.current_output].format
-        assert src_fmt
+
+        assert (src_fmt := self.outputs[self.main.current_output].format)
 
         if src_fmt.sample_type == vs.INTEGER:
             self.src_max_val = 2**src_fmt.bits_per_sample - 1
@@ -270,12 +252,13 @@ class PipetteToolbar(AbstractToolbar):
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
-        assert vs_output.format
+        assert (fmt := vs_output.format)
 
-        def non_subsampled_format(fmt: vs.VideoFormat) -> vs.VideoFormat:
-            return vs.core.query_video_format(fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0)
-
-        return vs.core.resize.Bicubic(vs_output, format=non_subsampled_format(vs_output.format).id)
+        return vs.core.resize.Bicubic(
+            vs_output, format=vs.core.query_video_format(
+                fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0
+            ).id
+        )
 
     @staticmethod
     def clip(value: float, lower_bound: float, upper_bound: float) -> float:

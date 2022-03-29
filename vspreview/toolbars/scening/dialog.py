@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from PyQt5.QtWidgets import QDialog, QTableView
 from PyQt5.QtCore import Qt, QModelIndex, QItemSelection, QItemSelectionModel
-from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QLineEdit, QTableView, QHBoxLayout
 
 from ...models import SceningList
 from ...widgets import TimeEdit, FrameEdit
-from ...core import AbstractMainWindow, Frame, Time
 from ...utils import qt_silent_call, set_qobject_names
+from ...core import AbstractMainWindow, Frame, Time, VBoxLayout, HBoxLayout, PushButton, LineEdit
 
 
 class SceningListDialog(QDialog):
@@ -27,53 +27,41 @@ class SceningListDialog(QDialog):
         self.setWindowTitle('Scening List View')
         self.setup_ui()
 
-        self.end_frame_control.valueChanged.connect(self.on_end_frame_changed)
-        self.end_time_control.valueChanged.connect(self.on_end_time_changed)
-        self.label_lineedit.textChanged.connect(self.on_label_changed)
-        self.name_lineedit.textChanged.connect(self.on_name_changed)
-        self.start_frame_control.valueChanged.connect(self.on_start_frame_changed)
-        self.start_time_control.valueChanged.connect(self.on_start_time_changed)
-        self.tableview.doubleClicked.connect(self.on_tableview_clicked)
-
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setObjectName('SceningListDialog.setup_ui.layout')
 
-        self.name_lineedit = QLineEdit(self)
-        layout.addWidget(self.name_lineedit)
+        self.name_lineedit = LineEdit(self, textChanged=self.on_name_changed)
 
-        self.tableview = QTableView(self)
+        self.tableview = QTableView(self, doubleClicked=self.on_tableview_clicked)
         self.tableview.setSelectionMode(QTableView.SingleSelection)
         self.tableview.setSelectionBehavior(QTableView.SelectRows)
         self.tableview.setSizeAdjustPolicy(QTableView.AdjustToContents)
-        layout.addWidget(self.tableview)
 
-        scene_layout = QHBoxLayout()
-        scene_layout.setObjectName('SceningListDialog.setup_ui.scene_layout')
-        layout.addLayout(scene_layout)
+        self.start_frame_control = FrameEdit(self, valueChanged=self.on_start_frame_changed)
 
-        self.start_frame_control = FrameEdit(self)
-        scene_layout.addWidget(self.start_frame_control)
+        self.end_frame_control = FrameEdit(self, valueChanged=self.on_end_frame_changed)
 
-        self.end_frame_control = FrameEdit(self)
-        scene_layout.addWidget(self.end_frame_control)
+        self.start_time_control = TimeEdit(self, valueChanged=self.on_start_time_changed)
 
-        self.start_time_control = TimeEdit(self)
-        scene_layout.addWidget(self.start_time_control)
+        self.end_time_control = TimeEdit(self, valueChanged=self.on_end_time_changed)
 
-        self.end_time_control = TimeEdit(self)
-        scene_layout.addWidget(self.end_time_control)
+        self.label_lineedit = LineEdit(self, placeholder='Label', textChanged=self.on_label_changed)
 
-        self.label_lineedit = QLineEdit(self)
-        self.label_lineedit.setPlaceholderText('Label')
-        scene_layout.addWidget(self.label_lineedit)
+        self.add_button = PushButton('Add', self, enabled=False)
 
-        self.add_button = QPushButton(self)
-        self.add_button.setText('Add')
-        self.add_button.setEnabled(False)
-        scene_layout.addWidget(self.add_button)
+        VBoxLayout(self, [
+            self.name_lineedit, self.tableview
+        ]).addLayout(
+            HBoxLayout([
+                self.start_frame_control,
+                self.end_frame_control,
+                self.start_time_control,
+                self.end_time_control,
+                self.label_lineedit,
+                self.add_button
+            ])
+        )
 
     def on_add_clicked(self, checked: bool | None = None) -> None:
         pass

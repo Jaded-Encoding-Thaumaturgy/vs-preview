@@ -6,17 +6,18 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
-from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar
-
-from .better_abc import abstract_attribute
-from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
+from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload
 
 from PyQt5.QtGui import QClipboard
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene,
-    QGraphicsView, QStatusBar, QFrame, QVBoxLayout, QHBoxLayout
+    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit, QCheckBox
 )
+
+from .better_abc import abstract_attribute
+from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
+
 
 if TYPE_CHECKING:
     from ..models import VideoOutputs
@@ -27,24 +28,134 @@ if TYPE_CHECKING:
 T = TypeVar('T')
 
 
-class QHelperClass():
+class ExtendedLayout(QBoxLayout):
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, parent: QWidget | QBoxLayout | None) -> None: ...
+    @overload
+    def __init__(self, children: Sequence[QWidget] | None) -> None: ...
+    @overload
+    def __init__(self, children: Sequence[QBoxLayout] | None) -> None: ...
+
+    @overload
+    def __init__(
+        self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None
+    ) -> None: ...
+
+    def __init__(
+        self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None, **kwargs
+    ) -> ExtendedLayout:
+        if isinstance(arg0, QBoxLayout):
+            super().__init__(**kwargs)
+            arg0.addLayout(self)
+        elif isinstance(arg0, QWidget):
+            super().__init__(arg0, **kwargs)
+        else:
+            super().__init__(**kwargs)
+            if not any((arg0, arg1)):
+                return
+
+        for arg in (arg0, arg1):
+            if isinstance(arg, Sequence):
+                if isinstance(arg[0], QBoxLayout):
+                    self.addLayouts(arg)
+                else:
+                    self.addWidgets(arg)
+
+    def addWidgets(self, widgets: Sequence[QWidget]) -> None:
+        for widget in widgets:
+            self.addWidget(widget)
+
+    def addLayouts(self, layouts: Sequence[QBoxLayout]) -> None:
+        for layout in layouts:
+            self.addLayout(layout)
+
+
+class HBoxLayout(QHBoxLayout, ExtendedLayout):
+    ...
+
+
+class VBoxLayout(QVBoxLayout, ExtendedLayout):
+    ...
+
+
+class SpinBox(QSpinBox):
+    def __init__(
+        self, parent: QWidget | None = None, minimum: int | None = None,
+        maximum: int | None = None, suffix: str | None = None, tooltip: str | None = None, **kwargs
+    ) -> None:
+        super().__init__(parent, **kwargs)
+        for arg, action in (
+            (minimum, 'setMinimum'), (maximum, 'setMaximum'), (suffix, 'setSuffix'), (tooltip, 'setToolTip')
+        ):
+            if arg is not None:
+                getattr(self, action)(arg)
+
+
+class ExtendedItemInit():
+    def __init__(self, *args, tooltip: str | None = None, **kwargs) -> None:
+        try:
+            super().__init__(*args, **kwargs)
+        except TypeError:
+            super().__init__(*args)
+        if tooltip:
+            super().setToolTip(tooltip)
+
+
+class PushButton(ExtendedItemInit, QPushButton):
+    ...
+
+
+class LineEdit(ExtendedItemInit, QLineEdit):
+    ...
+
+
+class CheckBox(ExtendedItemInit, QCheckBox):
+    ...
+
+
+class AbstractQItem():
+    storable_attrs = tuple()
+
+    def __get_storable_attr__(self) -> Tuple[str, ...]:
+        return self.storable_attrs
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {
+            attr_name: getattr(self, attr_name)
+            for attr_name in self.__get_storable_attr__()
+        }
+
+
+class AbstractYAMLObject(AbstractQItem):
+    ...
+
+
+class ExtendedWidget(AbstractQItem, QWidget):
+    vlayout: VBoxLayout
+    hlayout: HBoxLayout
+
+    def setup_ui(self) -> None:
+        self.vlayout = VBoxLayout(self)
+        self.hlayout = HBoxLayout(self.vlayout)
+
+    def add_shortcuts(self) -> None:
+        pass
+
+    def get_separator(self) -> QFrame:
+        separator = QFrame(self)
+        separator.setFrameShape(QFrame.VLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        return separator
+
+
+class ExtendedMainWindow(AbstractQItem, QMainWindow):
     def setup_ui(self) -> None:
         ...
 
 
-class ExtendedWidget(QHelperClass, QWidget):
-    ...
-
-
-class ExtendedMainWindow(QHelperClass, QMainWindow):
-    vlayout: QVBoxLayout
-    hlayout: QHBoxLayout
-    ...
-
-
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
-    vlayout: QVBoxLayout
-
     __slots__ = ()
 
     def __init__(self) -> None:
@@ -56,9 +167,6 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
         self.set_defaults()
 
         set_qobject_names(self)
-
-    def setup_ui(self) -> None:
-        self.vlayout = QVBoxLayout(self)
 
     def set_defaults(self) -> None:
         pass
@@ -177,6 +285,9 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     _no_visibility_choice = False
     _storable_attrs: Tuple[str, ...] = tuple()
     _class_storable_attrs: Tuple[str, ...] = ('settings', 'visibility')
+    num_keys = [
+        Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
+    ]
 
     __slots__ = ('main', 'toggle_button', *_class_storable_attrs)
 
@@ -193,17 +304,24 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 
-        self.toggle_button = QPushButton(self)
-        self.toggle_button.setCheckable(True)
-        self.toggle_button.setText(self.name)
-        self.toggle_button.clicked.connect(self.on_toggle)
+        self.toggle_button = PushButton(
+            self.name, self, checkable=True, clicked=self.on_toggle
+        )
+        self.toggle_button.setVisible(not self._no_visibility_choice)
 
         self.setVisible(False)
         self.visibility = False
 
+    def setup_ui(self) -> None:
+        self.hlayout = HBoxLayout(self)
+        self.vlayout = VBoxLayout(self.hlayout)
+
+        self.hlayout.setContentsMargins(0, 0, 0, 0)
+
     def on_toggle(self, new_state: bool) -> None:
         if new_state == self.visibility:
             return
+
         # invoking order matters
         self.setVisible(new_state)
         self.visibility = new_state
@@ -234,12 +352,6 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
             self.main.timeline.full_repaint()
 
-    def get_separator(self) -> QFrame:
-        separator = QFrame(self)
-        separator.setFrameShape(QFrame.VLine)
-        separator.setFrameShadow(QFrame.Sunken)
-        return separator
-
     def __get_storable_attr__(self) -> Tuple[str, ...]:
         attributes = list(self._class_storable_attrs + self._storable_attrs)
 
@@ -247,12 +359,6 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
             attributes.remove('visibility')
 
         return tuple(attributes)
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self.__get_storable_attr__()
-        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         if not self._no_visibility_choice:

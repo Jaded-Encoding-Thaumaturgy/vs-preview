@@ -24,7 +24,7 @@ class ComboBox(QComboBox, Generic[T]):
     indexChanged = pyqtSignal(int, int)
     content_type: Type[T]
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, **kwargs) -> None:
         super().__init__(parent)
 
         self.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
@@ -32,6 +32,9 @@ class ComboBox(QComboBox, Generic[T]):
         self.oldValue = self.currentData()
         self.oldIndex = self.currentIndex()
         self.currentIndexChanged.connect(self._currentIndexChanged)
+
+        for arg in kwargs:
+            getattr(self, 'set' + arg[0].upper() + arg[1:])(kwargs.get(arg))
 
     def _currentIndexChanged(self, newIndex: int) -> None:
         newValue = self.currentData()

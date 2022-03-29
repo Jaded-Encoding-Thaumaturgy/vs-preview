@@ -8,9 +8,7 @@ from PyQt5.QtGui import QMouseEvent, QNativeGestureEvent, QTransform, QWheelEven
 class GraphicsView(QGraphicsView):
     WHEEL_STEP = 15 * 8  # degrees
 
-    __slots__ = (
-        'app', 'angleRemainder', 'zoomValue',
-    )
+    __slots__ = ('app', 'angleRemainder', 'zoomValue',)
 
     mouseMoved = pyqtSignal(QMouseEvent)
     mousePressed = pyqtSignal(QMouseEvent)

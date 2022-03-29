@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from PyQt5.QtWidgets import QLabel, QHBoxLayout, QCheckBox, QSpinBox
+from PyQt5.QtWidgets import QLabel
 
 from ..widgets import TimeEdit
-from ..core import Time, AbstractToolbarSettings, try_load
+from ..core import Time, AbstractToolbarSettings, try_load, VBoxLayout, HBoxLayout, SpinBox, CheckBox
 
 
 class MainSettings(AbstractToolbarSettings):
@@ -19,120 +19,47 @@ class MainSettings(AbstractToolbarSettings):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        autosave_layout = QHBoxLayout()
-        autosave_layout.setObjectName('MainSettings.setup_ui.autosave_layout')
-        self.vlayout.addLayout(autosave_layout)
-
-        autosave_label = QLabel(self)
-        autosave_label.setObjectName('MainSettings.setup_ui.autosave_label')
-        autosave_label.setText('Autosave interval (0 - disable)')
-        autosave_layout.addWidget(autosave_label)
-
         self.autosave_control = TimeEdit(self)
-        autosave_layout.addWidget(self.autosave_control)
 
-        base_ppi_layout = QHBoxLayout()
-        base_ppi_layout.setObjectName('MainSettings.setup_ui.base_ppi_layout')
-        self.vlayout.addLayout(base_ppi_layout)
+        self.base_ppi_spinbox = SpinBox(self, 1, 999)
 
-        base_ppi_label = QLabel(self)
-        base_ppi_label.setObjectName('MainSettings.setup_ui.base_ppi_label')
-        base_ppi_label.setText('Base PPI')
-        base_ppi_layout.addWidget(base_ppi_label)
+        self.dark_theme_checkbox = CheckBox('Dark theme', self)
 
-        self.base_ppi_spinbox = QSpinBox(self)
-        self.base_ppi_spinbox.setMinimum(1)
-        self.base_ppi_spinbox.setMaximum(9999)
-        self.base_ppi_spinbox.setEnabled(False)
-        base_ppi_layout.addWidget(self.base_ppi_spinbox)
+        self.opengl_rendering_checkbox = CheckBox('OpenGL rendering', self)
 
-        self.dark_theme_checkbox = QCheckBox(self)
-        self.dark_theme_checkbox.setText('Dark theme')
-        self.dark_theme_checkbox.setEnabled(False)
-        self.vlayout.addWidget(self.dark_theme_checkbox)
+        self.force_old_storages_removal_checkbox = CheckBox('Remove old storages', self)
 
-        self.opengl_rendering_checkbox = QCheckBox(self)
-        self.opengl_rendering_checkbox.setText('OpenGL rendering')
-        self.opengl_rendering_checkbox.setEnabled(False)
-        self.vlayout.addWidget(self.opengl_rendering_checkbox)
+        self.output_index_spinbox = SpinBox(self, 0, 65535)
 
-        self.force_old_storages_removal_checkbox = QCheckBox(self)
-        self.force_old_storages_removal_checkbox.setText('Remove old storages')
-        self.force_old_storages_removal_checkbox.setEnabled(False)
-        self.vlayout.addWidget(self.force_old_storages_removal_checkbox)
-
-        output_index_layout = QHBoxLayout()
-        output_index_layout.setObjectName(
-            'MainSettings.setup_ui.output_index_layout'
-        )
-        self.vlayout.addLayout(output_index_layout)
-
-        output_index_label = QLabel(self)
-        output_index_label.setObjectName(
-            'MainSettings.setup_ui.output_index_label'
-        )
-        output_index_label.setText('Default output index')
-        output_index_layout.addWidget(output_index_label)
-
-        self.output_index_spinbox = QSpinBox(self)
-        self.output_index_spinbox.setMinimum(0)
-        self.output_index_spinbox.setMaximum(65535)
-        output_index_layout.addWidget(self.output_index_spinbox)
-
-        png_compression_layout = QHBoxLayout()
-        png_compression_layout.setObjectName(
-            'MainSettings.setup_ui.png_compression_layout'
-        )
-        self.vlayout.addLayout(png_compression_layout)
-
-        png_compression_label = QLabel(self)
-        png_compression_label.setObjectName(
-            'MainSettings.setup_ui.png_compression_label'
-        )
-        png_compression_label.setText('PNG compression level (0 - max)')
-        png_compression_layout.addWidget(png_compression_label)
-
-        self.png_compressing_spinbox = QSpinBox(self)
-        self.png_compressing_spinbox.setMinimum(0)
-        self.png_compressing_spinbox.setMaximum(100)
-        png_compression_layout.addWidget(self.png_compressing_spinbox)
-
-        statusbar_timeout_layout = QHBoxLayout()
-        statusbar_timeout_layout.setObjectName(
-            'MainSettings.setup_ui.statusbar_timeout_layout'
-        )
-        self.vlayout.addLayout(statusbar_timeout_layout)
-
-        statusbar_timeout_label = QLabel(self)
-        statusbar_timeout_label.setObjectName(
-            'MainSettings.setup_ui.statusbar_timeout_label'
-        )
-        statusbar_timeout_label.setText('Status bar message timeout')
-        statusbar_timeout_layout.addWidget(statusbar_timeout_label)
+        self.png_compressing_spinbox = SpinBox(self, 0, 100)
 
         self.statusbar_timeout_control = TimeEdit(self)
-        statusbar_timeout_layout.addWidget(self.statusbar_timeout_control)
 
-        timeline_notches_margin_layout = QHBoxLayout()
-        timeline_notches_margin_layout.setObjectName(
-            'MainSettings.setup_ui.timeline_notches_margin_layout'
-        )
-        self.vlayout.addLayout(timeline_notches_margin_layout)
+        self.timeline_notches_margin_spinbox = SpinBox(self, 1, 9999, '%')
 
-        timeline_notches_margin_label = QLabel(self)
-        timeline_notches_margin_label.setObjectName(
-            'MainSettings.setup_ui.timeline_notches_margin_label'
-        )
-        timeline_notches_margin_label.setText('Timeline label notches margin')
-        timeline_notches_margin_layout.addWidget(timeline_notches_margin_label)
+        HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
-        self.timeline_notches_margin_spinbox = QSpinBox(self)
-        self.timeline_notches_margin_spinbox.setMinimum(1)
-        self.timeline_notches_margin_spinbox.setMaximum(9999)
-        self.timeline_notches_margin_spinbox.setSuffix('%')
-        timeline_notches_margin_layout.addWidget(
-            self.timeline_notches_margin_spinbox
-        )
+        HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
+
+        HBoxLayout(self.vlayout, [
+            VBoxLayout([
+                self.dark_theme_checkbox,
+                self.opengl_rendering_checkbox
+            ]),
+            VBoxLayout([
+                self.force_old_storages_removal_checkbox
+            ])
+        ])
+
+        HBoxLayout(self.vlayout, [QLabel('Default output index'), self.output_index_spinbox])
+
+        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 - max)'), self.png_compressing_spinbox])
+
+        HBoxLayout(self.vlayout, [QLabel('Status bar message timeout'), self.statusbar_timeout_control])
+
+        HBoxLayout(self.vlayout, [
+            QLabel('Timeline label notches margin', self), self.timeline_notches_margin_spinbox
+        ])
 
     def set_defaults(self) -> None:
         self.autosave_control.setValue(Time(seconds=30))
@@ -190,8 +117,7 @@ class MainSettings(AbstractToolbarSettings):
             'output_index': self.output_index,
             'png_compression': self.png_compression_level,
             'statusbar_message_timeout': self.statusbar_message_timeout,
-            'timeline_label_notches_margin':
-            self.timeline_label_notches_margin,
+            'timeline_label_notches_margin': self.timeline_label_notches_margin,
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:

@@ -10,12 +10,12 @@ from concurrent.futures import Future
 from typing import Any, cast, Deque, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QFrame, QComboBox
+from PyQt5.QtWidgets import QDoubleSpinBox, QComboBox
 
 from ...models import AudioOutputs
 from ...widgets import ComboBox, FrameEdit, TimeEdit
 from ...utils import add_shortcut, debug, qt_silent_call, set_qobject_names
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load
+from ...core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load, PushButton, CheckBox
 
 from .settings import PlaybackSettings
 
@@ -38,22 +38,16 @@ class PlaybackToolbar(AbstractToolbar):
         self.setup_ui()
 
         self.play_buffer: Deque[Future[vs.VideoFrame]] = deque()
-        self.play_timer = QTimer()
-        self.play_timer.setTimerType(Qt.PreciseTimer)
-        self.play_timer.timeout.connect(self._show_next_frame)
+        self.play_timer = QTimer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
 
-        self.play_timer_audio = QTimer()
-        self.play_timer_audio.setTimerType(Qt.PreciseTimer)
-        self.play_timer_audio.timeout.connect(self._play_next_audio_frame)
-        self.current_audio_output: AudioOutput
+        self.play_timer_audio = QTimer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
+
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future] = deque()
 
         self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
-        self.fps_timer = QTimer()
-        self.fps_timer.setTimerType(Qt.PreciseTimer)
-        self.fps_timer.timeout.connect(lambda: self.fps_spinbox.setValue(self.current_fps))
+        self.fps_timer = QTimer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
 
         self.play_start_time: int | None = None
         self.play_start_frame = Frame(0)
@@ -62,23 +56,85 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs: AudioOutputs = []  # type: ignore
         self.last_frame = Frame(0)
 
-        self.play_pause_button.clicked.connect(self.on_play_pause_clicked)
-        self.play_n_frames_button.clicked.connect(self.on_play_n_frames_clicked)
-        self.seek_to_prev_button.clicked.connect(self.seek_to_prev)
-        self.seek_to_next_button.clicked.connect(self.seek_to_next)
-        self.seek_n_frames_b_button.clicked.connect(self.seek_n_frames_b)
-        self.seek_n_frames_f_button.clicked.connect(self.seek_n_frames_f)
-        self.seek_frame_control.valueChanged.connect(self.on_seek_frame_changed)
-        self.seek_time_control.valueChanged.connect(self.on_seek_time_changed)
-        self.fps_spinbox.valueChanged.connect(self.on_fps_changed)
-        self.fps_reset_button.clicked.connect(self.reset_fps)
-        self.fps_unlimited_checkbox.stateChanged.connect(self.on_fps_unlimited_changed)
-        self.fps_variable_checkbox.stateChanged.connect(self.on_fps_variable_changed)
-        self.mute_checkbox.stateChanged.connect(self.on_mute_changed)
         self.main.timeline.clicked.connect(self.on_timeline_clicked)
-        self.seek_to_start_button.clicked.connect(self.seek_to_start)
-        self.seek_to_end_button.clicked.connect(self.seek_to_end)
 
+        self.add_shortcuts()
+
+        set_qobject_names(self)
+
+    def setup_ui(self) -> None:
+        super().setup_ui()
+
+        self.seek_to_start_button = PushButton(
+            '⏮', self, tooltip='Seek to First Frame', clicked=self.seek_to_start
+        )
+
+        self.seek_n_frames_b_button = PushButton(
+            '⏪', self, tooltip='Seek N Frames Backwards', clicked=self.seek_n_frames_b
+        )
+
+        self.seek_to_prev_button = PushButton(
+            '⏪', self, tooltip='Seek 1 Frame Backwards', clicked=self.seek_to_prev
+        )
+
+        self.play_pause_button = PushButton(
+            '⏯', self, tooltip='Play/Pause', checkable=True, clicked=self.on_play_pause_clicked
+        )
+
+        self.seek_to_next_button = PushButton(
+            '⏩', self, tooltip='Seek 1 Frame Forward', clicked=self.seek_to_next)
+
+        self.seek_n_frames_f_button = PushButton(
+            '⏩', self, tooltip='Seek N Frames Forward', clicked=self.seek_n_frames_f
+        )
+
+        self.seek_to_end_button = PushButton(
+            '⏭', self, tooltip='Seek to Last Frame', clicked=self.seek_to_end
+        )
+
+        self.seek_frame_control = FrameEdit(
+            self, 1, value=self.main.SEEK_STEP, tooltip='Seek N Frames Step', valueChanged=self.on_seek_frame_changed
+        )
+
+        self.play_n_frames_button = PushButton(
+            '⏯', self, tooltip='Play N Frames', checkable=True, clicked=self.on_play_n_frames_clicked
+        )
+
+        self.seek_time_control = TimeEdit(self, valueChanged=self.on_seek_time_changed)
+
+        self.fps_spinbox = QDoubleSpinBox(self, valueChanged=self.on_fps_changed)
+        self.fps_spinbox.setRange(0.001, 9999.0)
+        self.fps_spinbox.setDecimals(3)
+        self.fps_spinbox.setSuffix(' fps')
+
+        self.fps_reset_button = PushButton('Reset FPS', self, clicked=self.reset_fps)
+
+        self.fps_unlimited_checkbox = CheckBox('Unlimited FPS', self, stateChanged=self.on_fps_unlimited_changed)
+
+        self.fps_variable_checkbox = CheckBox('Variable FPS', self, stateChanged=self.on_fps_variable_changed)
+
+        self.mute_checkbox = CheckBox('Mute', self, checked=True, stateChanged=self.on_mute_changed)
+
+        self.audio_outputs_combobox = ComboBox[AudioOutput](
+            self, enabled=False, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents
+        )
+
+        self.hlayout.addWidgets([
+            self.seek_to_start_button, self.seek_n_frames_b_button, self.seek_to_prev_button,
+            self.play_pause_button,
+            self.seek_to_next_button, self.seek_n_frames_f_button, self.seek_to_end_button,
+            self.seek_frame_control, self.play_n_frames_button,
+            self.seek_time_control,
+            self.fps_spinbox, self.fps_reset_button,
+            self.fps_unlimited_checkbox, self.fps_variable_checkbox,
+            self.get_separator(),
+            self.mute_checkbox, self.audio_outputs_combobox
+        ])
+
+        self.hlayout.addStretch()
+
+    def add_shortcuts(self) -> None:
         add_shortcut(Qt.Key_Space, self.play_pause_button.click)
         add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
         add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
@@ -88,103 +144,6 @@ class PlaybackToolbar(AbstractToolbar):
         add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
         add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
         add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
-
-        set_qobject_names(self)
-
-    def setup_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setObjectName('PlaybackToolbar.setup_ui.layout')
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        self.seek_to_start_button = QPushButton(self)
-        self.seek_to_start_button.setText('⏮')
-        self.seek_to_start_button.setToolTip('Seek to First Frame')
-        layout.addWidget(self.seek_to_start_button)
-
-        self.seek_n_frames_b_button = QPushButton(self)
-        self.seek_n_frames_b_button.setText('⏪')
-        self.seek_n_frames_b_button.setToolTip('Seek N Frames Backwards')
-        layout.addWidget(self.seek_n_frames_b_button)
-
-        self.seek_to_prev_button = QPushButton(self)
-        self.seek_to_prev_button.setText('⏪')
-        self.seek_to_prev_button.setToolTip('Seek 1 Frame Backwards')
-        layout.addWidget(self.seek_to_prev_button)
-
-        self.play_pause_button = QPushButton(self)
-        self.play_pause_button.setText('⏯')
-        self.play_pause_button.setToolTip('Play/Pause')
-        self.play_pause_button.setCheckable(True)
-        layout.addWidget(self.play_pause_button)
-
-        self.seek_to_next_button = QPushButton(self)
-        self.seek_to_next_button.setText('⏩')
-        self.seek_to_next_button.setToolTip('Seek 1 Frame Forward')
-        layout.addWidget(self.seek_to_next_button)
-
-        self.seek_n_frames_f_button = QPushButton(self)
-        self.seek_n_frames_f_button.setText('⏩')
-        self.seek_n_frames_f_button.setToolTip('Seek N Frames Forward')
-        layout.addWidget(self.seek_n_frames_f_button)
-
-        self.seek_to_end_button = QPushButton(self)
-        self.seek_to_end_button.setText('⏭')
-        self.seek_to_end_button.setToolTip('Seek to Last Frame')
-        layout.addWidget(self.seek_to_end_button)
-
-        self.seek_frame_control = FrameEdit(self)
-        self.seek_frame_control.setMinimum(Frame(1))
-        self.seek_frame_control.setToolTip('Seek N Frames Step')
-        self.seek_frame_control.setValue(Frame(self.main.SEEK_STEP))
-        layout.addWidget(self.seek_frame_control)
-
-        self.play_n_frames_button = QPushButton(self)
-        self.play_n_frames_button.setText('⏯')
-        self.play_n_frames_button.setToolTip('Play N Frames')
-        self.play_n_frames_button.setCheckable(True)
-        layout.addWidget(self.play_n_frames_button)
-
-        self.seek_time_control = TimeEdit(self)
-        layout.addWidget(self.seek_time_control)
-
-        self.fps_spinbox = QDoubleSpinBox(self)
-        self.fps_spinbox.setRange(0.001, 9999.0)
-        self.fps_spinbox.setDecimals(3)
-        self.fps_spinbox.setSuffix(' fps')
-        layout.addWidget(self.fps_spinbox)
-
-        self.fps_reset_button = QPushButton(self)
-        self.fps_reset_button.setText('Reset FPS')
-        layout.addWidget(self.fps_reset_button)
-
-        self.fps_unlimited_checkbox = QCheckBox(self)
-        self.fps_unlimited_checkbox.setText('Unlimited FPS')
-        layout.addWidget(self.fps_unlimited_checkbox)
-
-        self.fps_variable_checkbox = QCheckBox(self)
-        self.fps_variable_checkbox.setText('Variable FPS')
-        layout.addWidget(self.fps_variable_checkbox)
-
-        separator = QFrame(self)
-        separator.setObjectName('PlaybackToolbar.setup_ui.separator')
-        separator.setFrameShape(QFrame.VLine)
-        separator.setFrameShadow(QFrame.Sunken)
-        layout.addWidget(separator)
-
-        self.mute_checkbox = QCheckBox(self)
-        self.mute_checkbox.setText('Mute')
-        self.mute_checkbox.setChecked(True)
-        layout.addWidget(self.mute_checkbox)
-
-        self.audio_outputs_combobox = ComboBox[AudioOutput]()
-        self.audio_outputs_combobox.setEnabled(False)
-        self.audio_outputs_combobox.setEditable(True)
-        self.audio_outputs_combobox.setInsertPolicy(QComboBox.InsertAtCurrent)
-        self.audio_outputs_combobox.setDuplicatesEnabled(True)
-        self.audio_outputs_combobox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        layout.addWidget(self.audio_outputs_combobox)
-
-        layout.addStretch()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)
@@ -483,7 +442,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
 
     def on_fps_changed(self, new_fps: float) -> None:
-        if not self.fps_spinbox.isEnabled():
+        if not self.fps_spinbox.isEnabled() or not hasattr(self.main, 'current_output'):
             return
 
         self.main.current_output.play_fps = new_fps
@@ -542,6 +501,9 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_fps = 1_000_000_000 / (elapsed_total / len(self.fps_history))
 
     def on_mute_changed(self, state: int) -> None:
+        if not hasattr(self, 'audio_outputs_combox'):
+            return
+
         if state == Qt.Checked:
             self.audio_outputs_combobox.setEnabled(False)
             if self.play_timer_audio.isActive():

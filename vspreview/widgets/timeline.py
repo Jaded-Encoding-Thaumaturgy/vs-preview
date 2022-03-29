@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 from PyQt5.QtCore import Qt
-from yaml import YAMLObject
 from typing import cast, Dict, Iterator, List, Type
 
 from PyQt5.QtWidgets import QWidget, QApplication, QToolTip
@@ -10,7 +9,7 @@ from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
 from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QPalette, QPen, QMoveEvent, QMouseEvent, QResizeEvent
 
 from ..utils import strfdelta
-from ..core import AbstractToolbar, Frame, Scene, Time, main_window
+from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Scene, Time, main_window
 
 
 class Notch:
@@ -79,7 +78,7 @@ class Timeline(QWidget):
         'scrollRect',
     )
 
-    class Mode(YAMLObject):
+    class Mode(AbstractYAMLObject):
         FRAME = 'frame'
         TIME = 'time'
 
@@ -89,8 +88,8 @@ class Timeline(QWidget):
 
     clicked = pyqtSignal(Frame, Time)
 
-    def __init__(self, parent: QWidget) -> None:
-        super().__init__(parent)
+    def __init__(self, parent: QWidget, **kwargs) -> None:
+        super().__init__(parent, **kwargs)
         self.app = QApplication.instance()
         self.main = main_window()
 
@@ -108,8 +107,7 @@ class Timeline(QWidget):
         self.notch_scroll_interval = round(2 * self.main.display_scale)
         self.scroll_height = round(10 * self.main.display_scale)
 
-        self.setMinimumSize(self.notch_interval_target_x,
-                            round(33 * self.main.display_scale))
+        self.setMinimumSize(self.notch_interval_target_x, round(33 * self.main.display_scale))
 
         font = self.font()
         font.setPixelSize(self.font_height)
@@ -296,7 +294,7 @@ class Timeline(QWidget):
         self.full_repaint()
 
     @property
-    def mode(self) -> str:  # pylint: disable=undefined-variable
+    def mode(self) -> str:
         return self._mode
 
     @mode.setter
@@ -307,25 +305,11 @@ class Timeline(QWidget):
         self._mode = value
         self.full_repaint()
 
-    notch_intervals_t = (
-        Time(seconds=1),
-        Time(seconds=2),
-        Time(seconds=5),
-        Time(seconds=10),
-        Time(seconds=15),
-        Time(seconds=30),
-        Time(seconds=60),
-        Time(seconds=90),
-        Time(seconds=120),
-        Time(seconds=300),
-        Time(seconds=600),
-        Time(seconds=900),
-        Time(seconds=1200),
-        Time(seconds=1800),
-        Time(seconds=2700),
-        Time(seconds=3600),
-        Time(seconds=5400),
-        Time(seconds=7200),
+    notch_intervals_t = list(
+        Time(seconds=n) for n in [
+            1, 2, 5, 10, 15, 30, 60, 90, 120, 300, 600,
+            900, 1200, 1800, 2700, 3600, 5400, 7200
+        ]
     )
 
     def calculate_notch_interval_t(self, target_interval_x: int) -> Time:
@@ -338,29 +322,11 @@ class Timeline(QWidget):
                 return interval
         raise RuntimeError
 
-    notch_intervals_f = (
-        Frame(1),
-        Frame(5),
-        Frame(10),
-        Frame(20),
-        Frame(25),
-        Frame(50),
-        Frame(75),
-        Frame(100),
-        Frame(200),
-        Frame(250),
-        Frame(500),
-        Frame(750),
-        Frame(1000),
-        Frame(2000),
-        Frame(2500),
-        Frame(5000),
-        Frame(7500),
-        Frame(10000),
-        Frame(20000),
-        Frame(25000),
-        Frame(50000),
-        Frame(75000),
+    notch_intervals_f = list(
+        Frame(n) for n in [
+            1, 5, 10, 20, 25, 50, 75, 100, 200, 250, 500, 750, 1000,
+            2000, 2500, 5000, 7500, 10000, 20000, 25000, 50000, 75000
+        ]
     )
 
     def calculate_notch_interval_f(self, target_interval_x: int) -> Frame:

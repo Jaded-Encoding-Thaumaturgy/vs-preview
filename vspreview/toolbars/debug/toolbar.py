@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from PyQt5.QtWidgets import QLineEdit, QHBoxLayout, QPushButton
-
-from ...utils import debug, set_qobject_names
-from ...core import AbstractMainWindow, AbstractToolbar
+from ...utils import debug, set_qobject_names, vs_clear_cache
+from ...core import AbstractMainWindow, AbstractToolbar, PushButton, LineEdit
 
 from .settings import DebugSettings
 
@@ -13,19 +11,12 @@ from .settings import DebugSettings
 class DebugToolbar(AbstractToolbar):
     _no_visibility_choice = True
 
-    __slots__ = (
-        'test_button', 'exec_lineedit',
-        'exec_button', 'test_button', 'toggle_button'
-    )
+    __slots__ = ('exec_lineedit',)
 
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, DebugSettings())
 
         self.setup_ui()
-
-        self.test_button.clicked.connect(self.test_button_clicked)
-        self.exec_button.clicked.connect(self.exec_button_clicked)
-        self.exec_lineedit.editingFinished.connect(self.exec_button_clicked)
 
         if self.main.DEBUG_TOOLBAR_BUTTONS_PRINT_STATE:
             self.filter = debug.EventFilter(main)
@@ -36,40 +27,29 @@ class DebugToolbar(AbstractToolbar):
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setObjectName('DebugToolbar.setup_ui.layout')
-        layout.setContentsMargins(0, 0, 0, 0)
+        super().setup_ui()
 
-        self.test_button = QPushButton(self)
-        self.test_button.setText('Test')
-        layout.addWidget(self.test_button)
-
-        self.break_button = QPushButton(self)
-        self.break_button.setText('Break')
-        layout.addWidget(self.break_button)
-
-        self.exec_lineedit = QLineEdit(self)
-        self.exec_lineedit.setPlaceholderText(
-            'Python statement in context of DebugToolbar.exec_button_clicked()'
+        self.exec_lineedit = LineEdit(
+            self, editingFinished=self.exec_button_clicked,
+            placeholderText='Python statement in context of DebugToolbar.exec_button_clicked()'
         )
-        layout.addWidget(self.exec_lineedit)
 
-        self.exec_button = QPushButton(self)
-        self.exec_button.setText('Exec')
-        layout.addWidget(self.exec_button)
+        self.hlayout.addWidgets([
+            PushButton('Test', self, clicked=self.test_button_clicked),
+            PushButton('Break', self),
+            self.exec_lineedit,
+            PushButton('Exec', self, clicked=self.exec_button_clicked)
+        ])
 
-        layout.addStretch()
-
-        self.toggle_button.setVisible(False)
+        self.hlayout.addStretch()
 
     def test_button_clicked(self, checked: bool | None = None) -> None:
-        from vspreview.utils import vs_clear_cache
         vs_clear_cache()
 
     def exec_button_clicked(self, checked: bool | None = None) -> None:
         try:
             exec(self.exec_lineedit.text())
-        except Exception as e:
+        except BaseException as e:
             logging.error(e)
 
     def break_button_clicked(self, checked: bool | None = None) -> None:

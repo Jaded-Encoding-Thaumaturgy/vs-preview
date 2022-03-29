@@ -4,10 +4,9 @@ import ctypes
 from math import floor
 from array import array
 import vapoursynth as vs
-from yaml import YAMLObject
 from typing import Any, Mapping
 
-from ..abstracts import main_window, try_load
+from ..abstracts import main_window, try_load, AbstractYAMLObject
 from .units import Frame, Time
 
 from PyQt5.QtMultimedia import QAudioFormat, QAudioOutput, QAudioDeviceInfo
@@ -16,7 +15,7 @@ from PyQt5.QtMultimedia import QAudioFormat, QAudioOutput, QAudioDeviceInfo
 core = vs.core
 
 
-class AudioOutput(YAMLObject):
+class AudioOutput(AbstractYAMLObject):
     SAMPLES_PER_FRAME = 3000
 
     storable_attrs = (
@@ -117,12 +116,6 @@ class AudioOutput(YAMLObject):
 
     def to_time(self, frame: Frame) -> Time:
         return Time(seconds=self._calculate_seconds(int(frame)))
-
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self.storable_attrs
-        }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'name', str, self.__setattr__)

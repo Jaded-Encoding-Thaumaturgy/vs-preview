@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import vapoursynth as vs
-from yaml import YAMLObject
-from typing import Any, Mapping
+from typing import Tuple, Any
+
+from ..abstracts import AbstractYAMLObject
 
 
 core = vs.core
 
 
-class YAMLObjectWrapper(YAMLObject):
+class YAMLObjectWrapper(AbstractYAMLObject):
     value: Any
 
     def __int__(self) -> int:
@@ -56,8 +57,5 @@ class YAMLObjectWrapper(YAMLObject):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.value})'
 
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            name: getattr(self, name)
-            for name in self.__slots__
-        }
+    def __get_storable_attr__(self) -> Tuple[str, ...]:
+        return self.__slots__

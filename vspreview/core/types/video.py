@@ -6,7 +6,6 @@ import ctypes
 import logging
 import itertools
 import vapoursynth as vs
-from yaml import YAMLObject
 from dataclasses import dataclass
 from typing import Any, Mapping, Tuple, List, cast
 
@@ -16,7 +15,7 @@ from PyQt5.QtGui import QImage, QPixmap, QPainter
 
 from ..vsenv import __name__ as _venv  # noqa: F401
 from .units import Frame, Time
-from ..abstracts import main_window, try_load
+from ..abstracts import main_window, try_load, AbstractYAMLObject
 
 
 core = vs.core
@@ -87,7 +86,7 @@ class VideoOutputNode():
     alpha: vs.VideoNode | None
 
 
-class VideoOutput(YAMLObject):
+class VideoOutput(AbstractYAMLObject):
     class Resizer:
         Bilinear = core.resize.Bilinear
         Bicubic = core.resize.Bicubic
@@ -237,7 +236,7 @@ class VideoOutput(YAMLObject):
         'index', 'width', 'height', 'fps_num', 'fps_den',
         'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'source', 'prepared',
-        'main', 'checkerboard', 'props', '__weakref__', '_stateset'
+        'main', 'checkerboard', 'props', '_stateset'
     )
 
     source: VideoOutputNode
@@ -539,17 +538,10 @@ class VideoOutput(YAMLObject):
     def to_time(self, frame: Frame) -> Time:
         return Time(seconds=self._calculate_seconds(int(frame)))
 
-    def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self.storable_attrs
-        }
-
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         from ...models import SceningLists
 
         try_load(state, 'title', str, self.__setattr__)
-        try_load(state, 'frame_to_show', Frame, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'scening_lists', SceningLists, self.__setattr__)
         try_load(state, 'play_fps', float, self.__setattr__)

@@ -8,10 +8,10 @@ from collections import deque
 from concurrent.futures import Future
 
 from PyQt5.QtCore import Qt, QTimer, QMetaObject
-from PyQt5.QtWidgets import QHBoxLayout, QCheckBox, QLabel, QPushButton
+from PyQt5.QtWidgets import QLabel
 
 from ...widgets import FrameEdit
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time
+from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, PushButton, CheckBox
 from ...utils import get_usable_cpus_count, qt_silent_call, set_qobject_names, vs_clear_cache, strfdelta
 
 from .settings import BenchmarkSettings
@@ -42,78 +42,49 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_frames = Frame(0)
         self.frames_left = Frame(0)
 
-        self.sequenced_timer = QTimer()
-        self.sequenced_timer.setTimerType(Qt.PreciseTimer)
-        self.sequenced_timer.setInterval(0)
+        self.sequenced_timer = QTimer(
+            timeout=self._request_next_frame_sequenced, timerType=Qt.PreciseTimer, interval=0
+        )
 
-        self.update_info_timer = QTimer()
-        self.update_info_timer.setTimerType(Qt.PreciseTimer)
-
-        self.start_frame_control.valueChanged.connect(lambda value: self.update_controls(start=value))
-        self.end_frame_control.valueChanged.connect(lambda value: self.update_controls(end=value))
-        self.total_frames_control.valueChanged.connect(lambda value: self.update_controls(total=value))
-
-        self.prefetch_checkbox.stateChanged.connect(self.on_prefetch_changed)
-        self.run_abort_button.clicked.connect(self.on_run_abort_pressed)
-        self.sequenced_timer.timeout.connect(self._request_next_frame_sequenced)
-        self.update_info_timer.timeout.connect(self.update_info)
+        self.update_info_timer = QTimer(timeout=self.update_info, timerType=Qt.PreciseTimer)
 
         set_qobject_names(self)
 
     def setup_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setObjectName('BenchmarkToolbar.setup_ui.layout')
-        layout.setContentsMargins(0, 0, 0, 0)
+        super().setup_ui()
 
-        start_label = QLabel(self)
-        start_label.setObjectName('BenchmarkToolbar.setup_ui.start_label')
-        start_label.setText('Start:')
-        layout.addWidget(start_label)
+        self.start_frame_control = FrameEdit(self, valueChanged=lambda value: self.update_controls(start=value))
 
-        self.start_frame_control = FrameEdit(self)
-        layout.addWidget(self.start_frame_control)
+        self.end_frame_control = FrameEdit(self, valueChanged=lambda value: self.update_controls(end=value))
 
-        end_label = QLabel(self)
-        end_label.setObjectName('BenchmarkToolbar.setup_ui.end_label')
-        end_label.setText('End:')
-        layout.addWidget(end_label)
+        self.total_frames_control = FrameEdit(self, 1, valueChanged=lambda value: self.update_controls(total=value))
 
-        self.end_frame_control = FrameEdit(self)
-        layout.addWidget(self.end_frame_control)
-
-        total_label = QLabel(self)
-        total_label.setObjectName('BenchmarkToolbar.setup_ui.total_label')
-        total_label.setText('Total:')
-        layout.addWidget(total_label)
-
-        self.total_frames_control = FrameEdit(self)
-        self.total_frames_control.setMinimum(Frame(1))
-        layout.addWidget(self.total_frames_control)
-
-        self.prefetch_checkbox = QCheckBox(self)
-        self.prefetch_checkbox.setText('Prefetch')
-        self.prefetch_checkbox.setChecked(True)
-        self.prefetch_checkbox.setToolTip('Request multiple frames in advance.')
-        layout.addWidget(self.prefetch_checkbox)
-
-        self.unsequenced_checkbox = QCheckBox(self)
-        self.unsequenced_checkbox.setText('Unsequenced')
-        self.unsequenced_checkbox.setChecked(True)
-        self.unsequenced_checkbox.setToolTip(
-            "If enabled, next frame will be requested each time frameserver returns completed frame. "
-            "If disabled, first frame that's currently processing will be waited before requesting next."
+        self.unsequenced_checkbox = CheckBox(
+            'Unsequenced', self, checked=True, tooltip=(
+                "If enabled, next frame will be requested each time frameserver returns completed frame.\n"
+                "If disabled, first frame that's currently processing will be waited before requesting the next one."
+            )
         )
-        layout.addWidget(self.unsequenced_checkbox)
 
-        self.run_abort_button = QPushButton(self)
-        self.run_abort_button.setText('Run')
-        self.run_abort_button.setCheckable(True)
-        layout.addWidget(self.run_abort_button)
+        self.prefetch_checkbox = CheckBox(
+            'Prefetch', self, checked=True, tooltip='Request multiple frames in advance.',
+            stateChanged=self.on_prefetch_changed
+        )
+
+        self.run_abort_button = PushButton('Run', self, checkable=True, clicked=self.on_run_abort_pressed)
 
         self.info_label = QLabel(self)
-        layout.addWidget(self.info_label)
 
-        layout.addStretch()
+        self.hlayout.addWidgets([
+            QLabel('Start:'), self.start_frame_control,
+            QLabel('End:'), self.end_frame_control,
+            QLabel('Total:'), self.total_frames_control,
+            self.prefetch_checkbox,
+            self.unsequenced_checkbox,
+            self.run_abort_button,
+            self.info_label,
+        ])
+        self.hlayout.addStretch()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         self.start_frame_control.setMaximum(self.main.current_output.end_frame)
@@ -154,9 +125,7 @@ class BenchmarkToolbar(AbstractToolbar):
                 future = self.main.current_output.prepared.clip.get_frame_async(int(frame))
                 self.buffer.appendleft(future)
 
-        self.update_info_timer.setInterval(
-            round(float(self.settings.refresh_interval) * 1000)
-        )
+        self.update_info_timer.setInterval(round(float(self.settings.refresh_interval) * 1000))
         self.update_info_timer.start()
 
     def abort(self) -> None:
@@ -221,6 +190,9 @@ class BenchmarkToolbar(AbstractToolbar):
     def update_controls(
         self, start: Frame | None = None, end: Frame | None = None, total: Frame | None = None
     ) -> None:
+        if not hasattr(self.main, 'current_output'):
+            return
+
         if start is not None:
             end = self.end_frame_control.value()
             total = self.total_frames_control.value()

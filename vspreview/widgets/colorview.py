@@ -3,9 +3,7 @@ from PyQt5.QtGui import QColor, QPainter, QPaintEvent
 
 
 class ColorView(QWidget):
-    __slots__ = (
-        '_color',
-    )
+    __slots__ = ('_color',)
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)

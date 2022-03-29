@@ -30,7 +30,7 @@ class ZoomLevels(QAbstractListModel):
             return None
 
         if role == Qt.DisplayRole:
-            return '{}%'.format(round(self.levels[index.row()] * 100))
+            return str(round(self.levels[index.row()] * 100)) + '%'
         if role == Qt.UserRole:
             return self.levels[index.row()]
         return None

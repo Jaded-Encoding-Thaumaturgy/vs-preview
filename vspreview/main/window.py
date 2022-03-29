@@ -14,15 +14,13 @@ from typing import Any, cast, List, Mapping, Tuple, Dict
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent
 from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent
-from PyQt5.QtWidgets import (
-    QVBoxLayout, QLabel, QWidget, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
-)
+from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
 
 from ..toolbars import Toolbars
 from ..models import VideoOutputs
 from ..core.vsenv import get_policy
-from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load
 from ..widgets import StatusBar, Timeline, GraphicsView, GraphicsImageItem
+from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget
 from ..utils import get_usable_cpus_count, set_qobject_names, fire_and_forget, set_status_label
 
 from .settings import MainSettings
@@ -120,7 +118,7 @@ class MainWindow(AbstractMainWindow):
 
         desktop_size = self.app.primaryScreen().size()
 
-        self.move(int(desktop_size.width() * 0.15), int(desktop_size.width() * 0.075))
+        self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = None
         self.script_globals: Dict[str, Any] = dict()
@@ -165,55 +163,34 @@ class MainWindow(AbstractMainWindow):
         self.setObjectName('MainWindow')
 
     def setup_ui(self) -> None:
-        self.central_widget = QWidget(self)
-        self.main_layout = QVBoxLayout(self.central_widget)
+        self.central_widget = ExtendedWidget(self)
+        self.main_layout = VBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
         self.graphics_view = GraphicsView(self.central_widget)
         self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
         self.graphics_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.main_layout.addWidget(self.graphics_view)
 
         self.timeline = Timeline(self.central_widget)
-        self.main_layout.addWidget(self.timeline)
+
+        self.main_layout.addWidgets([self.graphics_view, self.timeline])
 
         # status bar
-
         self.statusbar = StatusBar(self.central_widget)
 
-        self.statusbar.total_frames_label = QLabel(self.central_widget)
-        self.statusbar.total_frames_label.setObjectName('MainWindow.statusbar.total_frames_label')
-        self.statusbar.addWidget(self.statusbar.total_frames_label)
+        for name in self.statusbar.label_names:
+            self.statusbar.__setattr__(name, QLabel(self.central_widget))
 
-        self.statusbar.duration_label = QLabel(self.central_widget)
-        self.statusbar.duration_label.setObjectName('MainWindow.statusbar.duration_label')
-        self.statusbar.addWidget(self.statusbar.duration_label)
+        self.statusbar.addWidgets([
+            getattr(self.statusbar, name) for name in self.statusbar.label_names
+        ])
 
-        self.statusbar.resolution_label = QLabel(self.central_widget)
-        self.statusbar.resolution_label.setObjectName('MainWindow.statusbar.resolution_label')
-        self.statusbar.addWidget(self.statusbar.resolution_label)
-
-        self.statusbar.pixel_format_label = QLabel(self.central_widget)
-        self.statusbar.pixel_format_label.setObjectName('MainWindow.statusbar.pixel_format_label')
-        self.statusbar.addWidget(self.statusbar.pixel_format_label)
-
-        self.statusbar.fps_label = QLabel(self.central_widget)
-        self.statusbar.fps_label.setObjectName('MainWindow.statusbar.fps_label')
-        self.statusbar.addWidget(self.statusbar.fps_label)
-
-        self.statusbar.frame_props_label = QLabel(self.central_widget)
-        self.statusbar.frame_props_label.setObjectName('MainWindow.statusbar.frame_props_label')
-        self.statusbar.addWidget(self.statusbar.frame_props_label)
-
-        self.statusbar.label = QLabel(self.central_widget)
-        self.statusbar.label.setObjectName('MainWindow.statusbar.label')
         self.statusbar.addPermanentWidget(self.statusbar.label)
 
         self.setStatusBar(self.statusbar)
 
         # dialogs
-
         self.script_error_dialog = ScriptErrorDialog(self)
 
     def patch_dark_stylesheet(self, stylesheet: str) -> str:
@@ -310,7 +287,7 @@ class MainWindow(AbstractMainWindow):
 
         storage_contents = ''
         broken_storage = False
-        for is_global, storage_path in ((True, self.global_storage_path), (False, self.current_storage_path)):
+        for storage_path in (self.global_storage_path, self.current_storage_path):
             try:
                 with io.open(storage_path, 'r', encoding='utf-8') as storage_file:
                     version = storage_file.readline()
@@ -578,10 +555,10 @@ class MainWindow(AbstractMainWindow):
         fmt = output.source.clip.format
         assert fmt
 
-        self.statusbar.total_frames_label.setText('{} frames '.format(output.total_frames))
-        self.statusbar.duration_label.setText('{} '.format(output.total_time))
-        self.statusbar.resolution_label.setText('{}x{} '.format(output.width, output.height))
-        self.statusbar.pixel_format_label.setText('{} '.format(fmt.name))
+        self.statusbar.total_frames_label.setText(f'{output.total_frames} frames ')
+        self.statusbar.duration_label.setText(f'{output.total_time} ')
+        self.statusbar.resolution_label.setText(f'{output.width}x{output.height} ')
+        self.statusbar.pixel_format_label.setText(f'{fmt.name} ')
         if output.fps_den != 0:
             self.statusbar.fps_label.setText(
                 '{}/{} = {:.3f} fps '.format(output.fps_num, output.fps_den, output.fps_num / output.fps_den)
@@ -607,10 +584,7 @@ class MainWindow(AbstractMainWindow):
         self.reload_signal.emit()
 
     def __getstate__(self) -> Mapping[str, Any]:
-        return {
-            attr_name: getattr(self, attr_name)
-            for attr_name in self.storable_attrs
-        } | {
+        return super().__getstate__() | {
             'timeline_mode': self.timeline.mode,
             'window_geometry': bytes(cast(bytearray, self.saveGeometry())),
             'window_state': bytes(cast(bytearray, self.saveState()))

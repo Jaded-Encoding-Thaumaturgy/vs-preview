@@ -4,19 +4,20 @@ from functools import partial
 from typing import Mapping, Any
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QComboBox, QCheckBox
+from PyQt5.QtWidgets import QComboBox
 
 from ...models import VideoOutputs, ZoomLevels
 from ...widgets import ComboBox, TimeEdit, FrameEdit
 from ...utils import add_shortcut, qt_silent_call, set_qobject_names
-from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load
+from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load, PushButton, CheckBox
 
 
 class MainToolbar(AbstractToolbar):
     _no_visibility_choice = True
+    _storable_attrs = ('outputs',)
 
     __slots__ = (
-        'outputs', 'zoom_levels',
+        *_storable_attrs, 'zoom_levels',
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button', 'settings_button'
@@ -35,23 +36,63 @@ class MainToolbar(AbstractToolbar):
         self.zoom_combobox.setModel(self.zoom_levels)
         self.zoom_combobox.setCurrentIndex(3)
 
-        self.sync_outputs_checkbox.clicked.connect(self.on_sync_outputs_clicked)
+        self.add_shortcuts()
+
+        set_qobject_names(self)
+
+    def setup_ui(self) -> None:
+        super().setup_ui()
+
+        self.setVisible(True)
+
+        self.outputs_combobox = ComboBox[VideoOutput](
+            self, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents
+        )
         self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
-        self.frame_control.valueChanged.connect(self.main.switch_frame)
-        self.time_control.valueChanged.connect(self.main.switch_frame)
-        self.copy_frame_button.clicked.connect(self.on_copy_frame_button_clicked)
-        self.copy_timestamp_button.clicked.connect(self.on_copy_timestamp_button_clicked)
+        self.outputs_combobox.view().setMinimumWidth(
+            self.outputs_combobox.minimumSizeHint().width()
+        )
+
+        self.frame_control = FrameEdit(self, valueChanged=self.main.switch_frame)
+        if not self.main.INSTANT_FRAME_UPDATE:
+            self.frame_control.setKeyboardTracking(False)
+
+        self.copy_frame_button = PushButton('⎘', self, clicked=self.on_copy_frame_button_clicked)
+
+        self.time_control = TimeEdit(self, valueChanged=self.main.switch_frame)
+
+        self.copy_timestamp_button = PushButton('⎘', self, clicked=self.on_copy_timestamp_button_clicked)
+
+        self.sync_outputs_checkbox = CheckBox(
+            'Sync Outputs', self, checked=self.main.SYNC_OUTPUTS, clicked=self.on_sync_outputs_clicked
+        )
+
+        self.zoom_combobox = ComboBox[float](self, minimumContentsLength=4)
         self.zoom_combobox.currentTextChanged.connect(self.on_zoom_changed)
-        self.switch_timeline_mode_button.clicked.connect(self.on_switch_timeline_mode_clicked)
-        self.settings_button.clicked.connect(self.main.app_settings.show)
 
-        num_keys = [
-            Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
-        ]
+        self.switch_timeline_mode_button = PushButton(
+            'Switch Timeline Mode', self, clicked=self.on_switch_timeline_mode_clicked
+        )
 
-        for i, key in enumerate(num_keys):
-            add_shortcut(key, partial(self.main.switch_output, value=i))
-            add_shortcut(Qt.CTRL + key, partial(self.main.switch_output, value=-(i + 1)))
+        self.settings_button = PushButton('Settings', self, clicked=self.main.app_settings.show)
+
+        self.hlayout.addWidgets([
+            self.outputs_combobox,
+            self.frame_control, self.copy_frame_button,
+            self.time_control, self.copy_timestamp_button,
+            self.sync_outputs_checkbox,
+            self.zoom_combobox,
+            self.switch_timeline_mode_button,
+            self.settings_button
+        ])
+
+        self.hlayout.addStretch()
+
+    def add_shortcuts(self) -> None:
+        for i, key in enumerate(self.num_keys):
+            add_shortcut(key, partial(self.main.switch_output, i))
+            add_shortcut(Qt.CTRL + key, partial(self.main.switch_output, -(i + 1)))
 
         add_shortcut(Qt.Key_S, self.sync_outputs_checkbox.click)
         add_shortcut(
@@ -63,60 +104,6 @@ class MainToolbar(AbstractToolbar):
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
         )
         add_shortcut(Qt.Key_V, self.on_copy_frame_button_clicked)
-
-        set_qobject_names(self)
-
-    def setup_ui(self) -> None:
-        self.setVisible(True)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        self.outputs_combobox = ComboBox[VideoOutput](self)
-        self.outputs_combobox.setEditable(True)
-        self.outputs_combobox.setInsertPolicy(QComboBox.InsertAtCurrent)
-        self.outputs_combobox.setDuplicatesEnabled(True)
-        self.outputs_combobox.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.outputs_combobox.view().setMinimumWidth(
-            self.outputs_combobox.minimumSizeHint().width()
-        )
-        layout.addWidget(self.outputs_combobox)
-
-        self.frame_control = FrameEdit(self)
-        if not self.main.INSTANT_FRAME_UPDATE:
-            self.frame_control.setKeyboardTracking(False)
-        layout.addWidget(self.frame_control)
-
-        self.copy_frame_button = QPushButton(self)
-        self.copy_frame_button.setText('⎘')
-        layout.addWidget(self.copy_frame_button)
-
-        self.time_control = TimeEdit(self)
-        layout.addWidget(self.time_control)
-
-        self.copy_timestamp_button = QPushButton(self)
-        self.copy_timestamp_button.setText('⎘')
-        layout.addWidget(self.copy_timestamp_button)
-
-        self.sync_outputs_checkbox = QCheckBox(self)
-        self.sync_outputs_checkbox.setText('Sync Outputs')
-        self.sync_outputs_checkbox.setChecked(self.main.SYNC_OUTPUTS)
-        layout.addWidget(self.sync_outputs_checkbox)
-
-        self.zoom_combobox = ComboBox[float](self)
-        self.zoom_combobox.setMinimumContentsLength(4)
-        layout.addWidget(self.zoom_combobox)
-
-        self.switch_timeline_mode_button = QPushButton(self)
-        self.switch_timeline_mode_button.setText('Switch Timeline Mode')
-        layout.addWidget(self.switch_timeline_mode_button)
-
-        self.settings_button = QPushButton(self)
-        self.settings_button.setText('Settings')
-        layout.addWidget(self.settings_button)
-
-        layout.addStretch()
-
-        self.toggle_button.setVisible(False)
 
     def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
         if checked:
@@ -170,7 +157,6 @@ class MainToolbar(AbstractToolbar):
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
             'current_output_index': self.outputs_combobox.currentIndex(),
-            'outputs': self.outputs,
             'current_zoom_index': self.zoom_combobox.currentIndex(),
             'sync_outputs': self.sync_outputs_checkbox.isChecked()
         }

@@ -73,7 +73,7 @@ def strfdelta(time: Time, output_format: str) -> str:
 def add_shortcut(key: int, handler: Callable[[], None], widget: QWidget | None = None) -> None:
     if widget is None:
         widget = main_window()
-    QShortcut(QKeySequence(key), widget).activated.connect(handler)
+    QShortcut(QKeySequence(key), widget, activated=handler)
 
 
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:

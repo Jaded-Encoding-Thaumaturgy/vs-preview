@@ -55,7 +55,7 @@ class MainToolbar(AbstractToolbar):
         )
 
         self.frame_control = FrameEdit(self, valueChanged=self.main.switch_frame)
-        if not self.main.INSTANT_FRAME_UPDATE:
+        if not self.settings.INSTANT_FRAME_UPDATE:
             self.frame_control.setKeyboardTracking(False)
 
         self.copy_frame_button = PushButton('⎘', self, clicked=self.on_copy_frame_button_clicked)
@@ -65,7 +65,7 @@ class MainToolbar(AbstractToolbar):
         self.copy_timestamp_button = PushButton('⎘', self, clicked=self.on_copy_timestamp_button_clicked)
 
         self.sync_outputs_checkbox = CheckBox(
-            'Sync Outputs', self, checked=self.main.SYNC_OUTPUTS, clicked=self.on_sync_outputs_clicked
+            'Sync Outputs', self, checked=self.settings.SYNC_OUTPUTS, clicked=self.on_sync_outputs_clicked
         )
 
         self.zoom_combobox = ComboBox[float](self, minimumContentsLength=4)

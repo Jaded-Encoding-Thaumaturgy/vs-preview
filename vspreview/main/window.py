@@ -12,41 +12,22 @@ from os.path import expandvars, expanduser
 from traceback import FrameSummary, TracebackException
 from typing import Any, cast, List, Mapping, Tuple, Dict
 
-from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QEvent
+from PyQt5.QtCore import pyqtSignal, QRectF, QEvent
 from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent
 from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
 
 from ..toolbars import Toolbars
 from ..models import VideoOutputs
 from ..core.vsenv import get_policy
+from ..utils import set_qobject_names, fire_and_forget, set_status_label
 from ..widgets import StatusBar, Timeline, GraphicsView, GraphicsImageItem
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget
-from ..utils import get_usable_cpus_count, set_qobject_names, fire_and_forget, set_status_label
 
 from .settings import MainSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
 
 
 class MainWindow(AbstractMainWindow):
-    # those are defaults that can be overriden at runtime or used as fallbacks
-    AUTOSAVE_INTERVAL = 60 * 1000  # s
-    CHECKERBOARD_ENABLED = True
-    CHECKERBOARD_TILE_COLOR_1 = Qt.white
-    CHECKERBOARD_TILE_COLOR_2 = Qt.lightGray
-    CHECKERBOARD_TILE_SIZE = 8  # px
-    FPS_AVERAGING_WINDOW_SIZE = Frame(100)
-    FPS_REFRESH_INTERVAL = 150  # ms
-    LOG_LEVEL = logging.INFO
-    OUTPUT_INDEX = 0
-    PLAY_BUFFER_SIZE = Frame(get_usable_cpus_count())
-    SAVE_TEMPLATE = '{script_name}_{frame}'
-    STORAGE_BACKUPS_COUNT = 2
-    SYNC_OUTPUTS = True
-    SEEK_STEP = 1
-    INSTANT_FRAME_UPDATE = False
-    # it's allowed to stretch target interval betweewn notches by N% at most
-    TIMELINE_LABEL_NOTCHES_MARGIN = 20  # %
-    TIMELINE_MODE = 'frame'
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
@@ -67,10 +48,6 @@ class MainWindow(AbstractMainWindow):
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
         return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
-
-    DEBUG_PLAY_FPS = False
-    DEBUG_TOOLBAR = False
-    DEBUG_TOOLBAR_BUTTONS_PRINT_STATE = False
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -94,7 +71,7 @@ class MainWindow(AbstractMainWindow):
         self.settings = MainSettings()
 
         # logging
-        logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.LOG_LEVEL)
+        logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.settings.LOG_LEVEL)
         logging.Formatter.default_msec_format = '%s.%03d'
 
         self.current_config_dir = config_dir / self.VSP_DIR_NAME
@@ -273,10 +250,10 @@ class MainWindow(AbstractMainWindow):
         if not self.storage_not_found:
             self.load_storage()
 
-        self.toolbars.misc.autosave_timer.start(self.AUTOSAVE_INTERVAL)
+        self.toolbars.misc.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
 
         if not reloading:
-            self.switch_output(self.OUTPUT_INDEX)
+            self.switch_output(self.settings.output_index)
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:
@@ -340,7 +317,7 @@ class MainWindow(AbstractMainWindow):
 
         backup_paths = [
             self.current_storage_path.with_suffix(f'.old{i}.yml')
-            for i in range(self.STORAGE_BACKUPS_COUNT, 0, -1)
+            for i in range(self.toolbars.misc.settings.STORAGE_BACKUPS_COUNT, 0, -1)
         ] + [self.current_storage_path]
 
         for src_path, dest_path in zip(backup_paths[1:], backup_paths[:-1]):

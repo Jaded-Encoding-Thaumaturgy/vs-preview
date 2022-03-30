@@ -45,7 +45,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future] = deque()
 
-        self.fps_history: Deque[int] = deque([], int(self.main.FPS_AVERAGING_WINDOW_SIZE) + 1)
+        self.fps_history: Deque[int] = deque([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
         self.fps_timer = QTimer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
 
@@ -93,7 +93,8 @@ class PlaybackToolbar(AbstractToolbar):
         )
 
         self.seek_frame_control = FrameEdit(
-            self, 1, value=self.main.SEEK_STEP, tooltip='Seek N Frames Step', valueChanged=self.on_seek_frame_changed
+            self, 1, value=self.settings.SEEK_STEP, tooltip='Seek N Frames Step',
+            valueChanged=self.on_seek_frame_changed
         )
 
         self.play_n_frames_button = PushButton(
@@ -169,13 +170,13 @@ class PlaybackToolbar(AbstractToolbar):
     def allocate_buffer(self, is_alpha: bool = False) -> None:
         if is_alpha:
             play_buffer_size = int(min(
-                self.main.PLAY_BUFFER_SIZE, (self.main.current_output.end_frame - self.main.current_frame) * 2
+                self.settings.PLAY_BUFFER_SIZE, (self.main.current_output.end_frame - self.main.current_frame) * 2
             ))
             play_buffer_size -= play_buffer_size % 2
             self.play_buffer = deque([], play_buffer_size)
         else:
             play_buffer_size = int(
-                min(self.main.PLAY_BUFFER_SIZE, self.main.current_output.end_frame - self.main.current_frame)
+                min(self.settings.PLAY_BUFFER_SIZE, self.main.current_output.end_frame - self.main.current_frame)
             )
             self.play_buffer = deque([], play_buffer_size)
 
@@ -207,14 +208,14 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.last_frame = Frame(stop_at_frame or self.main.current_output.end_frame)
 
-        if self.fps_unlimited_checkbox.isChecked() or self.main.DEBUG_PLAY_FPS:
+        if self.fps_unlimited_checkbox.isChecked() or self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
             self.mute_checkbox.setChecked(True)
             self.play_timer.start(0)
-            if self.main.DEBUG_PLAY_FPS:
+            if self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
                 self.play_start_time = debug.perf_counter_ns()
                 self.play_start_frame = self.main.current_frame
             else:
-                self.fps_timer.start(self.main.FPS_REFRESH_INTERVAL)
+                self.fps_timer.start(self.settings.FPS_REFRESH_INTERVAL)
         elif self.fps_variable_checkbox.isChecked() and self.main.current_output._stateset:
             self.play_timer.start(floor(1000 / self.get_true_fps(self.main.current_output.props)))
         else:
@@ -259,7 +260,7 @@ class PlaybackToolbar(AbstractToolbar):
             return
 
         n_frames = 1 if self.main.current_output.prepared.alpha is None else 2
-        next_frame_for_buffer = self.main.current_frame + self.main.PLAY_BUFFER_SIZE // n_frames
+        next_frame_for_buffer = self.main.current_frame + self.settings.PLAY_BUFFER_SIZE // n_frames
 
         try:
             frames_futures = [self.play_buffer.pop().result() for _ in range(n_frames)]
@@ -288,7 +289,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.current_fps = self.get_true_fps(frames_futures[0].props)
             self.play_timer.start(floor(1000 / self.current_fps))
             self.fps_spinbox.setValue(self.current_fps)
-        elif not self.main.DEBUG_PLAY_FPS:
+        elif not self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
             self.update_fps_counter()
 
     def _play_next_audio_frame(self) -> None:
@@ -313,7 +314,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.play_timer.stop()
 
-        if self.main.DEBUG_PLAY_FPS and self.play_start_time is not None:
+        if self.main.toolbars.debug.settings.DEBUG_PLAY_FPS and self.play_start_time is not None:
             self.play_end_time = debug.perf_counter_ns()
             self.play_end_frame = self.main.current_frame
         if self.main.statusbar.label.text() == 'Playing':
@@ -339,7 +340,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_history.clear()
         self.fps_timer.stop()
 
-        if self.main.DEBUG_PLAY_FPS and self.play_start_time is not None:
+        if self.main.toolbars.debug.settings.DEBUG_PLAY_FPS and self.play_start_time is not None:
             time_interval = (self.play_end_time - self.play_start_time) / 1_000_000_000
             frame_interval = self.play_end_frame - self.play_start_frame
             logging.debug(

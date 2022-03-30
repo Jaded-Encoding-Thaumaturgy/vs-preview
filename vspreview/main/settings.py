@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Mapping
 
 from PyQt5.QtWidgets import QLabel
@@ -15,6 +16,10 @@ class MainSettings(AbstractToolbarSettings):
         'png_compressing_spinbox', 'statusbar_timeout_control',
         'timeline_notches_margin_spinbox'
     )
+
+    INSTANT_FRAME_UPDATE = False
+    SYNC_OUTPUTS = True
+    LOG_LEVEL = logging.INFO
 
     def setup_ui(self) -> None:
         super().setup_ui()

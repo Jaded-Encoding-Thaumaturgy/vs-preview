@@ -495,7 +495,7 @@ class VideoOutput(AbstractYAMLObject):
         painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
         painter.drawImage(0, 0, alpha_image)
 
-        if self.main.CHECKERBOARD_ENABLED:
+        if self.main.toolbars.playback.settings.CHECKERBOARD_ENABLED:
             painter.setCompositionMode(QPainter.CompositionMode_DestinationOver)
             painter.drawImage(0, 0, self.checkerboard)
 
@@ -508,9 +508,9 @@ class VideoOutput(AbstractYAMLObject):
         return self.update_graphic_item(qpixmap)
 
     def _generate_checkerboard(self) -> QImage:
-        tile_size = self.main.CHECKERBOARD_TILE_SIZE
-        tile_color_1 = self.main.CHECKERBOARD_TILE_COLOR_1
-        tile_color_2 = self.main.CHECKERBOARD_TILE_COLOR_2
+        tile_size = self.main.toolbars.playback.settings.CHECKERBOARD_TILE_SIZE
+        tile_color_1 = self.main.toolbars.playback.settings.CHECKERBOARD_TILE_COLOR_1
+        tile_color_2 = self.main.toolbars.playback.settings.CHECKERBOARD_TILE_COLOR_2
 
         macrotile_pixmap = QPixmap(tile_size * 2, tile_size * 2)
         painter = QPainter(macrotile_pixmap)

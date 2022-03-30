@@ -18,7 +18,7 @@ class DebugToolbar(AbstractToolbar):
 
         self.setup_ui()
 
-        if self.main.DEBUG_TOOLBAR_BUTTONS_PRINT_STATE:
+        if self.settings.DEBUG_TOOLBAR_BUTTONS_PRINT_STATE:
             self.filter = debug.EventFilter(main)
             self.main.toolbars.main.widget.installEventFilter(self.filter)
             for toolbar in self.main.toolbars:

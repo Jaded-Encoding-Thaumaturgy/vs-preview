@@ -55,7 +55,7 @@ class MiscToolbar(AbstractToolbar):
         self.save_frame_as_button = PushButton('Save Frame as', self, clicked=self.on_save_frame_as_clicked)
 
         self.save_template_lineedit = LineEdit(
-            self.main.SAVE_TEMPLATE, self, tooltip=(
+            self.settings.SAVE_TEMPLATE, self, tooltip=(
                 r'Available placeholders: {format}, {fps_den}, {fps_num}, {frame},\n'
                 r' {height}, {index}, {matrix}, {primaries}, {range},\n'
                 r' {script_name}, {total_frames}, {transfer}, {width}.\n'
@@ -130,7 +130,7 @@ class MiscToolbar(AbstractToolbar):
         try:
             suggested_path_str = template.format(**substitutions)
         except ValueError:
-            suggested_path_str = self.main.SAVE_TEMPLATE.format(**substitutions)
+            suggested_path_str = self.settings.SAVE_TEMPLATE.format(**substitutions)
             self.main.show_message('Save name template is invalid')
 
         save_path_str, file_type = QFileDialog.getSaveFileName(

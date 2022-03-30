@@ -15,7 +15,7 @@ from PyQt5.QtCore import Qt, QEvent, QObject
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import get_policy
-from .main import MainWindow
+from .main import MainWindow, MainSettings
 from .utils import check_versions, get_temp_screen_resolution
 
 pretty_traceback.install()
@@ -27,7 +27,7 @@ class Application(QApplication):
         isex = False
         try:
             return QApplication.notify(self, obj, event)
-        except Exception:
+        except BaseException:
             isex = True
             logging.error('Application: unexpected error')
             logging.error(*sys.exc_info())
@@ -38,7 +38,7 @@ class Application(QApplication):
 
 
 def main() -> None:
-    logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=MainWindow.LOG_LEVEL)
+    logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=MainSettings.LOG_LEVEL)
     logging.Formatter.default_msec_format = '%s.%03d'
     if sys.stdout.isatty():
         logging.addLevelName(

@@ -122,18 +122,23 @@ class PipetteToolbar(AbstractToolbar):
 
     @property
     def current_source_frame(self) -> vs.VideoFrame:
-        if self._curr_frame_cache is None or self._curr_frame_cache[0] != self.main.current_frame:
+        if self._curr_frame_cache is None or self._curr_frame_cache[0] != self.main.current_output.last_showed_frame:
             self._curr_frame_cache = (
-                self.main.current_frame, self.outputs[self.main.current_output].get_frame(int(self.main.current_frame))
+                self.main.current_output.last_showed_frame, self.outputs[self.main.current_output].get_frame(
+                    int(self.main.current_output.last_showed_frame)
+                )
             )
 
         return self._curr_frame_cache[1]
 
     @property
     def current_source_alpha_frame(self) -> vs.VideoFrame:
-        if self._curr_alphaframe_cache is None or self._curr_alphaframe_cache[0] != self.main.current_frame:
+        cache = self._curr_alphaframe_cache
+        if cache is None or cache[0] != self.main.current_output.last_showed_frame:
             self._curr_alphaframe_cache = (
-                self.main.current_frame, self.main.current_output.source.alpha.get_frame(int(self.main.current_frame))
+                self.main.current_output.last_showed_frame, self.main.current_output.source.alpha.get_frame(
+                    int(self.main.current_output.last_showed_frame)
+                )
             )
 
         return self._curr_alphaframe_cache[1]

@@ -116,7 +116,7 @@ class MiscToolbar(AbstractToolbar):
             'format': fmt.name,
             'fps_den': self.main.current_output.fps_den,
             'fps_num': self.main.current_output.fps_num,
-            'frame': self.main.current_frame,
+            'frame': self.main.current_output.last_showed_frame,
             'height': self.main.current_output.height,
             'index': self.main.current_output.index,
             'matrix': VideoOutput.Matrix.values[int(str(frame_props['_Matrix']))],

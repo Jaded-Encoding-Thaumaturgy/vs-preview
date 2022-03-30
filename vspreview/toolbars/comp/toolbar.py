@@ -360,7 +360,7 @@ class CompToolbar(AbstractToolbar):
             samples.extend(frames)
 
         if self.current_frame_checkbox.isChecked():
-            samples.append(int(self.main.current_frame))
+            samples.append(int(self.main.current_output.last_showed_frame))
 
         return WorkerConfiguration(
             self.main.outputs, 'Function Test',

@@ -223,10 +223,6 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         @clipboard.setter
         def clipboard(self) -> None: ...
         @property
-        def current_frame(self) -> Frame: ...
-        @current_frame.setter
-        def current_frame(self) -> None: ...
-        @property
         def current_output(self) -> VideoOutput: ...
         @current_output.setter
         def current_output(self) -> None: ...
@@ -264,7 +260,6 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         app_settings: AbstractAppSettings = abstract_attribute()
         central_widget: QWidget = abstract_attribute()
         clipboard: QClipboard = abstract_attribute()
-        current_frame: Frame = abstract_attribute()
         current_output: VideoOutput = abstract_attribute()
         display_scale: float = abstract_attribute()
         graphics_scene: QGraphicsScene = abstract_attribute()
@@ -381,21 +376,16 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
     comp: AbstractToolbar = abstract_attribute()
     debug: AbstractToolbar = abstract_attribute()
 
-    toolbars_names = ('playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug')
-
-    # 'main' should be the first
-    all_toolbars_names = ['main'] + list(toolbars_names)
-
-    _max = len(all_toolbars_names)
-    _cidx = 0
+    # 'main' should always be the first
+    all_toolbars_names = ['main', 'playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug']
 
     def __getitem__(self, index: int) -> AbstractToolbar:
-        if index >= len(self.toolbars_names):
+        if index >= len(self.all_toolbars_names):
             raise IndexError
-        return cast(AbstractToolbar, getattr(self, self.toolbars_names[index]))
+        return cast(AbstractToolbar, getattr(self, self.all_toolbars_names[index]))
 
     def __len__(self) -> int:
-        return len(self.toolbars_names)
+        return len(self.all_toolbars_names)
 
     @abstractmethod
     def __getstate__(self) -> Mapping[str, Any]:

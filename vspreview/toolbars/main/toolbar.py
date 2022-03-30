@@ -108,9 +108,9 @@ class MainToolbar(AbstractToolbar):
     def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
         if checked:
             if not force_frame:
-                force_frame = self.main.current_frame
+                force_frame = self.main.current_output.last_showed_frame
             for output in self.main.outputs:
-                output.frame_to_show = force_frame
+                output.last_showed_frame = force_frame
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
@@ -130,7 +130,7 @@ class MainToolbar(AbstractToolbar):
         self.outputs_combobox.setModel(self.outputs)
 
     def on_copy_frame_button_clicked(self, checked: bool | None = None) -> None:
-        self.main.clipboard.setText(str(self.main.current_frame))
+        self.main.clipboard.setText(str(self.main.current_output.last_showed_frame))
         self.main.show_message('Current frame number copied to clipboard')
 
     def on_copy_timestamp_button_clicked(self, checked: bool | None = None) -> None:
@@ -146,10 +146,10 @@ class MainToolbar(AbstractToolbar):
     def on_sync_outputs_changed(self, state: Qt.CheckState) -> None:
         if state == Qt.Checked:
             for output in self.main.outputs:
-                output.frame_to_show = self.main.current_frame
+                output.last_showed_frame = self.main.current_output.last_showed_frame
         if state == Qt.Unchecked:
             for output in self.main.outputs:
-                output.frame_to_show = None
+                output.last_showed_frame = None
 
     def on_zoom_changed(self, text: str | None = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())

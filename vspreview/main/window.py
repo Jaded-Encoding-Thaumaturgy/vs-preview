@@ -124,7 +124,6 @@ class MainWindow(AbstractMainWindow):
         # init toolbars and outputs
         self.app_settings = SettingsDialog(self)
         self.toolbars = Toolbars(self)
-        self.main_layout.addWidget(self.toolbars.main)
 
         for toolbar in self.toolbars:
             self.main_layout.addWidget(toolbar)
@@ -419,7 +418,7 @@ class MainWindow(AbstractMainWindow):
 
         frame = Frame(pos)
 
-        if frame > self.current_output.end_frame:
+        if self.current_output.last_showed_frame == frame > self.current_output.end_frame:
             return
 
         if render_frame:
@@ -428,20 +427,19 @@ class MainWindow(AbstractMainWindow):
             else:
                 self.current_output.render_frame(frame)
 
-        self.current_output.frame_to_show = Frame(frame)
         self.current_output.last_showed_frame = frame
 
         self.timeline.set_position(frame)
-        self.toolbars.main.on_current_frame_changed(frame)
+
         for toolbar in self.toolbars:
-            if hasattr(toolbar, 'on_current_frame_changed'):
-                toolbar.on_current_frame_changed(frame)
+            toolbar.on_current_frame_changed(frame)
 
         self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
         if len(self.outputs) == 0:
             return
+
         if isinstance(value, VideoOutput):
             index = self.outputs.index_of(value)
         else:
@@ -450,7 +448,7 @@ class MainWindow(AbstractMainWindow):
         if index < 0:
             index = len(self.outputs) + index
 
-        if index < 0 or index >= len(self.outputs):
+        if 0 > index >= len(self.outputs):
             return
 
         prev_index = self.toolbars.main.outputs_combobox.currentIndex()
@@ -461,12 +459,10 @@ class MainWindow(AbstractMainWindow):
         self.toolbars.main.on_current_output_changed(index, prev_index)
         self.timeline.set_end_frame(self.current_output.end_frame)
 
-        if self.current_output.frame_to_show is not None:
-            self.current_frame = self.current_output.frame_to_show
-        elif self.current_output.last_showed_frame:
-            self.current_frame = self.current_output.last_showed_frame
+        if self.current_output.last_showed_frame:
+            self.switch_frame(self.current_output.last_showed_frame)
         else:
-            self.current_frame = Frame(0)
+            self.switch_frame(0)
 
         for output in self.outputs:
             output.graphics_scene_item.hide()
@@ -476,8 +472,7 @@ class MainWindow(AbstractMainWindow):
         self.timeline.update_notches()
 
         for toolbar in self.toolbars:
-            if hasattr(toolbar, 'on_current_output_changed'):
-                toolbar.on_current_output_changed(index, prev_index)
+            toolbar.on_current_output_changed(index, prev_index)
 
         self.update_statusbar_output_info()
 
@@ -488,14 +483,6 @@ class MainWindow(AbstractMainWindow):
     @current_output.setter
     def current_output(self, value: VideoOutput) -> None:
         self.switch_output(self.outputs.index_of(value))
-
-    @property
-    def current_frame(self) -> Frame:
-        return self.current_output.last_showed_frame or Frame(0)
-
-    @current_frame.setter
-    def current_frame(self, value: Frame) -> None:
-        self.switch_frame(value)
 
     @property
     def outputs(self) -> VideoOutputs:

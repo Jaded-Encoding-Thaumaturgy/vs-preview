@@ -170,8 +170,9 @@ class SceningToolbar(AbstractToolbar):
         add_shortcut(Qt.Key_E, self.add_to_list_button.click)
         add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
         add_shortcut(
-            Qt.Key_B,
-            lambda: self.scening_list_dialog.label_lineedit.setText(str(self.main.current_frame))
+            Qt.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
+                str(self.main.current_output.last_showed_frame)
+            )
         )
 
     def on_toggle(self, new_state: bool) -> None:
@@ -276,25 +277,25 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             return
 
-        new_pos = self.current_list.get_next_frame(self.main.current_frame)
+        new_pos = self.current_list.get_next_frame(self.main.current_output.last_showed_frame)
         if new_pos is None:
             return
-        self.main.current_frame = new_pos
+        self.main.switch_frame(new_pos)
 
     def on_seek_to_prev_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
-        new_pos = self.current_list.get_prev_frame(self.main.current_frame)
+        new_pos = self.current_list.get_prev_frame(self.main.current_output.last_showed_frame)
         if new_pos is None:
             return
-        self.main.current_frame = new_pos
+        self.main.switch_frame(new_pos)
 
     # scene management
     def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()
-        cast(SceningList, self.current_list).add(self.main.current_frame)
+        cast(SceningList, self.current_list).add(self.main.current_output.last_showed_frame)
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: bool | None = None) -> None:
@@ -311,7 +312,7 @@ class SceningToolbar(AbstractToolbar):
 
     def on_first_frame_clicked(self, checked: bool, frame: Frame | None = None) -> None:
         if frame is None:
-            frame = self.main.current_frame
+            frame = self.main.current_output.last_showed_frame
 
         if checked:
             self.first_frame = frame
@@ -324,8 +325,10 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             return
 
+        curr = self.main.current_output.last_showed_frame
+
         for scene in self.current_list:
-            if (scene.start == self.main.current_frame or scene.end == self.main.current_frame):
+            if (scene.start == curr or scene.end == curr):
                 self.current_list.remove(scene)
 
         self.remove_at_current_frame_button.clearFocus()
@@ -341,7 +344,7 @@ class SceningToolbar(AbstractToolbar):
 
     def on_second_frame_clicked(self, checked: bool, frame: Frame | None = None) -> None:
         if frame is None:
-            frame = self.main.current_frame
+            frame = self.main.self.main.current_output.last_showed_frame
 
         if checked:
             self.second_frame = frame
@@ -729,7 +732,9 @@ class SceningToolbar(AbstractToolbar):
         self.seek_to_next_button.setEnabled(is_enabled)
         self.seek_to_prev_button.setEnabled(is_enabled)
 
-        is_enabled = self.current_list is not None and self.main.current_frame in self.current_list
+        curr = self.main.current_output.last_showed_frame
+
+        is_enabled = self.current_list is not None and curr in self.current_list
         self.add_single_frame_button.setEnabled(not is_enabled)
         self.remove_at_current_frame_button.setEnabled(is_enabled)
 

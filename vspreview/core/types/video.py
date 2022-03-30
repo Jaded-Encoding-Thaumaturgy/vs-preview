@@ -229,8 +229,7 @@ class VideoOutput(AbstractYAMLObject):
         BOTTOM = values[5]
 
     storable_attrs = (
-        'title', 'last_showed_frame', 'play_fps',
-        'frame_to_show', 'scening_lists'
+        'title', 'last_showed_frame', 'play_fps', 'scening_lists'
     )
     __slots__ = storable_attrs + (
         'index', 'width', 'height', 'fps_num', 'fps_den',
@@ -286,12 +285,7 @@ class VideoOutput(AbstractYAMLObject):
         if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:  # type: ignore
             self.last_showed_frame = Frame(0)
 
-        if not hasattr(self, 'frame_to_show') or (
-            self.frame_to_show is not None and (0 > self.frame_to_show > self.end_frame)  # type: ignore
-        ):
-            self.frame_to_show: Frame | None = None
-
-        self.render_frame(self.frame_to_show or self.last_showed_frame)
+        self.render_frame(self.last_showed_frame)
 
         self.graphics_scene_item: GraphicsImageItem
 
@@ -460,7 +454,7 @@ class VideoOutput(AbstractYAMLObject):
 
     def render_frame(
         self, frame: Frame | None, vs_frame: vs.VideoFrame | None = None,
-        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = False
+        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = True
     ) -> QPixmap:
         if frame is None or not self._stateset:
             return QPixmap()
@@ -479,10 +473,11 @@ class VideoOutput(AbstractYAMLObject):
 
         if self.prepared.alpha is None:
             qpixmap = QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
-            if do_painting:
-                return qpixmap
 
-            return self.update_graphic_item(qpixmap)
+            if do_painting:
+                self.update_graphic_item(qpixmap)
+
+            return qpixmap
 
         alpha_image = self.frame_to_qimage(
             vs_alpha_frame or self.prepared.alpha.get_frame(frame.value), True
@@ -502,10 +497,11 @@ class VideoOutput(AbstractYAMLObject):
         painter.end()
 
         qpixmap = QPixmap.fromImage(result_image, Qt.NoFormatConversion)
-        if do_painting:
-            return qpixmap
 
-        return self.update_graphic_item(qpixmap)
+        if do_painting:
+            self.update_graphic_item(qpixmap)
+
+        return qpixmap
 
     def _generate_checkerboard(self) -> QImage:
         tile_size = self.main.toolbars.playback.settings.CHECKERBOARD_TILE_SIZE

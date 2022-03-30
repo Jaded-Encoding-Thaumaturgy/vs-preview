@@ -150,7 +150,7 @@ def vs_clear_cache() -> None:
     if isinstance(output, vs.VideoOutputTuple):
         curr = main_window().current_output
         output.clip.get_frame(
-            int(curr.frame_to_show or curr.last_showed_frame or Frame(0))
+            int(curr.last_showed_frame or Frame(0))
         )
     vs.core.max_cache_size = cache_size
 

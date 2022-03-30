@@ -282,10 +282,8 @@ class VideoOutput(AbstractYAMLObject):
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:  # type: ignore
+        if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:
             self.last_showed_frame = Frame(0)
-
-        self.render_frame(self.last_showed_frame)
 
         self.graphics_scene_item: GraphicsImageItem
 

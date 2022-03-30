@@ -13,7 +13,7 @@ from traceback import FrameSummary, TracebackException
 from typing import Any, cast, List, Mapping, Tuple, Dict
 
 from PyQt5.QtCore import pyqtSignal, QRectF, QEvent
-from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent
+from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent, QPixmap
 from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
 
 from ..toolbars import Toolbars
@@ -385,10 +385,9 @@ class MainWindow(AbstractMainWindow):
 
     def init_outputs(self) -> None:
         self.graphics_scene.clear()
-        for output in self.outputs:
-            frame_image = output.render_frame(output.last_showed_frame)
 
-            raw_frame_item = self.graphics_scene.addPixmap(frame_image)
+        for output in self.outputs:
+            raw_frame_item = self.graphics_scene.addPixmap(QPixmap())
             raw_frame_item.hide()
 
             output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
@@ -422,10 +421,10 @@ class MainWindow(AbstractMainWindow):
             return
 
         if render_frame:
-            if not isinstance(render_frame, bool):
-                self.current_output.render_frame(frame, *render_frame)
-            else:
+            if isinstance(render_frame, bool):
                 self.current_output.render_frame(frame)
+            else:
+                self.current_output.render_frame(frame, *render_frame)
 
         self.current_output.last_showed_frame = frame
 

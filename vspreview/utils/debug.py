@@ -462,7 +462,7 @@ class Application(QApplication):
             )
 
             return ret
-        except Exception:  # pylint: disable=broad-except
+        except BaseException:  # pylint: disable=broad-except
             isex = True
             logging.error('Application: unexpected error')
             logging.debug(*sys.exc_info())

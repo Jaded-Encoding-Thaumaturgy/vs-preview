@@ -46,7 +46,7 @@ class ScriptErrorDialog(ExtendedWidget, QDialog):
 
     def on_exit_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
-        self.main.save_on_exit = False
+        self.script_exec_failed = True
         self.main.app.exit()
 
     def closeEvent(self, event: QCloseEvent) -> None:

@@ -253,10 +253,6 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         @toolbars.setter
         def toolbars(self) -> None: ...
         @property
-        def save_on_exit(self) -> bool: ...
-        @save_on_exit.setter
-        def save_on_exit(self) -> None: ...
-        @property
         def script_path(self) -> Path: ...
         @script_path.setter
         def script_path(self) -> None: ...
@@ -276,7 +272,6 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         outputs: VideoOutputs = abstract_attribute()
         timeline: Timeline = abstract_attribute()
         toolbars: AbstractToolbars = abstract_attribute()
-        save_on_exit: bool = abstract_attribute()
         script_path: Path = abstract_attribute()
         statusbar: QStatusBar = abstract_attribute()
 

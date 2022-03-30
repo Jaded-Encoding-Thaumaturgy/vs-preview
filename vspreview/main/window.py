@@ -79,7 +79,7 @@ class MainWindow(AbstractMainWindow):
     ]
     __slots__ = storable_attrs + [
         'app', 'display_scale', 'clipboard',
-        'script_path', 'save_on_exit', 'timeline', 'main_layout',
+        'script_path', 'timeline', 'main_layout',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
         'current_storage_path', 'opengl_widget'
@@ -127,7 +127,6 @@ class MainWindow(AbstractMainWindow):
         self.clipboard = self.app.clipboard()
         self.external_args: List[Tuple[str, str]] = []
         self.script_path = Path()
-        self.save_on_exit = True
         self.script_exec_failed = False
         self.current_storage_path = Path()
 
@@ -219,12 +218,11 @@ class MainWindow(AbstractMainWindow):
         self.script_globals.clear()
         self.script_globals = dict([('__file__', sys.argv[0])] + self.external_args)
 
-        ast_compiled = compile(self.script_path.read_bytes(), sys.argv[0], 'exec', optimize=2)
-
         try:
+            ast_compiled = compile(self.script_path.read_bytes(), sys.argv[0], 'exec', optimize=2)
+
             exec(ast_compiled, self.script_globals)
         except BaseException as e:
-            self.script_exec_failed = True
             logging.error(e)
 
             te = TracebackException.from_exception(e)
@@ -243,6 +241,7 @@ class MainWindow(AbstractMainWindow):
                     break
             logging.error(''.join(te.format()))
 
+            self.script_exec_failed = True
             return self.handle_script_error(
                 '\n'.join([
                     'An error occured while evaluating script:',
@@ -253,13 +252,13 @@ class MainWindow(AbstractMainWindow):
             sys.argv = argv_orig
             sys.path.pop()
 
-        self.script_exec_failed = False
-
         if len(vs.get_outputs()) == 0:
             logging.error('Script has no outputs set.')
+            self.script_exec_failed = True
             self.handle_script_error('Script has no outputs set.')
             return
 
+        self.script_exec_failed = False
         self.current_storage_path = (self.current_config_dir / self.script_path.stem).with_suffix('.yml')
 
         self.storage_not_found = not self.current_storage_path.exists()
@@ -333,6 +332,9 @@ class MainWindow(AbstractMainWindow):
         self.dump_storage()
 
     def dump_storage(self, manually: bool = False) -> None:
+        if self.script_exec_failed:
+            return
+
         self.current_config_dir.mkdir(0o777, True, True)
         self.global_config_dir.mkdir(0o777, True, True)
 
@@ -416,10 +418,7 @@ class MainWindow(AbstractMainWindow):
             output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
 
     def reload_script(self) -> None:
-        if not self.script_exec_failed:
-            self.dump_storage()
-        elif self.settings.autosave_control.value() != Time(seconds=0):
-            self.dump_storage_async()
+        self.dump_storage()
 
         vs.clear_outputs()
         self.graphics_scene.clear()
@@ -578,7 +577,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_view.setSizePolicy(self.EVENT_POLICY)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self.settings.autosave_control.value() != Time(seconds=0) and self.save_on_exit:
+        if self.settings.autosave_control.value() != Time(seconds=0):
             self.dump_storage_async()
 
         self.reload_signal.emit()

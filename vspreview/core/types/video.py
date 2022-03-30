@@ -401,7 +401,8 @@ class VideoOutput(AbstractYAMLObject):
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
         stride = frame.get_stride(0)
-        ctype_pointer = ctypes.POINTER(point_size * width * height)
+        memory_bug_fix = False
+        ctype_pointer = ctypes.POINTER(point_size * stride)
 
         if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
             import numpy as np
@@ -440,10 +441,13 @@ class VideoOutput(AbstractYAMLObject):
                         frame.get_read_ptr(0), ctype_pointer
                     ).contents
                 )
+                memory_bug_fix = True
             else:
                 self._curr_pointers[2] = cast(sip.voidptr, frame[0])
 
-        return QImage(self._curr_pointers[2], width, height, stride, qt_format)
+        image = QImage(self._curr_pointers[2], width, height, stride, qt_format)
+
+        return image.copy() if memory_bug_fix else image
 
     def update_graphic_item(self, pixmap: QPixmap) -> QPixmap:
         if hasattr(self, 'graphics_scene_item'):

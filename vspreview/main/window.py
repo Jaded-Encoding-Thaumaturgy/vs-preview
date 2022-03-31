@@ -262,7 +262,8 @@ class MainWindow(AbstractMainWindow):
 
         storage_contents = ''
         broken_storage = False
-        for storage_path in (self.global_storage_path, self.current_storage_path):
+        global_length = 0
+        for i, storage_path in enumerate((self.global_storage_path, self.current_storage_path)):
             try:
                 with io.open(storage_path, 'r', encoding='utf-8') as storage_file:
                     version = storage_file.readline()
@@ -272,6 +273,8 @@ class MainWindow(AbstractMainWindow):
                         raise FileNotFoundError
 
                     storage_contents += storage_file.read()
+                    if i == 0:
+                        global_length = storage_contents.count('\n')
             except FileNotFoundError:
                 if self.settings.force_old_storages_removal:
                     storage_path.unlink()
@@ -293,10 +296,15 @@ class MainWindow(AbstractMainWindow):
         except yaml.YAMLError as exc:
             if isinstance(exc, yaml.MarkedYAMLError):
                 if exc.problem_mark:
+                    line = exc.problem_mark.line + 1
+                    isglobal = line <= global_length
+                    if not isglobal:
+                        line -= global_length
                     logging.warning(
-                        'Storage parsing failed on line {} column {}. Using defaults.'
-                        .format(exc.problem_mark.line + 1, exc.problem_mark.column + 1)
+                        'Storage ({}) parsing failed on line {} column {}. Exiting...'
+                        .format('Global' if isglobal else 'Local', line, exc.problem_mark.column + 1)
                     )
+                    sys.exit(1)
             else:
                 logging.warning('Storage parsing failed. Using defaults.')
         finally:

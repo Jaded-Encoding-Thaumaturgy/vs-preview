@@ -6,7 +6,7 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
-from typing import Any, cast, Mapping, Iterator, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload
+from typing import Any, cast, Mapping, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload
 
 from PyQt5.QtGui import QClipboard
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .better_abc import abstract_attribute
-from .bases import AbstractYAMLObjectSingleton, QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
+from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
 
 
 if TYPE_CHECKING:
@@ -245,10 +245,6 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         @timeline.setter
         def timeline(self) -> None: ...
         @property
-        def toolbars(self) -> AbstractToolbars: ...
-        @toolbars.setter
-        def toolbars(self) -> None: ...
-        @property
         def script_path(self) -> Path: ...
         @script_path.setter
         def script_path(self) -> None: ...
@@ -266,7 +262,6 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         graphics_view: QGraphicsView = abstract_attribute()
         outputs: VideoOutputs = abstract_attribute()
         timeline: Timeline = abstract_attribute()
-        toolbars: AbstractToolbars = abstract_attribute()
         script_path: Path = abstract_attribute()
         statusbar: QStatusBar = abstract_attribute()
 
@@ -360,50 +355,6 @@ class AbstractAppSettings(QDialog, QABC):
     @abstractmethod
     def addTab(self, widget: QWidget, label: str) -> int:
         raise NotImplementedError
-
-
-class AbstractToolbars(AbstractYAMLObjectSingleton):
-    __slots__ = ()
-
-    # special toolbar ignored by len() and not accessible via subscription and 'in' operator
-    main: AbstractToolbar = abstract_attribute()
-
-    playback: AbstractToolbar = abstract_attribute()
-    scening: AbstractToolbar = abstract_attribute()
-    pipette: AbstractToolbar = abstract_attribute()
-    benchmark: AbstractToolbar = abstract_attribute()
-    misc: AbstractToolbar = abstract_attribute()
-    comp: AbstractToolbar = abstract_attribute()
-    debug: AbstractToolbar = abstract_attribute()
-
-    # 'main' should always be the first
-    all_toolbars_names = ['main', 'playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug']
-
-    def __getitem__(self, _sub: int) -> AbstractToolbar:
-        length = len(self.all_toolbars_names)
-        if isinstance(_sub, slice):
-            return [self[i] for i in range(*_sub.indices(length))]
-        elif isinstance(_sub, int):
-            if _sub < 0:
-                _sub += length
-            if _sub < 0 or _sub >= length:
-                raise IndexError
-            return cast(AbstractToolbar, getattr(self, self.all_toolbars_names[_sub]))
-
-    def __len__(self) -> int:
-        return len(self.all_toolbars_names)
-
-    @abstractmethod
-    def __getstate__(self) -> Mapping[str, Any]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        raise NotImplementedError
-
-    if TYPE_CHECKING:
-        # https://github.com/python/mypy/issues/2220
-        def __iter__(self) -> Iterator[AbstractToolbar]: ...
 
 
 @lru_cache()

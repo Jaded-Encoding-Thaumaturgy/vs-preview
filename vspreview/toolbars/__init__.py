@@ -1,11 +1,10 @@
-# flake8: noqa
-
 import logging
-from typing import Mapping, Any
+from typing import Mapping, Any, Iterator, cast, TYPE_CHECKING
 
 
 from ..core import storage_err_msg
-from ..core.abstracts import AbstractToolbars, AbstractMainWindow
+from ..core.bases import AbstractYAMLObjectSingleton
+from ..core.abstracts import AbstractMainWindow, AbstractToolbar
 
 from .benchmark import BenchmarkToolbar
 from .comp import CompToolbar
@@ -23,13 +22,45 @@ all_toolbars = [
 ]
 
 
-class Toolbars(AbstractToolbars):
+class Toolbars(AbstractYAMLObjectSingleton):
+    __slots__ = ()
+
+    main: MainToolbar
+    playback: PlaybackToolbar
+    scening: SceningToolbar
+    pipette: PipetteToolbar
+    benchmark: BenchmarkToolbar
+    misc: MiscToolbar
+    comp: CompToolbar
+    debug: DebugToolbar
+
+    # 'main' should always be the first
+    all_toolbars_names = ['main', 'playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug']
+
     def __init__(self, main_window: AbstractMainWindow) -> None:
         for name, toolbar in zip(self.all_toolbars_names, all_toolbars):
             self.__setattr__(name, toolbar(main_window))
 
         for name in self.all_toolbars_names:
             self.__getattribute__(name).setObjectName(f'Toolbars.{name}')
+
+    def __getitem__(self, _sub: int) -> AbstractToolbar:
+        length = len(self.all_toolbars_names)
+        if isinstance(_sub, slice):
+            return [self[i] for i in range(*_sub.indices(length))]
+        elif isinstance(_sub, int):
+            if _sub < 0:
+                _sub += length
+            if _sub < 0 or _sub >= length:
+                raise IndexError
+            return cast(AbstractToolbar, getattr(self, self.all_toolbars_names[_sub]))
+
+    def __len__(self) -> int:
+        return len(self.all_toolbars_names)
+
+    if TYPE_CHECKING:
+        # https://github.com/python/mypy/issues/2220
+        def __iter__(self) -> Iterator[AbstractToolbar]: ...
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {

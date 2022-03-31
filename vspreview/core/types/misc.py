@@ -5,14 +5,14 @@ from typing import List
 
 
 class PictureType(bytes, Enum):
-    UNSET = b'None'
+    ALL = b'All'
     I = b'I'
     P = b'P'
     B = b'B'
 
     def __str__(self) -> str:
-        if self == PictureType.UNSET:
-            return 'None'
+        if self == PictureType.ALL:
+            return 'All'
 
         return self.decode('utf-8') + ' Frames'
 

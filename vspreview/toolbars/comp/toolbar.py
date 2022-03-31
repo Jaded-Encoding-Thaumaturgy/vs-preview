@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import string
 import random
 import logging
@@ -40,13 +41,13 @@ class WorkerConfiguration(NamedTuple):
     compression: int
     path: Path
     main: AbstractMainWindow
+    delete_cache: bool
 
 
 class Worker(QObject):
     finished = pyqtSignal()
     progress_bar = pyqtSignal(int)
     progress_status = pyqtSignal(str, int, int)
-    outputs: VideoOutputs
 
     is_finished = False
 
@@ -59,6 +60,7 @@ class Worker(QObject):
     def run(self, conf: WorkerConfiguration) -> None:
         all_images: List[List[Path]] = []
         conf.path.mkdir(parents=True, exist_ok=False)
+
         try:
             for i, output in enumerate(conf.outputs):
                 if self.is_finished:
@@ -94,16 +96,16 @@ class Worker(QObject):
 
                 all_images.append(sorted(path_images))
         except StopIteration:
-            return self.finished.emit('')
+            return self.finished.emit()
 
         fields: Dict[str, Any] = {}
 
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.is_finished:
-                return self.finished.emit('')
+                return self.finished.emit()
             for j, (image, frame) in enumerate(zip(images, conf.frames)):
                 if self.is_finished:
-                    return self.finished.emit('')  # type: ignore
+                    return self.finished.emit()  # type: ignore
                 fields[f'comparisons[{j}].name'] = str(frame)
                 fields[f'comparisons[{j}].images[{i}].name'] = output.name
                 fields[f'comparisons[{j}].images[{i}].file'] = (image.name, image.read_bytes(), 'image/png')
@@ -113,7 +115,7 @@ class Worker(QObject):
         with Session() as sess:
             sess.get('https://slow.pics/api/comparison')
             if self.is_finished:
-                return self.finished.emit('')
+                return self.finished.emit()
             head_conf = {
                 'collectionName': conf.collection_name,
                 'public': str(conf.public).lower(),
@@ -150,8 +152,10 @@ class Worker(QObject):
                 }
             )
 
+        if conf.delete_cache:
+            shutil.rmtree(conf.path, True)
+
         self.progress_status.emit(f'https://slow.pics/c/{response.text}', 0, 0)
-        conf.path.unlink()
         self.finished.emit()
 
 
@@ -174,11 +178,13 @@ class CompToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
+        self.collection_name_lineedit = LineEdit(self, placeholderText='Collection name')
+
         self.random_frames_control = FrameEdit(self)
 
         self.manual_frames_lineedit = LineEdit(self, placeholderText='frame,frame,frame')
 
-        self.current_frame_checkbox = CheckBox('Current Frame', self, checked=True)
+        self.current_frame_checkbox = CheckBox('Current', self, checked=True)
 
         self.pic_type_combox = ComboBox[PictureType](
             self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertAtCurrent,
@@ -197,9 +203,9 @@ class CompToolbar(AbstractToolbar):
 
         self.output_url_copy_button = PushButton('⎘', self, clicked=self.on_copy_output_url_clicked)
 
-        self.start_upload_button = PushButton('Upload to slow.pics', self, clicked=self.on_start_upload)
+        self.start_upload_button = PushButton('Start Upload', self, clicked=self.on_start_upload)
 
-        self.stop_upload_button = PushButton('Stop Uploading', self, visible=False, clicked=self.on_stop_upload)
+        self.stop_upload_button = PushButton('Stop Upload', self, visible=False, clicked=self.on_stop_upload)
 
         self.upload_progressbar = QProgressBar(self, value=0)
         self.upload_progressbar.setGeometry(200, 80, 250, 20)
@@ -211,11 +217,12 @@ class CompToolbar(AbstractToolbar):
         )
 
         self.hlayout.addWidgets([
-            QLabel('Num Random Frames:'), self.random_frames_control,
-            QLabel('Additional Frames:'), self.manual_frames_lineedit,
+            self.collection_name_lineedit,
+            QLabel('Random:'), self.random_frames_control,
+            QLabel('Manual:'), self.manual_frames_lineedit,
             self.current_frame_checkbox,
             self.get_separator(),
-            QLabel('Filter per Picture Type:'), self.pic_type_combox,
+            QLabel('Picture Type:'), self.pic_type_combox,
             self.get_separator(),
             self.is_public_checkbox,
             self.is_nsfw_checkbox,
@@ -227,15 +234,13 @@ class CompToolbar(AbstractToolbar):
             *self.upload_status_elements
         ])
 
-        self.hlayout.addStretch(2)
-
         self.update_status_label('extract')
 
         self.update_upload_status_visibility(False)
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())
-        self.main.show_message('Slow.pics URL copied to clipboard')
+        self.main.show_message('Slow.pics URL copied to clipboard!')
 
     def update_upload_status_visibility(self, visible: bool) -> None:
         for element in self.upload_status_elements:
@@ -244,9 +249,10 @@ class CompToolbar(AbstractToolbar):
     def on_start_upload(self) -> None:
         if self._thread_running:
             return
+        if not self.upload_to_slowpics():
+            return
         self.start_upload_button.setVisible(False)
         self.stop_upload_button.setVisible(True)
-        self.upload_to_slowpics()
 
     def on_end_upload(self, forced: bool = False) -> None:
         self.start_upload_button.setVisible(True)
@@ -348,7 +354,7 @@ class CompToolbar(AbstractToolbar):
         )
 
         if num:
-            if picture_type is PictureType.UNSET:
+            if picture_type is PictureType.ALL:
                 samples = random.sample(range(lens_n), num)
             else:
                 logging.info('Making samples according to specified picture types...')
@@ -362,27 +368,49 @@ class CompToolbar(AbstractToolbar):
         if self.current_frame_checkbox.isChecked():
             samples.append(int(self.main.current_output.last_showed_frame))
 
+        collection_name = self.collection_name_lineedit.text()
+
+        if not collection_name:
+            collection_name = self.settings.DEFAULT_COLLECTION_NAME
+
+        if not collection_name:
+            raise ValueError('You have to put a collection name!')
+
+        collection_name = collection_name.format(
+            script_name=self.main.script_path.stem
+        )
+
         return WorkerConfiguration(
-            self.main.outputs, 'Function Test',
+            self.main.outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, None, sorted(set(samples)), -1, path, self.main
+            True, None, sorted(set(samples)), -1, path, self.main, self.settings.delete_cache_enabled
         )
 
-    def upload_to_slowpics(self) -> None:
-        self.upload_thread = QThread(
-            started=partial(self.upload_worker.run, conf=self.get_slowpics_conf()),
-            finished=self.on_end_upload
-        )
+    def upload_to_slowpics(self) -> bool:
+        try:
+            config = self.get_slowpics_conf()
 
-        self.upload_worker = Worker(
-            progress_bar=self.upload_progressbar.setValue,
-            progress_status=self.update_status_label,
-            finished=(
-                self.upload_thread.quit, self.upload_worker.deleteLater
-            )
-        )
+            self.upload_thread = QThread()
 
-        self.upload_worker.moveToThread(self.upload_thread)
+            self.upload_worker = Worker()
 
-        self.upload_thread.start()
-        self._thread_running = True
+            self.upload_worker.moveToThread(self.upload_thread)
+
+            self.upload_thread.started.connect(partial(self.upload_worker.run, config))
+            self.upload_thread.finished.connect(self.on_end_upload)
+
+            self.upload_worker.finished.connect(self.upload_thread.quit)
+            self.upload_worker.finished.connect(self.upload_worker.deleteLater)
+
+            self.upload_worker.progress_bar.connect(self.upload_progressbar.setValue)
+            self.upload_worker.progress_status.connect(self.update_status_label)
+
+            self.upload_thread.start()
+
+            self._thread_running = True
+
+            return True
+        except BaseException as e:
+            self.main.show_message(str(e))
+
+        return False

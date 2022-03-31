@@ -339,6 +339,8 @@ class VideoOutput(AbstractYAMLObject):
 
         if clip.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in_s']
+        elif clip.format.color_family == vs.GRAY:
+            clip = clip.std.RemoveFrameProps('_Matrix')
 
         if is_alpha:
             if clip.format.id == self._ALPHA_FMT.id:

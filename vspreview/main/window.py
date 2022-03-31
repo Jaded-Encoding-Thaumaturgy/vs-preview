@@ -455,6 +455,7 @@ class MainWindow(AbstractMainWindow):
         self.toolbars.playback.stop()
 
         # current_output relies on outputs_combobox
+        self.toolbars.main.on_current_output_changed(index, prev_index)
         self.timeline.set_end_frame(self.current_output.end_frame)
 
         if self.current_output.last_showed_frame:
@@ -469,7 +470,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene.setSceneRect(QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
         self.timeline.update_notches()
 
-        for toolbar in self.toolbars:
+        for toolbar in self.toolbars[1:]:
             toolbar.on_current_output_changed(index, prev_index)
 
         self.update_statusbar_output_info()

@@ -379,10 +379,16 @@ class AbstractToolbars(AbstractYAMLObjectSingleton):
     # 'main' should always be the first
     all_toolbars_names = ['main', 'playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug']
 
-    def __getitem__(self, index: int) -> AbstractToolbar:
-        if index >= len(self.all_toolbars_names):
-            raise IndexError
-        return cast(AbstractToolbar, getattr(self, self.all_toolbars_names[index]))
+    def __getitem__(self, _sub: int) -> AbstractToolbar:
+        length = len(self.all_toolbars_names)
+        if isinstance(_sub, slice):
+            return [self[i] for i in range(*_sub.indices(length))]
+        elif isinstance(_sub, int):
+            if _sub < 0:
+                _sub += length
+            if _sub < 0 or _sub >= length:
+                raise IndexError
+            return cast(AbstractToolbar, getattr(self, self.all_toolbars_names[_sub]))
 
     def __len__(self) -> int:
         return len(self.all_toolbars_names)

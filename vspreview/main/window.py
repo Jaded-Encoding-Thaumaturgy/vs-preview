@@ -447,7 +447,7 @@ class MainWindow(AbstractMainWindow):
         if index < 0:
             index = len(self.outputs) + index
 
-        if 0 > index >= len(self.outputs):
+        if index < 0 or index >= len(self.outputs):
             return
 
         prev_index = self.toolbars.main.outputs_combobox.currentIndex()
@@ -455,7 +455,6 @@ class MainWindow(AbstractMainWindow):
         self.toolbars.playback.stop()
 
         # current_output relies on outputs_combobox
-        self.toolbars.main.on_current_output_changed(index, prev_index)
         self.timeline.set_end_frame(self.current_output.end_frame)
 
         if self.current_output.last_showed_frame:

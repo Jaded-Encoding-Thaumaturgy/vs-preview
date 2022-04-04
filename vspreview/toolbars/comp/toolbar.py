@@ -15,8 +15,7 @@ from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QLabel, QComboBox, QProgressBar
 
-from ...utils import set_qobject_names
-from ...widgets import ComboBox, FrameEdit
+from ...core.custom import ComboBox, FrameEdit
 from ...models import PictureTypes, VideoOutputs
 from ...core import AbstractMainWindow, AbstractToolbar, PictureType, main_window, PushButton, LineEdit, CheckBox
 
@@ -173,7 +172,7 @@ class CompToolbar(AbstractToolbar):
         super().__init__(main, CompSettings())
         self.setup_ui()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()

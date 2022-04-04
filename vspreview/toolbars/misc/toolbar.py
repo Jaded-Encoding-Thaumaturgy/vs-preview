@@ -8,7 +8,6 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QLabel, QFileDialog
 
 from ...core.types import VideoOutput
-from ...utils import add_shortcut, set_qobject_names
 from ...core import AbstractMainWindow, AbstractToolbar, Time, try_load, PushButton, LineEdit, CheckBox
 
 from .settings import MiscSettings
@@ -37,7 +36,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.add_shortcuts()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -76,10 +75,10 @@ class MiscToolbar(AbstractToolbar):
         self.hlayout.addWidget(self.show_debug_checkbox)
 
     def add_shortcuts(self) -> None:
-        add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
-        add_shortcut(Qt.ALT + Qt.Key_S, self.save_button.click)
-        add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
-        add_shortcut(Qt.CTRL + Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
+        self.add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
+        self.add_shortcut(Qt.ALT + Qt.Key_S, self.save_button.click)
+        self.add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
+        self.add_shortcut(Qt.CTRL + Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
 
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(

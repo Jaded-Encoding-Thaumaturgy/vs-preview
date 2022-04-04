@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import QDialog, QLabel, QWidget, QTabWidget
+from PyQt5.QtWidgets import QLabel, QWidget, QTabWidget
 
 
-from ..utils import add_shortcut, set_qobject_names
-from ..core import AbstractMainWindow, AbstractAppSettings, VBoxLayout, HBoxLayout, ExtendedWidget, PushButton
+from ..core import AbstractMainWindow, ExtendedDialog, VBoxLayout, HBoxLayout, PushButton
 
 
-class ScriptErrorDialog(ExtendedWidget, QDialog):
+class ScriptErrorDialog(ExtendedDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
@@ -22,7 +21,7 @@ class ScriptErrorDialog(ExtendedWidget, QDialog):
         self.setup_ui()
         self.setup_shortcuts()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         self.vlayout = VBoxLayout(self)
@@ -38,7 +37,7 @@ class ScriptErrorDialog(ExtendedWidget, QDialog):
         ]))
 
     def setup_shortcuts(self) -> None:
-        add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_button.click, self)
+        self.add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_button.click)
 
     def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
@@ -53,7 +52,7 @@ class ScriptErrorDialog(ExtendedWidget, QDialog):
         self.on_exit_clicked()
 
 
-class SettingsDialog(AbstractAppSettings):
+class SettingsDialog(ExtendedDialog):
     __slots__ = ('main', 'tab_widget',)
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
@@ -64,7 +63,7 @@ class SettingsDialog(AbstractAppSettings):
 
         self.setup_ui()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         self.tab_widget = QTabWidget(self)

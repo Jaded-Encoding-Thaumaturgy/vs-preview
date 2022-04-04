@@ -5,33 +5,17 @@ import logging
 import vapoursynth as vs
 from string import Template
 from platform import python_version
-from psutil import cpu_count, Process
+from functools import partial, wraps
 from pkg_resources import get_distribution
-from typing import Any, Callable, Type, TypeVar, Tuple
+from typing import Any, Callable, TypeVar, Tuple
 from asyncio import get_running_loop, get_event_loop_policy
-from functools import partial, wraps, singledispatch, update_wrapper
 
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtCore import QTime, QSignalBlocker, QObject
-from PyQt5.QtWidgets import QWidget, QShortcut, QApplication
+from PyQt5.QtCore import QSignalBlocker
+from PyQt5.QtWidgets import QApplication
 
-from ..core import main_window, Frame, Time, AbstractToolbar
+from ..core import main_window, Frame, Time
 
 T = TypeVar('T')
-
-
-def to_qtime(time: Time) -> QTime:
-    seconds = time.value.seconds % (24 * 3600)
-    hours = seconds // 3600
-    seconds %= 3600
-    minutes = seconds // 60
-    seconds %= 60
-    milliseconds = time.value.microseconds // 1000
-    return QTime(hours, minutes, seconds, milliseconds)
-
-
-def from_qtime(qtime: QTime, t: Type[Time]) -> Time:
-    return t(milliseconds=qtime.msecsSinceStartOfDay())
 
 
 # it is a BuiltinMethodType at the same time
@@ -70,12 +54,6 @@ def strfdelta(time: Time, output_format: str) -> str:
     )
 
 
-def add_shortcut(key: int, handler: Callable[[], None], widget: QWidget | None = None) -> None:
-    if widget is None:
-        widget = main_window()
-    QShortcut(QKeySequence(key), widget, activated=handler)
-
-
 def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
@@ -104,54 +82,13 @@ def set_status_label(label: str) -> Callable[..., T]:
     return decorator
 
 
-def method_dispatch(func: Callable[..., T]) -> Callable[..., T]:
-    '''
-    https://stackoverflow.com/a/24602374
-    '''
-    dispatcher = singledispatch(func)
-
-    def wrapper(*args: Any, **kwargs: Any) -> T:
-        return dispatcher.dispatch(args[1].__class__)(*args, **kwargs)
-
-    wrapper.register = dispatcher.register  # type: ignore
-    update_wrapper(wrapper, dispatcher)
-    return wrapper
-
-
-def set_qobject_names(obj: object) -> None:
-    if not hasattr(obj, '__slots__'):
-        return
-
-    slots = list(obj.__slots__)
-
-    if isinstance(obj, AbstractToolbar) and 'main' in slots:
-        slots.remove('main')
-
-    for attr_name in slots:
-        attr = getattr(obj, attr_name)
-        if not isinstance(attr, QObject):
-            continue
-        attr.setObjectName(type(obj).__name__ + '.' + attr_name)
-
-
-def get_usable_cpus_count() -> int:
-    try:
-        count = len(Process().cpu_affinity())
-    except AttributeError:
-        count = cpu_count()
-
-    return count
-
-
 def vs_clear_cache() -> None:
     cache_size = vs.core.max_cache_size
     vs.core.max_cache_size = 1
-    output = list(vs.get_outputs().values())[0]
-    if isinstance(output, vs.VideoOutputTuple):
-        curr = main_window().current_output
-        output.clip.get_frame(
-            int(curr.last_showed_frame or Frame(0))
-        )
+    for output in list(vs.get_outputs().values()):
+        if isinstance(output, vs.VideoOutputTuple):
+            output.clip.get_frame(int(main_window().current_output.last_showed_frame or Frame(0)))
+            break
     vs.core.max_cache_size = cache_size
 
 

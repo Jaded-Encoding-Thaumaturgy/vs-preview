@@ -11,9 +11,10 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QModelIndex
 from PyQt5.QtWidgets import QLabel, QFileDialog
 
-from ...widgets import ComboBox, Notches
+from ...core.custom import ComboBox
+from ...main.timeline import Notches
 from ...models import SceningList, SceningLists
-from ...utils import add_shortcut, fire_and_forget, set_qobject_names, set_status_label
+from ...utils import fire_and_forget, set_status_label
 from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load, HBoxLayout, PushButton, LineEdit
 
 from .dialog import SceningListDialog
@@ -65,7 +66,7 @@ class SceningToolbar(AbstractToolbar):
         # FIXME: get rid of workaround
         self._on_list_items_changed = lambda *arg: self.on_list_items_changed(*arg)
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -160,16 +161,16 @@ class SceningToolbar(AbstractToolbar):
 
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys[:-2]):
-            add_shortcut(Qt.SHIFT + key, partial(self.switch_list, i))
+            self.add_shortcut(Qt.SHIFT + key, partial(self.switch_list, i))
 
-        add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
-        add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_next_button.click)
-        add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_prev_button.click)
-        add_shortcut(Qt.Key_Q, self.toggle_first_frame_button.click)
-        add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
-        add_shortcut(Qt.Key_E, self.add_to_list_button.click)
-        add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
-        add_shortcut(
+        self.add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
+        self.add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_next_button.click)
+        self.add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_prev_button.click)
+        self.add_shortcut(Qt.Key_Q, self.toggle_first_frame_button.click)
+        self.add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
+        self.add_shortcut(Qt.Key_E, self.add_to_list_button.click)
+        self.add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
+        self.add_shortcut(
             Qt.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
                 str(self.main.current_output.last_showed_frame)
             )

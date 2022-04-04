@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QDialog, QTableView
+from PyQt5.QtWidgets import QTableView
 from PyQt5.QtCore import Qt, QModelIndex, QItemSelection, QItemSelectionModel
 
 from ...models import SceningList
-from ...widgets import TimeEdit, FrameEdit
-from ...utils import qt_silent_call, set_qobject_names
-from ...core import AbstractMainWindow, Frame, Time, VBoxLayout, HBoxLayout, PushButton, LineEdit
+from ...utils import qt_silent_call
+from ...core.custom import TimeEdit, FrameEdit
+from ...core import AbstractMainWindow, Frame, Time, VBoxLayout, HBoxLayout, PushButton, LineEdit, ExtendedDialog
 
 
-class SceningListDialog(QDialog):
+class SceningListDialog(ExtendedDialog):
     __slots__ = (
         'main', 'scening_list',
         'name_lineedit', 'tableview',
@@ -27,7 +27,7 @@ class SceningListDialog(QDialog):
         self.setWindowTitle('Scening List View')
         self.setup_ui()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
 

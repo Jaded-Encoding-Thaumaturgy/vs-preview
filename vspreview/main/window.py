@@ -19,10 +19,11 @@ from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget,
 from ..toolbars import Toolbars
 from ..models import VideoOutputs
 from ..core.vsenv import get_policy
-from ..utils import set_qobject_names, fire_and_forget, set_status_label
-from ..widgets import StatusBar, Timeline, GraphicsView, GraphicsImageItem
+from ..utils import fire_and_forget, set_status_label
+from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget
 
+from .timeline import Timeline
 from .settings import MainSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
 
@@ -134,7 +135,7 @@ class MainWindow(AbstractMainWindow):
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
         )
 
-        set_qobject_names(self)
+        self.set_qobject_names()
         self.setObjectName('MainWindow')
 
     def setup_ui(self) -> None:

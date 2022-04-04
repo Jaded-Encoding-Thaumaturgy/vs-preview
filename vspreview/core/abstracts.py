@@ -6,13 +6,14 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
-from typing import Any, cast, Mapping, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload
+from typing import Any, cast, Mapping, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload, Callable
 
 from PyQt5.QtGui import QClipboard
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene,
-    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit, QCheckBox
+    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QShortcut, QCheckBox,
+    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit
 )
 
 from .better_abc import abstract_attribute
@@ -21,8 +22,8 @@ from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
 
 if TYPE_CHECKING:
     from ..models import VideoOutputs
-    from ..widgets import Timeline, Notches
     from .types import Frame, VideoOutput, Time
+    from ..main.timeline import Timeline, Notches
 
 
 T = TypeVar('T')
@@ -118,6 +119,24 @@ class CheckBox(ExtendedItemInit, QCheckBox):
 class AbstractQItem():
     storable_attrs = tuple()
 
+    def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
+        QShortcut(QKeySequence(key), self, activated=handler)
+
+    def set_qobject_names(self) -> None:
+        if not hasattr(self, '__slots__'):
+            return
+
+        slots = list(self.__slots__)
+
+        if isinstance(self, AbstractToolbar) and 'main' in slots:
+            slots.remove('main')
+
+        for attr_name in slots:
+            attr = getattr(self, attr_name)
+            if not isinstance(attr, QObject):
+                continue
+            attr.setObjectName(type(self).__name__ + '.' + attr_name)
+
     def __get_storable_attr__(self) -> Tuple[str, ...]:
         return self.storable_attrs
 
@@ -155,18 +174,26 @@ class ExtendedMainWindow(AbstractQItem, QMainWindow):
         ...
 
 
+class ExtendedDialog(AbstractQItem, QDialog):
+    ...
+
+
+class AbstractAppSettings(ExtendedDialog):
+    @abstractmethod
+    def addTab(self, widget: QWidget, label: str) -> int:
+        raise NotImplementedError
+
+
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
     def __init__(self) -> None:
-        from ..utils import set_qobject_names
-
         super().__init__()
 
         self.setup_ui()
         self.set_defaults()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def set_defaults(self) -> None:
         pass
@@ -320,7 +347,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         pass
 
     def get_notches(self) -> Notches:
-        from ..widgets import Notches
+        from ..main.timeline import Notches
 
         return Notches()
 
@@ -349,12 +376,6 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         if not self._no_visibility_choice:
             try_load(state, 'visibility', bool, self.on_toggle)
         try_load(state, 'settings', AbstractToolbarSettings, self.__setattr__)
-
-
-class AbstractAppSettings(QDialog, QABC):
-    @abstractmethod
-    def addTab(self, widget: QWidget, label: str) -> int:
-        raise NotImplementedError
 
 
 @lru_cache()

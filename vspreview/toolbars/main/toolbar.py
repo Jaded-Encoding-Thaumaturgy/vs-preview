@@ -6,9 +6,9 @@ from typing import Mapping, Any
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox
 
+from ...utils import qt_silent_call
 from ...models import VideoOutputs, ZoomLevels
-from ...widgets import ComboBox, TimeEdit, FrameEdit
-from ...utils import add_shortcut, qt_silent_call, set_qobject_names
+from ...core.custom import ComboBox, TimeEdit, FrameEdit
 from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load, PushButton, CheckBox
 
 
@@ -38,7 +38,7 @@ class MainToolbar(AbstractToolbar):
 
         self.add_shortcuts()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -91,19 +91,19 @@ class MainToolbar(AbstractToolbar):
 
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys):
-            add_shortcut(key, partial(self.main.switch_output, i))
-            add_shortcut(Qt.CTRL + key, partial(self.main.switch_output, -(i + 1)))
+            self.add_shortcut(key, partial(self.main.switch_output, i))
+            self.add_shortcut(Qt.CTRL + key, partial(self.main.switch_output, -(i + 1)))
 
-        add_shortcut(Qt.Key_S, self.sync_outputs_checkbox.click)
-        add_shortcut(
+        self.add_shortcut(Qt.Key_S, self.sync_outputs_checkbox.click)
+        self.add_shortcut(
             Qt.CTRL + Qt.Key_Tab,
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1)
         )
-        add_shortcut(
+        self.add_shortcut(
             Qt.CTRL + Qt.SHIFT + Qt.Key_Tab,
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
         )
-        add_shortcut(Qt.Key_V, self.on_copy_frame_button_clicked)
+        self.add_shortcut(Qt.Key_V, self.on_copy_frame_button_clicked)
 
     def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
         if checked:

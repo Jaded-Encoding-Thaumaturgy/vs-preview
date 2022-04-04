@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Mapping
+from psutil import cpu_count, Process
 
 from PyQt5.QtWidgets import QLabel
 
-from ..widgets import TimeEdit
+from ..core.custom import TimeEdit
 from ..core import Time, AbstractToolbarSettings, try_load, VBoxLayout, HBoxLayout, SpinBox, CheckBox
 
 
@@ -14,7 +15,7 @@ class MainSettings(AbstractToolbarSettings):
         'autosave_control', 'base_ppi_spinbox', 'dark_theme_checkbox',
         'opengl_rendering_checkbox', 'output_index_spinbox',
         'png_compressing_spinbox', 'statusbar_timeout_control',
-        'timeline_notches_margin_spinbox'
+        'timeline_notches_margin_spinbox', 'usable_cpus_spinbox'
     )
 
     INSTANT_FRAME_UPDATE = False
@@ -42,6 +43,8 @@ class MainSettings(AbstractToolbarSettings):
 
         self.timeline_notches_margin_spinbox = SpinBox(self, 1, 9999, '%')
 
+        self.usable_cpus_spinbox = SpinBox(self, 1, self.get_usable_cpus_count())
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
@@ -66,6 +69,8 @@ class MainSettings(AbstractToolbarSettings):
             QLabel('Timeline label notches margin', self), self.timeline_notches_margin_spinbox
         ])
 
+        HBoxLayout(self.vlayout, [QLabel('Usable CPUs count'), self.usable_cpus_spinbox])
+
     def set_defaults(self) -> None:
         self.autosave_control.setValue(Time(seconds=30))
         self.base_ppi_spinbox.setValue(96)
@@ -76,6 +81,7 @@ class MainSettings(AbstractToolbarSettings):
         self.statusbar_timeout_control.setValue(Time(seconds=2.5))
         self.timeline_notches_margin_spinbox.setValue(20)
         self.force_old_storages_removal_checkbox.setChecked(False)
+        self.usable_cpus_spinbox.setValue(self.get_usable_cpus_count())
 
     @property
     def autosave_interval(self) -> Time:
@@ -112,6 +118,17 @@ class MainSettings(AbstractToolbarSettings):
     @property
     def force_old_storages_removal(self) -> int:
         return self.force_old_storages_removal_checkbox.isChecked()
+
+    @property
+    def usable_cpus_count(self) -> int:
+        return self.usable_cpus_spinbox.value()
+
+    @staticmethod
+    def get_usable_cpus_count() -> int:
+        try:
+            return len(Process().cpu_affinity())
+        except AttributeError:
+            return cpu_count()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {

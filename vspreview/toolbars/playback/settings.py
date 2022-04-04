@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QLabel
 
-from ...utils import get_usable_cpus_count
-from ...core import AbstractToolbarSettings, Frame
+from ...main.settings import MainSettings
+from ...core import AbstractToolbarSettings, Frame, SpinBox, HBoxLayout
 
 
 class PlaybackSettings(AbstractToolbarSettings):
-    __slots__ = ()
+    __slots__ = ('buffer_size_spinbox',)
 
     CHECKERBOARD_ENABLED = True
     CHECKERBOARD_TILE_COLOR_1 = Qt.white
@@ -15,11 +16,18 @@ class PlaybackSettings(AbstractToolbarSettings):
     CHECKERBOARD_TILE_SIZE = 8  # px
     FPS_AVERAGING_WINDOW_SIZE = Frame(100)
     FPS_REFRESH_INTERVAL = 150  # ms
-    PLAY_BUFFER_SIZE = Frame(get_usable_cpus_count())
     SEEK_STEP = 1
 
     def setup_ui(self) -> None:
         super().setup_ui()
 
+        self.buffer_size_spinbox = SpinBox(self, 1, MainSettings.get_usable_cpus_count())
+
+        HBoxLayout(self.vlayout, [QLabel('Playback buffer size (frames)'), self.buffer_size_spinbox])
+
     def set_defaults(self) -> None:
-        pass
+        self.buffer_size_spinbox.setValue(MainSettings.get_usable_cpus_count())
+
+    @property
+    def playback_buffer_size(self) -> int:
+        return self.buffer_size_spinbox.value()

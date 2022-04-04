@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 from PyQt5.QtWidgets import QLabel
 
-from ...widgets import TimeEdit
+from ...core.custom import TimeEdit
 from ...core import Time, AbstractToolbarSettings, HBoxLayout, try_load, CheckBox
 
 

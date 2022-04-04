@@ -1,10 +1,25 @@
 from __future__ import annotations
 
+from typing import Type
+
 from PyQt5.QtCore import pyqtSignal, QTime
 from PyQt5.QtWidgets import QWidget, QTimeEdit
 
 from ...core import Frame, Time, SpinBox
-from ...utils import from_qtime, to_qtime
+
+
+def to_qtime(time: Time) -> QTime:
+    seconds = time.value.seconds % (24 * 3600)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    milliseconds = time.value.microseconds // 1000
+    return QTime(hours, minutes, seconds, milliseconds)
+
+
+def from_qtime(qtime: QTime, t: Type[Time]) -> Time:
+    return t(milliseconds=qtime.msecsSinceStartOfDay())
 
 
 class FrameEdit(SpinBox):

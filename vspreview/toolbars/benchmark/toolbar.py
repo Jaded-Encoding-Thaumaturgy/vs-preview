@@ -10,9 +10,9 @@ from concurrent.futures import Future
 from PyQt5.QtCore import Qt, QTimer, QMetaObject
 from PyQt5.QtWidgets import QLabel
 
-from ...widgets import FrameEdit
+from ...core.custom import FrameEdit
+from ...utils import qt_silent_call, vs_clear_cache, strfdelta
 from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, PushButton, CheckBox
-from ...utils import get_usable_cpus_count, qt_silent_call, set_qobject_names, vs_clear_cache, strfdelta
 
 from .settings import BenchmarkSettings
 
@@ -48,7 +48,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.update_info_timer = QTimer(timeout=self.update_info, timerType=Qt.PreciseTimer)
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -105,7 +105,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_frames = self.total_frames_control.value()
         self.frames_left = deepcopy(self.total_frames)
         if self.prefetch_checkbox.isChecked():
-            concurrent_requests_count = get_usable_cpus_count()
+            concurrent_requests_count = self.main.settings.usable_cpu_count()
         else:
             concurrent_requests_count = 1
 

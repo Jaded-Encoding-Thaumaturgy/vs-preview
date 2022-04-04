@@ -13,8 +13,8 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QDoubleSpinBox, QComboBox
 
 from ...models import AudioOutputs
-from ...widgets import ComboBox, FrameEdit, TimeEdit
-from ...utils import add_shortcut, debug, qt_silent_call, set_qobject_names
+from ...utils import debug, qt_silent_call
+from ...core.custom import ComboBox, FrameEdit, TimeEdit
 from ...core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load, PushButton, CheckBox
 
 from .settings import PlaybackSettings
@@ -60,7 +60,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.add_shortcuts()
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -139,15 +139,15 @@ class PlaybackToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def add_shortcuts(self) -> None:
-        add_shortcut(Qt.Key_Space, self.play_pause_button.click)
-        add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
-        add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
-        add_shortcut(Qt.SHIFT + Qt.Key_Left, self.seek_n_frames_b_button.click)
-        add_shortcut(Qt.SHIFT + Qt.Key_Right, self.seek_n_frames_f_button.click)
-        add_shortcut(Qt.Key_PageUp, self.seek_n_frames_b_button.click)
-        add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
-        add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
-        add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
+        self.add_shortcut(Qt.Key_Space, self.play_pause_button.click)
+        self.add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
+        self.add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
+        self.add_shortcut(Qt.SHIFT + Qt.Key_Left, self.seek_n_frames_b_button.click)
+        self.add_shortcut(Qt.SHIFT + Qt.Key_Right, self.seek_n_frames_f_button.click)
+        self.add_shortcut(Qt.Key_PageUp, self.seek_n_frames_b_button.click)
+        self.add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
+        self.add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
+        self.add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)
@@ -164,6 +164,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.update_outputs(AudioOutputs(self.main))
 
     def get_true_fps(self, frameprops: vs.FrameProps) -> float:
+        print(frameprops)
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(
                 'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
@@ -173,7 +174,7 @@ class PlaybackToolbar(AbstractToolbar):
     def allocate_buffer(self, is_alpha: bool = False) -> None:
         if is_alpha:
             play_buffer_size = int(min(
-                self.settings.PLAY_BUFFER_SIZE, (
+                self.settings.playback_buffer_size, (
                     self.main.current_output.end_frame - self.main.current_output.last_showed_frame
                 ) * 2
             ))
@@ -181,7 +182,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_buffer = deque([], play_buffer_size)
         else:
             play_buffer_size = int(min(
-                self.settings.PLAY_BUFFER_SIZE,
+                self.settings.playback_buffer_size,
                 self.main.current_output.end_frame - self.main.current_output.last_showed_frame
             ))
             self.play_buffer = deque([], play_buffer_size)
@@ -270,7 +271,9 @@ class PlaybackToolbar(AbstractToolbar):
             return
 
         n_frames = 1 if self.main.current_output.prepared.alpha is None else 2
-        next_buffered_frame = self.main.current_output.last_showed_frame + self.settings.PLAY_BUFFER_SIZE // n_frames
+        next_buffered_frame = self.main.current_output.last_showed_frame + (
+            self.settings.playback_buffer_size // n_frames
+        )
 
         try:
             frames_futures = [(x[0], x[1].result()) for x in [self.play_buffer.pop() for _ in range(n_frames)]]
@@ -289,14 +292,14 @@ class PlaybackToolbar(AbstractToolbar):
 
         curr_frame = Frame(frames_futures[0][0])
 
-        self.main.switch_frame(curr_frame, render_frame=(x[1] for x in frames_futures))
-
         if self.fps_variable_checkbox.isChecked():
-            self.current_fps = self.get_true_fps(frames_futures[0].props)
+            self.current_fps = self.get_true_fps(frames_futures[0][1].props)
             self.play_timer.start(floor(1000 / self.current_fps))
             self.fps_spinbox.setValue(self.current_fps)
         elif not self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
             self.update_fps_counter()
+
+        self.main.switch_frame(curr_frame, render_frame=(x[1] for x in frames_futures))
 
     def _play_next_audio_frame(self) -> None:
         try:

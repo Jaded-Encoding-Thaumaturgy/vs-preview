@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from ...utils import debug, set_qobject_names, vs_clear_cache
+from ...utils import debug, vs_clear_cache
 from ...core import AbstractMainWindow, AbstractToolbar, PushButton, LineEdit
 
 from .settings import DebugSettings
@@ -24,7 +24,7 @@ class DebugToolbar(AbstractToolbar):
             for toolbar in self.main.toolbars:
                 toolbar.widget.installEventFilter(self.filter)
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def setup_ui(self) -> None:
         super().setup_ui()

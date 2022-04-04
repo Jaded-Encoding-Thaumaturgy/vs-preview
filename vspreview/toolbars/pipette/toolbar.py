@@ -9,10 +9,9 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QLabel, QGraphicsView
 
-from ...widgets import ColorView
-from ...utils import set_qobject_names
 from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput
 
+from .colorview import ColorView
 from .settings import PipetteSettings
 
 
@@ -53,7 +52,7 @@ class PipetteToolbar(AbstractToolbar):
 
         main.reload_signal.connect(self.clear_outputs)
 
-        set_qobject_names(self)
+        self.set_qobject_names()
 
     def clear_outputs(self) -> None:
         self.outputs.clear()

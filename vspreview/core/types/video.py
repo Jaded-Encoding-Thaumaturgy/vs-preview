@@ -250,7 +250,7 @@ class VideoOutput(AbstractYAMLObject):
         self.source = self.prepared = None  # type: ignore
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
-        from ...widgets import GraphicsImageItem
+        from ..custom import GraphicsImageItem
         from ...models import SceningLists
 
         self._stateset = not new_storage
@@ -291,7 +291,7 @@ class VideoOutput(AbstractYAMLObject):
             self.scening_lists: SceningLists = SceningLists()
 
         if not hasattr(self, 'play_fps'):
-            if self.fps_num == 0:
+            if self.fps_num == 0 and self._stateset:
                 self.play_fps = self.main.toolbars.playback.get_true_fps(self.props)
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)

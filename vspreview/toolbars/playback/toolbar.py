@@ -379,7 +379,7 @@ class PlaybackToolbar(AbstractToolbar):
     def seek_offset(self, offset: int) -> None:
         new_pos = self.main.current_output.last_showed_frame + offset
 
-        if 0 > new_pos > self.main.current_output.end_frame:
+        if new_pos < 0 or new_pos > self.main.current_output.end_frame:
             return
 
         if self.play_timer.isActive():

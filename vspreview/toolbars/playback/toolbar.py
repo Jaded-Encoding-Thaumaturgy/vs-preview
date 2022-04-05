@@ -139,15 +139,15 @@ class PlaybackToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def add_shortcuts(self) -> None:
-        self.add_shortcut(Qt.Key_Space, self.play_pause_button.click)
-        self.add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
-        self.add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
-        self.add_shortcut(Qt.SHIFT + Qt.Key_Left, self.seek_n_frames_b_button.click)
-        self.add_shortcut(Qt.SHIFT + Qt.Key_Right, self.seek_n_frames_f_button.click)
-        self.add_shortcut(Qt.Key_PageUp, self.seek_n_frames_b_button.click)
-        self.add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
-        self.add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
-        self.add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
+        self.main.add_shortcut(Qt.Key_Space, self.play_pause_button.click)
+        self.main.add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
+        self.main.add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
+        self.main.add_shortcut(Qt.SHIFT + Qt.Key_Left, self.seek_n_frames_b_button.click)
+        self.main.add_shortcut(Qt.SHIFT + Qt.Key_Right, self.seek_n_frames_f_button.click)
+        self.main.add_shortcut(Qt.Key_PageUp, self.seek_n_frames_b_button.click)
+        self.main.add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
+        self.main.add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
+        self.main.add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)

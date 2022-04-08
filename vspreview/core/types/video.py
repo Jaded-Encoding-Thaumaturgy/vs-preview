@@ -543,7 +543,7 @@ class VideoOutput(AbstractYAMLObject):
 
         try_load(state, 'title', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
-        try_load(state, 'scening_lists', SceningLists, self.__setattr__)
+        try_load(state, 'scening_lists', SceningLists, main_window().toolbars.scening.lists.add_list)
         try_load(state, 'play_fps', float, self.__setattr__)
 
         self._stateset = True

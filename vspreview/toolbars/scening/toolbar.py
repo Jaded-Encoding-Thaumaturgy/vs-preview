@@ -15,28 +15,37 @@ from ...core.custom import ComboBox
 from ...main.timeline import Notches
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, try_load, HBoxLayout, PushButton, LineEdit
+from ...core import (
+    AbstractMainWindow, AbstractToolbar, Frame, Time, try_load, HBoxLayout, PushButton, LineEdit, CheckBox
+)
 
 from .dialog import SceningListDialog
 from .settings import SceningSettings
 
 
 class SceningToolbar(AbstractToolbar):
-    _storable_attrs = ('first_frame', 'second_frame')
+    _storable_attrs = ('lists', 'first_frame', 'second_frame')
 
     __slots__ = (
-        *_storable_attrs, 'export_template_pattern', 'export_template_scenes_pattern',
-        'scening_list_dialog', 'supported_file_types', 'add_list_button', 'remove_list_button',
-        'view_list_button', 'toggle_first_frame_button', 'toggle_second_frame_button',
-        'add_single_frame_button', 'add_to_list_button', 'remove_last_from_list_button',
-        'export_single_line_button', 'export_template_lineedit', 'export_multiline_button',
-        'status_label', 'import_file_button', 'items_combobox', 'remove_at_current_frame_button',
-        'seek_to_next_button', 'seek_to_prev_button', 'toggle_button'
+        *_storable_attrs,
+        'export_template_pattern', 'export_template_scenes_pattern',
+        'scening_list_dialog', 'supported_file_types',
+        'add_list_button', 'remove_list_button', 'view_list_button',
+        'toggle_first_frame_button', 'toggle_second_frame_button',
+        'add_single_frame_button',
+        'add_to_list_button', 'remove_last_from_list_button',
+        'export_single_line_button', 'export_template_lineedit',
+        'export_multiline_button', 'always_show_scene_marks_checkbox',
+        'status_label', 'import_file_button', 'items_combobox',
+        'remove_at_current_frame_button',
+        'seek_to_next_button', 'seek_to_prev_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, SceningSettings())
         self.setup_ui()
+
+        self.lists = SceningLists()
 
         self.first_frame: Frame | None = None
         self.second_frame: Frame | None = None
@@ -47,18 +56,22 @@ class SceningToolbar(AbstractToolbar):
         self.scening_list_dialog = SceningListDialog(self.main)
 
         self.supported_file_types = {
-            'Matroska XML Chapters (*.xml)': self.import_matroska_xml_chapters,
             'Aegisub Project (*.ass)': self.import_ass,
+            'AvsP Session (*.ses)': self.import_ses,
             'CUE Sheet (*.cue)': self.import_cue,
             'DGIndex Project (*.dgi)': self.import_dgi,
+            'IfoEdit Celltimes (*.txt)': self.import_celltimes,
             'L-SMASH Works Index (*.lwi)': self.import_lwi,
             'Matroska Timestamps v1 (*.txt)': self.import_matroska_timestamps_v1,
             'Matroska Timestamps v2 (*.txt)': self.import_matroska_timestamps_v2,
+            'Matroska Timestamps v3 (*.txt)': self.import_matroska_timestamps_v3,
+            'Matroska XML Chapters (*.xml)': self.import_matroska_xml_chapters,
             'OGM Chapters (*.txt)': self.import_ogm_chapters,
             'TFM Log (*.txt)': self.import_tfm,
-            'x264/x265 QP File (*.qp)': self.import_qp,
+            'VSEdit Bookmarks (*.bookmarks)': self.import_vsedit,
+            'x264/x265 2 Pass Log (*.log)': self.import_x264_2pass_log,
+            'x264/x265 QP File (*.qp *.txt)': self.import_qp,
             'XviD Log (*.txt)': self.import_xvid,
-            'Simple Mappings (*.txt)': self.import_simple,
         }
 
         self.add_shortcuts()
@@ -85,6 +98,8 @@ class SceningToolbar(AbstractToolbar):
         self.seek_to_prev_button = PushButton('⏪', self, enabled=False, clicked=self.on_seek_to_prev_clicked)
 
         self.seek_to_next_button = PushButton('⏩', self, enabled=False, clicked=self.on_seek_to_next_clicked)
+
+        self.always_show_scene_marks_checkbox = CheckBox('Always show scene marks in the timeline', self, checked=False)
 
         # 'Add Single Frame'
         self.add_single_frame_button = PushButton(
@@ -137,7 +152,8 @@ class SceningToolbar(AbstractToolbar):
             self.import_file_button,
             self.get_separator(),
             self.seek_to_prev_button,
-            self.seek_to_next_button
+            self.seek_to_next_button,
+            self.always_show_scene_marks_checkbox
         ]).addStretch()
 
         HBoxLayout(self.hlayout, [
@@ -193,7 +209,7 @@ class SceningToolbar(AbstractToolbar):
                 except TypeError:
                     pass
 
-        self.items_combobox.setModel(self.current_lists)
+        self.items_combobox.setModel(self.lists)
         self.notches_changed.emit(self)
         self.scening_list_dialog.on_current_output_changed(index, prev_index)
 
@@ -218,22 +234,21 @@ class SceningToolbar(AbstractToolbar):
         self.items_combobox.setCurrentValue(item)
 
     @property
-    def current_lists(self) -> SceningLists:
-        return self.main.current_output.scening_lists
-
-    @property
     def current_list_index(self) -> int:
         return self.items_combobox.currentIndex()
 
     @current_list_index.setter
     def current_list_index(self, index: int) -> None:
-        if not (0 <= index < len(self.current_lists)):
+        if not (0 <= index < len(self.lists)):
             raise IndexError
         self.items_combobox.setCurrentIndex(index)
 
+    def is_notches_visible(self) -> bool:
+        return self.always_show_scene_marks_checkbox.isChecked() or self.toggle_button.isChecked()
+
     # list management
     def on_add_list_clicked(self, checked: bool | None = None) -> None:
-        _, i = self.current_lists.add()
+        _, i = self.lists.add()
         self.current_list_index = i
 
     def on_current_list_changed(self, new_value: SceningList | None, old_value: SceningList) -> None:
@@ -242,6 +257,7 @@ class SceningToolbar(AbstractToolbar):
             self.view_list_button.setEnabled(True)
             new_value.rowsInserted.connect(self._on_list_items_changed)
             new_value.rowsRemoved.connect(self._on_list_items_changed)
+            new_value.dataChanged.connect(self._on_list_items_changed)
             self.scening_list_dialog.on_current_list_changed(new_value)
         else:
             self.remove_list_button.setEnabled(False)
@@ -251,6 +267,7 @@ class SceningToolbar(AbstractToolbar):
             try:
                 old_value.rowsInserted.disconnect(self._on_list_items_changed)
                 old_value.rowsRemoved.disconnect(self._on_list_items_changed)
+                old_value.dataChanged.disconnect(self._on_list_items_changed)
             except (IndexError, TypeError):
                 pass
 
@@ -262,7 +279,7 @@ class SceningToolbar(AbstractToolbar):
         self.notches_changed.emit(self)
 
     def on_remove_list_clicked(self, checked: bool | None = None) -> None:
-        self.current_lists.remove(self.current_list_index)
+        self.lists.remove(self.current_list_index)
 
     def on_view_list_clicked(self, checked: bool | None = None) -> None:
         self.scening_list_dialog.show()
@@ -375,7 +392,7 @@ class SceningToolbar(AbstractToolbar):
     @set_status_label('Importing scening list')
     def import_file(self, import_func: Callable[[Path, SceningList, int], None], path: Path) -> None:
         out_of_range_count = 0
-        scening_list, scening_list_index = self.current_lists.add(path.stem)
+        scening_list, scening_list_index = self.lists.add(path.stem)
 
         import_func(path, scening_list, out_of_range_count)
 
@@ -384,7 +401,7 @@ class SceningToolbar(AbstractToolbar):
                 f'Scening import: {out_of_range_count} scenes were out of range of output, so they were dropped.')
         if len(scening_list) == 0:
             logging.warning(f'Scening import: nothing was imported from \'{path.name}\'.')
-            self.current_lists.remove(scening_list_index)
+            self.lists.remove(scening_list_index)
         else:
             self.current_list_index = scening_list_index
 
@@ -616,6 +633,83 @@ class SceningToolbar(AbstractToolbar):
             except ValueError:
                 out_of_range_count += 1
 
+    def import_matroska_timestamps_v3(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports listed scenes, ignoring gaps.
+        Uses FPS for scene label.
+        '''
+        pattern = re.compile(
+            r'^((?:\d+(?:\.\d+)?)|gap)(?:,\s?(\d+(?:\.\d+)?))?',
+            re.RegexFlag.MULTILINE)
+
+        assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
+        if len(match := assume_pattern.findall(path.read_text())) > 0:
+            default_fps = float(match[0])
+        else:
+            logging.warning('Scening import: "assume" entry not found.')
+            return
+
+        pos = Time()
+        for match in pattern.finditer(path.read_text()):
+            if match[1] == 'gap':
+                pos += Time(seconds=float(match[2]))
+                continue
+
+            interval = Time(seconds=float(match[1]))
+            fps = float(match[2]) if match.lastindex >= 2 else default_fps
+
+            scening_list.add(
+                self.main.current_output.to_frame(pos),
+                self.main.current_output.to_frame(pos + interval),
+                '{:.3f} fps'.format(fps))
+
+            pos += interval
+
+    def import_celltimes(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports cell times as single-frame scenes
+        '''
+
+        for line in path.read_text().splitlines():
+            scening_list.add(Frame(int(line)))
+
+    def import_ses(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports bookmarks as single-frame scenes
+        '''
+        import pickle
+
+        with path.open('rb') as f:
+            try:
+                session = pickle.load(f)
+            except pickle.UnpicklingError:
+                logging.warning('Scening import: failed to load .ses file.')
+                return
+        if 'bookmarks' not in session:
+            return
+
+        for bookmark in session['bookmarks']:
+            scening_list.add(Frame(bookmark[0]))
+
+    def import_vsedit(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports bookmarks as single-frame scenes
+        '''
+
+        for bookmark in path.read_text().split(', '):
+            scening_list.add(Frame(int(bookmark)))
+
+    def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports I- and K-frames as single-frame scenes.
+        '''
+        pattern = re.compile(r'in:(\d+).*type:I|K')
+        for match in pattern.findall(path.read_text()):
+            try:
+                scening_list.add(Frame(int(match)))
+            except ValueError:
+                out_of_range_count += 1
+
     def import_tfm(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
         Imports TFM's 'OVR HELP INFORMATION'.
@@ -752,9 +846,12 @@ class SceningToolbar(AbstractToolbar):
         return super().__getstate__() | {
             'label': self.label_lineedit.text(),
             'scening_export_template': self.export_template_lineedit.text(),
+            'always_show_scene_marks': self.always_show_scene_marks_checkbox.isChecked(),
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(state, 'lists', str, self.__setattr__)
+        try_load(state, 'current_list_index', str, self.__setattr__)
         try_load(state, 'first_frame', Frame, self.__setattr__, nullable=True)
         try_load(state, 'second_frame', Frame, self.__setattr__, nullable=True)
 
@@ -767,5 +864,16 @@ class SceningToolbar(AbstractToolbar):
         self.check_add_to_list_possibility()
 
         try_load(state, 'label', str, self.label_lineedit.setText)
+        self.items_combobox.setModel(self.lists)
+
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
+
+        always_show_scene_marks = None
+        try_load(state, 'always_show_scene_marks', str, always_show_scene_marks, nullable=True)
+        if always_show_scene_marks is None:
+            always_show_scene_marks = self.settings.ALWAYS_SHOW_SCENE_MARKS
+
+        self.always_show_scene_marks_checkbox.setChecked(always_show_scene_marks)
+        self.status_label.setVisible(always_show_scene_marks)
+
         super().__setstate__(state)

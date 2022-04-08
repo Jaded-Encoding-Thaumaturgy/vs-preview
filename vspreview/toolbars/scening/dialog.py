@@ -96,8 +96,12 @@ class SceningListDialog(ExtendedDialog):
         self.tableview.setModel(self.scening_list)
         self.tableview.resizeColumnsToContents()
         self.tableview.selectionModel().selectionChanged.connect(self.on_tableview_selection_changed)
+        self.delete_button.setEnabled(False)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
+        if not hasattr(self.main, 'current_output'):
+            return
+
         self.start_frame_control.setMaximum(self.main.current_output.end_frame)
         self.end_frame_control.setMaximum(self.main.current_output.end_frame)
         self.start_time_control.setMaximum(self.main.current_output.end_time)
@@ -176,6 +180,12 @@ class SceningListDialog(ExtendedDialog):
 
     def on_tableview_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         if len(selected.indexes()) == 0:
+            self.delete_button.setEnabled(False)
+            self.start_frame_control.setEnabled(False)
+            self.end_frame_control.setEnabled(False)
+            self.start_time_control.setEnabled(False)
+            self.end_time_control.setEnabled(False)
+            self.label_lineedit.setEnabled(False)
             return
         index = selected.indexes()[0]
         scene = self.scening_list[index.row()]
@@ -184,3 +194,9 @@ class SceningListDialog(ExtendedDialog):
         qt_silent_call(self.start_time_control.setValue, Time(scene.start))
         qt_silent_call(self.end_time_control.setValue, Time(scene.end))
         qt_silent_call(self.label_lineedit.setText, scene.label)
+        self.delete_button.setEnabled(True)
+        self.start_frame_control.setEnabled(True)
+        self.end_frame_control.setEnabled(True)
+        self.start_time_control.setEnabled(True)
+        self.end_time_control.setEnabled(True)
+        self.label_lineedit.setEnabled(True)

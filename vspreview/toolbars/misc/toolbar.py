@@ -17,7 +17,7 @@ class MiscToolbar(AbstractToolbar):
     __slots__ = (
         'autosave_timer', 'reload_script_button',
         'save_button', 'autosave_checkbox',
-        'keep_on_top_checkbox', 'save_template_lineedit',
+        'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
         'toggle_button', 'save_file_types', 'copy_frame_button'
     )
@@ -47,8 +47,6 @@ class MiscToolbar(AbstractToolbar):
 
         self.autosave_checkbox = CheckBox('Autosave', self, checked=True)
 
-        self.keep_on_top_checkbox = CheckBox('Keep on Top', self, clicked=self.on_keep_on_top_changed)
-
         self.copy_frame_button = PushButton('Copy Frame', self, clicked=self.copy_frame_to_clipboard)
 
         self.save_frame_as_button = PushButton('Save Frame as', self, clicked=self.on_save_frame_as_clicked)
@@ -63,7 +61,7 @@ class MiscToolbar(AbstractToolbar):
         )
         self.hlayout.addWidgets([
             self.reload_script_button,
-            self.save_button, self.autosave_checkbox, self.keep_on_top_checkbox,
+            self.save_button, self.autosave_checkbox,
             self.copy_frame_button, self.save_frame_as_button,
             QLabel('Save file name template:'), self.save_template_lineedit
         ])
@@ -93,13 +91,6 @@ class MiscToolbar(AbstractToolbar):
             self.autosave_timer.stop()
         else:
             self.autosave_timer.start(round(float(new_value) * 1000))
-
-    def on_keep_on_top_changed(self, state: Qt.CheckState) -> None:
-        # if state == Qt.Checked:
-        #     self.main.setWindowFlag(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint, True)
-        # elif state == Qt.Unchecked:
-        #     self.main.setWindowFlag(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint, False)
-        ...
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
         fmt = self.main.current_output.source.clip.format

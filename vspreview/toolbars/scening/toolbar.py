@@ -181,8 +181,8 @@ class SceningToolbar(AbstractToolbar):
             self.add_shortcut(Qt.SHIFT + key, partial(self.switch_list, i))
 
         self.add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
-        self.add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_next_button.click)
-        self.add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_prev_button.click)
+        self.add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_prev_button.click)
+        self.add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_next_button.click)
         self.add_shortcut(Qt.Key_Q, self.toggle_first_frame_button.click)
         self.add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
         self.add_shortcut(Qt.Key_E, self.add_to_list_button.click)

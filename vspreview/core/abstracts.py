@@ -13,7 +13,7 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QShortcut, QCheckBox,
-    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit
+    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit, QTableView
 )
 
 from .better_abc import abstract_attribute
@@ -175,6 +175,10 @@ class ExtendedMainWindow(AbstractQItem, QMainWindow):
 
 
 class ExtendedDialog(AbstractQItem, QDialog):
+    ...
+
+
+class ExtendedTableView(AbstractQItem, QTableView):
     ...
 
 

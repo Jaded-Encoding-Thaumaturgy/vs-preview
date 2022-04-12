@@ -10,9 +10,7 @@ from ..core import Frame, QYAMLObject, Scene, Time, main_window
 
 
 class SceningList(QAbstractTableModel, QYAMLObject):
-    __slots__ = (
-        'name', 'items', 'max_value'
-    )
+    __slots__ = ('name', 'items', 'max_value')
 
     START_FRAME_COLUMN = 0
     END_FRAME_COLUMN = 1
@@ -212,6 +210,19 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         else:
             raise IndexError
 
+    def get_prev_frame(self, initial: Frame) -> Frame | None:
+        result = None
+        result_delta = Frame(int(self.max_value))
+        for scene in reversed(self.items):
+            if Frame(0) < initial - scene.start < result_delta:
+                result = scene.start
+                result_delta = scene.start - initial
+            if Frame(0) < initial - scene.end < result_delta:
+                result = scene.end
+                result_delta = scene.end - initial
+
+        return result
+
     def get_next_frame(self, initial: Frame) -> Frame | None:
         result = None
         result_delta = Frame(int(self.max_value))
@@ -225,19 +236,6 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         return result
 
-    def get_prev_frame(self, initial: Frame) -> Frame | None:
-        result = None
-        result_delta = Frame(int(self.max_value))
-        for scene in self.items:
-            if Frame(0) < initial - scene.start < result_delta:
-                result = scene.start
-                result_delta = scene.start - initial
-            if Frame(0) < initial - scene.end < result_delta:
-                result = scene.end
-                result_delta = scene.end - initial
-
-        return result
-
     def __getstate__(self) -> Mapping[str, Any]:
         return {name: getattr(self, name)
                 for name in self.__slots__}
@@ -246,21 +244,21 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         try:
             max_value = state['max_value']
             if not isinstance(max_value, Frame):
-                raise TypeError('\'max_value\' of a SceningList is not a Frame. It\'s most probably corrupted.')
+                raise TypeError("'max_value' of a SceningList is not a Frame. It's most probably corrupted.")
 
             name = state['name']
             if not isinstance(name, str):
-                raise TypeError('\'name\' of a SceningList is not a Frame. It\'s most probably corrupted.')
+                raise TypeError("'name' of a SceningList is not a Frame. It's most probably corrupted.")
 
             items = state['items']
             if not isinstance(items, list):
-                raise TypeError('\'items\' of a SceningList is not a List. It\'s most probably corrupted.')
+                raise TypeError("'items' of a SceningList is not a List. It's most probably corrupted.")
             for item in items:
                 if not isinstance(item, Scene):
-                    raise TypeError('One of the items of SceningList is not a Scene. It\'s most probably corrupted.')
+                    raise TypeError("One of the items of SceningList is not a Scene. It's most probably corrupted.")
         except KeyError:
             raise KeyError(
-                'SceningList lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'.format(
+                "SceningList lacks one or more of its fields. It's most probably corrupted. Check those: {}.".format(
                     ', '.join(self.__slots__)))
 
         self.__init__(name, max_value, items)  # type: ignore

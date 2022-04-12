@@ -16,7 +16,7 @@ from ...main.timeline import Notches
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, Frame, Time, try_load, HBoxLayout, PushButton, LineEdit, CheckBox
+    AbstractMainWindow, AbstractToolbar, Frame, Time, HBoxLayout, PushButton, LineEdit, CheckBox, try_load
 )
 
 from .dialog import SceningListDialog
@@ -24,10 +24,10 @@ from .settings import SceningSettings
 
 
 class SceningToolbar(AbstractToolbar):
-    _storable_attrs = ('lists', 'first_frame', 'second_frame')
+    _storable_attrs = ('current_list_index', 'lists', 'first_frame', 'second_frame')
 
     __slots__ = (
-        *_storable_attrs,
+        *_storable_attrs[1:],
         'export_template_pattern', 'export_template_scenes_pattern',
         'scening_list_dialog', 'supported_file_types',
         'add_list_button', 'remove_list_button', 'view_list_button',
@@ -52,6 +52,7 @@ class SceningToolbar(AbstractToolbar):
         self.export_template_pattern = re.compile(r'.*(?:{start}|{end}|{label}).*')
         self.export_template_scenes_pattern = re.compile(r'.+')
 
+        self.items_combobox.setModel(self.lists)
         self.scening_update_status_label()
         self.scening_list_dialog = SceningListDialog(self.main)
 
@@ -74,6 +75,24 @@ class SceningToolbar(AbstractToolbar):
             'XviD Log (*.txt)': self.import_xvid,
         }
 
+        self.items_combobox.valueChanged.connect(self.on_current_list_changed)
+        self.add_list_button.clicked.connect(self.on_add_list_clicked)
+        self.remove_list_button.clicked.connect(self.on_remove_list_clicked)
+        self.view_list_button.clicked.connect(self.on_view_list_clicked)
+        self.import_file_button.clicked.connect(self.on_import_file_clicked)
+        self.seek_to_prev_button.clicked.connect(self.on_seek_to_prev_clicked)
+        self.seek_to_next_button.clicked.connect(self.on_seek_to_next_clicked)
+
+        self.add_single_frame_button.clicked.connect(self.on_add_single_frame_clicked)
+        self.toggle_first_frame_button.clicked.connect(self.on_first_frame_clicked)
+        self.toggle_second_frame_button.clicked.connect(self.on_second_frame_clicked)
+        self.add_to_list_button.clicked.connect(self.on_add_to_list_clicked)
+        self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)
+        self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
+        self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)
+        self.export_multiline_button.clicked.connect(self.export_multiline)
+        self.export_single_line_button.clicked.connect(self.export_single_line)
+
         self.add_shortcuts()
 
         # FIXME: get rid of workaround
@@ -84,67 +103,49 @@ class SceningToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.items_combobox = ComboBox[SceningList](self, duplicatesEnabled=True, minimumContentsLength=4)
-        self.items_combobox.valueChanged.connect(self.on_current_list_changed)
+        self.items_combobox = ComboBox[SceningList](duplicatesEnabled=True, minimumContentsLength=4)
 
-        self.add_list_button = PushButton('Add List', self, clicked=self.on_add_list_clicked)
+        self.add_list_button = PushButton('Add List')
 
-        self.remove_list_button = PushButton('Remove List', self, enabled=False, clicked=self.on_remove_list_clicked)
+        self.remove_list_button = PushButton('Remove List', enabled=False)
 
-        self.view_list_button = PushButton('View List', self, enabled=False, clicked=self.on_view_list_clicked)
+        self.view_list_button = PushButton('View List', enabled=False)
 
-        self.import_file_button = PushButton('Import List', self, clicked=self.on_import_file_clicked)
+        self.import_file_button = PushButton('Import List')
 
-        self.seek_to_prev_button = PushButton('⏪', self, enabled=False, clicked=self.on_seek_to_prev_clicked)
+        self.seek_to_prev_button = PushButton('⏪', enabled=False)
 
-        self.seek_to_next_button = PushButton('⏩', self, enabled=False, clicked=self.on_seek_to_next_clicked)
+        self.seek_to_next_button = PushButton('⏩', enabled=False)
 
-        self.always_show_scene_marks_checkbox = CheckBox('Always show scene marks in the timeline', self, checked=False)
+        self.always_show_scene_marks_checkbox = CheckBox('Always show scene marks in the timeline', checked=False)
 
-        # 'Add Single Frame'
-        self.add_single_frame_button = PushButton(
-            '🆎', self, tooltip='Add Single Frame Scene', clicked=self.on_add_single_frame_clicked
-        )
+        self.add_single_frame_button = PushButton('🆎', tooltip='Add Single Frame Scene')
 
-        # 'Frame 1'
-        self.toggle_first_frame_button = PushButton(
-            '🅰️', self, tooltip='Toggle Start of New Scene', checkable=True, clicked=self.on_first_frame_clicked
-        )
+        self.toggle_first_frame_button = PushButton('🅰️', tooltip='Toggle Start of New Scene', checkable=True)
 
-        # 'Frame 2'
-        self.toggle_second_frame_button = PushButton(
-            '🅱️', self, tooltip='Toggle End of New Scene', checkable=True, clicked=self.on_second_frame_clicked
-        )
+        self.toggle_second_frame_button = PushButton('🅱️', tooltip='Toggle End of New Scene', checkable=True)
 
-        self.label_lineedit = LineEdit(self, placeholder='New Scene Label')
+        self.label_lineedit = LineEdit(placeholder='New Scene Label')
 
-        self.add_to_list_button = PushButton('Add to List', self, enabled=False, clicked=self.on_add_to_list_clicked)
+        self.add_to_list_button = PushButton('Add to List', enabled=False)
 
-        self.remove_last_from_list_button = PushButton(
-            'Remove Last', self, enabled=False, clicked=self.on_remove_last_from_list_clicked
-        )
+        self.remove_last_from_list_button = PushButton('Remove Last', enabled=False)
 
-        self.remove_at_current_frame_button = PushButton(
-            'Remove at Current Frame', self, enabled=False, clicked=self.on_remove_at_current_frame_clicked
-        )
+        self.remove_at_current_frame_button = PushButton('Remove at Current Frame', enabled=False)
 
         self.export_template_lineedit = LineEdit(
-            self, textChanged=self.check_remove_export_possibility, tooltip=(
+            tooltip=(
                 r'Use {start} and {end} as placeholders.'
                 r'Both are valid for single frame scenes. '
                 r'{label} is available, too. '
             ), placeholderText='Export Template'
         )
 
-        self.export_multiline_button = PushButton(
-            'Export Multiline', self, clicked=self.export_multiline, enabled=False
-        )
+        self.export_multiline_button = PushButton('Export Multiline', enabled=False)
 
-        self.export_single_line_button = PushButton(
-            'Export Single Line', self, clicked=self.export_single_line, enabled=False
-        )
+        self.export_single_line_button = PushButton('Export Single Line', enabled=False)
 
-        HBoxLayout(self.hlayout, [
+        HBoxLayout(self.vlayout, [
             self.items_combobox,
             self.add_list_button,
             self.remove_list_button,
@@ -156,7 +157,7 @@ class SceningToolbar(AbstractToolbar):
             self.always_show_scene_marks_checkbox
         ]).addStretch()
 
-        HBoxLayout(self.hlayout, [
+        HBoxLayout(self.vlayout, [
             self.add_single_frame_button,
             self.toggle_first_frame_button,
             self.toggle_second_frame_button,
@@ -193,24 +194,14 @@ class SceningToolbar(AbstractToolbar):
         )
 
     def on_toggle(self, new_state: bool) -> None:
-        # if new_state is True:
-        #     self.check_add_to_list_possibility()
-        #     self.check_remove_export_possibility()
+        if new_state is True:
+            self.check_add_to_list_possibility()
+            self.check_remove_export_possibility()
 
-        self.status_label.setVisible(new_state)
+        self.status_label.setVisible(self.is_notches_visible())
         super().on_toggle(new_state)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        if prev_index != -1:
-            for scening_list in self.main.outputs[prev_index].scening_lists:
-                try:
-                    scening_list.rowsInserted.disconnect(self.on_list_items_changed)
-                    scening_list.rowsRemoved.disconnect(self.on_list_items_changed)
-                except TypeError:
-                    pass
-
-        self.items_combobox.setModel(self.lists)
-        self.notches_changed.emit(self)
         self.scening_list_dialog.on_current_output_changed(index, prev_index)
 
     def on_current_frame_changed(self, frame: Frame) -> None:
@@ -239,17 +230,16 @@ class SceningToolbar(AbstractToolbar):
 
     @current_list_index.setter
     def current_list_index(self, index: int) -> None:
-        if not (0 <= index < len(self.lists)):
-            raise IndexError
-        self.items_combobox.setCurrentIndex(index)
+        if (0 <= index < len(self.lists)):
+            return self.items_combobox.setCurrentIndex(index)
+        raise IndexError
 
     def is_notches_visible(self) -> bool:
         return self.always_show_scene_marks_checkbox.isChecked() or self.toggle_button.isChecked()
 
     # list management
     def on_add_list_clicked(self, checked: bool | None = None) -> None:
-        _, i = self.lists.add()
-        self.current_list_index = i
+        _, self.current_list_index = self.lists.add()
 
     def on_current_list_changed(self, new_value: SceningList | None, old_value: SceningList) -> None:
         if new_value is not None:
@@ -281,6 +271,10 @@ class SceningToolbar(AbstractToolbar):
     def on_remove_list_clicked(self, checked: bool | None = None) -> None:
         self.lists.remove(self.current_list_index)
 
+        if len(self.lists) == 0:
+            self.remove_list_button.setEnabled(False)
+            self.view_list_button.setEnabled(False)
+
     def on_view_list_clicked(self, checked: bool | None = None) -> None:
         self.scening_list_dialog.show()
 
@@ -291,20 +285,20 @@ class SceningToolbar(AbstractToolbar):
             pass
 
     # seeking
-    def on_seek_to_next_clicked(self, checked: bool | None = None) -> None:
-        if self.current_list is None:
-            return
-
-        new_pos = self.current_list.get_next_frame(self.main.current_output.last_showed_frame)
-        if new_pos is None:
-            return
-        self.main.switch_frame(new_pos)
-
     def on_seek_to_prev_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
         new_pos = self.current_list.get_prev_frame(self.main.current_output.last_showed_frame)
+        if new_pos is None:
+            return
+        self.main.switch_frame(new_pos)
+
+    def on_seek_to_next_clicked(self, checked: bool | None = None) -> None:
+        if self.current_list is None:
+            return
+
+        new_pos = self.current_list.get_next_frame(self.main.current_output.last_showed_frame)
         if new_pos is None:
             return
         self.main.switch_frame(new_pos)
@@ -362,7 +356,7 @@ class SceningToolbar(AbstractToolbar):
 
     def on_second_frame_clicked(self, checked: bool, frame: Frame | None = None) -> None:
         if frame is None:
-            frame = self.main.self.main.current_output.last_showed_frame
+            frame = self.main.current_output.last_showed_frame
 
         if checked:
             self.second_frame = frame
@@ -400,7 +394,7 @@ class SceningToolbar(AbstractToolbar):
             logging.warning(
                 f'Scening import: {out_of_range_count} scenes were out of range of output, so they were dropped.')
         if len(scening_list) == 0:
-            logging.warning(f'Scening import: nothing was imported from \'{path.name}\'.')
+            logging.warning(f"Scening import: nothing was imported from '{path.name}'.")
             self.lists.remove(scening_list_index)
         else:
             self.current_list_index = scening_list_index
@@ -418,6 +412,17 @@ class SceningToolbar(AbstractToolbar):
             t_end = Time(milliseconds=line.end)
             try:
                 scening_list.add(Frame(t_start), Frame(t_end))
+            except ValueError:
+                out_of_range_count += 1
+
+    def import_celltimes(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports cell times as single-frame scenes
+        '''
+
+        for line in path.read_text().splitlines():
+            try:
+                scening_list.add(Frame(int(line)))
             except ValueError:
                 out_of_range_count += 1
 
@@ -445,7 +450,7 @@ class SceningToolbar(AbstractToolbar):
                 continue
             offset = offset_to_time(track.offset)
             if offset is None:
-                logging.warning(f'Scening import: INDEX timestamp \'{track.offset}\' format isn\'t suported.')
+                logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't suported.")
                 continue
             start = Frame(offset)
 
@@ -515,7 +520,7 @@ class SceningToolbar(AbstractToolbar):
         try:
             root = ElementTree.parse(str(path)).getroot()
         except ElementTree.ParseError as exc:
-            logging.warning(f'Scening import: error occured while parsing \'{path.name}\':')
+            logging.warning(f"Scening import: error occured while parsing '{path.name}':")
             logging.warning(exc.msg)
             return
         for chapter in root.iter('ChapterAtom'):
@@ -567,22 +572,42 @@ class SceningToolbar(AbstractToolbar):
         pattern = re.compile(r'(\d+)\sI|K')
         for match in pattern.findall(path.read_text()):
             try:
-                scening_list.add(Frame(match))
+                scening_list.add(Frame(int(match)))
+            except ValueError:
+                out_of_range_count += 1
+
+    def import_ses(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports bookmarks as single-frame scenes
+        '''
+        import pickle
+
+        with path.open('rb') as f:
+            try:
+                session = pickle.load(f)
+            except pickle.UnpicklingError:
+                logging.warning('Scening import: failed to load .ses file.')
+                return
+        if 'bookmarks' not in session:
+            return
+
+        for bookmark in session['bookmarks']:
+            try:
+                scening_list.add(Frame(bookmark[0]))
             except ValueError:
                 out_of_range_count += 1
 
     def import_matroska_timestamps_v1(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
-        Imports gaps between timestamps as scenes.
+        Imports listed scenes.
+        Uses FPS for scene label.
         '''
         pattern = re.compile(r'(\d+),(\d+),(\d+(?:\.\d+)?)')
 
         for match in pattern.finditer(path.read_text()):
             try:
                 scening_list.add(
-                    Frame(int(match[1])),
-                    Frame(int(match[2])),
-                    '{:.3f} fps'.format(float(match[3]))
+                    Frame(int(match[1])), Frame(int(match[2])), '{:.3f} fps'.format(float(match[3]))
                 )
             except ValueError:
                 out_of_range_count += 1
@@ -590,7 +615,7 @@ class SceningToolbar(AbstractToolbar):
     def import_matroska_timestamps_v2(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
         Imports intervals of constant FPS as scenes.
-        Uses FPS as scene label.
+        Uses FPS for scene label.
         '''
         timestamps: List[Time] = []
         for line in path.read_text().splitlines():
@@ -601,7 +626,8 @@ class SceningToolbar(AbstractToolbar):
 
         if len(timestamps) < 2:
             logging.warning(
-                'Scening import: timestamps file contains less that 2 timestamps, so there\'s nothing to import.')
+                "Scening import: timestamps file contains less than 2 timestamps, so there's nothing to import."
+            )
             return
 
         deltas = [
@@ -658,57 +684,13 @@ class SceningToolbar(AbstractToolbar):
             interval = Time(seconds=float(match[1]))
             fps = float(match[2]) if match.lastindex >= 2 else default_fps
 
-            scening_list.add(
-                self.main.current_output.to_frame(pos),
-                self.main.current_output.to_frame(pos + interval),
-                '{:.3f} fps'.format(fps))
-
-            pos += interval
-
-    def import_celltimes(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports cell times as single-frame scenes
-        '''
-
-        for line in path.read_text().splitlines():
-            scening_list.add(Frame(int(line)))
-
-    def import_ses(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports bookmarks as single-frame scenes
-        '''
-        import pickle
-
-        with path.open('rb') as f:
             try:
-                session = pickle.load(f)
-            except pickle.UnpicklingError:
-                logging.warning('Scening import: failed to load .ses file.')
-                return
-        if 'bookmarks' not in session:
-            return
-
-        for bookmark in session['bookmarks']:
-            scening_list.add(Frame(bookmark[0]))
-
-    def import_vsedit(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports bookmarks as single-frame scenes
-        '''
-
-        for bookmark in path.read_text().split(', '):
-            scening_list.add(Frame(int(bookmark)))
-
-    def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports I- and K-frames as single-frame scenes.
-        '''
-        pattern = re.compile(r'in:(\d+).*type:I|K')
-        for match in pattern.findall(path.read_text()):
-            try:
-                scening_list.add(Frame(int(match)))
+                scening_list.add(Frame(pos), Frame(pos + interval),
+                                 '{:.3f} fps'.format(fps))
             except ValueError:
                 out_of_range_count += 1
+
+            pos += interval
 
     def import_tfm(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
@@ -727,7 +709,7 @@ class SceningToolbar(AbstractToolbar):
 
         start_pos = log.find('OVR HELP INFORMATION')
         if start_pos == -1:
-            logging.warning('Scening import: TFM log doesn\'t contain OVR Help Information.')
+            logging.warning("Scening import: TFM log doesn't contain OVR Help Information.")
             return
         log = log[start_pos:]
 
@@ -752,26 +734,37 @@ class SceningToolbar(AbstractToolbar):
             except ValueError:
                 out_of_range_count += 1
 
+    def import_vsedit(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports bookmarks as single-frame scenes
+        '''
+
+        for bookmark in path.read_text().split(', '):
+            try:
+                scening_list.add(Frame(int(bookmark)))
+            except ValueError:
+                out_of_range_count += 1
+
+    def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Imports I- and K-frames as single-frame scenes.
+        '''
+        pattern = re.compile(r'in:(\d+).*type:I|K')
+        for match in pattern.findall(path.read_text()):
+            try:
+                scening_list.add(Frame(int(match)))
+            except ValueError:
+                out_of_range_count += 1
+
     def import_xvid(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
-        Imports I-frames as single-frames scenes.
+        Imports I-frames as single-frame scenes.
         '''
         for i, line in enumerate(path.read_text().splitlines()):
             if not line.startswith('i'):
                 continue
             try:
                 scening_list.add(Frame(i - 3))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_simple(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Import simple frame mappings [Start End]
-        '''
-        for line in path.read_text().splitlines():
-            try:
-                fnumbers = [int(n) for n in line.split()]
-                scening_list.add(Frame(fnumbers[0]), Frame(fnumbers[1]))
             except ValueError:
                 out_of_range_count += 1
 
@@ -785,7 +778,9 @@ class SceningToolbar(AbstractToolbar):
 
         try:
             for scene in self.current_list:
-                export_str += template.format(start=scene.start, end=scene.end, label=scene.label) + '\n'
+                export_str += template.format(
+                    start=scene.start, end=scene.end, label=scene.label, script_name=self.main.script_path.stem
+                ) + '\n'
         except KeyError:
             logging.warning('Scening: export template contains invalid placeholders.')
             self.main.show_message('Export template contains invalid placeholders.')
@@ -803,7 +798,9 @@ class SceningToolbar(AbstractToolbar):
 
         try:
             for scene in self.current_list:
-                export_str += template.format(start=scene.start, end=scene.end, label=scene.label)
+                export_str += template.format(
+                    start=scene.start, end=scene.end, label=scene.label, script_name=self.main.script_path.stem
+                ) + '\n'
         except KeyError:
             logging.warning('Scening: export template contains invalid placeholders.')
             self.main.show_message('Export template contains invalid placeholders.')
@@ -850,13 +847,14 @@ class SceningToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'lists', str, self.__setattr__)
-        try_load(state, 'current_list_index', str, self.__setattr__)
+        try_load(state, 'lists', SceningLists, self.__setattr__)
+        try_load(state, 'current_list_index', int, self.__setattr__)
         try_load(state, 'first_frame', Frame, self.__setattr__, nullable=True)
         try_load(state, 'second_frame', Frame, self.__setattr__, nullable=True)
 
         if self.first_frame is not None:
             self.toggle_first_frame_button.setChecked(True)
+
         if self.second_frame is not None:
             self.toggle_second_frame_button.setChecked(True)
 
@@ -869,7 +867,7 @@ class SceningToolbar(AbstractToolbar):
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
 
         always_show_scene_marks = None
-        try_load(state, 'always_show_scene_marks', str, always_show_scene_marks, nullable=True)
+        try_load(state, 'always_show_scene_marks', bool, always_show_scene_marks, nullable=True)
         if always_show_scene_marks is None:
             always_show_scene_marks = self.settings.ALWAYS_SHOW_SCENE_MARKS
 

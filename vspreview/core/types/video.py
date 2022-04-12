@@ -229,7 +229,7 @@ class VideoOutput(AbstractYAMLObject):
         BOTTOM = values[5]
 
     storable_attrs = (
-        'title', 'last_showed_frame', 'play_fps', 'scening_lists'
+        'title', 'last_showed_frame', 'play_fps'
     )
     __slots__ = storable_attrs + (
         'index', 'width', 'height', 'fps_num', 'fps_den',
@@ -251,7 +251,6 @@ class VideoOutput(AbstractYAMLObject):
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
         from ..custom import GraphicsImageItem
-        from ...models import SceningLists
 
         self._stateset = not new_storage
 
@@ -286,9 +285,6 @@ class VideoOutput(AbstractYAMLObject):
             self.last_showed_frame = Frame(0)
 
         self.graphics_scene_item: GraphicsImageItem
-
-        if not hasattr(self, 'scening_lists'):
-            self.scening_lists: SceningLists = SceningLists()
 
         if not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
@@ -539,11 +535,8 @@ class VideoOutput(AbstractYAMLObject):
         return Time(seconds=self._calculate_seconds(int(frame)))
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        from ...models import SceningLists
-
         try_load(state, 'title', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
-        try_load(state, 'scening_lists', SceningLists, main_window().toolbars.scening.lists.add_list)
         try_load(state, 'play_fps', float, self.__setattr__)
 
         self._stateset = True

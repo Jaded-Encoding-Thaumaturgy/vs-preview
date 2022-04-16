@@ -848,7 +848,7 @@ class SceningToolbar(AbstractToolbar):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'lists', SceningLists, self.__setattr__)
-        try_load(state, 'current_list_index', int, self.__setattr__)
+        try_load(state, 'current_list_index', int, self.current_list_index)
         try_load(state, 'first_frame', Frame, self.__setattr__, nullable=True)
         try_load(state, 'second_frame', Frame, self.__setattr__, nullable=True)
 

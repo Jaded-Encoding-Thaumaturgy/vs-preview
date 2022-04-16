@@ -370,7 +370,11 @@ class MainWindow(AbstractMainWindow):
 
         for toolbar_name in gtoolbars:
             gtoolbars[toolbar_name].clear()
-            gtoolbars[toolbar_name]['settings'] = getattr(data['toolbars'], toolbar_name).settings
+            gtoolbars[toolbar_name] = getattr(data['toolbars'], toolbar_name).settings
+
+        data['_toolbars_settings'] = [None] * len(gtoolbars)
+        for i, toolbar_name in enumerate(gtoolbars.keys()):
+            data['_toolbars_settings'][i] = gtoolbars[toolbar_name]
 
         return data
 

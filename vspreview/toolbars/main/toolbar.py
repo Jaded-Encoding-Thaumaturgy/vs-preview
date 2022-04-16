@@ -109,8 +109,11 @@ class MainToolbar(AbstractToolbar):
         if checked:
             if not force_frame:
                 force_frame = self.main.current_output.last_showed_frame
+
             for output in self.main.outputs:
-                output.last_showed_frame = force_frame
+                output.last_showed_frame = output.to_frame(
+                    self.main.current_output.to_time(force_frame)
+                )
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)

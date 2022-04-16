@@ -105,7 +105,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_frames = self.total_frames_control.value()
         self.frames_left = deepcopy(self.total_frames)
         if self.prefetch_checkbox.isChecked():
-            concurrent_requests_count = self.main.settings.usable_cpu_count()
+            concurrent_requests_count = self.main.settings.usable_cpus_count()
         else:
             concurrent_requests_count = 1
 

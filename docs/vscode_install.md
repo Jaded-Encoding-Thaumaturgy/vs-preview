@@ -32,7 +32,7 @@ This is easier said then done
     Open the terminal by doing `Ctrl + Shift + P and typing "Terminal: Create New Terminal" and write the following:
 
     ```powershell
-    vspreview --vs-code-setup
+    vspreview --vscode-setup
     ```
 1. Congratulations, you can now write and preview beautiful filterchains!
 

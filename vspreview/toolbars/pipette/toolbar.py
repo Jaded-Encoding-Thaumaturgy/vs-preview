@@ -16,10 +16,15 @@ from .settings import PipetteSettings
 
 
 class PipetteToolbar(AbstractToolbar):
+    labels = [
+        'position',
+        'rgb_label', 'rgb_hex', 'rgb_dec', 'rgb_norm',
+        'src_label', 'src_hex', 'src_dec', 'src_norm'
+    ]
+
     __slots__ = (
-        'color_view', 'outputs', 'position', 'pos_fmt', 'tracking',
-        'rgb_dec', 'rgb_hex', 'rgb_label',
-        'src_dec', 'src_dec_fmt', 'src_hex', 'src_hex_fmt', 'src_label'
+        'color_view', 'outputs', 'tracking',
+        'src_dec_fmt', 'src_hex_fmt', *labels
     )
 
     data_types = {
@@ -29,7 +34,7 @@ class PipetteToolbar(AbstractToolbar):
             # 4: ctypes.c_char * 4,
         },
         vs.FLOAT: {
-            # 2: ctypes.c_char * 2,
+            2: ctypes.c_char,
             4: ctypes.c_float,
         }
     }
@@ -38,17 +43,12 @@ class PipetteToolbar(AbstractToolbar):
         super().__init__(main, PipetteSettings())
 
         self.setup_ui()
-
-        self.pos_fmt = '{},{}'
-        self.src_hex_fmt = '{:2X}'
         self.src_max_val: float = 2**8 - 1
-        self.src_dec_fmt = '{:3d}'
-        self.src_norm_fmt = '{:0.5f}'
+        self.pos_fmt = self.src_hex_fmt = self.src_dec_fmt = self.src_norm_fmt = ''
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
-        self.IS_SUBSCRIBED_MOUSE_EVT = False
-        self._curr_frame_cache = None
-        self._curr_alphaframe_cache = None
+        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, [int, vs.VideoNode]]()
+        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, [int, vs.VideoNode]]()
 
         main.reload_signal.connect(self.clear_outputs)
 
@@ -112,82 +112,63 @@ class PipetteToolbar(AbstractToolbar):
 
     def mouse_pressed(self, event: QMouseEvent) -> None:
         if event.buttons() == Qt.MouseButtons(Qt.RightButton):
-            self.tracking = False
+            self.tracking = not self.tracking
+
+        if self.tracking:
+            self.update_labels(event.pos())
 
     def mouse_released(self, event: QMouseEvent) -> None:
-        if event.buttons() == Qt.MouseButtons(Qt.RightButton):
-            self.tracking = True
-        self.update_labels(event.pos())
+        pass
 
     @property
     def current_source_frame(self) -> vs.VideoFrame:
-        if self._curr_frame_cache is None or self._curr_frame_cache[0] != self.main.current_output.last_showed_frame:
-            self._curr_frame_cache = (
-                self.main.current_output.last_showed_frame, self.outputs[self.main.current_output].get_frame(
-                    int(self.main.current_output.last_showed_frame)
-                )
-            )
+        if self.main.current_output not in self._curr_frame_cache:
+            cache = self._curr_frame_cache[self.main.current_output] = [None, None]
+        else:
+            cache = self._curr_frame_cache[self.main.current_output]
+        if cache[1] is None or cache[0] != self.main.current_output.last_showed_frame:
+            cache[0] = int(self.main.current_output.last_showed_frame)
+            cache[1] = self.outputs[self.main.current_output].get_frame(cache[0])
 
-        return self._curr_frame_cache[1]
+        return cache[1]
 
     @property
     def current_source_alpha_frame(self) -> vs.VideoFrame:
-        cache = self._curr_alphaframe_cache
-        if cache is None or cache[0] != self.main.current_output.last_showed_frame:
-            self._curr_alphaframe_cache = (
-                self.main.current_output.last_showed_frame, self.main.current_output.source.alpha.get_frame(
-                    int(self.main.current_output.last_showed_frame)
-                )
-            )
+        if self.main.current_output not in self._curr_alphaframe_cache:
+            cache = self._curr_alphaframe_cache[self.main.current_output] = [None, None]
+        else:
+            cache = self._curr_alphaframe_cache[self.main.current_output]
+        cache = self._curr_alphaframe_cache[self.main.current_output]
+        if cache[1] is None or cache[0] != self.main.current_output.last_showed_frame:
+            cache[0] = int(self.main.current_output.last_showed_frame)
+            cache[1] = self.main.current_output.source.alpha.get_frame(cache[0])
 
-        return self._curr_alphaframe_cache[1]
+        return cache[1]
 
     def update_labels(self, local_pos: QPoint) -> None:
         pos_f = self.main.graphics_view.mapToScene(local_pos)
-        pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
 
         if not self.main.current_output.graphics_scene_item.contains(pos_f):
             return
 
+        pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
         color = self.main.current_output.graphics_scene_item.pixmap().toImage().pixelColor(pos)
+        red, green, blue = color.red(), color.green(), color.blue()
+
         self.color_view.color = color
-
-        self.position.setText(self.pos_fmt.format(pos.x(), pos.y()))
-
-        self.rgb_hex.setText('{:2X},{:2X},{:2X}'.format(color.red(), color.green(), color.blue()))
-        self.rgb_dec.setText('{:3d},{:3d},{:3d}'.format(color.red(), color.green(), color.blue()))
-        self.rgb_norm.setText(
-            '{:0.5f},{:0.5f},{:0.5f}'.format(color.red() / 255, color.green() / 255, color.blue() / 255)
-        )
+        self.position.setText('{:4d},{:4d}'.format(pos.x(), pos.y()))
+        self.rgb_hex.setText('{:2X},{:2X},{:2X}'.format(red, green, blue))
+        self.rgb_dec.setText('{:3d},{:3d},{:3d}'.format(red, green, blue))
+        self.rgb_norm.setText('{:0.5f},{:0.5f},{:0.5f}'.format(red / 255, green / 255, blue / 255))
 
         if not self.src_label.isVisible():
             return
 
-        def extract_value(vs_frame: vs.VideoFrame, plane: int, pos: QPoint) -> float:
-            fmt = vs_frame.format
-            stride = vs_frame.get_stride(plane)
-            if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:
-                ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                    ctypes.c_char * (stride * vs_frame.height)
-                ))
-                offset = pos.y() * stride + pos.x() * 2
-                val = unpack('e', cast(bytearray, ptr.contents[offset:(offset + 2)]))[0]
-                return cast(float, val)
-            else:
-                ptr = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                    self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
-                ))
-                logical_stride = stride // fmt.bytes_per_sample
-                idx = pos.y() * logical_stride + pos.x()
-                return cast(int, ptr.contents[idx])
+        fmt = self.current_source_frame.format
 
-        vs_frame = self.current_source_frame
-        fmt = vs_frame.format
-
-        src_vals = [extract_value(vs_frame, i, pos) for i in range(fmt.num_planes)]
+        src_vals = list(self.extract_value(self.current_source_frame, pos))
         if self.main.current_output.source.alpha:
-            vs_alpha = self.current_source_alpha_frame
-            src_vals.append(extract_value(vs_alpha, 0, pos))
+            src_vals.append(next(self.extract_value(self.current_source_alpha_frame, pos)))
 
         self.src_dec.setText(self.src_dec_fmt.format(*src_vals))
         if fmt.sample_type == vs.INTEGER:
@@ -197,62 +178,50 @@ class PipetteToolbar(AbstractToolbar):
             ]))
         elif fmt.sample_type == vs.FLOAT:
             self.src_norm.setText(self.src_norm_fmt.format(*[
-                self.clip(val, 0.0, 1.0) if i in {0, 3} else self.clip(val, -0.5, 0.5) + 0.5
+                max(0.0, min(val, 1.0)) if i in {0, 3} else max(-.5, min(val, .5)) + .5
                 for i, val in enumerate(src_vals)
             ]))
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         super().on_current_output_changed(index, prev_index)
 
-        assert (fmt := self.main.current_output.source.clip.format)
-
-        src_label_text = ''
-        if fmt.color_family == vs.RGB:
-            src_label_text = 'Raw (RGB{}):'
-        elif fmt.color_family == vs.YUV:
-            src_label_text = 'Raw (YUV{}):'
-        elif fmt.color_family == vs.GRAY:
-            src_label_text = 'Raw (Gray{}):'
-
-        self.src_label.setText(src_label_text.format(' + Alpha' if self.main.current_output.source.alpha else ''))
-
-        self.pos_fmt = '{:4d},{:4d}'
-
         if self.main.current_output not in self.outputs:
-            self.outputs[self.main.current_output] = self.prepare_vs_output(
-                self.main.current_output.source.clip
-            )
+            self.outputs[self.main.current_output] = self.prepare_vs_output(self.main.current_output.source.clip)
 
         assert (src_fmt := self.outputs[self.main.current_output].format)
+
+        has_alpha = bool(self.main.current_output.source.alpha)
+
+        self.src_label.setText(f"Raw ({str(src_fmt.color_family)[12:]}{' + Alpha' if has_alpha else ''}):")
+        self.src_hex.setVisible(src_fmt.sample_type == vs.INTEGER)
 
         if src_fmt.sample_type == vs.INTEGER:
             self.src_max_val = 2**src_fmt.bits_per_sample - 1
         elif src_fmt.sample_type == vs.FLOAT:
-            self.src_hex.setVisible(False)
             self.src_max_val = 1.0
 
-        src_num_planes = src_fmt.num_planes + int(bool(self.main.current_output.source.alpha))
-        self.src_hex_fmt = ','.join(('{{:{w}X}}',) * src_num_planes).format(w=ceil(log(self.src_max_val, 16)))
-        if src_fmt.sample_type == vs.INTEGER:
-            self.src_dec_fmt = ','.join(('{{:{w}d}}',) * src_num_planes).format(w=ceil(log(self.src_max_val, 10)))
-        elif src_fmt.sample_type == vs.FLOAT:
-            self.src_dec_fmt = ','.join(('{: 0.5f}',) * src_num_planes)
-        self.src_norm_fmt = ','.join(('{:0.5f}',) * src_num_planes)
+        src_num_planes = src_fmt.num_planes + int(has_alpha)
 
-        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))  # type: ignore
+        self.src_hex_fmt = ('{{:{w}X}},' * src_num_planes)[:-1].format(w=ceil(log(self.src_max_val, 16)))
+        if src_fmt.sample_type == vs.INTEGER:
+            self.src_dec_fmt = ('{{:{w}d}},' * src_num_planes)[:-1].format(w=ceil(log(self.src_max_val, 10)))
+        elif src_fmt.sample_type == vs.FLOAT:
+            self.src_dec_fmt = ('{: 0.5f},' * src_num_planes)[:-1]
+        self.src_norm_fmt = ('{:0.5f},' * src_num_planes)[:-1]
+
+        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))
 
     def on_toggle(self, new_state: bool) -> None:
         super().on_toggle(new_state)
+        self.tracking = new_state
         self.main.graphics_view.setMouseTracking(new_state)
-        if new_state is True:
+
+        if new_state:
             self.subscribe_on_mouse_events()
             self.main.graphics_view.setDragMode(QGraphicsView.NoDrag)
-            self.IS_SUBSCRIBED_MOUSE_EVT = True
-        elif self.IS_SUBSCRIBED_MOUSE_EVT:
+        else:
             self.unsubscribe_from_mouse_events()
             self.main.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
-            self.IS_SUBSCRIBED_MOUSE_EVT = False
-        self.tracking = new_state
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
@@ -261,9 +230,22 @@ class PipetteToolbar(AbstractToolbar):
         return vs.core.resize.Bicubic(
             vs_output, format=vs.core.query_video_format(
                 fmt.color_family, fmt.sample_type, fmt.bits_per_sample, 0, 0
-            ).id
+            ).id, dither_type='none'
         )
 
-    @staticmethod
-    def clip(value: float, lower_bound: float, upper_bound: float) -> float:
-        return max(lower_bound, min(value, upper_bound))
+    def extract_value(self, vs_frame: vs.VideoFrame, pos: QPoint) -> float:
+        fmt = vs_frame.format
+
+        for plane in range(fmt.num_planes):
+            stride = vs_frame.get_stride(plane)
+            pointer = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
+                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
+            ))
+
+            if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:
+                offset = pos.y() * stride + pos.x() * fmt.bytes_per_sample
+                yield cast(float, unpack('e', cast(bytearray, pointer.contents[
+                    slice(offset, offset + fmt.bytes_per_sample)
+                ]))[0])
+            else:
+                yield cast(int, pointer.contents[pos.y() * (stride // fmt.bytes_per_sample) + pos.x()])

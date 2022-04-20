@@ -15,7 +15,8 @@ class MainSettings(AbstractToolbarSettings):
         'autosave_control', 'base_ppi_spinbox', 'dark_theme_checkbox',
         'opengl_rendering_checkbox', 'output_index_spinbox',
         'png_compressing_spinbox', 'statusbar_timeout_control',
-        'timeline_notches_margin_spinbox', 'usable_cpus_spinbox'
+        'timeline_notches_margin_spinbox', 'usable_cpus_spinbox',
+        'azerty_keyboard_checkbox'
     )
 
     INSTANT_FRAME_UPDATE = False
@@ -45,6 +46,8 @@ class MainSettings(AbstractToolbarSettings):
 
         self.usable_cpus_spinbox = SpinBox(self, 1, self.get_usable_cpus_count())
 
+        self.azerty_keyboard_checkbox = CheckBox('AZERTY Keyboard', self)
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
@@ -55,7 +58,8 @@ class MainSettings(AbstractToolbarSettings):
                 self.opengl_rendering_checkbox
             ]),
             VBoxLayout([
-                self.force_old_storages_removal_checkbox
+                self.force_old_storages_removal_checkbox,
+                self.azerty_keyboard_checkbox
             ])
         ])
 
@@ -81,6 +85,7 @@ class MainSettings(AbstractToolbarSettings):
         self.statusbar_timeout_control.setValue(Time(seconds=2.5))
         self.timeline_notches_margin_spinbox.setValue(20)
         self.force_old_storages_removal_checkbox.setChecked(False)
+        self.azerty_keyboard_checkbox.setChecked(False)
         self.usable_cpus_spinbox.setValue(self.get_usable_cpus_count())
 
     @property
@@ -118,6 +123,10 @@ class MainSettings(AbstractToolbarSettings):
     @property
     def force_old_storages_removal(self) -> int:
         return self.force_old_storages_removal_checkbox.isChecked()
+
+    @property
+    def azerty_keybinds(self) -> int:
+        return self.azerty_keyboard_checkbox.isChecked()
 
     @property
     def usable_cpus_count(self) -> int:

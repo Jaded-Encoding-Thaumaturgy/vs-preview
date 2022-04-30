@@ -49,6 +49,7 @@ class PipetteToolbar(AbstractToolbar):
         self.tracking = False
         self._curr_frame_cache = WeakKeyDictionary[VideoOutput, [int, vs.VideoNode]]()
         self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, [int, vs.VideoNode]]()
+        self._mouse_is_subscribed = False
 
         main.reload_signal.connect(self.clear_outputs)
 
@@ -97,14 +98,18 @@ class PipetteToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def subscribe_on_mouse_events(self) -> None:
-        self.main.graphics_view.mouseMoved.connect(self.mouse_moved)
-        self.main.graphics_view.mousePressed.connect(self.mouse_pressed)
-        self.main.graphics_view.mouseReleased.connect(self.mouse_released)
+        if not self._mouse_is_subscribed:
+            self.main.graphics_view.mouseMoved.connect(self.mouse_moved)
+            self.main.graphics_view.mousePressed.connect(self.mouse_pressed)
+            self.main.graphics_view.mouseReleased.connect(self.mouse_released)
+        self._mouse_is_subscribed = True
 
     def unsubscribe_from_mouse_events(self) -> None:
-        self.main.graphics_view.mouseMoved.disconnect(self.mouse_moved)
-        self.main.graphics_view.mousePressed.disconnect(self.mouse_pressed)
-        self.main.graphics_view.mouseReleased.disconnect(self.mouse_released)
+        if self._mouse_is_subscribed:
+            self.main.graphics_view.mouseMoved.disconnect(self.mouse_moved)
+            self.main.graphics_view.mousePressed.disconnect(self.mouse_pressed)
+            self.main.graphics_view.mouseReleased.disconnect(self.mouse_released)
+        self._mouse_is_subscribed = False
 
     def mouse_moved(self, event: QMouseEvent) -> None:
         if self.tracking and not event.buttons():

@@ -1,6 +1,6 @@
 # flake8: noqa
 
-from .zoom_levels import ZoomLevels
+from .generalmodel import GeneralModel
 from .picture_types import PictureTypes
 from .scening import SceningList, SceningLists
 from .outputs import Outputs, VideoOutputs, AudioOutputs

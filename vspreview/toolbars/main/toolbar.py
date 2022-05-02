@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox
 
 from ...utils import qt_silent_call
-from ...models import VideoOutputs, ZoomLevels
+from ...models import VideoOutputs, GeneralModel
 from ...core.custom import ComboBox, TimeEdit, FrameEdit
 from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load, PushButton, CheckBox
 
@@ -29,7 +29,7 @@ class MainToolbar(AbstractToolbar):
 
         self.outputs: VideoOutputs = []  # type: ignore
 
-        self.zoom_levels = ZoomLevels([
+        self.zoom_levels = GeneralModel[float]([
             0.25, 0.5, 0.68, 0.75, 0.85, 1.0, 1.5, 2.0,
             4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 32.0
         ])

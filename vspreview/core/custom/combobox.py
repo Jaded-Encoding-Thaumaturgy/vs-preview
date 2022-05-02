@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QWidget, QComboBox
 from ...core import VideoOutput, AudioOutput, PictureType
 from ...models import SceningList
 
-T = TypeVar('T', VideoOutput, AudioOutput, SceningList, PictureType, float)
+T = TypeVar('T', VideoOutput, AudioOutput, SceningList, PictureType, float, str)
 
 
 class ComboBox(QComboBox, Generic[T]):
@@ -19,6 +19,7 @@ class ComboBox(QComboBox, Generic[T]):
             SceningList: _ComboBox_SceningList,
             PictureType: _ComboBox_PictureType,
             float: _ComboBox_float,
+            str: _ComboBox_string
         }[content_type]
 
     indexChanged = pyqtSignal(int, int)
@@ -89,6 +90,14 @@ class _ComboBox_PictureType(ComboBox):
 
 class _ComboBox_float(ComboBox):
     content_type = float
+    if TYPE_CHECKING:
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
+    else:
+        valueChanged = pyqtSignal(content_type, object)
+
+
+class _ComboBox_string(ComboBox):
+    content_type = str
     if TYPE_CHECKING:
         valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:

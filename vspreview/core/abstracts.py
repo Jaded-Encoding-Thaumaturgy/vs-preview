@@ -13,7 +13,8 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QShortcut, QCheckBox,
-    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit, QTableView
+    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit,
+    QTableView, QSpacerItem
 )
 
 from .better_abc import abstract_attribute
@@ -47,22 +48,31 @@ class ExtendedLayout(QBoxLayout):
     def __init__(
         self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None, **kwargs
     ) -> ExtendedLayout:
-        if isinstance(arg0, QBoxLayout):
-            super().__init__(**kwargs)
-            arg0.addLayout(self)
-        elif isinstance(arg0, QWidget):
-            super().__init__(arg0, **kwargs)
-        else:
+        try:
+            if isinstance(arg0, QBoxLayout):
+                super().__init__(**kwargs)
+                arg0.addLayout(self)
+                arg0 = []
+            elif isinstance(arg0, QWidget):
+                super().__init__(arg0, **kwargs)
+                arg0 = []
+            else:
+                raise BaseException()
+        except BaseException:
             super().__init__(**kwargs)
             if not any((arg0, arg1)):
                 return
 
-        for arg in (arg0, arg1):
-            if isinstance(arg, Sequence):
-                if isinstance(arg[0], QBoxLayout):
-                    self.addLayouts(arg)
-                else:
-                    self.addWidgets(arg)
+        items = [u for s in (t if isinstance(t, Sequence) else [t] if t else [] for t in [arg0, arg1]) for u in s]
+
+        for item in items:
+            print(type(item))
+            if isinstance(item, QBoxLayout):
+                self.addLayout(item)
+            elif isinstance(item, QSpacerItem):
+                self.addSpacerItem(item)
+            else:
+                self.addWidget(item)
 
     def addWidgets(self, widgets: Sequence[QWidget]) -> None:
         for widget in widgets:

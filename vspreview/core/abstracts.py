@@ -6,6 +6,7 @@ from pathlib import Path
 import vapoursynth as vs
 from abc import abstractmethod
 from functools import lru_cache
+from dataclasses import dataclass
 from typing import Any, cast, Mapping, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload, Callable
 
 from PyQt5.QtGui import QClipboard
@@ -30,6 +31,11 @@ if TYPE_CHECKING:
 T = TypeVar('T')
 
 
+@dataclass
+class Stretch:
+    amount: int = 0
+
+
 class ExtendedLayout(QBoxLayout):
     @overload
     def __init__(self) -> None: ...
@@ -46,7 +52,8 @@ class ExtendedLayout(QBoxLayout):
     ) -> None: ...
 
     def __init__(
-        self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None, **kwargs
+        self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
+        spacing: int | None = None, alignment: Qt.Alignment | Qt.AlignmentFlag | None = None, **kwargs
     ) -> ExtendedLayout:
         try:
             if isinstance(arg0, QBoxLayout):
@@ -66,13 +73,18 @@ class ExtendedLayout(QBoxLayout):
         items = [u for s in (t if isinstance(t, Sequence) else [t] if t else [] for t in [arg0, arg1]) for u in s]
 
         for item in items:
-            print(type(item))
             if isinstance(item, QBoxLayout):
                 self.addLayout(item)
             elif isinstance(item, QSpacerItem):
                 self.addSpacerItem(item)
+            elif isinstance(item, Stretch):
+                self.addStretch(item.amount)
             else:
                 self.addWidget(item)
+
+        for arg, action in ((spacing, 'setSpacing'), (alignment, 'setAlignment')):
+            if arg is not None:
+                getattr(self, action)(arg)
 
     def addWidgets(self, widgets: Sequence[QWidget]) -> None:
         for widget in widgets:
@@ -81,6 +93,10 @@ class ExtendedLayout(QBoxLayout):
     def addLayouts(self, layouts: Sequence[QBoxLayout]) -> None:
         for layout in layouts:
             self.addLayout(layout)
+
+    @staticmethod
+    def stretch(amount: int | None) -> Stretch:
+        return Stretch(amount)
 
 
 class HBoxLayout(QHBoxLayout, ExtendedLayout):

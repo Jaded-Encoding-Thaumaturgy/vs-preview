@@ -5,10 +5,16 @@ from functools import partial
 from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QLabel, QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QLabel, QComboBox, QSpacerItem
 
+from ...utils import qt_silent_call
+from ...models import GeneralModel
 from ...core.types import VideoOutput
-from ...core import AbstractMainWindow, AbstractToolbar, Time, try_load, PushButton, LineEdit, CheckBox
+from ...core.custom import ComboBox, Switch
+from ...core import (
+    AbstractMainWindow, AbstractToolbar, Time, try_load, PushButton,
+    LineEdit, CheckBox, VBoxLayout, HBoxLayout, SpinBox, Stretch, CroppingInfo
+)
 
 from .settings import MiscSettings
 
@@ -19,7 +25,10 @@ class MiscToolbar(AbstractToolbar):
         'save_button', 'autosave_checkbox',
         'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
-        'toggle_button', 'save_file_types', 'copy_frame_button'
+        'toggle_button', 'save_file_types', 'copy_frame_button',
+        'crop_top_spinbox', 'crop_left_spinbox', 'crop_width_spinbox',
+        'crop_bottom_spinbox', 'crop_right_spinbox', 'crop_height_spinbox',
+        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -59,18 +68,63 @@ class MiscToolbar(AbstractToolbar):
                 r' Frame props can be accessed as well using their names.\n'
             )
         )
-        self.hlayout.addWidgets([
-            self.reload_script_button,
-            self.save_button, self.autosave_checkbox,
-            self.copy_frame_button, self.save_frame_as_button,
-            QLabel('Save file name template:'), self.save_template_lineedit
+
+        self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
+
+        VBoxLayout(self.hlayout, [
+            HBoxLayout([self.autosave_checkbox, self.get_separator(), self.show_debug_checkbox, Stretch()]),
+            HBoxLayout([
+                self.reload_script_button, self.get_separator(),
+                self.save_button, self.get_separator(),
+                self.copy_frame_button, Stretch()
+            ]),
+            HBoxLayout([self.save_frame_as_button, self.save_template_lineedit, Stretch()])
         ])
 
         self.hlayout.addStretch()
 
-        self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
+        self.crop_active_switch = Switch(10, 22, checked=True, clicked=self.crop_active_onchange)
 
-        self.hlayout.addWidget(self.show_debug_checkbox)
+        self.crop_top_spinbox = SpinBox(None, 0, 2 ** 16, valueChanged=self.crop_top_onchange)
+        self.crop_left_spinbox = SpinBox(None, 0, 2 ** 16, valueChanged=self.crop_left_onchange)
+        self.crop_bottom_spinbox = SpinBox(None, 0, 2 ** 16, valueChanged=self.crop_bottom_onchange)
+        self.crop_right_spinbox = SpinBox(None, 0, 2 ** 16, valueChanged=self.crop_right_onchange)
+        self.crop_width_spinbox = SpinBox(None, 1, 2 ** 16, valueChanged=self.crop_width_onchange)
+        self.crop_height_spinbox = SpinBox(None, 1, 2 ** 16, valueChanged=self.crop_height_onchange)
+
+        self.crop_copycommand_button = PushButton('Copy cropping command', clicked=self.crop_copycommand_onclick)
+
+        self.crop_mode_combox = ComboBox[str](
+            self, model=GeneralModel[str](['relative', 'absolute']),
+            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+        )
+        self.crop_mode_combox.currentIndexChanged.connect(self.crop_mode_onchange)
+
+        self.crop_active_switch.click()
+
+        HBoxLayout(self.hlayout, [
+            VBoxLayout([
+                HBoxLayout([
+                    QLabel('Top'), self.crop_top_spinbox, QSpacerItem(35, 10)
+                ], alignment=Qt.AlignCenter, spacing=0),
+                HBoxLayout([
+                    QLabel('Left'), self.crop_left_spinbox,
+                    self.crop_active_switch,
+                    self.crop_right_spinbox, QLabel('Right')
+                ], alignment=Qt.AlignCenter, spacing=5),
+                HBoxLayout([
+                    QLabel('Bottom'), self.crop_bottom_spinbox, QSpacerItem(51, 10)
+                ], alignment=Qt.AlignCenter, spacing=0)
+            ]),
+            VBoxLayout([
+                HBoxLayout([QLabel('Cropping Type:'), self.crop_mode_combox]),
+                HBoxLayout([
+                    QLabel('Width'), self.crop_width_spinbox,
+                    QLabel('Height'), self.crop_height_spinbox
+                ], spacing=0),
+                HBoxLayout([self.crop_copycommand_button])
+            ])
+        ])
 
     def add_shortcuts(self) -> None:
         self.main.add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
@@ -143,6 +197,186 @@ class MiscToolbar(AbstractToolbar):
         self.main.current_output.graphics_scene_item.pixmap().save(
             str(path), 'PNG', self.main.settings.png_compression_level
         )
+
+    def on_current_output_changed(self, index: int, prev_index: int) -> None:
+        if index != prev_index:
+            self.update_crop(prev_index)
+
+        curr = self.main.current_output
+        crop = curr.crop_values
+
+        self.crop_top_spinbox.setMaximum(curr.height - 1)
+        self.crop_bottom_spinbox.setMaximum(curr.height - 1)
+        self.crop_left_spinbox.setMaximum(curr.width - 1)
+        self.crop_right_spinbox.setMaximum(curr.width - 1)
+        self.crop_width_spinbox.setMaximum(curr.width)
+        self.crop_height_spinbox.setMaximum(curr.height)
+
+        qt_silent_call(self.crop_top_spinbox.setValue, crop.top)
+        qt_silent_call(self.crop_bottom_spinbox.setValue, curr.height - crop.height - crop.top)
+        qt_silent_call(self.crop_left_spinbox.setValue, crop.left)
+        qt_silent_call(self.crop_right_spinbox.setValue, curr.width - crop.width - crop.left)
+        qt_silent_call(self.crop_width_spinbox.setValue, crop.width)
+        qt_silent_call(self.crop_height_spinbox.setValue, crop.height)
+
+        self.crop_active_switch.setChecked(not crop.active)
+        self.crop_active_switch.click()
+
+        self.crop_mode_combox.setCurrentIndex(int(crop.is_absolute))
+
+    def update_crop(self, index: int | None = None) -> None:
+        if not hasattr(self.main, 'current_output'):
+            return
+
+        output = self.main.current_output if index is None else self.main.outputs[index]
+
+        output.update_graphic_item(None, CroppingInfo(
+            self.crop_top_spinbox.value(), self.crop_left_spinbox.value(),
+            self.crop_width_spinbox.value(), self.crop_height_spinbox.value(),
+            self.crop_active_switch.isChecked(), bool(self.crop_mode_combox.currentIndex())
+        ))
+
+    def crop_active_onchange(self, checked: bool) -> None:
+        is_absolute = self.crop_mode_combox.currentIndex()
+
+        self.crop_top_spinbox.setEnabled(checked)
+        self.crop_left_spinbox.setEnabled(checked)
+
+        self.crop_bottom_spinbox.setEnabled(checked and not is_absolute)
+        self.crop_right_spinbox.setEnabled(checked and not is_absolute)
+
+        self.crop_width_spinbox.setEnabled(checked and is_absolute)
+        self.crop_height_spinbox.setEnabled(checked and is_absolute)
+
+        self.crop_mode_combox.setEnabled(checked)
+
+        self.crop_copycommand_button.setEnabled(checked)
+
+        self.update_crop()
+
+    def crop_mode_onchange(self, is_absolute: int) -> None:
+        self.crop_bottom_spinbox.setEnabled(not is_absolute)
+        self.crop_right_spinbox.setEnabled(not is_absolute)
+
+        self.crop_width_spinbox.setEnabled(is_absolute)
+        self.crop_height_spinbox.setEnabled(is_absolute)
+
+        self.update_crop()
+
+    def crop_top_onchange(self, value: int) -> None:
+        if not self.crop_active_switch.isChecked():
+            return
+
+        height = self.main.current_output.height
+        offset = height - self.crop_bottom_spinbox.value()
+
+        if offset - value < 1:
+            qt_silent_call(self.crop_top_spinbox.setValue, offset - 1)
+            return
+
+        qt_silent_call(self.crop_height_spinbox.setValue, offset - value)
+
+        self.update_crop()
+
+    def crop_left_onchange(self, value: int) -> None:
+        if not self.crop_active_switch.isChecked():
+            return
+
+        width = self.main.current_output.width
+        offset = width - self.crop_right_spinbox.value()
+
+        if offset - value < 1:
+            qt_silent_call(self.crop_left_spinbox.setValue, offset - 1)
+            return
+
+        qt_silent_call(self.crop_width_spinbox.setValue, offset - value)
+
+        self.update_crop()
+
+    def crop_bottom_onchange(self, value: int) -> None:
+        if not self.crop_active_switch.isChecked():
+            return
+
+        if self.crop_mode_combox.currentIndex():
+            return
+
+        height = self.main.current_output.height
+        offset = height - self.crop_top_spinbox.value()
+
+        if offset - value < 1:
+            qt_silent_call(self.crop_bottom_spinbox.setValue, offset - 1)
+            return
+
+        qt_silent_call(self.crop_height_spinbox.setValue, offset - value)
+
+        self.update_crop()
+
+    def crop_right_onchange(self, value: int) -> None:
+        if not self.crop_active_switch.isChecked():
+            return
+
+        if self.crop_mode_combox.currentIndex():
+            return
+
+        width = self.main.current_output.width
+        offset = width - self.crop_left_spinbox.value()
+
+        if offset - value < 1:
+            qt_silent_call(self.crop_right_spinbox.setValue, offset - 1)
+            return
+
+        qt_silent_call(self.crop_width_spinbox.setValue, offset - value)
+
+        self.update_crop()
+
+    def crop_width_onchange(self, value: int) -> None:
+        if not self.crop_active_switch.isChecked():
+            return
+
+        if self.crop_mode_combox.currentIndex():
+            width = self.main.current_output.width
+            offset = width - self.crop_left_spinbox.value()
+
+            qt_silent_call(self.crop_right_spinbox.setValue, offset - value)
+
+            if offset - value < 1:
+                qt_silent_call(self.crop_left_spinbox.setValue, width - value - 1)
+
+        self.update_crop()
+
+    def crop_height_onchange(self, value: int) -> None:
+        if not self.crop_active_switch.isChecked():
+            return
+
+        if self.crop_mode_combox.currentIndex():
+            height = self.main.current_output.height
+            offset = height - self.crop_top_spinbox.value()
+
+            qt_silent_call(self.crop_bottom_spinbox.setValue, offset - value)
+
+            if offset - value < 1:
+                qt_silent_call(self.crop_top_spinbox.setValue, height - value - 1)
+
+        self.update_crop()
+
+    def crop_copycommand_onclick(self) -> None:
+        is_absolute = self.crop_mode_combox.currentIndex()
+
+        crop_top = self.crop_top_spinbox.value()
+        crop_left = self.crop_left_spinbox.value()
+
+        if not is_absolute:
+            crop_bottom = self.crop_bottom_spinbox.value()
+            crop_right = self.crop_right_spinbox.value()
+
+            text = f'.std.Crop({crop_left}, {crop_right}, {crop_top}, {crop_bottom})'
+        else:
+            crop_width = self.crop_width_spinbox.value()
+            crop_height = self.crop_height_spinbox.value()
+
+            text = f'.std.CropAbs({crop_width}, {crop_height}, {crop_left}, {crop_top})'
+
+        self.main.clipboard.setText(text)
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {

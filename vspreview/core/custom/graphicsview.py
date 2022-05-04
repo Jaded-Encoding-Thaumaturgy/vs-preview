@@ -1,8 +1,20 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF
+from dataclasses import dataclass
+
+from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF, QRect, QPoint
 from PyQt5.QtWidgets import QWidget, QGraphicsView, QApplication, QGraphicsPixmapItem
-from PyQt5.QtGui import QMouseEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap
+from PyQt5.QtGui import QMouseEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap, QPainter, QColor
+
+
+@dataclass
+class CroppingInfo:
+    top: int
+    left: int
+    width: int
+    height: int
+    active: bool = True
+    is_absolute: bool = False
 
 
 class GraphicsView(QGraphicsView):
@@ -90,10 +102,11 @@ class GraphicsView(QGraphicsView):
 
 
 class GraphicsImageItem:
-    __slots__ = ('_graphics_item',)
+    __slots__ = ('_graphics_item', '_pixmap')
 
     def __init__(self, graphics_item: QGraphicsPixmapItem) -> None:
         self._graphics_item = graphics_item
+        self._pixmap = self._graphics_item.pixmap()
 
     def contains(self, point: QPointF) -> bool:
         return self._graphics_item.contains(point)
@@ -104,8 +117,24 @@ class GraphicsImageItem:
     def pixmap(self) -> QPixmap:
         return self._graphics_item.pixmap()
 
-    def setPixmap(self, value: QPixmap) -> None:
-        self._graphics_item.setPixmap(value)
+    def setPixmap(self, new_pixmap: QPixmap | None, crop_values: CroppingInfo | None = None) -> None:
+        if new_pixmap is None:
+            new_pixmap = self._pixmap
+        else:
+            self._pixmap = new_pixmap
+
+        if crop_values is not None and crop_values.active:
+            padded = QPixmap(new_pixmap.width(), new_pixmap.height())
+            padded.fill(QColor(0, 0, 0, 0))
+            painter = QPainter(padded)
+            painter.drawPixmap(
+                QPoint(crop_values.left, crop_values.top), new_pixmap,
+                QRect(crop_values.left, crop_values.top, crop_values.width, crop_values.height)
+            )
+            painter.end()
+            new_pixmap = padded
+
+        self._graphics_item.setPixmap(new_pixmap)
 
     def show(self) -> None:
         self._graphics_item.show()

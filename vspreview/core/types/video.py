@@ -21,6 +21,16 @@ from ..abstracts import main_window, try_load, AbstractYAMLObject
 core = vs.core
 
 
+@dataclass
+class CroppingInfo:
+    top: int
+    left: int
+    width: int
+    height: int
+    active: bool = True
+    is_absolute: bool = False
+
+
 class PackingTypeInfo():
     _getid = itertools.count()
 
@@ -229,7 +239,7 @@ class VideoOutput(AbstractYAMLObject):
         BOTTOM = values[5]
 
     storable_attrs = (
-        'title', 'last_showed_frame', 'play_fps'
+        'title', 'last_showed_frame', 'play_fps', 'crop_values'
     )
     __slots__ = storable_attrs + (
         'index', 'width', 'height', 'fps_num', 'fps_den',
@@ -244,6 +254,7 @@ class VideoOutput(AbstractYAMLObject):
     title: str | None
     curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
     last_showed_frame: Frame | None
+    crop_values: CroppingInfo
     _stateset: bool
 
     def clear(self) -> None:
@@ -293,6 +304,9 @@ class VideoOutput(AbstractYAMLObject):
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
             else:
                 self.play_fps = self.fps_num / self.fps_den
+
+        if not hasattr(self, 'crop_values'):
+            self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
     @property
     def name(self) -> str:
@@ -447,9 +461,16 @@ class VideoOutput(AbstractYAMLObject):
 
         return image.copy() if memory_bug_fix else image
 
-    def update_graphic_item(self, pixmap: QPixmap) -> QPixmap:
+    def update_graphic_item(
+        self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
+    ) -> QPixmap:
+        if isinstance(crop_values, bool):
+            self.crop_values.active = crop_values
+        elif crop_values is not None:
+            self.crop_values = crop_values
+
         if hasattr(self, 'graphics_scene_item'):
-            self.graphics_scene_item.setPixmap(pixmap)
+            self.graphics_scene_item.setPixmap(pixmap, self.crop_values)
         return pixmap
 
     def render_frame(
@@ -538,5 +559,6 @@ class VideoOutput(AbstractYAMLObject):
         try_load(state, 'title', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', float, self.__setattr__)
+        try_load(state, 'crop_values', CroppingInfo, self.__setattr__)
 
         self._stateset = True

@@ -164,7 +164,6 @@ class PlaybackToolbar(AbstractToolbar):
         self.update_outputs(AudioOutputs(self.main))
 
     def get_true_fps(self, frameprops: vs.FrameProps) -> float:
-        print(frameprops)
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(
                 'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'

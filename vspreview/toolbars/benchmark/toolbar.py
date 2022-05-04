@@ -96,7 +96,7 @@ class BenchmarkToolbar(AbstractToolbar):
             vs_clear_cache()
 
         if self.settings.frame_data_sharing_fix_enabled:
-            self.main.current_output.graphics_scene_item.setPixmap(
+            self.main.current_output.update_graphic_item(
                 self.main.current_output.graphics_scene_item.pixmap().copy()
             )
 

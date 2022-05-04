@@ -65,6 +65,7 @@ class MainWindow(AbstractMainWindow):
 
     # emit when about to reload a script: clear all existing references to existing clips.
     reload_signal = pyqtSignal()
+    toolbars: Toolbars
 
     def __init__(self, config_dir: Path) -> None:
         super().__init__()

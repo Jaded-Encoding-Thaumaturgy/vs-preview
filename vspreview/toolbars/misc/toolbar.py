@@ -340,7 +340,7 @@ class MiscToolbar(AbstractToolbar):
             qt_silent_call(self.crop_right_spinbox.setValue, offset - value)
 
             if offset - value < 1:
-                qt_silent_call(self.crop_left_spinbox.setValue, width - value - 1)
+                qt_silent_call(self.crop_left_spinbox.setValue, width - value)
 
         self.update_crop()
 
@@ -355,7 +355,7 @@ class MiscToolbar(AbstractToolbar):
             qt_silent_call(self.crop_bottom_spinbox.setValue, offset - value)
 
             if offset - value < 1:
-                qt_silent_call(self.crop_top_spinbox.setValue, height - value - 1)
+                qt_silent_call(self.crop_top_spinbox.setValue, height - value)
 
         self.update_crop()
 

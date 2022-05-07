@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import IntEnum, auto
 from dataclasses import dataclass
 
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF, QRect, QPoint
@@ -17,6 +18,13 @@ class CroppingInfo:
     is_absolute: bool = False
 
 
+class DragEventType(IntEnum):
+    start = auto()
+    stop = auto()
+    move = auto()
+    repaint = auto()
+
+
 class GraphicsView(QGraphicsView):
     WHEEL_STEP = 15 * 8  # degrees
 
@@ -26,6 +34,7 @@ class GraphicsView(QGraphicsView):
     mousePressed = pyqtSignal(QMouseEvent)
     mouseReleased = pyqtSignal(QMouseEvent)
     wheelScrolled = pyqtSignal(int)
+    dragEvent = pyqtSignal(DragEventType)
     drag_mode: QGraphicsView.DragMode
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -34,12 +43,15 @@ class GraphicsView(QGraphicsView):
         self.app = QApplication.instance()
         self.angleRemainder = 0
         self.zoomValue = 0.0
+        self.currentZoom = 0
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
     def setZoom(self, value: int) -> None:
+        self.currentZoom = value
         transform = QTransform()
         transform.scale(value, value)
         self.setTransform(transform)
+        self.dragEvent.emit(DragEventType.repaint)
 
     def event(self, event: QEvent) -> bool:
         if isinstance(event, QNativeGestureEvent):
@@ -86,6 +98,7 @@ class GraphicsView(QGraphicsView):
         super().mouseMoveEvent(event)
         if self.hasMouseTracking():
             self.mouseMoved.emit(event)
+        self.dragEvent.emit(DragEventType.move)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
@@ -93,12 +106,14 @@ class GraphicsView(QGraphicsView):
             self.setDragMode(QGraphicsView.ScrollHandDrag)
         super().mousePressEvent(event)
         self.mousePressed.emit(event)
+        self.dragEvent.emit(DragEventType.start)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         super().mouseReleaseEvent(event)
         if event.button() == Qt.LeftButton:
             self.setDragMode(self.drag_mode)
         self.mouseReleased.emit(event)
+        self.dragEvent.emit(DragEventType.stop)
 
 
 class GraphicsImageItem:

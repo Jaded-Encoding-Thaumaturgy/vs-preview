@@ -20,7 +20,7 @@ from ..toolbars import Toolbars
 from ..models import VideoOutputs
 from ..core.vsenv import get_policy
 from ..utils import fire_and_forget, set_status_label
-from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem
+from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget
 
 from .timeline import Timeline
@@ -60,7 +60,7 @@ class MainWindow(AbstractMainWindow):
         'script_path', 'timeline', 'main_layout',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
-        'current_storage_path', 'opengl_widget'
+        'current_storage_path', 'opengl_widget', 'drag_navigator'
     ]
 
     # emit when about to reload a script: clear all existing references to existing clips.
@@ -148,6 +148,8 @@ class MainWindow(AbstractMainWindow):
         self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
         self.graphics_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+
+        self.drag_navigator = DragNavigator(self, self.graphics_view)
 
         self.timeline = Timeline(self.central_widget)
 

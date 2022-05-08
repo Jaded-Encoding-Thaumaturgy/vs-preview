@@ -272,11 +272,11 @@ class VideoOutput(AbstractYAMLObject):
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha)
 
         if self.source.alpha is not None:
-            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True)
+            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
 
         self.index = index
 
-        self.prepared.clip = self.prepare_vs_output(self.source.clip)
+        self.prepared.clip = self.prepare_vs_output(self.source.clip).std.CopyFrameProps(self.source.clip)
         self.width = self.prepared.clip.width
         self.height = self.prepared.clip.height
         self.fps_num = self.prepared.clip.fps.numerator

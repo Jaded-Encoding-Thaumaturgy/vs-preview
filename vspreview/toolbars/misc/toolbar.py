@@ -22,7 +22,7 @@ from .settings import MiscSettings
 class MiscToolbar(AbstractToolbar):
     __slots__ = (
         'autosave_timer', 'reload_script_button',
-        'save_button', 'autosave_checkbox',
+        'save_storage_button', 'autosave_checkbox',
         'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
         'toggle_button', 'save_file_types', 'copy_frame_button',
@@ -52,7 +52,9 @@ class MiscToolbar(AbstractToolbar):
 
         self.reload_script_button = PushButton('Reload Script', self, clicked=self.main.reload_script)
 
-        self.save_button = PushButton('Save', self, clicked=partial(self.main.dump_storage_async, manually=True))
+        self.save_storage_button = PushButton(
+            'Save Storage', self, clicked=partial(self.main.dump_storage_async, manually=True)
+        )
 
         self.autosave_checkbox = CheckBox('Autosave', self, checked=True)
 
@@ -75,7 +77,7 @@ class MiscToolbar(AbstractToolbar):
             HBoxLayout([self.autosave_checkbox, self.get_separator(), self.show_debug_checkbox, Stretch()]),
             HBoxLayout([
                 self.reload_script_button, self.get_separator(),
-                self.save_button, self.get_separator(),
+                self.save_storage_button, self.get_separator(),
                 self.copy_frame_button, Stretch()
             ]),
             HBoxLayout([self.save_frame_as_button, self.save_template_lineedit, Stretch()])
@@ -128,7 +130,7 @@ class MiscToolbar(AbstractToolbar):
 
     def add_shortcuts(self) -> None:
         self.main.add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
-        self.main.add_shortcut(Qt.ALT + Qt.Key_S, self.save_button.click)
+        self.main.add_shortcut(Qt.ALT + Qt.Key_S, self.save_storage_button.click)
         self.main.add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
         self.main.add_shortcut(Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
 

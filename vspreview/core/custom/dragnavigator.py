@@ -37,7 +37,7 @@ class DragNavigator(QWidget):
 
     def on_drag(self, event_type: DragEventType):
         # while reloading and moving mouse
-        if not hasattr(self.main, 'current_output'):
+        if not hasattr(self.main, 'current_output') or not self.main.current_output:
             return
 
         if event_type == DragEventType.repaint:

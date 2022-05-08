@@ -195,7 +195,7 @@ class MainSettings(AbstractToolbarSettings):
             main_zoom_comb = main.toolbars.main.zoom_combobox
             old_index = main_zoom_comb.currentIndex()
             main_zoom_comb.setModel(GeneralModel[float](self.zoom_levels))
-            main_zoom_comb.setCurrentIndex(old_index)
+            main_zoom_comb.setCurrentIndex(min(max(old_index, 0), len(new_levels) - 1))
 
         self.zoom_levels_lineedit.clear()
 

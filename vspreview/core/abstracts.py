@@ -94,6 +94,19 @@ class ExtendedLayout(QBoxLayout):
         for layout in layouts:
             self.addLayout(layout)
 
+    def clear(self) -> None:
+        while(item := self.takeAt(0)):
+            if (widget := item.widget()):
+                widget.deleteLater()
+
+            if (layout := item.layout()):
+                try:
+                    layout.clear()
+                except BaseException:
+                    del layout
+
+            del item
+
     @staticmethod
     def stretch(amount: int | None) -> Stretch:
         return Stretch(amount)

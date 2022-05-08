@@ -149,6 +149,7 @@ class MainSettings(AbstractToolbarSettings):
             'png_compression': self.png_compression_level,
             'statusbar_message_timeout': self.statusbar_message_timeout,
             'timeline_label_notches_margin': self.timeline_label_notches_margin,
+            'force_old_storages_removal': self.force_old_storages_removal,
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -160,3 +161,4 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'png_compression', int, self.png_compressing_spinbox.setValue)
         try_load(state, 'statusbar_message_timeout', Time, self.statusbar_timeout_control.setValue)
         try_load(state, 'timeline_label_notches_margin', int, self.timeline_notches_margin_spinbox.setValue)
+        try_load(state, 'force_old_storages_removal', bool, self.force_old_storages_removal_checkbox.setChecked)

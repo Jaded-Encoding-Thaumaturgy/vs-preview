@@ -11,13 +11,15 @@ from ...models import VideoOutputs, GeneralModel
 from ...core.custom import ComboBox, TimeEdit, FrameEdit
 from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load, PushButton, CheckBox
 
+from .dialog import FramePropsDialog
+
 
 class MainToolbar(AbstractToolbar):
     _no_visibility_choice = True
     _storable_attrs = ('outputs',)
 
     __slots__ = (
-        *_storable_attrs,
+        *_storable_attrs, 'frame_props_dialog',
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button', 'settings_button'
@@ -40,6 +42,8 @@ class MainToolbar(AbstractToolbar):
         super().setup_ui()
 
         self.setVisible(True)
+
+        self.frame_props_dialog = FramePropsDialog(self.main)
 
         self.outputs_combobox = ComboBox[VideoOutput](
             self, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
@@ -71,6 +75,11 @@ class MainToolbar(AbstractToolbar):
             'Switch Timeline Mode', self, clicked=self.on_switch_timeline_mode_clicked
         )
 
+        self.frame_props_tab_button = PushButton('Frame Props', self, clicked=lambda: (
+            self.frame_props_dialog.update_frame_props(self.main.current_output.props),
+            self.frame_props_dialog.show()
+        ))
+
         self.settings_button = PushButton('Settings', self, clicked=self.main.app_settings.show)
 
         self.hlayout.addWidgets([
@@ -80,6 +89,7 @@ class MainToolbar(AbstractToolbar):
             self.sync_outputs_checkbox,
             self.zoom_combobox,
             self.switch_timeline_mode_button,
+            self.frame_props_tab_button,
             self.settings_button
         ])
 
@@ -117,6 +127,9 @@ class MainToolbar(AbstractToolbar):
 
         if self.sync_outputs_checkbox.isChecked():
             self.on_sync_outputs_clicked(True, force_frame=frame)
+
+        if not self.frame_props_dialog.isHidden():
+            self.frame_props_dialog.update_frame_props(self.main.current_output.props)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)

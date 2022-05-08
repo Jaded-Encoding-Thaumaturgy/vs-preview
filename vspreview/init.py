@@ -94,12 +94,9 @@ def main() -> None:
 
     width, height = get_temp_screen_resolution()
 
-    if width > 1920 and height > 1080:
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-    else:
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, False)
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, False)
+    hidpi = width > 1920 and height > 1080
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, hidpi)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, hidpi)
 
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)

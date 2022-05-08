@@ -448,30 +448,28 @@ def try_load(
     if error_msg is None:
         error_msg = storage_err_msg(name, 1)
 
-    error = False
-
     try:
         value = state[name]
         if not isinstance(value, expected_type) and not (nullable and value is None):
             raise TypeError
-    except (KeyError, TypeError):
-        error = True
+    except (KeyError, TypeError) as e:
+        logging.error(e)
         logging.warning(error_msg)
+        return
     finally:
         if nullable:
-            error = False
             value = None
 
-    if not error:
-        if isinstance(receiver, expected_type):
-            receiver = value
-        elif callable(receiver):
-            try:
-                cast(_SetterFunction, receiver)(name, value)
-            except BaseException:
-                cast(_OneArgumentFunction, receiver)(value)
-        elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
-            try:
-                receiver.__setattr__(name, value)
-            except AttributeError:
-                logging.warning(error_msg)
+    if isinstance(receiver, expected_type):
+        receiver = value
+    elif callable(receiver):
+        try:
+            cast(_SetterFunction, receiver)(name, value)
+        except BaseException:
+            cast(_OneArgumentFunction, receiver)(value)
+    elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
+        try:
+            receiver.__setattr__(name, value)
+        except AttributeError as e:
+            logging.error(e)
+            logging.warning(error_msg)

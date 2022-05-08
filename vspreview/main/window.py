@@ -431,7 +431,7 @@ class MainWindow(AbstractMainWindow):
             logging.debug('switch_frame: position is None!')
             return
 
-        frame = Frame(pos)
+        frame = Frame(min(max(0, int(Frame(pos))), self.current_output.total_frames))
 
         if self.current_output.last_showed_frame == frame > self.current_output.end_frame:
             return

@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from functools import partial
+from typing import Any, Mapping, List
 from psutil import cpu_count, Process
 
-from PyQt5.QtWidgets import QLabel
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QLabel, QComboBox, QShortcut
 
-from ..core.custom import TimeEdit
-from ..core import Time, AbstractToolbarSettings, try_load, VBoxLayout, HBoxLayout, SpinBox, CheckBox
+from ..utils import main_window
+from ..models import GeneralModel
+from ..core.custom import TimeEdit, ComboBox
+from ..core import Time, AbstractToolbarSettings, try_load, VBoxLayout, HBoxLayout, SpinBox, CheckBox, PushButton
 
 
 class MainSettings(AbstractToolbarSettings):
@@ -16,6 +21,7 @@ class MainSettings(AbstractToolbarSettings):
         'opengl_rendering_checkbox', 'output_index_spinbox',
         'png_compressing_spinbox', 'statusbar_timeout_control',
         'timeline_notches_margin_spinbox', 'usable_cpus_spinbox',
+        'zoom_levels_combobox', 'zoom_levels_lineedit', 'zoom_level_default_combobox',
         'azerty_keyboard_checkbox'
     )
 
@@ -48,19 +54,24 @@ class MainSettings(AbstractToolbarSettings):
 
         self.azerty_keyboard_checkbox = CheckBox('AZERTY Keyboard', self)
 
+        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.NoInsert)
+        self.zoom_levels_lineedit = self.zoom_levels_combobox.lineEdit()
+
+        self.zoom_levels_lineedit.returnPressed.connect(self.zoom_levels_combobox_on_add)
+        QShortcut(
+            QKeySequence(Qt.CTRL + Qt.Key_Delete), self.zoom_levels_combobox,
+            activated=partial(self.zoom_levels_combobox_on_remove, True)
+        )
+
+        self.zoom_level_default_combobox = ComboBox[int]()
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
 
         HBoxLayout(self.vlayout, [
-            VBoxLayout([
-                self.dark_theme_checkbox,
-                self.opengl_rendering_checkbox
-            ]),
-            VBoxLayout([
-                self.force_old_storages_removal_checkbox,
-                self.azerty_keyboard_checkbox
-            ])
+            VBoxLayout([self.dark_theme_checkbox, self.opengl_rendering_checkbox]),
+            VBoxLayout([self.force_old_storages_removal_checkbox, self.azerty_keyboard_checkbox])
         ])
 
         HBoxLayout(self.vlayout, [QLabel('Default output index'), self.output_index_spinbox])
@@ -75,6 +86,18 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Usable CPUs count'), self.usable_cpus_spinbox])
 
+        HBoxLayout(self.vlayout, [
+            VBoxLayout([
+                QLabel('Zoom Levels'),
+                HBoxLayout([
+                    self.zoom_levels_combobox,
+                    PushButton('❌', clicked=self.zoom_levels_combobox_on_remove, maximumWidth=18),
+                    PushButton('✔️', clicked=self.zoom_levels_combobox_on_add, maximumWidth=18),
+                ])
+            ]),
+            VBoxLayout([QLabel('Default Zoom Level'), self.zoom_level_default_combobox])
+        ])
+
     def set_defaults(self) -> None:
         self.autosave_control.setValue(Time(seconds=30))
         self.base_ppi_spinbox.setValue(96)
@@ -87,6 +110,11 @@ class MainSettings(AbstractToolbarSettings):
         self.force_old_storages_removal_checkbox.setChecked(False)
         self.azerty_keyboard_checkbox.setChecked(False)
         self.usable_cpus_spinbox.setValue(self.get_usable_cpus_count())
+
+        self.zoom_levels = [
+            25, 50, 68, 75, 85, 100, 150, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 2000, 3200
+        ]
+        self.zoom_level_default_combobox.setCurrentIndex(3)
 
     @property
     def autosave_interval(self) -> Time:
@@ -132,12 +160,90 @@ class MainSettings(AbstractToolbarSettings):
     def usable_cpus_count(self) -> int:
         return self.usable_cpus_spinbox.value()
 
+    @property
+    def zoom_levels(self) -> List[float]:
+        return [
+            int(self.zoom_levels_combobox.itemText(i)) / 100
+            for i in range(self.zoom_levels_combobox.count())
+        ]
+
+    @zoom_levels.setter
+    def zoom_levels(self, new_levels: List[int]) -> None:
+        new_levels = sorted(set(map(int, new_levels)))
+
+        if len(new_levels) < 3:
+            return
+
+        old_values = [int(x * 100) for x in self.zoom_levels]
+
+        self.zoom_levels_combobox.clear()
+        self.zoom_levels_combobox.addItems(map(str, new_levels))
+
+        old_default = self.zoom_level_default_combobox.currentData()
+
+        self.zoom_level_default_combobox.setModel(GeneralModel[int](new_levels))
+
+        if old_default:
+            try:
+                old_default_idx = new_levels.index(int(old_default))
+            except ValueError:
+                old_default_idx = old_values.index(int(old_default))
+                old_default_idx = min(max(old_default_idx - 1, 0), old_default_idx + 1, len(new_levels) - 1)
+            self.zoom_level_default_combobox.setCurrentIndex(old_default_idx)
+
+        if hasattr((main := main_window()), 'toolbars'):
+            main_zoom_comb = main.toolbars.main.zoom_combobox
+            old_index = main_zoom_comb.currentIndex()
+            main_zoom_comb.setModel(GeneralModel[float](self.zoom_levels))
+            main_zoom_comb.setCurrentIndex(old_index)
+
+        self.zoom_levels_lineedit.clear()
+
+    @property
+    def zoom_default_index(self) -> int:
+        return self.zoom_level_default_combobox.currentIndex()
+
     @staticmethod
     def get_usable_cpus_count() -> int:
         try:
             return len(Process().cpu_affinity())
         except AttributeError:
             return cpu_count()
+
+    def zoom_levels_combobox_on_add(self):
+        try:
+            new_value = int(self.zoom_levels_lineedit.text())
+        except ValueError:
+            return
+
+        if not new_value:
+            return
+
+        zoom_levels = [x * 100 for x in self.zoom_levels]
+
+        if new_value in zoom_levels:
+            return
+
+        self.zoom_levels = [*zoom_levels, new_value]
+
+    def zoom_levels_combobox_on_remove(self, checkFocus: bool = False):
+        if checkFocus and not self.zoom_levels_lineedit.hasFocus():
+            return
+
+        try:
+            old_value = int(self.zoom_levels_lineedit.text())
+        except ValueError:
+            return
+
+        if not old_value:
+            return
+
+        zoom_levels = [x * 100 for x in self.zoom_levels]
+
+        if old_value not in zoom_levels:
+            return
+
+        self.zoom_levels = [x for x in zoom_levels if round(x) != round(old_value)]
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {
@@ -150,6 +256,8 @@ class MainSettings(AbstractToolbarSettings):
             'statusbar_message_timeout': self.statusbar_message_timeout,
             'timeline_label_notches_margin': self.timeline_label_notches_margin,
             'force_old_storages_removal': self.force_old_storages_removal,
+            'zoom_levels': sorted([int(x * 100) for x in self.zoom_levels]),
+            'zoom_default_index': self.zoom_default_index,
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -162,3 +270,5 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'statusbar_message_timeout', Time, self.statusbar_timeout_control.setValue)
         try_load(state, 'timeline_label_notches_margin', int, self.timeline_notches_margin_spinbox.setValue)
         try_load(state, 'force_old_storages_removal', bool, self.force_old_storages_removal_checkbox.setChecked)
+        try_load(state, 'zoom_levels', List, self)
+        try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)

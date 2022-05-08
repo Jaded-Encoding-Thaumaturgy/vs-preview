@@ -17,7 +17,7 @@ class MainToolbar(AbstractToolbar):
     _storable_attrs = ('outputs',)
 
     __slots__ = (
-        *_storable_attrs, 'zoom_levels',
+        *_storable_attrs,
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button', 'settings_button'
@@ -29,12 +29,8 @@ class MainToolbar(AbstractToolbar):
 
         self.outputs: VideoOutputs = []  # type: ignore
 
-        self.zoom_levels = GeneralModel[float]([
-            0.25, 0.5, 0.68, 0.75, 0.85, 1.0, 1.5, 2.0,
-            4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 32.0
-        ])
-        self.zoom_combobox.setModel(self.zoom_levels)
-        self.zoom_combobox.setCurrentIndex(3)
+        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
+        self.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
 
         self.add_shortcuts()
 

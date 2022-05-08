@@ -511,8 +511,8 @@ class MainWindow(AbstractMainWindow):
         new_index = self.toolbars.main.zoom_combobox.currentIndex() + steps
         if new_index < 0:
             new_index = 0
-        elif new_index >= len(self.toolbars.main.zoom_levels):
-            new_index = len(self.toolbars.main.zoom_levels) - 1
+        elif new_index >= len(self.settings.zoom_levels):
+            new_index = len(self.settings.zoom_levels) - 1
         self.toolbars.main.zoom_combobox.setCurrentIndex(new_index)
 
     def on_timeline_clicked(self, start: int) -> None:

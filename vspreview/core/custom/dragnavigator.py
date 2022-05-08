@@ -36,6 +36,10 @@ class DragNavigator(QWidget):
         self.graphics_view.horizontalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))
 
     def on_drag(self, event_type: DragEventType):
+        # while reloading and moving mouse
+        if not hasattr(self.main, 'current_output'):
+            return
+
         if event_type == DragEventType.repaint:
             self.repaint_timer.stop()
             self.repaint_timer.start()
@@ -46,7 +50,7 @@ class DragNavigator(QWidget):
         elif event_type == DragEventType.stop:
             self.is_tracking = False
             self.setVisible(False)
-            return
+            return        
 
         scrollbarW = self.graphics_view.horizontalScrollBar()
         scrollbarH = self.graphics_view.verticalScrollBar()

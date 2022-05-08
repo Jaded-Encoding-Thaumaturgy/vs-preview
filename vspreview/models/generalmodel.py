@@ -13,6 +13,7 @@ class GeneralModel(QAbstractListModel):
     def __class_getitem__(cls, content_type: Type[T]) -> Type:
         return {
             float: _GeneralModel_float,
+            int: _GeneralModel_int,
             str: _GeneralModel_string,
         }[content_type]
 
@@ -56,6 +57,13 @@ class _GeneralModel_float(GeneralModel):
 
     def _displayValue(self, value: content_type) -> str:
         return str(round(value * 100)) + '%'
+
+
+class _GeneralModel_int(GeneralModel):
+    content_type = int
+
+    def _displayValue(self, value: content_type) -> str:
+        return str(value)
 
 
 class _GeneralModel_string(GeneralModel):

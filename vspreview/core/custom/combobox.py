@@ -19,6 +19,7 @@ class ComboBox(QComboBox, Generic[T]):
             SceningList: _ComboBox_SceningList,
             PictureType: _ComboBox_PictureType,
             float: _ComboBox_float,
+            int: _ComboBox_int,
             str: _ComboBox_string
         }[content_type]
 
@@ -90,6 +91,14 @@ class _ComboBox_PictureType(ComboBox):
 
 class _ComboBox_float(ComboBox):
     content_type = float
+    if TYPE_CHECKING:
+        valueChanged = pyqtSignal(content_type, Optional[content_type])
+    else:
+        valueChanged = pyqtSignal(content_type, object)
+
+
+class _ComboBox_int(ComboBox):
+    content_type = int
     if TYPE_CHECKING:
         valueChanged = pyqtSignal(content_type, Optional[content_type])
     else:

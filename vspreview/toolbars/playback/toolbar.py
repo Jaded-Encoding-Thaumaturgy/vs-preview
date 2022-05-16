@@ -507,7 +507,7 @@ class PlaybackToolbar(AbstractToolbar):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'seek_interval_frame', Frame, self.seek_frame_control.setValue)
-        try_load(state, 'audio_outputs', AudioOutputs, self.update_outputs)
+        try_load(state, 'audio_outputs', AudioOutputs, self.rescan_outputs)
         try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)
         try_load(state, 'audio_muted', bool, self.mute_checkbox.setChecked)
         super().__setstate__(state)

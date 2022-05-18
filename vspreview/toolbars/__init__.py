@@ -75,5 +75,6 @@ class Toolbars(AbstractYAMLObjectSingleton):
                 if not isinstance(storage, Mapping):
                     raise TypeError
                 getattr(self, toolbar_name).__setstate__(storage)
-            except (KeyError, TypeError):
+            except (KeyError, TypeError) as e:
+                logging.error(e)
                 logging.warning(storage_err_msg(toolbar_name))

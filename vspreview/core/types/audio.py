@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ctypes
 from math import floor
 from array import array
 import vapoursynth as vs
@@ -33,33 +32,19 @@ class AudioOutput(AbstractYAMLObject):
         self.source_vs_output = vs_output
         self.vs_output = self.source_vs_output
 
-        class AudioFormat:
-            sample_type: vs.SampleType
-            bits_per_sample: int
-            bytes_per_sample: int
-            channel_layout: int
-            num_channels: int
-            sample_rate: int
-            num_samples: int
-            samples_per_frame: int
-
-        self.format = AudioFormat()
-        self.format.num_samples = self.vs_output.num_samples
-        self.format.sample_rate = self.vs_output.sample_rate
-        self.format.samples_per_frame = self.SAMPLES_PER_FRAME
-        self.format.bits_per_sample = self.vs_output.bits_per_sample
-        self.format.bytes_per_sample = self.vs_output.bytes_per_sample
-        self.format.num_channels = self.vs_output.num_channels
-        self.format.sample_type = self.vs_output.sample_type
-        self.format.channel_layout = self.vs_output.channel_layout
+        (self.arrayType, sampleTypeQ) = (
+            'f', QAudioFormat.Float
+        ) if self.vs_output.sample_type == vs.FLOAT else (
+            (
+                'i' if self.vs_output.bits_per_sample <= 16 else 'l'
+            ), QAudioFormat.SignedInt
+        )
 
         self.qformat = QAudioFormat()
-        self.qformat.setChannelCount(self.format.num_channels)
-        self.qformat.setSampleRate(self.format.sample_rate)
-        self.qformat.setSampleType(
-            QAudioFormat.Float if self.format.bits_per_sample == 32 else QAudioFormat.UnSignedInt
-        )
-        self.qformat.setSampleSize(self.format.bits_per_sample)
+        self.qformat.setChannelCount(self.vs_output.num_channels)
+        self.qformat.setSampleRate(self.vs_output.sample_rate)
+        self.qformat.setSampleType(sampleTypeQ)
+        self.qformat.setSampleSize(self.vs_output.bits_per_sample)
         self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')
 
@@ -67,42 +52,33 @@ class AudioOutput(AbstractYAMLObject):
             raise RuntimeError('Audio format not supported')
 
         self.qoutput = QAudioOutput(self.qformat, self.main)
-        self.qoutput.setBufferSize(self.format.bytes_per_sample * self.format.samples_per_frame * 10)
+        self.qoutput.setBufferSize(self.vs_output.bits_per_sample / 8 * self.SAMPLES_PER_FRAME * 5)
         self.iodevice = self.qoutput.start()
 
-        self.fps_num = self.format.sample_rate
-        self.fps_den = self.format.samples_per_frame
+        self.fps_num = self.vs_output.sample_rate
+        self.fps_den = self.SAMPLES_PER_FRAME
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.vs_output.num_frames)
         self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
 
+        self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * 2)
+
         if not hasattr(self, 'name'):
             self.name = 'Audio Node ' + str(self.index)
 
     def clear(self) -> None:
-        self.source_vs_output = self.vs_output = self.format = None  # type: ignore
+        self.source_vs_output = self.vs_output = None  # type: ignore
 
     def render_audio_frame(self, frame: Frame) -> None:
         self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))
 
     def render_raw_audio_frame(self, vs_frame: vs.AudioFrame) -> None:
-        ptr_type = ctypes.POINTER(ctypes.c_float * self.format.samples_per_frame)
+        self.audio_buffer[::2] = array(self.arrayType, vs_frame[0].tobytes())
+        self.audio_buffer[1::2] = array(self.arrayType, vs_frame[1].tobytes())
 
-        barray_l = bytes(ctypes.cast(vs_frame.get_read_ptr(0), ptr_type).contents)
-        barray_r = bytes(ctypes.cast(vs_frame.get_read_ptr(1), ptr_type).contents)
-
-        array_l = array('f', barray_l)
-        array_r = array('f', barray_r)
-        array_lr = array('f', array_l + array_r)
-
-        array_lr[::2] = array_l
-        array_lr[1::2] = array_r
-
-        barray = bytes(array_lr.tobytes())
-
-        self.iodevice.write(barray)
+        self.iodevice.write(bytes(self.audio_buffer.tobytes()))
 
     def _calculate_frame(self, seconds: float) -> int:
         return floor(seconds * self.fps)

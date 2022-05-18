@@ -20,6 +20,11 @@ from ...core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Tim
 from .settings import PlaybackSettings
 
 
+def _del_future(f: Future[vs.VideoFrame]) -> None:
+    f0 = f.result()
+    del f, f0
+
+
 class PlaybackToolbar(AbstractToolbar):
     __slots__ = (
         'play_timer', 'fps_timer', 'fps_history', 'current_fps',
@@ -158,7 +163,6 @@ class PlaybackToolbar(AbstractToolbar):
 
     def rescan_outputs(self, outputs: AudioOutputs | None = None) -> None:
         self.audio_outputs = outputs or AudioOutputs(self.main)
-        self.main.init_outputs()
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
     def get_true_fps(self, frameprops: vs.FrameProps) -> float:
@@ -326,12 +330,8 @@ class PlaybackToolbar(AbstractToolbar):
         if self.main.statusbar.label.text() == 'Playing':
             self.main.statusbar.label.setText('Ready')
 
-        def _del(f: Future[vs.VideoFrame]) -> None:
-            f0 = f.result()
-            del f, f0
-
         for future in self.play_buffer:
-            future[1].add_done_callback(_del)
+            future[1].add_done_callback(_del_future)
 
         self.play_buffer.clear()
         del self.play_buffer
@@ -355,13 +355,15 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_start_time = None
 
     def stop_audio(self) -> None:
-        current_audio_output = self.audio_outputs_combobox.currentValue()
+        self.audio_outputs_combobox.currentValue().iodevice.reset()
 
         self.play_timer_audio.stop()
+
         for future in self.play_buffer_audio:
-            future.add_done_callback(lambda future: future.result())
+            future.add_done_callback(_del_future)
+
         self.play_buffer_audio.clear()
-        current_audio_output.iodevice.reset()
+
         self.current_audio_frame = Frame(0)
         self.audio_outputs_combobox.setEnabled(True)
 

@@ -157,22 +157,37 @@ class MiscToolbar(AbstractToolbar):
         template = self.main.toolbars.misc.save_template_lineedit.text()
 
         frame_props = self.main.current_output.props
+
+        # will be replaced with vsengine heuristics
+        resize_props = {
+            'matrix': VideoOutput.Matrix.values[
+                int(str(frame_props['_Matrix']))
+            ] if '_Matrix' in frame_props else VideoOutput.Matrix.BT709,
+            'primaries': VideoOutput.Primaries.values[
+                int(str(frame_props['_Primaries']))
+            ] if '_Primaries' in frame_props else VideoOutput.Primaries.BT709,
+            'range': VideoOutput.Range.values[
+                int(str(frame_props['_ColorRange']))
+            ] if '_ColorRange' in frame_props else VideoOutput.Range.LIMITED,
+            'transfer': VideoOutput.Transfer.values[
+                int(str(frame_props['_Transfer']))
+            ] if '_Transfer' in frame_props else VideoOutput.Transfer.BT709,
+        }
+
         substitutions = {
             **frame_props,
+            **resize_props,
             'format': fmt.name,
             'fps_den': self.main.current_output.fps_den,
             'fps_num': self.main.current_output.fps_num,
-            'frame': self.main.current_output.last_showed_frame,
-            'height': self.main.current_output.height,
-            'index': self.main.current_output.index,
-            'matrix': VideoOutput.Matrix.values[int(str(frame_props['_Matrix']))],
-            'primaries': VideoOutput.Primaries.values[int(str(frame_props['_Primaries']))],
-            'range': VideoOutput.Range.values[int(str(frame_props['_ColorRange']))],
-            'script_name': self.main.script_path.stem,
-            'total_frames': self.main.current_output.total_frames,
-            'transfer': VideoOutput.Transfer.values[int(str(frame_props['_Transfer']))],
             'width': self.main.current_output.width,
+            'height': self.main.current_output.height,
+            'script_name': self.main.script_path.stem,
+            'index': self.main.current_output.index,
+            'frame': self.main.current_output.last_showed_frame,
+            'total_frames': self.main.current_output.total_frames
         }
+
         try:
             suggested_path_str = template.format(**substitutions)
         except ValueError:

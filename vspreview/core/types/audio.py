@@ -35,16 +35,14 @@ class AudioOutput(AbstractYAMLObject):
         (self.arrayType, sampleTypeQ) = (
             'f', QAudioFormat.Float
         ) if self.vs_output.sample_type == vs.FLOAT else (
-            (
-                'i' if self.vs_output.bits_per_sample <= 16 else 'l'
-            ), QAudioFormat.SignedInt
+            'I' if self.vs_output.bits_per_sample <= 16 else 'L', QAudioFormat.SignedInt
         )
 
         self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.vs_output.num_channels)
         self.qformat.setSampleRate(self.vs_output.sample_rate)
         self.qformat.setSampleType(sampleTypeQ)
-        self.qformat.setSampleSize(self.vs_output.bits_per_sample)
+        self.qformat.setSampleSize(32)
         self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')
 
@@ -52,7 +50,7 @@ class AudioOutput(AbstractYAMLObject):
             raise RuntimeError('Audio format not supported')
 
         self.qoutput = QAudioOutput(self.qformat, self.main)
-        self.qoutput.setBufferSize(self.vs_output.bits_per_sample / 8 * self.SAMPLES_PER_FRAME * 5)
+        self.qoutput.setBufferSize(32 * self.SAMPLES_PER_FRAME)
         self.iodevice = self.qoutput.start()
 
         self.fps_num = self.vs_output.sample_rate
@@ -78,7 +76,7 @@ class AudioOutput(AbstractYAMLObject):
         self.audio_buffer[::2] = array(self.arrayType, vs_frame[0].tobytes())
         self.audio_buffer[1::2] = array(self.arrayType, vs_frame[1].tobytes())
 
-        self.iodevice.write(bytes(self.audio_buffer.tobytes()))
+        self.iodevice.write(self.audio_buffer.tobytes())
 
     def _calculate_frame(self, seconds: float) -> int:
         return floor(seconds * self.fps)

@@ -16,7 +16,7 @@ core = vs.core
 
 
 class AudioOutput(AbstractYAMLObject):
-    SAMPLES_PER_FRAME = 3000
+    SAMPLES_PER_FRAME = 3072  # https://github.com/vapoursynth/vapoursynth/blob/maste/r/include/VapourSynth4.h#L32
 
     storable_attrs = (
         'name',
@@ -53,13 +53,12 @@ class AudioOutput(AbstractYAMLObject):
         self.format.sample_type = self.vs_output.sample_type
         self.format.channel_layout = self.vs_output.channel_layout
 
-        if self.format.num_channels != 2:
-            raise RuntimeError('Non-2-channel audio is not supported')
-
         self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.format.num_channels)
         self.qformat.setSampleRate(self.format.sample_rate)
-        self.qformat.setSampleType(QAudioFormat.UnSignedInt)
+        self.qformat.setSampleType(
+            QAudioFormat.Float if self.format.bits_per_sample == 32 else QAudioFormat.UnSignedInt
+        )
         self.qformat.setSampleSize(self.format.bits_per_sample)
         self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')
@@ -68,7 +67,7 @@ class AudioOutput(AbstractYAMLObject):
             raise RuntimeError('Audio format not supported')
 
         self.qoutput = QAudioOutput(self.qformat, self.main)
-        self.qoutput.setBufferSize(self.format.bytes_per_sample * self.format.samples_per_frame * 5)
+        self.qoutput.setBufferSize(self.format.bytes_per_sample * self.format.samples_per_frame * 10)
         self.iodevice = self.qoutput.start()
 
         self.fps_num = self.format.sample_rate

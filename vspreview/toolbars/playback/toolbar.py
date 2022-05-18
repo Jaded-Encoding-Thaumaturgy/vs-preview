@@ -156,12 +156,10 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.seek_time_control.setValue, Time(self.seek_frame_control.value()))
         qt_silent_call(self.fps_spinbox.setValue, self.main.current_output.play_fps)
 
-    def update_outputs(self, outputs: AudioOutputs) -> None:
-        self.audio_outputs = outputs
+    def rescan_outputs(self, outputs: AudioOutputs | None = None) -> None:
+        self.audio_outputs = outputs or AudioOutputs(self.main)
+        self.main.init_outputs()
         self.audio_outputs_combobox.setModel(self.audio_outputs)
-
-    def rescan_outputs(self) -> None:
-        self.update_outputs(AudioOutputs(self.main))
 
     def get_true_fps(self, frameprops: vs.FrameProps) -> float:
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):

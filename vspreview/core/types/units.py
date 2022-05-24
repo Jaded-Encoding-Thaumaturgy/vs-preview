@@ -16,7 +16,7 @@ Number = Union[int, float, SupportsInt, SupportsFloat]
 class Frame(YAMLObjectWrapper):
     __slots__ = ('value',)
 
-    def __init__(self, init_value: Number | Frame | Time) -> None:
+    def __init__(self, init_value: Number | Frame | Time | None = 0) -> None:
         if isinstance(init_value, float):
             init_value = int(init_value)
         if isinstance(init_value, int):

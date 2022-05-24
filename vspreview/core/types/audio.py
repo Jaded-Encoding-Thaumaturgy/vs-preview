@@ -23,7 +23,7 @@ class AudioOutput(AbstractYAMLObject):
     __slots__ = storable_attrs + (
         'vs_output', 'index', 'fps_num', 'fps_den', 'format', 'total_frames',
         'total_time', 'end_frame', 'end_time', 'fps', 'source_vs_output',
-        'main', 'qformat', 'qoutput', 'iodevice', 'flags',
+        'main', 'qformat', 'qoutput', 'iodevice', 'flags', 'is_mono'
     )
 
     def __init__(self, vs_output: vs.AudioNode, index: int, new_storage: bool = False) -> None:
@@ -31,6 +31,7 @@ class AudioOutput(AbstractYAMLObject):
         self.index = index
         self.source_vs_output = vs_output
         self.vs_output = self.source_vs_output
+        self.is_mono = self.vs_output.num_channels == 1
 
         (self.arrayType, sampleTypeQ) = (
             'f', QAudioFormat.Float
@@ -38,11 +39,13 @@ class AudioOutput(AbstractYAMLObject):
             'I' if self.vs_output.bits_per_sample <= 16 else 'L', QAudioFormat.SignedInt
         )
 
+        sample_size = 8 * self.vs_output.bytes_per_sample
+
         self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.vs_output.num_channels)
         self.qformat.setSampleRate(self.vs_output.sample_rate)
         self.qformat.setSampleType(sampleTypeQ)
-        self.qformat.setSampleSize(32)
+        self.qformat.setSampleSize(sample_size)
         self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')
 
@@ -50,7 +53,7 @@ class AudioOutput(AbstractYAMLObject):
             raise RuntimeError('Audio format not supported')
 
         self.qoutput = QAudioOutput(self.qformat, self.main)
-        self.qoutput.setBufferSize(32 * self.SAMPLES_PER_FRAME)
+        self.qoutput.setBufferSize(sample_size * self.SAMPLES_PER_FRAME)
         self.iodevice = self.qoutput.start()
 
         self.fps_num = self.vs_output.sample_rate
@@ -61,7 +64,7 @@ class AudioOutput(AbstractYAMLObject):
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
 
-        self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * 2)
+        self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * (self.vs_output.bytes_per_sample // 2))
 
         if not hasattr(self, 'name'):
             self.name = 'Audio Node ' + str(self.index)
@@ -73,10 +76,13 @@ class AudioOutput(AbstractYAMLObject):
         self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))
 
     def render_raw_audio_frame(self, vs_frame: vs.AudioFrame) -> None:
-        self.audio_buffer[::2] = array(self.arrayType, vs_frame[0].tobytes())
-        self.audio_buffer[1::2] = array(self.arrayType, vs_frame[1].tobytes())
+        if self.is_mono:
+            self.iodevice.write(vs_frame[0].tobytes())
+        else:
+            self.audio_buffer[::2] = array(self.arrayType, vs_frame[0].tobytes())
+            self.audio_buffer[1::2] = array(self.arrayType, vs_frame[1].tobytes())
 
-        self.iodevice.write(self.audio_buffer.tobytes())
+            self.iodevice.write(self.audio_buffer.tobytes())
 
     def _calculate_frame(self, seconds: float) -> int:
         return floor(seconds * self.fps)

@@ -22,7 +22,7 @@ class MainSettings(AbstractToolbarSettings):
         'png_compressing_spinbox', 'statusbar_timeout_control',
         'timeline_notches_margin_spinbox', 'usable_cpus_spinbox',
         'zoom_levels_combobox', 'zoom_levels_lineedit', 'zoom_level_default_combobox',
-        'azerty_keyboard_checkbox'
+        'azerty_keyboard_checkbox', 'dragnavigator_timeout_spinbox'
     )
 
     INSTANT_FRAME_UPDATE = False
@@ -65,6 +65,8 @@ class MainSettings(AbstractToolbarSettings):
 
         self.zoom_level_default_combobox = ComboBox[int]()
 
+        self.dragnavigator_timeout_spinbox = SpinBox(self, 0, 1000 * 60 * 5)
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
@@ -98,6 +100,8 @@ class MainSettings(AbstractToolbarSettings):
             VBoxLayout([QLabel('Default Zoom Level'), self.zoom_level_default_combobox])
         ])
 
+        HBoxLayout(self.vlayout, [QLabel('Drag Navigator Timeout (ms)'), self.dragnavigator_timeout_spinbox])
+
     def set_defaults(self) -> None:
         self.autosave_control.setValue(Time(seconds=30))
         self.base_ppi_spinbox.setValue(96)
@@ -110,6 +114,7 @@ class MainSettings(AbstractToolbarSettings):
         self.force_old_storages_removal_checkbox.setChecked(False)
         self.azerty_keyboard_checkbox.setChecked(False)
         self.usable_cpus_spinbox.setValue(self.get_usable_cpus_count())
+        self.dragnavigator_timeout_spinbox.setValue(250)
 
         self.zoom_levels = [
             25, 50, 68, 75, 85, 100, 150, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 2000, 3200
@@ -210,6 +215,10 @@ class MainSettings(AbstractToolbarSettings):
         except AttributeError:
             return cpu_count()
 
+    @property
+    def dragnavigator_timeout(self) -> int:
+        return self.dragnavigator_timeout_spinbox.value()
+
     def zoom_levels_combobox_on_add(self):
         try:
             new_value = int(self.zoom_levels_lineedit.text())
@@ -258,6 +267,7 @@ class MainSettings(AbstractToolbarSettings):
             'force_old_storages_removal': self.force_old_storages_removal,
             'zoom_levels': sorted([int(x * 100) for x in self.zoom_levels]),
             'zoom_default_index': self.zoom_default_index,
+            'dragnavigator_timeout': self.dragnavigator_timeout
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -272,3 +282,4 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'force_old_storages_removal', bool, self.force_old_storages_removal_checkbox.setChecked)
         try_load(state, 'zoom_levels', List, self)
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
+        try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)

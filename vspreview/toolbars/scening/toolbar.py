@@ -850,7 +850,7 @@ class SceningToolbar(AbstractToolbar):
         always_show_scene_marks = None
         try_load(state, 'always_show_scene_marks', bool, always_show_scene_marks, nullable=True)
         if always_show_scene_marks is None:
-            always_show_scene_marks = self.settings.ALWAYS_SHOW_SCENE_MARKS
+            always_show_scene_marks = self.settings.always_show_scene_marks
 
         self.always_show_scene_marks_checkbox.setChecked(always_show_scene_marks)
         self.status_label.setVisible(always_show_scene_marks)

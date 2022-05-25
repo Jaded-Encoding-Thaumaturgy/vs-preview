@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from functools import partial
 from enum import IntEnum, auto
 from dataclasses import dataclass
 
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF, QRect, QPoint
 from PyQt5.QtWidgets import QWidget, QGraphicsView, QApplication, QGraphicsPixmapItem
 from PyQt5.QtGui import QMouseEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap, QPainter, QColor
+
+from ...core import AbstractMainWindow
 
 
 @dataclass
@@ -37,6 +40,9 @@ class GraphicsView(QGraphicsView):
     dragEvent = pyqtSignal(DragEventType)
     drag_mode: QGraphicsView.DragMode
 
+    underReload = False
+    last_positions = (0, 0)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
@@ -47,13 +53,18 @@ class GraphicsView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
     def setZoom(self, value: int) -> None:
+        if self.underReload:
+            return
+
         self.currentZoom = value
-        transform = QTransform()
-        transform.scale(value, value)
-        self.setTransform(transform)
+
+        self.setTransform(QTransform().scale(value, value))
         self.dragEvent.emit(DragEventType.repaint)
 
     def event(self, event: QEvent) -> bool:
+        if self.underReload:
+            return event.ignore()
+
         if isinstance(event, QNativeGestureEvent):
             typ = event.gestureType()
             if typ == Qt.BeginNativeGesture:
@@ -62,9 +73,13 @@ class GraphicsView(QGraphicsView):
                 self.zoomValue += event.value()
             if typ == Qt.EndNativeGesture:
                 self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
+
         return super().event(event)
 
     def wheelEvent(self, event: QWheelEvent) -> None:
+        if self.underReload:
+            return event.ignore()
+
         assert self.app
 
         modifiers = self.app.keyboardModifiers()
@@ -95,25 +110,54 @@ class GraphicsView(QGraphicsView):
         event.ignore()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.underReload:
+            return event.ignore()
+
         super().mouseMoveEvent(event)
+
         if self.hasMouseTracking():
             self.mouseMoved.emit(event)
         self.dragEvent.emit(DragEventType.move)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        if self.underReload:
+            return event.ignore()
+
         if event.button() == Qt.LeftButton:
             self.drag_mode = self.dragMode()
             self.setDragMode(QGraphicsView.ScrollHandDrag)
+
         super().mousePressEvent(event)
+
         self.mousePressed.emit(event)
         self.dragEvent.emit(DragEventType.start)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self.underReload:
+            return event.ignore()
+
         super().mouseReleaseEvent(event)
+
         if event.button() == Qt.LeftButton:
             self.setDragMode(self.drag_mode)
+
         self.mouseReleased.emit(event)
         self.dragEvent.emit(DragEventType.stop)
+
+    def beforeReload(self) -> None:
+        self.underReload = True
+        self.setTransformationAnchor(QGraphicsView.NoAnchor)
+        self.last_positions = (self.verticalScrollBar().value(), self.horizontalScrollBar().value())
+
+    def afterReload(self) -> None:
+        self.underReload = False
+        self.verticalScrollBar().setValue(self.last_positions[0])
+        self.horizontalScrollBar().setValue(self.last_positions[1])
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+    def registerReloadEvents(self, main: AbstractMainWindow) -> None:
+        main.reload_before_signal.connect(self.beforeReload)
+        main.reload_after_signal.connect(self.afterReload)
 
 
 class GraphicsImageItem:

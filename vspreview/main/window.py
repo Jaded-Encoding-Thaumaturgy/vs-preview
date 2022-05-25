@@ -52,19 +52,20 @@ class MainWindow(AbstractMainWindow):
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    storable_attrs = [
-        'settings', 'toolbars',
-    ]
-    __slots__ = storable_attrs + [
+    storable_attrs = ('settings', 'toolbars')
+
+    __slots__ = storable_attrs + (
         'app', 'display_scale', 'clipboard',
         'script_path', 'timeline', 'main_layout',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
         'current_storage_path', 'opengl_widget', 'drag_navigator'
-    ]
+    )
 
     # emit when about to reload a script: clear all existing references to existing clips.
     reload_signal = pyqtSignal()
+    reload_before_signal = pyqtSignal()
+    reload_after_signal = pyqtSignal()
     toolbars: Toolbars
 
     def __init__(self, config_dir: Path) -> None:
@@ -119,6 +120,8 @@ class MainWindow(AbstractMainWindow):
             self.graphics_view.setViewport(self.opengl_widget)
 
         self.graphics_view.wheelScrolled.connect(self.on_wheel_scrolled)
+
+        self.graphics_view.registerReloadEvents(self)
 
         # timeline
         self.timeline.clicked.connect(self.on_timeline_clicked)
@@ -409,6 +412,8 @@ class MainWindow(AbstractMainWindow):
             output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
 
     def reload_script(self) -> None:
+        self.reload_before_signal.emit()
+
         self.dump_storage()
 
         vs.clear_outputs()
@@ -421,6 +426,8 @@ class MainWindow(AbstractMainWindow):
         gc.collect(generation=2)
 
         self.load_script(self.script_path, reloading=True)
+
+        self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
 

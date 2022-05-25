@@ -68,6 +68,8 @@ class MainToolbar(AbstractToolbar):
             'Sync Outputs', self, checked=self.settings.SYNC_OUTPUTS, clicked=self.on_sync_outputs_clicked
         )
 
+        self.auto_fit_button = CheckBox('Auto-fit', self, clicked=self.auto_fit_button_clicked)
+
         self.zoom_combobox = ComboBox[float](self, minimumContentsLength=4)
         self.zoom_combobox.currentTextChanged.connect(self.on_zoom_changed)
 
@@ -87,7 +89,8 @@ class MainToolbar(AbstractToolbar):
             self.frame_control, self.copy_frame_button,
             self.time_control, self.copy_timestamp_button,
             self.sync_outputs_checkbox,
-            self.zoom_combobox,
+            self.get_separator(),
+            self.auto_fit_button, self.zoom_combobox,
             self.switch_timeline_mode_button,
             self.frame_props_tab_button,
             self.settings_button
@@ -121,6 +124,11 @@ class MainToolbar(AbstractToolbar):
                     self.main.current_output.to_time(force_frame)
                 )
 
+    def auto_fit_button_clicked(self, checked: bool) -> None:
+        self.zoom_combobox.setEnabled(not checked)
+        self.main.graphics_view.autofit = checked
+        self.main.graphics_view.setZoom(None)
+
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
         qt_silent_call(self.time_control.setValue, Time(frame))
@@ -135,6 +143,9 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
         qt_silent_call(self.frame_control.setMaximum, self.main.current_output.end_frame)
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.end_time)
+
+        if self.main.graphics_view.autofit:
+            self.main.graphics_view.setZoom(None)
 
     def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
         self.outputs = outputs or VideoOutputs(self.main)

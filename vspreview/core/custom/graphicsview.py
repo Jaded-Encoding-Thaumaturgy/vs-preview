@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF, QRect, QPoint
 from PyQt5.QtWidgets import QWidget, QGraphicsView, QApplication, QGraphicsPixmapItem
-from PyQt5.QtGui import QMouseEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap, QPainter, QColor
+from PyQt5.QtGui import QMouseEvent, QResizeEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap, QPainter, QColor
 
 from ...core import AbstractMainWindow
 
@@ -43,18 +43,33 @@ class GraphicsView(QGraphicsView):
     underReload = False
     last_positions = (0, 0)
 
+    autofit = False
+    main: AbstractMainWindow = None
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.app = QApplication.instance()
         self.angleRemainder = 0
         self.zoomValue = 0.0
-        self.currentZoom = 0
+        self.currentZoom = 0.0
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
-    def setZoom(self, value: int) -> None:
-        if self.underReload:
+    def setZoom(self, value: float | None) -> None:
+        if self.underReload or value == 0:
             return
+
+        if value is None:
+            if self.autofit:
+                viewport = self.viewport()
+                value = min(
+                    viewport.width() / self.main.current_output.width,
+                    viewport.height() / self.main.current_output.height
+                )
+            else:
+                return
+
+        print(value)
 
         self.currentZoom = value
 
@@ -63,7 +78,8 @@ class GraphicsView(QGraphicsView):
 
     def event(self, event: QEvent) -> bool:
         if self.underReload:
-            return event.ignore()
+            event.ignore()
+            return False
 
         if isinstance(event, QNativeGestureEvent):
             typ = event.gestureType()
@@ -77,7 +93,7 @@ class GraphicsView(QGraphicsView):
         return super().event(event)
 
     def wheelEvent(self, event: QWheelEvent) -> None:
-        if self.underReload:
+        if self.underReload or self.autofit:
             return event.ignore()
 
         assert self.app
@@ -110,7 +126,7 @@ class GraphicsView(QGraphicsView):
         event.ignore()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self.underReload:
+        if self.underReload or self.autofit:
             return event.ignore()
 
         super().mouseMoveEvent(event)
@@ -120,7 +136,7 @@ class GraphicsView(QGraphicsView):
         self.dragEvent.emit(DragEventType.move)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if self.underReload:
+        if self.underReload or self.autofit:
             return event.ignore()
 
         if event.button() == Qt.LeftButton:
@@ -133,7 +149,7 @@ class GraphicsView(QGraphicsView):
         self.dragEvent.emit(DragEventType.start)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if self.underReload:
+        if self.underReload or self.autofit:
             return event.ignore()
 
         super().mouseReleaseEvent(event)
@@ -146,7 +162,7 @@ class GraphicsView(QGraphicsView):
 
     def beforeReload(self) -> None:
         self.underReload = True
-        self.setTransformationAnchor(QGraphicsView.NoAnchor)
+        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
         self.last_positions = (self.verticalScrollBar().value(), self.horizontalScrollBar().value())
 
     def afterReload(self) -> None:
@@ -156,8 +172,13 @@ class GraphicsView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
     def registerReloadEvents(self, main: AbstractMainWindow) -> None:
-        main.reload_before_signal.connect(self.beforeReload)
-        main.reload_after_signal.connect(self.afterReload)
+        self.main = main
+        self.main.reload_before_signal.connect(self.beforeReload)
+        self.main.reload_after_signal.connect(self.afterReload)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.setZoom(None)
 
 
 class GraphicsImageItem:

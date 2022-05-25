@@ -16,10 +16,10 @@ from .dialog import FramePropsDialog
 
 class MainToolbar(AbstractToolbar):
     _no_visibility_choice = True
-    _storable_attrs = ('outputs',)
+    storable_attrs = ('outputs',)
 
     __slots__ = (
-        *_storable_attrs, 'frame_props_dialog',
+        *storable_attrs, 'frame_props_dialog',
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button', 'settings_button'

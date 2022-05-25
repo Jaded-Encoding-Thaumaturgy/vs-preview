@@ -24,10 +24,10 @@ from .settings import SceningSettings
 
 
 class SceningToolbar(AbstractToolbar):
-    _storable_attrs = ('current_list_index', 'lists', 'first_frame', 'second_frame')
+    storable_attrs = ('current_list_index', 'lists', 'first_frame', 'second_frame')
 
     __slots__ = (
-        *_storable_attrs[1:],
+        *storable_attrs[1:],
         'export_template_pattern', 'export_template_scenes_pattern',
         'scening_list_dialog', 'supported_file_types',
         'add_list_button', 'remove_list_button', 'view_list_button',

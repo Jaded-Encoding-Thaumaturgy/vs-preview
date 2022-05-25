@@ -338,13 +338,13 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     _no_visibility_choice = False
-    _storable_attrs: Tuple[str, ...] = tuple()
-    _class_storable_attrs: Tuple[str, ...] = ('settings', 'visibility')
+    storable_attrs: Tuple[str, ...] = tuple()
+    class_storable_attrs: Tuple[str, ...] = ('settings', 'visibility')
     num_keys = [
         Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
     ]
 
-    __slots__ = ('main', 'toggle_button', *_class_storable_attrs)
+    __slots__ = ('main', 'toggle_button', *class_storable_attrs)
 
     notches_changed = pyqtSignal(ExtendedWidget)
 
@@ -408,7 +408,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
             self.main.timeline.full_repaint()
 
     def __get_storable_attr__(self) -> Tuple[str, ...]:
-        attributes = list(self._class_storable_attrs + self._storable_attrs)
+        attributes = list(self.class_storable_attrs + self.storable_attrs)
 
         if self._no_visibility_choice:
             attributes.remove('visibility')

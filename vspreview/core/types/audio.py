@@ -84,6 +84,14 @@ class AudioOutput(AbstractYAMLObject):
 
             self.iodevice.write(self.audio_buffer.tobytes())
 
+    @property
+    def volume(self) -> float:
+        return self.qoutput.volume()
+
+    @volume.setter
+    def volume(self, newVolume: float) -> None:
+        return self.qoutput.setVolume(newVolume)
+
     def _calculate_frame(self, seconds: float) -> int:
         return floor(seconds * self.fps)
 

@@ -4,13 +4,14 @@ import gc
 import logging
 from math import floor
 import vapoursynth as vs
+from functools import partial
 from collections import deque
 from time import perf_counter_ns
 from concurrent.futures import Future
 from typing import Any, cast, Deque, Mapping, Tuple
 
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QDoubleSpinBox, QComboBox
+from PyQt5.QtWidgets import QDoubleSpinBox, QComboBox, QSlider
 
 from ...models import AudioOutputs
 from ...utils import debug, qt_silent_call
@@ -35,8 +36,11 @@ class PlaybackToolbar(AbstractToolbar):
         'play_start_time', 'play_start_frame', 'play_end_time',
         'play_end_frame', 'play_buffer', 'toggle_button', 'play_timer_audio',
         'current_audio_frame', 'play_buffer_audio', 'audio_outputs',
-        'audio_outputs_combobox', 'seek_to_start_button', 'seek_to_end_button'
+        'audio_outputs_combobox', 'seek_to_start_button', 'seek_to_end_button',
+        'audio_volume_slider'
     )
+
+    storable_attrs = ('audio_muted', 'audio_outputs', 'volume')
 
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, PlaybackSettings())
@@ -47,6 +51,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.play_timer_audio = QTimer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
 
+        self.current_audio_output = None
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio: Deque[Future[vs.AudioFrame]] = deque()
 
@@ -60,6 +65,9 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_end_frame = Frame(0)
         self.audio_outputs: AudioOutputs = []  # type: ignore
         self.last_frame = Frame(0)
+
+        self.setVolume(50, True)
+        self.setMute(True)
 
         self.main.timeline.clicked.connect(self.on_timeline_clicked)
 
@@ -122,12 +130,19 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.fps_variable_checkbox = CheckBox('Variable FPS', self, stateChanged=self.on_fps_variable_changed)
 
-        self.mute_checkbox = CheckBox('Mute', self, checked=True, stateChanged=self.on_mute_changed)
+        self.mute_button = PushButton(self, clicked=self.on_mute_clicked)
+        self.mute_button.setFixedWidth(18)
 
         self.audio_outputs_combobox = ComboBox[AudioOutput](
-            self, enabled=False, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
+            self, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
             duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents
         )
+
+        self.audio_volume_slider = QSlider(Qt.Horizontal, valueChanged=self.setVolume)
+        self.audio_volume_slider.setFocusPolicy(Qt.NoFocus)
+        self.audio_volume_slider.setFixedWidth(120)
+        self.audio_volume_slider.setRange(0, 100)
+        self.audio_volume_slider.setPageStep(5)
 
         self.hlayout.addWidgets([
             self.seek_to_start_button, self.seek_n_frames_b_button, self.seek_to_prev_button,
@@ -138,7 +153,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.fps_spinbox, self.fps_reset_button,
             self.fps_unlimited_checkbox, self.fps_variable_checkbox,
             self.get_separator(),
-            self.mute_checkbox, self.audio_outputs_combobox
+            self.audio_outputs_combobox, self.mute_button, self.audio_volume_slider
         ])
 
         self.hlayout.addStretch()
@@ -216,7 +231,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.last_frame = Frame(stop_at_frame or self.main.current_output.end_frame)
 
         if self.fps_unlimited_checkbox.isChecked() or self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
-            self.mute_checkbox.setChecked(True)
+            self.mute_button.setChecked(True)
             self.play_timer.start(0)
             if self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
                 self.play_start_time = debug.perf_counter_ns()
@@ -233,7 +248,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.current_audio_output = self.audio_outputs_combobox.currentValue()
 
-        if not self.mute_checkbox.isChecked() and self.current_audio_output is not None:
+        if not self.audio_muted and self.current_audio_output is not None:
             self.play_audio()
 
     def play_audio(self) -> None:
@@ -248,7 +263,10 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_output.render_audio_frame(self.current_audio_frame + Frame(1))
         self.current_audio_output.render_audio_frame(self.current_audio_frame + Frame(2))
 
-        self.play_buffer_audio = deque([], 5)
+        self.play_buffer_audio = deque([], int(min(
+            self.settings.playback_buffer_size,
+            self.current_audio_output.end_frame - self.current_audio_frame
+        )))
 
         for i in range(2, cast(int, self.play_buffer_audio.maxlen)):
             self.play_buffer_audio.appendleft(
@@ -342,9 +360,9 @@ class PlaybackToolbar(AbstractToolbar):
 
         gc.collect(generation=2)
 
-        current_audio_output = self.audio_outputs_combobox.currentValue()
+        self.current_audio_output = self.audio_outputs_combobox.currentValue()
 
-        if not self.mute_checkbox.isChecked() and current_audio_output is not None:
+        if not self.audio_muted and self.current_audio_output is not None:
             self.stop_audio()
 
         self.fps_history.clear()
@@ -359,7 +377,10 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_start_time = None
 
     def stop_audio(self) -> None:
-        self.audio_outputs_combobox.currentValue().iodevice.reset()
+        if self.current_audio_output is None:
+            return
+
+        self.current_audio_output.iodevice.reset()
 
         self.play_timer_audio.stop()
 
@@ -410,7 +431,7 @@ class PlaybackToolbar(AbstractToolbar):
         if not self.play_timer.isActive() or not self.play_timer_audio.isActive():
             return
 
-        self.audio_outputs_combobox.currentValue().iodevice.reset()
+        self.current_audio_output.iodevice.reset()
         self.current_audio_frame = self.current_audio_output.to_frame(time)
 
         for future in self.play_buffer_audio:
@@ -488,30 +509,58 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.current_fps = 1_000_000_000 / (elapsed_total / len(self.fps_history))
 
-    def on_mute_changed(self, state: int) -> None:
-        if not hasattr(self, 'audio_outputs_combox'):
+    def updateMuteGui(self) -> None:
+        if self.volume == 0 or self.audio_muted:
+            self.mute_button.setText('🔇')
+        elif self.volume <= 33:
+            self.mute_button.setText('🔈')
+        elif self.volume <= 66:
+            self.mute_button.setText('🔉')
+        else:
+            self.mute_button.setText('🔊')
+
+    def on_mute_clicked(self) -> None:
+        if not hasattr(self, 'audio_outputs_combobox'):
             return
 
-        if state == Qt.Checked:
-            self.audio_outputs_combobox.setEnabled(False)
-            if self.play_timer_audio.isActive():
-                self.stop_audio()
-        elif state == Qt.Unchecked:
-            self.audio_outputs_combobox.setEnabled(True)
-            if self.play_timer.isActive():
+        if self.volume == 0 and self.audio_muted:
+            self.setVolume(50, True)
+        else:
+            self.setMute(not self.audio_muted)
+
+    def setMute(self, isMuted: bool) -> None:
+        self.audio_muted = isMuted
+
+        if not isMuted:
+            if self.play_timer.isActive() and not self.play_timer_audio.isActive():
                 self.play_audio()
+        elif self.play_timer_audio.isActive():
+            self.stop_audio()
+
+        self.updateMuteGui()
+
+    def setVolume(self, newVolume: float, updateGui: bool = False) -> None:
+        self.volume = newVolume
+
+        self.setMute(self.volume == 0)
+
+        if newVolume:
+            for output in self.audio_outputs:
+                output.volume = newVolume / 100.0
+
+        if updateGui:
+            qt_silent_call(self.audio_volume_slider.setValue, self.volume)
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
             'seek_interval_frame': self.seek_frame_control.value(),
-            'audio_outputs': self.audio_outputs,
-            'current_audio_output_index': self.audio_outputs_combobox.currentIndex(),
-            'audio_muted': self.mute_checkbox.isChecked(),
+            'current_audio_output_index': self.audio_outputs_combobox.currentIndex()
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'seek_interval_frame', Frame, self.seek_frame_control.setValue)
         try_load(state, 'audio_outputs', AudioOutputs, self.rescan_outputs)
         try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)
-        try_load(state, 'audio_muted', bool, self.mute_checkbox.setChecked)
+        try_load(state, 'audio_muted', bool, self.setMute)
+        try_load(state, 'volume', int, partial(self.setVolume, updateGui=True))
         super().__setstate__(state)

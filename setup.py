@@ -11,22 +11,22 @@ with open("requirements.txt", "r", encoding="UTF-8") as rq:
 
 setup(
     name="vspreview",
-    version="0.2.1b",
+    version="0.2.2b",
     author="Endilll",
     maintainer='Setsugennoao',
     maintainer_email='setsugen@setsugen.dev',
     description="Preview for VapourSynth scripts",
     long_description=long_desc,
     long_description_content_type="text/markdown",
-    url="https://github.com/Setsugennoao/vapoursynth-preview",
+    url="https://github.com/Irrational-Encoding-Wizardry/vs-preview",
     packages=find_packages('.', ("docs", "stubs")),
     install_requires=req,
     python_requires=">=3.9",
     zip_safe=False,
         project_urls={
-            'Documentation': 'https://github.com/Setsugennoao/vapoursynth-preview/#readme',
-            'Source': 'https://github.com/Setsugennoao/vapoursynth-preview',
-            'Tracker': 'https://github.com/Setsugennoao/vapoursynth-preview/issues'
+            'Documentation': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/#readme',
+            'Source': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview',
+            'Tracker': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/issues'
     },
     classifiers=[
         "Topic :: Multimedia :: Graphics",

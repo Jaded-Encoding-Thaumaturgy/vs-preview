@@ -121,9 +121,9 @@ def check_versions() -> bool:
             .format(get_distribution('PyQt5').version))
         return False
 
-    if vs.core.version_number() < 58:
+    if vs.core.version_number() < 57:
         logging.warning(
-            'VSPreview is not tested on VapourSynth versions prior to 58, but you have {}. Use at your own risk.'
+            'VSPreview is not tested on VapourSynth versions prior to 57, but you have {}. Use at your own risk.'
             .format(vs.core.version_number())
         )
         return False

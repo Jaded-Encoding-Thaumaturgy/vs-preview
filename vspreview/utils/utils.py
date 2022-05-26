@@ -66,35 +66,22 @@ def fire_and_forget(f: F_SL) -> F_SL:
     return wrapped
 
 
-@overload
-def set_status_label(*, label: str) -> Callable[[F_SL], F_SL]:
-    ...
+def set_status_label(label: str) -> Callable[[F_SL], F_SL]:
+    def _decorator(func: Callable[..., T]) -> Any:
+        @wraps(func)
+        def _wrapped(*args: Any, **kwargs: Any) -> T:
+            main = main_window()
 
+            main.statusbar.label.setText(label)
 
-@overload
-def set_status_label(func: F_SL | None, /) -> F_SL:
-    ...
+            ret = func(*args, **kwargs)
 
+            main.statusbar.label.setText('Ready')
 
-def set_status_label(func: F_SL | None = None, /, *, label: str) -> F_SL | Callable[[F_SL], F_SL]:
-    if func is None:
-        return cast(Callable[[F_SL], F_SL], partial(set_status_label, label=label))
+            return ret
+        return _wrapped
 
-    @wraps(func)
-    def _wrapper(*args: Any, **kwargs: Any) -> T:
-        assert func
-
-        main = main_window()
-
-        main.statusbar.label.setText(label)
-
-        ret = func(*args, **kwargs)
-
-        main.statusbar.label.setText('Ready')
-
-        return cast(T, ret)
-
-    return cast(F_SL, _wrapper)
+    return cast(Callable[[...], F_SL], _decorator)
 
 
 def vs_clear_cache() -> None:

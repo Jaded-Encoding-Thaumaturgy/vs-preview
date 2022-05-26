@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-from setuptools import find_packages, setup
+from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding="UTF-8") as rdm:
-    long_desc = rdm.read()
+with open("README.md") as fh:
+    long_description = fh.read()
 
-with open("requirements.txt", "r", encoding="UTF-8") as rq:
-    req = rq.read()
+with open("requirements.txt") as fh:
+    install_requires = fh.read()
 
 setup(
     name="vspreview",
@@ -16,17 +16,17 @@ setup(
     maintainer='Setsugennoao',
     maintainer_email='setsugen@setsugen.dev',
     description="Preview for VapourSynth scripts",
-    long_description=long_desc,
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Irrational-Encoding-Wizardry/vs-preview",
     packages=find_packages('.', ("docs", "stubs")),
-    install_requires=req,
+    install_requires=install_requires,
     python_requires=">=3.9",
     zip_safe=False,
-        project_urls={
-            'Documentation': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/#readme',
-            'Source': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview',
-            'Tracker': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/issues'
+    project_urls={
+        'Documentation': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/#readme',
+        'Source': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview',
+        'Tracker': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/issues'
     },
     classifiers=[
         "Topic :: Multimedia :: Graphics",

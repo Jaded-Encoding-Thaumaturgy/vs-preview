@@ -385,7 +385,7 @@ class SceningToolbar(AbstractToolbar):
             self.import_file(self.supported_file_types[file_type], path)
 
     @fire_and_forget
-    @set_status_label(label='Importing scening list')
+    @set_status_label('Importing scening list')
     def import_file(self, import_func: Callable[[Path, SceningList, int], None], path: Path) -> None:
         out_of_range_count = 0
         scening_list, scening_list_index = self.lists.add(path.stem)

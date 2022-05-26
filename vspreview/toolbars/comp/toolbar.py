@@ -135,7 +135,7 @@ class Worker(QObject):
 
             response = sess.post(
                 'https://slow.pics/api/comparison',
-                monitor.to_string().encode(),
+                cast(bytes, monitor.to_string()),
                 headers={
                     "Accept": "*/*",
                     "Accept-Encoding": "gzip, deflate, br",

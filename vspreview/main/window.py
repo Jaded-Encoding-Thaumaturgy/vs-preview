@@ -261,7 +261,7 @@ class MainWindow(AbstractMainWindow):
         if not reloading:
             self.switch_output(self.settings.output_index)
 
-    @set_status_label(label='Loading...')
+    @set_status_label('Loading...')
     def load_storage(self) -> None:
         if self.storage_not_found:
             logging.info('No storage found. Using defaults.')
@@ -318,7 +318,7 @@ class MainWindow(AbstractMainWindow):
             loader.dispose()
 
     @fire_and_forget
-    @set_status_label(label='Saving...')
+    @set_status_label('Saving...')
     def dump_storage_async(self) -> None:
         self.dump_storage()
 

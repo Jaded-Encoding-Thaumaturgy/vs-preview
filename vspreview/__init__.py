@@ -1,3 +1,1 @@
-# flake8: noqa
-
-from .init import main
+from .init import main  # noqa: F401

@@ -34,8 +34,8 @@ class VSPreviewEnvironmentPolicy(EnvironmentPolicy):
         if self._current:
             del self._current
         try:
-            self._api.unregister_policy()
-            self._current = self._api.create_environment()
+            self._api.unregister_policy()  # type: ignore
+            self._current = self._api.create_environment()  # type: ignore
         except BaseException:
             pass
 

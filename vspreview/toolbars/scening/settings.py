@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PyQt5.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, HBoxLayout, CheckBox, LineEdit
+from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit
 
 
 class SceningSettings(AbstractToolbarSettings):

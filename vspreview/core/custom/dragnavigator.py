@@ -1,11 +1,11 @@
 from functools import partial
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QPainter, QPaintEvent
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtGui import QPainter, QColor
 
-from ..abstracts import AbstractMainWindow
-from .graphicsview import GraphicsView, DragEventType
+from ..abstracts import AbstractMainWindow, Timer
+from .graphicsview import DragEventType, GraphicsView
 
 
 class DragNavigator(QWidget):
@@ -29,13 +29,13 @@ class DragNavigator(QWidget):
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         rate = self.main.settings.base_ppi / 96
         self.setGeometry(round(10 * rate), round(10 * rate), round(120 * rate), round(120 * rate))
-        self.repaint_timer = QTimer(
+        self.repaint_timer = Timer(
             timeout=self.repaint_timeout, timerType=Qt.PreciseTimer, interval=self.main.settings.dragnavigator_timeout
         )
         self.graphics_view.verticalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))
         self.graphics_view.horizontalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))
 
-    def on_drag(self, event_type: DragEventType):
+    def on_drag(self, event_type: DragEventType) -> None:
         # while reloading and moving mouse
         if not hasattr(self.main, 'current_output') or not self.main.current_output:
             return
@@ -50,7 +50,7 @@ class DragNavigator(QWidget):
         elif event_type == DragEventType.stop:
             self.is_tracking = False
             self.setVisible(False)
-            return        
+            return
 
         scrollbarW = self.graphics_view.horizontalScrollBar()
         scrollbarH = self.graphics_view.verticalScrollBar()
@@ -62,13 +62,15 @@ class DragNavigator(QWidget):
         self.draw(
             self.main.current_output.width,
             self.main.current_output.height,
-            scrollbarW.value() / self.graphics_view.currentZoom,
-            scrollbarH.value() / self.graphics_view.currentZoom,
-            self.graphics_view.width() / self.graphics_view.currentZoom,
-            self.graphics_view.height() / self.graphics_view.currentZoom
+            int(scrollbarW.value() / self.graphics_view.currentZoom),
+            int(scrollbarH.value() / self.graphics_view.currentZoom),
+            int(self.graphics_view.width() / self.graphics_view.currentZoom),
+            int(self.graphics_view.height() / self.graphics_view.currentZoom)
         )
 
-    def draw(self, contentsW: int, contentsH: int, viewportX: int, viewportY: int, viewportW: int, viewportH: int):
+    def draw(
+        self, contentsW: int, contentsH: int, viewportX: int, viewportY: int, viewportW: int, viewportH: int
+    ) -> None:
         self.contentsW = contentsW
         self.contentsH = contentsH
         self.viewportW = min(viewportW, contentsW)
@@ -82,7 +84,7 @@ class DragNavigator(QWidget):
         self.hide()
         self.repaint_timer.stop()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         if(
             (self.contentsW == 0) or (self.contentsH == 0) or
             (self.viewportW == 0) or (self.viewportH == 0) or

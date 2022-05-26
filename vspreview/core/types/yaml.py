@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from typing import Any, Tuple, cast
+
 import vapoursynth as vs
-from typing import Tuple, Any
 
 from ..abstracts import AbstractYAMLObject
-
 
 core = vs.core
 
@@ -29,14 +29,14 @@ class YAMLObjectWrapper(AbstractYAMLObject):
             return False
         if not isinstance(other, YAMLObjectWrapper):
             other = self.__class__(other)
-        return self.value == other.value
+        return bool(self.value == other.value)
 
     def __gt__(self, other: object) -> bool:
         if other is None:
             return False
         if not isinstance(other, YAMLObjectWrapper):
             other = self.__class__(other)
-        return self.value > other.value
+        return bool(self.value > other.value)
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -58,4 +58,4 @@ class YAMLObjectWrapper(AbstractYAMLObject):
         return f'{self.__class__.__name__}({self.value})'
 
     def __get_storable_attr__(self) -> Tuple[str, ...]:
-        return self.__slots__
+        return cast(tuple, self.__slots__)

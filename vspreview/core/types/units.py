@@ -85,7 +85,7 @@ class Frame(YAMLObjectWrapper):
 
 
 class Time(YAMLObjectWrapper):
-    __slots__ = ('value',)
+    __slots__ = ('value', )
 
     def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
         if isinstance(init_value, timedelta):

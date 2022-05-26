@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Mapping, Any
+from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox
 
+from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, VideoOutput, try_load
+from ...core.custom import ComboBox, FrameEdit, TimeEdit
+from ...models import GeneralModel, VideoOutputs
 from ...utils import qt_silent_call
-from ...models import VideoOutputs, GeneralModel
-from ...core.custom import ComboBox, TimeEdit, FrameEdit
-from ...core import AbstractMainWindow, AbstractToolbar, Time, Frame, VideoOutput, try_load, PushButton, CheckBox
-
 from .dialog import FramePropsDialog
 
 
 class MainToolbar(AbstractToolbar):
     _no_visibility_choice = True
-    storable_attrs = ('outputs',)
+    storable_attrs = ('outputs', )
 
     __slots__ = (
         *storable_attrs, 'frame_props_dialog',
@@ -77,10 +76,9 @@ class MainToolbar(AbstractToolbar):
             'Switch Timeline Mode', self, clicked=self.on_switch_timeline_mode_clicked
         )
 
-        self.frame_props_tab_button = PushButton('Frame Props', self, clicked=lambda: (
-            self.frame_props_dialog.update_frame_props(self.main.current_output.props),
-            self.frame_props_dialog.show()
-        ))
+        self.frame_props_tab_button = PushButton(
+            'Frame Props', self, clicked=lambda: self.frame_props_dialog.showDialog(self.main.current_output.props)
+        )
 
         self.settings_button = PushButton('Settings', self, clicked=self.main.app_settings.show)
 
@@ -126,8 +124,11 @@ class MainToolbar(AbstractToolbar):
 
     def auto_fit_button_clicked(self, checked: bool) -> None:
         self.zoom_combobox.setEnabled(not checked)
-        self.main.graphics_view.autofit = checked
-        self.main.graphics_view.setZoom(None)
+        self.main.graphics_view.autofit = checked  # type: ignore
+        if checked:
+            self.main.graphics_view.setZoom(None)
+        else:
+            self.main.graphics_view.setZoom(self.zoom_combobox.currentData())
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
@@ -172,7 +173,7 @@ class MainToolbar(AbstractToolbar):
                 output.last_showed_frame = self.main.current_output.last_showed_frame
         if state == Qt.Unchecked:
             for output in self.main.outputs:
-                output.last_showed_frame = None
+                output.last_showed_frame = None  # type: ignore
 
     def on_zoom_changed(self, text: str | None = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())

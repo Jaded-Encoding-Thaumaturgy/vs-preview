@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import QLabel, QWidget, QTabWidget
+from PyQt5.QtWidgets import QLabel, QTabWidget, QWidget
 
-
-from ..core import AbstractMainWindow, ExtendedDialog, VBoxLayout, HBoxLayout, PushButton
+from ..core import AbstractMainWindow, ExtendedDialog, HBoxLayout, PushButton, VBoxLayout
 
 
 class ScriptErrorDialog(ExtendedDialog):

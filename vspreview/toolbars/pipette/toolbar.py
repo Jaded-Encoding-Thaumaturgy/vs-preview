@@ -1,16 +1,15 @@
 import ctypes
-from typing import cast
-import vapoursynth as vs
+from math import ceil, floor, log
 from struct import unpack
-from math import floor, ceil, log
+from typing import Generator, Tuple, cast
 from weakref import WeakKeyDictionary
 
-from PyQt5.QtCore import Qt, QPoint
+import vapoursynth as vs
+from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
-from PyQt5.QtWidgets import QLabel, QGraphicsView
+from PyQt5.QtWidgets import QGraphicsView, QLabel
 
 from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput
-
 from .colorview import ColorView
 from .settings import PipetteSettings
 
@@ -47,8 +46,8 @@ class PipetteToolbar(AbstractToolbar):
         self.pos_fmt = self.src_hex_fmt = self.src_dec_fmt = self.src_norm_fmt = ''
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
-        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, [int, vs.VideoNode]]()
-        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, [int, vs.VideoNode]]()
+        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, Tuple[int, vs.VideoNode]]()
+        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, Tuple[int, vs.VideoNode]]()
         self._mouse_is_subscribed = False
 
         main.reload_signal.connect(self.clear_outputs)
@@ -131,9 +130,12 @@ class PipetteToolbar(AbstractToolbar):
             cache = self._curr_frame_cache[self.main.current_output] = [None, None]
         else:
             cache = self._curr_frame_cache[self.main.current_output]
+
         if cache[1] is None or cache[0] != self.main.current_output.last_showed_frame:
-            cache[0] = int(self.main.current_output.last_showed_frame)
-            cache[1] = self.outputs[self.main.current_output].get_frame(cache[0])
+            cache = (
+                int(self.main.current_output.last_showed_frame),
+                self.outputs[self.main.current_output].get_frame(cache[0])
+            )
 
         return cache[1]
 
@@ -143,10 +145,12 @@ class PipetteToolbar(AbstractToolbar):
             cache = self._curr_alphaframe_cache[self.main.current_output] = [None, None]
         else:
             cache = self._curr_alphaframe_cache[self.main.current_output]
-        cache = self._curr_alphaframe_cache[self.main.current_output]
+
         if cache[1] is None or cache[0] != self.main.current_output.last_showed_frame:
-            cache[0] = int(self.main.current_output.last_showed_frame)
-            cache[1] = self.main.current_output.source.alpha.get_frame(cache[0])
+            cache = (
+                int(self.main.current_output.last_showed_frame),
+                self.main.current_output.source.alpha.get_frame(cache[0])
+            )
 
         return cache[1]
 
@@ -214,7 +218,7 @@ class PipetteToolbar(AbstractToolbar):
             self.src_dec_fmt = ('{: 0.5f},' * src_num_planes)[:-1]
         self.src_norm_fmt = ('{:0.5f},' * src_num_planes)[:-1]
 
-        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))
+        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))  # type: ignore
 
     def on_toggle(self, new_state: bool) -> None:
         super().on_toggle(new_state)
@@ -238,13 +242,13 @@ class PipetteToolbar(AbstractToolbar):
             ).id, dither_type='none'
         )
 
-    def extract_value(self, vs_frame: vs.VideoFrame, pos: QPoint) -> float:
+    def extract_value(self, vs_frame: vs.VideoFrame, pos: QPoint) -> Generator[float, None, None]:
         fmt = vs_frame.format
 
         for plane in range(fmt.num_planes):
             stride = vs_frame.get_stride(plane)
             pointer = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
+                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
             ))
 
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:

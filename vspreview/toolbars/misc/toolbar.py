@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from pathlib import Path
 from functools import partial
+from pathlib import Path
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QFileDialog, QLabel, QComboBox, QSpacerItem
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 
-from ...utils import qt_silent_call
-from ...models import GeneralModel
-from ...core.types import VideoOutput
-from ...core.custom import ComboBox, Switch
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, Time, try_load, PushButton,
-    LineEdit, CheckBox, VBoxLayout, HBoxLayout, SpinBox, Stretch, CroppingInfo
+    AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout,
+    LineEdit, PushButton, SpinBox, Stretch, Time, Timer, VBoxLayout, try_load
 )
-
+from ...core.custom import ComboBox, Switch
+from ...core.types import VideoOutput
+from ...models import GeneralModel
+from ...utils import qt_silent_call
 from .settings import MiscSettings
 
 
@@ -36,7 +35,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.setup_ui()
 
-        self.autosave_timer = QTimer(timeout=self.main.dump_storage_async)
+        self.autosave_timer = Timer(timeout=self.main.dump_storage_async)
 
         self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
@@ -254,7 +253,7 @@ class MiscToolbar(AbstractToolbar):
         ))
 
     def crop_active_onchange(self, checked: bool) -> None:
-        is_absolute = self.crop_mode_combox.currentIndex()
+        is_absolute = not not self.crop_mode_combox.currentIndex()
 
         self.crop_top_spinbox.setEnabled(checked)
         self.crop_left_spinbox.setEnabled(checked)
@@ -271,7 +270,9 @@ class MiscToolbar(AbstractToolbar):
 
         self.update_crop()
 
-    def crop_mode_onchange(self, is_absolute: int) -> None:
+    def crop_mode_onchange(self, crop_mode_idx: int) -> None:
+        is_absolute = bool(crop_mode_idx)
+
         self.crop_bottom_spinbox.setEnabled(not is_absolute)
         self.crop_right_spinbox.setEnabled(not is_absolute)
 

@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import logging
 
+from ...core import AbstractMainWindow, AbstractToolbar, LineEdit, PushButton
 from ...utils import debug, vs_clear_cache
-from ...core import AbstractMainWindow, AbstractToolbar, PushButton, LineEdit
-
 from .settings import DebugSettings
 
 
 class DebugToolbar(AbstractToolbar):
     _no_visibility_choice = True
 
-    __slots__ = ('exec_lineedit',)
+    __slots__ = ('exec_lineedit', )
 
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, DebugSettings())

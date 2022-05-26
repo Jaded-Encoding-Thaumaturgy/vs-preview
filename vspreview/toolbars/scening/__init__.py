@@ -1,5 +1,3 @@
-# flake8: noqa
-
-from .settings import *
-from .dialog import *
-from .toolbar import *
+from .settings import *  # noqa: F401, F403
+from .dialog import *  # noqa: F401, F403
+from .toolbar import *  # noqa: F401, F403

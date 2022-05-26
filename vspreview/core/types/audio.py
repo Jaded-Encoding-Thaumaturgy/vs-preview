@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from math import floor
 from array import array
-import vapoursynth as vs
+from math import floor
 from typing import Any, Mapping
 
-from ..abstracts import main_window, try_load, AbstractYAMLObject
+import vapoursynth as vs
+from PyQt5.QtMultimedia import QAudioDeviceInfo, QAudioFormat, QAudioOutput
+
+from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .units import Frame, Time
-
-from PyQt5.QtMultimedia import QAudioFormat, QAudioOutput, QAudioDeviceInfo
-
 
 core = vs.core
 
@@ -17,16 +16,18 @@ core = vs.core
 class AudioOutput(AbstractYAMLObject):
     SAMPLES_PER_FRAME = 3072  # https://github.com/vapoursynth/vapoursynth/blob/maste/r/include/VapourSynth4.h#L32
 
-    storable_attrs = (
-        'name',
-    )
-    __slots__ = storable_attrs + (
-        'vs_output', 'index', 'fps_num', 'fps_den', 'format', 'total_frames',
-        'total_time', 'end_frame', 'end_time', 'fps', 'source_vs_output',
-        'main', 'qformat', 'qoutput', 'iodevice', 'flags', 'is_mono'
+    storable_attrs = ('name', )
+
+    __slots__ = (
+        *storable_attrs, 'vs_output', 'index', 'fps_num', 'fps_den', 'format',
+        'total_frames', 'total_time', 'end_frame', 'end_time', 'fps', 'is_mono',
+        'source_vs_output', 'main', 'qformat', 'qoutput', 'iodevice', 'flags'
     )
 
     def __init__(self, vs_output: vs.AudioNode, index: int, new_storage: bool = False) -> None:
+        self.setValue(vs_output, index, new_storage)
+
+    def setValue(self, vs_output: vs.AudioNode, index: int, new_storage: bool = False) -> None:
         self.main = main_window()
         self.index = index
         self.source_vs_output = vs_output
@@ -79,7 +80,7 @@ class AudioOutput(AbstractYAMLObject):
         if self.is_mono:
             self.iodevice.write(vs_frame[0].tobytes())
         else:
-            self.audio_buffer[::2] = array(self.arrayType, vs_frame[0].tobytes())
+            self.audio_buffer[0::2] = array(self.arrayType, vs_frame[0].tobytes())
             self.audio_buffer[1::2] = array(self.arrayType, vs_frame[1].tobytes())
 
             self.iodevice.write(self.audio_buffer.tobytes())

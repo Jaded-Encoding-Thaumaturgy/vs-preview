@@ -385,7 +385,7 @@ class SceningToolbar(AbstractToolbar):
             self.import_file(self.supported_file_types[file_type], path)
 
     @fire_and_forget
-    @set_status_label('Importing scening list')
+    @set_status_label(label='Importing scening list')
     def import_file(self, import_func: Callable[[Path, SceningList, int], None], path: Path) -> None:
         out_of_range_count = 0
         scening_list, scening_list_index = self.lists.add(path.stem)
@@ -668,7 +668,8 @@ class SceningToolbar(AbstractToolbar):
         '''
         pattern = re.compile(
             r'^((?:\d+(?:\.\d+)?)|gap)(?:,\s?(\d+(?:\.\d+)?))?',
-            re.RegexFlag.MULTILINE)
+            re.RegexFlag.MULTILINE
+        )
 
         assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
         if len(match := assume_pattern.findall(path.read_text())) > 0:
@@ -687,8 +688,7 @@ class SceningToolbar(AbstractToolbar):
             fps = float(match[2]) if match.lastindex >= 2 else default_fps
 
             try:
-                scening_list.add(Frame(pos), Frame(pos + interval),
-                                 '{:.3f} fps'.format(fps))
+                scening_list.add(Frame(pos), Frame(pos + interval), '{:.3f} fps'.format(fps))
             except ValueError:
                 out_of_range_count += 1
 

@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="UTF-8") as rq:
 
 setup(
     name="vspreview",
-    version="0.2b",
+    version="0.2.1b",
     author="Endilll",
     maintainer='Setsugennoao',
     maintainer_email='setsugen@setsugen.dev',

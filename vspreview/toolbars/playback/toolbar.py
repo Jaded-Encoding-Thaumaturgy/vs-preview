@@ -2,22 +2,23 @@ from __future__ import annotations
 
 import gc
 import logging
-from math import floor
-import vapoursynth as vs
-from functools import partial
 from collections import deque
-from time import perf_counter_ns
 from concurrent.futures import Future
-from typing import Any, cast, Deque, Mapping, Tuple
+from functools import partial
+from math import floor
+from time import perf_counter_ns
+from typing import Any, Deque, Mapping, Tuple, cast
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QDoubleSpinBox, QComboBox, QSlider
+import vapoursynth as vs
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QComboBox, QSlider
 
+from ...core import (
+    AbstractMainWindow, AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
+)
+from ...core.custom import ComboBox, FrameEdit, TimeEdit
 from ...models import AudioOutputs
 from ...utils import debug, qt_silent_call
-from ...core.custom import ComboBox, FrameEdit, TimeEdit
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, AudioOutput, Time, try_load, PushButton, CheckBox
-
 from .settings import PlaybackSettings
 
 
@@ -27,8 +28,10 @@ def _del_future(f: Future[vs.VideoFrame]) -> None:
 
 
 class PlaybackToolbar(AbstractToolbar):
+    storable_attrs = ('audio_muted', 'audio_outputs', 'volume')
+
     __slots__ = (
-        'play_timer', 'fps_timer', 'fps_history', 'current_fps',
+        *storable_attrs, 'play_timer', 'fps_timer', 'fps_history', 'current_fps',
         'seek_n_frames_b_button', 'seek_to_prev_button', 'play_pause_button',
         'seek_to_next_button', 'seek_n_frames_f_button', 'play_n_frames_button',
         'seek_frame_control', 'seek_time_control',
@@ -40,16 +43,14 @@ class PlaybackToolbar(AbstractToolbar):
         'audio_volume_slider'
     )
 
-    storable_attrs = ('audio_muted', 'audio_outputs', 'volume')
-
     def __init__(self, main: AbstractMainWindow) -> None:
         super().__init__(main, PlaybackSettings())
         self.setup_ui()
 
         self.play_buffer: Deque[Tuple[int, Future[vs.VideoFrame]]] = deque()
-        self.play_timer = QTimer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
+        self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
 
-        self.play_timer_audio = QTimer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
+        self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
 
         self.current_audio_output = None
         self.current_audio_frame = Frame(0)
@@ -57,7 +58,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.fps_history: Deque[int] = deque([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
-        self.fps_timer = QTimer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
+        self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
 
         self.play_start_time: int | None = None
         self.play_start_frame = Frame(0)
@@ -119,7 +120,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.seek_time_control = TimeEdit(self, valueChanged=self.on_seek_time_changed)
 
-        self.fps_spinbox = QDoubleSpinBox(self, valueChanged=self.on_fps_changed)
+        self.fps_spinbox = DoubleSpinBox(self, valueChanged=self.on_fps_changed)
         self.fps_spinbox.setRange(0.001, 9999.0)
         self.fps_spinbox.setDecimals(3)
         self.fps_spinbox.setSuffix(' fps')

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Mapping, Any
+from typing import Any, Mapping
 
 from ...core import AbstractToolbarSettings, CheckBox, try_load
 
 
 class CompSettings(AbstractToolbarSettings):
-    __slots__ = ('delete_cache_checkbox',)
+    __slots__ = ('delete_cache_checkbox', )
 
     DEFAULT_COLLECTION_NAME = ''
 

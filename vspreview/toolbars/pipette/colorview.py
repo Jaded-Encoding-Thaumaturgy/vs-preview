@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QColor, QPainter, QPaintEvent
+from PyQt5.QtWidgets import QWidget
 
 
 class ColorView(QWidget):
-    __slots__ = ('_color',)
+    __slots__ = ('_color', )
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)

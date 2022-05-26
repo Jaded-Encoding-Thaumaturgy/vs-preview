@@ -219,7 +219,7 @@ class MainSettings(AbstractToolbarSettings):
     def dragnavigator_timeout(self) -> int:
         return self.dragnavigator_timeout_spinbox.value()
 
-    def zoom_levels_combobox_on_add(self):
+    def zoom_levels_combobox_on_add(self) -> None:
         try:
             new_value = int(self.zoom_levels_lineedit.text())
         except ValueError:
@@ -235,7 +235,7 @@ class MainSettings(AbstractToolbarSettings):
 
         self.zoom_levels = [*zoom_levels, new_value]
 
-    def zoom_levels_combobox_on_remove(self, checkFocus: bool = False):
+    def zoom_levels_combobox_on_remove(self, checkFocus: bool = False) -> None:
         if checkFocus and not self.zoom_levels_lineedit.hasFocus():
             return
 

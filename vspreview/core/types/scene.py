@@ -11,11 +11,12 @@ core = vs.core
 
 
 class Scene(YAMLObjectWrapper):
-    __slots__ = (
-        'start', 'end', 'label'
-    )
+    __slots__ = ('start', 'end', 'label')
 
     def __init__(self, start: Frame | None = None, end: Frame | None = None, label: str = '') -> None:
+        self.setValue(start, end, label)
+
+    def setValue(self, start: Frame | None, end: Frame | None, label: str) -> None:
         if start is not None and end is not None:
             self.start = start
             self.end = end
@@ -47,7 +48,7 @@ class Scene(YAMLObjectWrapper):
         return result
 
     def __repr__(self) -> str:
-        return 'Scene({}, {}, \'{}\')'.format(self.start, self.end, self.label)
+        return f"Scene({self.start}, {self.end}, '{self.label}')"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Scene):
@@ -71,17 +72,17 @@ class Scene(YAMLObjectWrapper):
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try:
             if not isinstance(state['start'], Frame):
-                raise TypeError('Start frame of Scene is not a Frame. It\'s most probably corrupted.')
+                raise TypeError("Start frame of Scene is not a Frame. It's most probably corrupted.")
 
             if not isinstance(state['end'], Frame):
-                raise TypeError('End frame of Scene is not a Frame. It\'s most probably corrupted.')
+                raise TypeError("End frame of Scene is not a Frame. It's most probably corrupted.")
 
             if not isinstance(state['label'], str):
-                raise TypeError('Label of Scene is not a string. It\'s most probably corrupted.')
+                raise TypeError("Label of Scene is not a string. It's most probably corrupted.")
         except KeyError:
             raise KeyError(
-                'Scene lacks one or more of its fields. It\'s most probably corrupted. Check those: {}.'
-                .format(', '.join(self.__slots__))
+                "Scene lacks one or more of its fields."
+                f"It's most probably corrupted. Check those: {', '.join(self.__slots__)}."
             )
 
-        self.__init__(state['start'], state['end'], state['label'])  # type: ignore
+        self.setValue(state['start'], state['end'], state['label'])

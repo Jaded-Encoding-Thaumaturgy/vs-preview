@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Tuple, Sequence, Any
+from typing import Any, Sequence, Tuple, cast
 
-from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtGui import QPainter, QColor, QPen, QBrush
-from PyQt5.QtWidgets import QWidget, QStatusBar, QLabel
+from PyQt5.QtCore import QRect, Qt
+from PyQt5.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
+from PyQt5.QtWidgets import QLabel, QStatusBar, QWidget
 
 from ..abstracts import PushButton
 
@@ -14,6 +14,7 @@ class StatusBar(QStatusBar):
         'total_frames_label', 'duration_label', 'resolution_label',
         'pixel_format_label', 'fps_label', 'frame_props_label', 'label'
     )
+
     total_frames_label: QLabel
     duration_label: QLabel
     resolution_label: QLabel
@@ -54,7 +55,7 @@ class Switch(PushButton):
         super().__init__(**kwargs)
 
         self.radius = radius
-        self.width = width
+        self.sw_width = width
         self.border = border
         self.state_texts = state_texts
         self.state_colors = state_colors
@@ -66,7 +67,7 @@ class Switch(PushButton):
         self.setMinimumWidth((width + border) * 2)
         self.setMinimumHeight((radius + border) * 2)
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.translate(self.rect().center())
@@ -77,21 +78,22 @@ class Switch(PushButton):
         painter.setPen(pen)
 
         painter.drawRoundedRect(
-            QRect(-self.width, -self.radius, self.width * 2, self.radius * 2), self.radius, self.radius
+            QRect(-self.sw_width, -self.radius, self.sw_width * 2, self.radius * 2), self.radius, self.radius
         )
         painter.setBrush(QBrush(self.state_colors[int(self.isChecked())]))
 
         switch_rect = QRect(
-            -self.radius, -self.radius + self.border, self.width + self.radius, self.radius * 2 - self.border * 2
+            -self.radius, -self.radius + self.border, self.sw_width + self.radius, self.radius * 2 - self.border * 2
         )
 
         if not self.isChecked():
-            switch_rect.moveLeft(-self.width)
+            switch_rect.moveLeft(-self.sw_width)
 
         painter.setPen(pen)
         painter.drawRoundedRect(switch_rect, self.radius, self.radius)
 
         textpen = QPen(self.text_color)
         textpen.setWidth(self.state_texts[2])
+
         painter.setPen(textpen)
-        painter.drawText(switch_rect, Qt.AlignCenter, self.state_texts[int(self.isChecked())])
+        painter.drawText(switch_rect, Qt.AlignCenter, cast(str, self.state_texts[int(self.isChecked())]))

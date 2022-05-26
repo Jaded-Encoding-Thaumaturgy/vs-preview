@@ -1,3 +1,1 @@
-# flake8: noqa
-
-from .toolbar import *
+from .toolbar import *  # noqa: F401, F403

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import vapoursynth as vs
-from typing import Deque
-from copy import deepcopy
-from time import perf_counter
 from collections import deque
 from concurrent.futures import Future
+from copy import deepcopy
+from time import perf_counter
+from typing import Deque
 
-from PyQt5.QtCore import Qt, QTimer, QMetaObject
+import vapoursynth as vs
+from PyQt5.QtCore import QMetaObject, Qt
 from PyQt5.QtWidgets import QLabel
 
+from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
 from ...core.custom import FrameEdit
-from ...utils import qt_silent_call, vs_clear_cache, strfdelta
-from ...core import AbstractMainWindow, AbstractToolbar, Frame, Time, PushButton, CheckBox
-
+from ...utils import qt_silent_call, strfdelta, vs_clear_cache
 from .settings import BenchmarkSettings
 
 
@@ -42,11 +41,11 @@ class BenchmarkToolbar(AbstractToolbar):
         self.total_frames = Frame(0)
         self.frames_left = Frame(0)
 
-        self.sequenced_timer = QTimer(
+        self.sequenced_timer = Timer(
             timeout=self._request_next_frame_sequenced, timerType=Qt.PreciseTimer, interval=0
         )
 
-        self.update_info_timer = QTimer(timeout=self.update_info, timerType=Qt.PreciseTimer)
+        self.update_info_timer = Timer(timeout=self.update_info, timerType=Qt.PreciseTimer)
 
         self.set_qobject_names()
 

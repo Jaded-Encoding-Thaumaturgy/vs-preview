@@ -20,6 +20,9 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     COLUMN_COUNT = 5
 
     def __init__(self, name: str = '', max_value: Frame | None = None, items: List[Scene] | None = None) -> None:
+        self.setValue(name, max_value, items)
+
+    def setValue(self, name: str = '', max_value: Frame | None = None, items: List[Scene] | None = None) -> None:
         super().__init__()
         self.name = name
         self.max_value = max_value if max_value is not None else Frame(2**31)
@@ -261,13 +264,16 @@ class SceningList(QAbstractTableModel, QYAMLObject):
                 "SceningList lacks one or more of its fields. It's most probably corrupted. Check those: {}.".format(
                     ', '.join(self.__slots__)))
 
-        self.__init__(name, max_value, items)  # type: ignore
+        self.setValue(name, max_value, items)
 
 
 class SceningLists(QAbstractListModel, QYAMLObject):
     __slots__ = ('items',)
 
     def __init__(self, items: List[SceningList] | None = None) -> None:
+        self.setValue(items)
+
+    def setValue(self, items: List[SceningList] | None = None) -> None:
         super().__init__()
         self.main = main_window()
         self.items = items if items is not None else []
@@ -388,4 +394,4 @@ class SceningLists(QAbstractListModel, QYAMLObject):
                 .format(', '.join(self.__slots__))
             )
 
-        self.__init__(items)  # type: ignore
+        self.setValue(items)

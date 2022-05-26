@@ -4,7 +4,7 @@ from ...core import AbstractToolbarSettings
 
 
 class PipetteSettings(AbstractToolbarSettings):
-    __slots__ = ()
+    __slots__ = tuple()
 
     def setup_ui(self) -> None:
         super().setup_ui()

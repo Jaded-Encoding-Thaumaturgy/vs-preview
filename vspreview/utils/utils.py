@@ -7,8 +7,8 @@ from string import Template
 from platform import python_version
 from functools import partial, wraps
 from pkg_resources import get_distribution
-from typing import Any, Callable, TypeVar, Tuple
 from asyncio import get_running_loop, get_event_loop_policy
+from typing import Any, Callable, TypeVar, Tuple, cast, overload
 
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication
@@ -16,16 +16,17 @@ from PyQt5.QtWidgets import QApplication
 from ..core import main_window, Frame, Time
 
 T = TypeVar('T')
+F_SL = TypeVar('F_SL', bound=Callable)
 
 
 # it is a BuiltinMethodType at the same time
-def qt_silent_call(qt_method: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+def qt_silent_call(qt_method: F_SL, *args: Any, **kwargs: Any) -> T:
     # https://github.com/python/typing/issues/213
     qobject = qt_method.__self__  # type: ignore
     block = QSignalBlocker(qobject)
     ret = qt_method(*args, **kwargs)
     del block
-    return ret
+    return cast(T, ret)
 
 
 class DeltaTemplate(Template):
@@ -54,7 +55,7 @@ def strfdelta(time: Time, output_format: str) -> str:
     )
 
 
-def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
+def fire_and_forget(f: F_SL) -> F_SL:
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
@@ -65,21 +66,35 @@ def fire_and_forget(f: Callable[..., T]) -> Callable[..., T]:
     return wrapped
 
 
-def set_status_label(label: str) -> Callable[..., T]:
-    def decorator(func: Callable[..., T]) -> Any:
-        @wraps(func)
-        def wrapped(*args: Any, **kwargs: Any) -> T:
-            main = main_window()
+@overload
+def set_status_label(*, label: str) -> Callable[[F_SL], F_SL]:
+    ...
 
-            main.statusbar.label.setText(label)
 
-            ret = func(*args, **kwargs)
+@overload
+def set_status_label(func: F_SL | None, /) -> F_SL:
+    ...
 
-            main.statusbar.label.setText('Ready')
 
-            return ret
-        return wrapped
-    return decorator
+def set_status_label(func: F_SL | None = None, /, *, label: str) -> F_SL | Callable[[F_SL], F_SL]:
+    if func is None:
+        return cast(Callable[[F_SL], F_SL], partial(set_status_label, label=label))
+
+    @wraps(func)
+    def _wrapper(*args: Any, **kwargs: Any) -> T:
+        assert func
+        
+        main = main_window()
+
+        main.statusbar.label.setText(label)
+
+        ret = func(*args, **kwargs)
+
+        main.statusbar.label.setText('Ready')
+
+        return cast(T, ret)
+
+    return cast(F_SL, _wrapper)
 
 
 def vs_clear_cache() -> None:
@@ -106,9 +121,9 @@ def check_versions() -> bool:
             .format(get_distribution('PyQt5').version))
         return False
 
-    if vs.core.version_number() < 53:
+    if vs.core.version_number() < 58:
         logging.warning(
-            'VSPreview is not tested on VapourSynth versions prior to 53, but you have {}. Use at your own risk.'
+            'VSPreview is not tested on VapourSynth versions prior to 58, but you have {}. Use at your own risk.'
             .format(vs.core.version_number())
         )
         return False

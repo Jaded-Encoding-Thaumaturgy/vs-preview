@@ -1,24 +1,16 @@
 from __future__ import annotations
 
-from functools import partial
 from enum import IntEnum, auto
-from dataclasses import dataclass
 
-from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QPointF, QRect, QPoint
-from PyQt5.QtWidgets import QWidget, QGraphicsView, QApplication, QGraphicsPixmapItem
-from PyQt5.QtGui import QMouseEvent, QResizeEvent, QNativeGestureEvent, QTransform, QWheelEvent, QPixmap, QPainter, QColor
+from PyQt5.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
+from PyQt5.QtGui import (
+    QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPixmap, QResizeEvent, QTransform, QWheelEvent
+)
+from PyQt5.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
 
 from ...core import AbstractMainWindow
 
-
-@dataclass
-class CroppingInfo:
-    top: int
-    left: int
-    width: int
-    height: int
-    active: bool = True
-    is_absolute: bool = False
+from ..types.dataclasses import CroppingInfo
 
 
 class DragEventType(IntEnum):
@@ -44,7 +36,7 @@ class GraphicsView(QGraphicsView):
     last_positions = (0, 0)
 
     autofit = False
-    main: AbstractMainWindow = None
+    main: AbstractMainWindow
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -68,8 +60,6 @@ class GraphicsView(QGraphicsView):
                 )
             else:
                 return
-
-        print(value)
 
         self.currentZoom = value
 

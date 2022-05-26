@@ -4,7 +4,7 @@ from ...core import AbstractToolbarSettings
 
 
 class DebugSettings(AbstractToolbarSettings):
-    __slots__ = ()
+    __slots__ = tuple()
 
     DEBUG_PLAY_FPS = False
     DEBUG_TOOLBAR = False

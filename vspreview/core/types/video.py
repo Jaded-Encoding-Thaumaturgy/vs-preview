@@ -1,34 +1,23 @@
 from __future__ import annotations
 
+import ctypes
+import itertools
+import logging
 import os
 import sys
-import ctypes
-import logging
-import itertools
-import vapoursynth as vs
-from dataclasses import dataclass
-from typing import Any, Mapping, Tuple, List, cast
+from typing import Any, List, Mapping, Tuple, cast
 
+import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPixmap, QPainter
+from PyQt5.QtGui import QImage, QPainter, QPixmap
 
+from ..abstracts import AbstractYAMLObject, main_window, try_load
 from ..vsenv import __name__ as _venv  # noqa: F401
+from .dataclasses import CroppingInfo, NumpyVideoPHelp, VideoOutputNode
 from .units import Frame, Time
-from ..abstracts import main_window, try_load, AbstractYAMLObject
-
 
 core = vs.core
-
-
-@dataclass
-class CroppingInfo:
-    top: int
-    left: int
-    width: int
-    height: int
-    active: bool = True
-    is_absolute: bool = False
 
 
 class PackingTypeInfo():
@@ -80,6 +69,7 @@ else:
 
     try:
         import numpy  # noqa
+
         # temp forced defaults until I have all the settings sorted out
         if _default_10bits:
             PACKING_TYPE = PackingType.NONE_numpy_10bit if True else PackingType.numpy_10bit
@@ -88,12 +78,6 @@ else:
     except ImportError:
         logging.error(RuntimeError("Numpy isn't installed either. Exiting..."))
         exit(1)
-
-
-@dataclass
-class VideoOutputNode():
-    clip: vs.VideoNode
-    alpha: vs.VideoNode | None
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -241,8 +225,9 @@ class VideoOutput(AbstractYAMLObject):
     storable_attrs = (
         'title', 'last_showed_frame', 'play_fps', 'crop_values'
     )
-    __slots__ = storable_attrs + (
-        'index', 'width', 'height', 'fps_num', 'fps_den',
+
+    __slots__ = (
+        *storable_attrs, 'index', 'width', 'height', 'fps_num', 'fps_den',
         'total_frames', 'total_time', 'graphics_scene_item',
         'end_frame', 'end_time', 'fps', 'source', 'prepared',
         'main', 'checkerboard', 'props', '_stateset'
@@ -253,7 +238,7 @@ class VideoOutput(AbstractYAMLObject):
     format: vs.VideoFormat
     title: str | None
     curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
-    last_showed_frame: Frame | None
+    last_showed_frame: Frame
     crop_values: CroppingInfo
     _stateset: bool
 
@@ -261,6 +246,9 @@ class VideoOutput(AbstractYAMLObject):
         self.source = self.prepared = None  # type: ignore
 
     def __init__(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
+        self.setValue(vs_output, index, new_storage)
+
+    def setValue(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
         from ..custom import GraphicsImageItem
 
         self._stateset = not new_storage
@@ -327,7 +315,8 @@ class VideoOutput(AbstractYAMLObject):
         False: (_NORML_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, PACKING_TYPE.qt_format),
         True: (_ALPHA_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, QImage.Format_Alpha8)
     }
-    _curr_pointers: List[Any | sip.voidptr] = [None, None, None]
+
+    _curr_pointers = NumpyVideoPHelp()
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         assert clip.format
@@ -351,6 +340,8 @@ class VideoOutput(AbstractYAMLObject):
             del resizer_kwargs['matrix_in_s']
         elif clip.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
+
+        assert clip.format
 
         if is_alpha:
             if clip.format.id == self._ALPHA_FMT.id:
@@ -419,51 +410,54 @@ class VideoOutput(AbstractYAMLObject):
         if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
             import numpy as np
 
-            if self._curr_pointers[0] is None:
+            if not self._curr_pointers.data:
                 bytesps = PACKING_TYPE.vs_format.bytes_per_sample
-                self._curr_pointers[0] = np.empty(
+                self._curr_pointers.data = np.empty(
                     (height, width * 4 // bytesps), dtype=[np.uint8, np.uint16][bytesps - 1]
                 )
-                self._curr_pointers[1] = self._curr_pointers[0].ctypes.strides[0]
+                self._curr_pointers.stride = self._curr_pointers.data.ctypes.strides[0]
 
+            stride = self._curr_pointers.stride
+
+        ctype_pointer = ctypes.POINTER(point_size * stride)
+
+        if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
             if PACKING_TYPE.vs_format.bits_per_sample == 8:
                 for i in range(1, 4):
-                    self._curr_pointers[0][:, (3 - i) if _iled else i::4] = np.ctypeslib.as_array(frame[i - 1])
+                    self._curr_pointers.data[:, (3 - i) if _iled else i::4] = np.ctypeslib.as_array(frame[i - 1])
             else:
                 rPlane = np.ctypeslib.as_array(frame[0]).view(np.uint16)
                 gPlane = np.ctypeslib.as_array(frame[1]).view(np.uint16)
                 bPlane = np.ctypeslib.as_array(frame[2]).view(np.uint16)
 
                 if _iled:
-                    self._curr_pointers[0][:, 1::2] = 0xc000 | ((rPlane & 0x3ff) << 4) | ((gPlane & 0x3ff) >> 6)
-                    self._curr_pointers[0][:, 0::2] = ((gPlane & 0x3ff) << 10) | (bPlane & 0x3ff)
+                    self._curr_pointers.data[:, 1::2] = 0xc000 | ((rPlane & 0x3ff) << 4) | ((gPlane & 0x3ff) >> 6)
+                    self._curr_pointers.data[:, 0::2] = ((gPlane & 0x3ff) << 10) | (bPlane & 0x3ff)
                 else:
-                    self._curr_pointers[0][:, 0::2] = ((bPlane & 0x3ff) << 6) | ((gPlane & 0x3ff) >> 4)
-                    self._curr_pointers[0][:, 1::2] = 0x0003 | ((rPlane & 0x3ff) << 2) | ((gPlane & 0x3ff) << 12)
+                    self._curr_pointers.data[:, 0::2] = ((bPlane & 0x3ff) << 6) | ((gPlane & 0x3ff) >> 4)
+                    self._curr_pointers.data[:, 1::2] = 0x0003 | ((rPlane & 0x3ff) << 2) | ((gPlane & 0x3ff) << 12)
 
-            stride = self._packed_stride[0]
-
-            self._curr_pointers[2] = cast(
-                sip.voidptr, self._curr_pointers[0].ctypes.data_as(ctype_pointer).contents
+            self._curr_pointers.pointer = cast(
+                sip.voidptr, self._curr_pointers.data.ctypes.data_as(ctype_pointer).contents
             )
         else:
             if width % mod:
-                self._curr_pointers[2] = cast(
+                self._curr_pointers.pointer = cast(
                     sip.voidptr, ctypes.cast(
                         frame.get_read_ptr(0), ctype_pointer
                     ).contents
                 )
                 memory_bug_fix = True
             else:
-                self._curr_pointers[2] = cast(sip.voidptr, frame[0])
+                self._curr_pointers.pointer = cast(sip.voidptr, frame[0])
 
-        image = QImage(self._curr_pointers[2], width, height, stride, qt_format)
+        image = QImage(self._curr_pointers.pointer, width, height, stride, qt_format)
 
         return image.copy() if memory_bug_fix else image
 
     def update_graphic_item(
         self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
-    ) -> QPixmap:
+    ) -> QPixmap | None:
         if isinstance(crop_values, bool):
             self.crop_values.active = crop_values
         elif crop_values is not None:

@@ -1,5 +1,3 @@
-# flake8: noqa
+from . import (debug, utils)  # noqa: F401
 
-from . import (debug, utils)
-
-from .utils import *
+from .utils import *  # noqa: F401, F403

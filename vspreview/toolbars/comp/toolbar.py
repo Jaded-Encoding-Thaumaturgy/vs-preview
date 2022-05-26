@@ -1,26 +1,26 @@
 from __future__ import annotations
 
+import logging
 import os
+import random
 import shutil
 import string
-import random
-import logging
-import vapoursynth as vs
-from pathlib import Path
-from requests import Session
 from functools import partial
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from pathlib import Path
 from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
 
+import vapoursynth as vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
-from PyQt5.QtWidgets import QLabel, QComboBox, QProgressBar
+from PyQt5.QtWidgets import QComboBox, QLabel
+from requests import Session
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 
+from ...core import (
+    AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
+)
 from ...core.custom import ComboBox, FrameEdit
 from ...models import PictureTypes, VideoOutputs
-from ...core import AbstractMainWindow, AbstractToolbar, PictureType, main_window, PushButton, LineEdit, CheckBox
-
 from .settings import CompSettings
-
 
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
@@ -56,13 +56,16 @@ class Worker(QObject):
         else:
             self.progress_bar.emit(int(100 * value / endvalue))
 
+    def isFinished(self) -> bool:
+        return self.is_finished
+
     def run(self, conf: WorkerConfiguration) -> None:
         all_images: List[List[Path]] = []
         conf.path.mkdir(parents=True, exist_ok=False)
 
         try:
             for i, output in enumerate(conf.outputs):
-                if self.is_finished:
+                if self.isFinished():
                     raise StopIteration
                 self.progress_status.emit('extract', i + 1, len(conf.outputs))
 
@@ -77,7 +80,7 @@ class Worker(QObject):
                 ]
 
                 def _save(n: int, f: vs.VideoFrame) -> vs.VideoFrame:
-                    if self.is_finished:
+                    if self.isFinished():
                         raise StopIteration
                     conf.main.current_output.frame_to_qimage(f).save(
                         str(path_images[n]), 'PNG', conf.compression
@@ -90,7 +93,7 @@ class Worker(QObject):
                 with open(os.devnull, 'wb') as devnull:
                     clip.output(devnull, y4m=False, progress_update=self._progress_update_func)
 
-                if self.is_finished:
+                if self.isFinished():
                     raise StopIteration
 
                 all_images.append(sorted(path_images))
@@ -100,11 +103,11 @@ class Worker(QObject):
         fields: Dict[str, Any] = {}
 
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
-            if self.is_finished:
+            if self.isFinished():
                 return self.finished.emit()
             for j, (image, frame) in enumerate(zip(images, conf.frames)):
-                if self.is_finished:
-                    return self.finished.emit()  # type: ignore
+                if self.isFinished():
+                    return self.finished.emit()
                 fields[f'comparisons[{j}].name'] = str(frame)
                 fields[f'comparisons[{j}].images[{i}].name'] = output.name
                 fields[f'comparisons[{j}].images[{i}].file'] = (image.name, image.read_bytes(), 'image/png')
@@ -113,7 +116,7 @@ class Worker(QObject):
 
         with Session() as sess:
             sess.get('https://slow.pics/api/comparison')
-            if self.is_finished:
+            if self.isFinished():
                 return self.finished.emit()
             head_conf = {
                 'collectionName': conf.collection_name,
@@ -132,7 +135,7 @@ class Worker(QObject):
 
             response = sess.post(
                 'https://slow.pics/api/comparison',
-                monitor.to_string(),  # type: ignore
+                monitor.to_string().encode(),
                 headers={
                     "Accept": "*/*",
                     "Accept-Encoding": "gzip, deflate, br",
@@ -206,7 +209,7 @@ class CompToolbar(AbstractToolbar):
 
         self.stop_upload_button = PushButton('Stop Upload', self, visible=False, clicked=self.on_stop_upload)
 
-        self.upload_progressbar = QProgressBar(self, value=0)
+        self.upload_progressbar = ProgressBar(self, value=0)
         self.upload_progressbar.setGeometry(200, 80, 250, 20)
 
         self.upload_status_label = QLabel(self)

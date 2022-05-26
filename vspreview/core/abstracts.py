@@ -1,31 +1,31 @@
 from __future__ import annotations
 
-import logging
 import inspect
-from pathlib import Path
-import vapoursynth as vs
+import logging
 from abc import abstractmethod
-from functools import lru_cache
 from dataclasses import dataclass
-from typing import Any, cast, Mapping, TYPE_CHECKING, Tuple, List, Type, TypeVar, Sequence, overload, Callable
-
-from PyQt5.QtGui import QClipboard
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QDialog, QPushButton, QGraphicsScene, QShortcut, QCheckBox,
-    QGraphicsView, QStatusBar, QFrame, QBoxLayout, QVBoxLayout, QHBoxLayout, QSpinBox, QLineEdit,
-    QTableView, QSpacerItem
+from functools import lru_cache
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, Type, TypeVar, cast, overload
 )
 
-from .better_abc import abstract_attribute
-from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
+import vapoursynth as vs
+from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QClipboard, QKeySequence
+from PyQt5.QtWidgets import (
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene,
+    QGraphicsView, QHBoxLayout, QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut,
+    QSpacerItem, QSpinBox, QStatusBar, QTableView, QVBoxLayout, QWidget
+)
 
+from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
+from .better_abc import abstract_attribute
 
 if TYPE_CHECKING:
+    from ..main.timeline import Notches, Timeline
     from ..models import VideoOutputs
-    from .types import Frame, VideoOutput, Time
-    from ..main.timeline import Timeline, Notches
+    from .types import Frame, Time, VideoOutput
 
 
 T = TypeVar('T')
@@ -40,12 +40,9 @@ class ExtendedLayout(QBoxLayout):
     @overload
     def __init__(self) -> None: ...
     @overload
-    def __init__(self, parent: QWidget | QBoxLayout | None) -> None: ...
+    def __init__(self, init_value: QWidget | QBoxLayout | None) -> None: ...
     @overload
-    def __init__(self, children: Sequence[QWidget] | None) -> None: ...
-    @overload
-    def __init__(self, children: Sequence[QBoxLayout] | None) -> None: ...
-
+    def __init__(self, init_value: Sequence[QWidget | QBoxLayout] | None) -> None: ...
     @overload
     def __init__(
         self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None
@@ -155,7 +152,20 @@ class CheckBox(ExtendedItemInit, QCheckBox):
     ...
 
 
+class Timer(ExtendedItemInit, QTimer):
+    ...
+
+
+class ProgressBar(ExtendedItemInit, QProgressBar):
+    ...
+
+
+class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
+    ...
+
+
 class AbstractQItem():
+    __slots__: Tuple[str]
     storable_attrs = tuple()
 
     def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
@@ -187,7 +197,9 @@ class AbstractQItem():
 
 
 class AbstractYAMLObject(AbstractQItem):
-    ...
+    @abstractmethod
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise NotImplementedError
 
 
 class ExtendedWidget(AbstractQItem, QWidget):

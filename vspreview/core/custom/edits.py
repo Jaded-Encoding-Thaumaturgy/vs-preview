@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Type
+from typing import Any, Type
 
-from PyQt5.QtCore import pyqtSignal, QTime
-from PyQt5.QtWidgets import QWidget, QTimeEdit
+from PyQt5.QtCore import QTime, pyqtSignal
+from PyQt5.QtWidgets import QTimeEdit, QWidget
 
-from ...core import Frame, Time, SpinBox
+from ...core import Frame, SpinBox, Time
 
 
 def to_qtime(time: Time) -> QTime:
@@ -25,7 +25,7 @@ def from_qtime(qtime: QTime, t: Type[Time]) -> Time:
 class FrameEdit(SpinBox):
     valueChanged = pyqtSignal(Frame, Frame)
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         self.setMinimum(Frame(0))
@@ -58,7 +58,7 @@ class FrameEdit(SpinBox):
 class TimeEdit(QTimeEdit):
     valueChanged = pyqtSignal(Time, Time)
 
-    def __init__(self, parent: QWidget | None = None, **kwargs) -> None:
+    def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent, **kwargs, timeChanged=self._timeChanged)
 
         self.setDisplayFormat('H:mm:ss.zzz')

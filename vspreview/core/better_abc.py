@@ -29,6 +29,7 @@ class ABCMeta(NativeABCMeta):
                 "Class {} doesn't initialize following abstract attributes: {}"
                 .format(cls.__name__, ', '.join(abstract_attributes))
             )
+
         return instance
 
 

@@ -17,6 +17,9 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     __slots__ = ('items')
 
     def __init__(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
+        self.setValue(main, local_storage)
+
+    def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
         self.items: List[T] = []
 
@@ -34,7 +37,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
                 continue
             try:
                 output = local_storage[str(i)]
-                output.__init__(vs_output, i, newstorage)  # type: ignore
+                output.setValue(vs_output, i, newstorage)
             except KeyError:
                 output = self.out_type(vs_output, i, newstorage)
 
@@ -108,7 +111,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     def __getstate__(self) -> Mapping[str, Any]:
         return dict(zip([str(x.index) for x in self.items], self.items), type=self.out_type.__name__)
 
-    def __setstate__(self, state: Mapping[str, T | str]) -> None:
+    def __setstate__(self, state: Mapping[str, T]) -> None:
         type_string = ''
         try_load(state, 'type', str, type_string)
 
@@ -120,7 +123,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
             if not isinstance(value, self.out_type):
                 raise TypeError(f'Storage loading (Outputs): value of key {key} is not {self.out_type.__name__}')
 
-        self.__init__(main_window(), state)  # type: ignore
+        self.setValue(main_window(), state)
 
 
 class VideoOutputs(Outputs[VideoOutput]):

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from PyQt5.QtCore import Qt
-from typing import cast, Dict, Iterator, List, Type
+from typing import Any, Dict, Iterator, List, Type, cast
 
-from PyQt5.QtWidgets import QWidget, QApplication, QToolTip
-from PyQt5.QtCore import QLineF, pyqtSignal, QRectF, QPoint, QEvent
-from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QPalette, QPen, QMoveEvent, QMouseEvent, QResizeEvent
+from PyQt5.QtCore import QEvent, QLineF, QPoint, QRectF, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
+from PyQt5.QtWidgets import QApplication, QToolTip, QWidget
 
-from ..utils import strfdelta
 from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Scene, Time, main_window
+from ..utils import strfdelta
 
 
 class Notch:
     def __init__(
-        self, data: Frame | Time, color: QColor = cast(QColor, Qt.white),
-        label: str = '', line: QLineF = QLineF()
+        self, data: Frame | Time, color: QColor = cast(QColor, Qt.white), label: str = '', line: QLineF = QLineF()
     ) -> None:
         self.data = data
         self.color = color
@@ -88,7 +86,7 @@ class Timeline(QWidget):
 
     clicked = pyqtSignal(Frame, Time)
 
-    def __init__(self, parent: QWidget, **kwargs) -> None:
+    def __init__(self, parent: QWidget, **kwargs: Any) -> None:
         super().__init__(parent, **kwargs)
         self.app = QApplication.instance()
         self.main = main_window()

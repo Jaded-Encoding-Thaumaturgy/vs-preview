@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+from PyQt5.QtCore import QPointF, Qt
+from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
+from PyQt5.QtWidgets import QLabel
 from vapoursynth import FrameProps
 
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore import Qt, QPointF
-from PyQt5.QtGui import QPainter, QColor, QMouseEvent
-
-from ...core import AbstractMainWindow, ExtendedWidget, VBoxLayout, HBoxLayout, Stretch, PushButton
+from ...core import AbstractMainWindow, ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
 
 _frame_props_excluded_keys = {
     # vs internals
@@ -174,6 +173,12 @@ class FramePropsDialog(ExtendedWidget):
             Stretch()
         ])
 
+    def showDialog(self, props: FrameProps | None) -> None:
+        if props is not None:
+            self.update_frame_props(props)
+
+        super().show()
+
     def update_frame_props(self, props: FrameProps) -> None:
         node_idx = self.main_window.toolbars.main.outputs_combobox.currentIndex()
         self.header.setText(
@@ -203,14 +208,14 @@ class FramePropsDialog(ExtendedWidget):
         if '_SARNum' in props and '_SARDen' in props:
             _add_prop_row('Pixel aspect ratio', f"{props['_SARNum']}/{props['_SARDen']}")
 
-    def paintEvent(self, event: QMouseEvent):
+    def paintEvent(self, event: QPaintEvent) -> None:
         QPainter(self).fillRect(self.rect(), QColor(45, 55, 65, 168))
         self.main_window.timeline.full_repaint()
 
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         self.old_pos = event.screenPos()
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.clicked:
             new_x = int(self.pos().x() - (self.old_pos.x() - event.screenPos().x()))
             new_y = int(self.pos().y() - (self.old_pos.y() - event.screenPos().y()))

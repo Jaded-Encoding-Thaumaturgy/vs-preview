@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-import os
-import sys
 import json
 import logging
-import pretty_traceback
-from pathlib import Path
-from typing import Literal
+import os
+import sys
 from argparse import ArgumentParser
+from pathlib import Path
+from typing import Dict, List, Literal, cast
 
+import pretty_traceback
+from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt, QEvent, QObject
 
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import get_policy
-from .main import MainWindow, MainSettings
+from .main import MainSettings, MainWindow
 from .utils import check_versions, get_temp_screen_resolution
 
 pretty_traceback.install()
@@ -106,7 +106,7 @@ def main() -> None:
     app.exec_()
 
 
-def install_vscode_launch(mode: Literal['override', 'append', 'ignore']):
+def install_vscode_launch(mode: Literal['override', 'append', 'ignore']) -> None:
     vscode_settings_path = Path.cwd() / '.vscode'
     vscode_settings_path.mkdir(0o777, True, True)
 
@@ -163,11 +163,11 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore']):
         current_settings['configurations'] = settings['configurations']
         return _write()
 
-    current_settings['configurations'].extend(settings['configurations'])
+    cast(List, current_settings['configurations']).extend(settings['configurations'])
 
     current_settings['configurations'] = list({
         ':'.join(str(row[column]) for column in row.keys()): row
-        for row in current_settings['configurations']
+        for row in cast(List[Dict[str, str]], current_settings['configurations'])
     }.values())
 
     return _write()

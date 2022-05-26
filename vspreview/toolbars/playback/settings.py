@@ -3,12 +3,12 @@ from __future__ import annotations
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QLabel
 
+from ...core import AbstractToolbarSettings, Frame, HBoxLayout, SpinBox
 from ...main.settings import MainSettings
-from ...core import AbstractToolbarSettings, Frame, SpinBox, HBoxLayout
 
 
 class PlaybackSettings(AbstractToolbarSettings):
-    __slots__ = ('buffer_size_spinbox',)
+    __slots__ = ('buffer_size_spinbox', )
 
     CHECKERBOARD_ENABLED = True
     CHECKERBOARD_TILE_COLOR_1 = Qt.white

@@ -6,9 +6,9 @@ from typing import List
 
 class PictureType(bytes, Enum):
     ALL = b'All'
-    I = b'I'
-    P = b'P'
-    B = b'B'
+    Intra = b'I'
+    Predicted = b'P'
+    Bipredictive = b'B'
 
     def __str__(self) -> str:
         if self == PictureType.ALL:
@@ -18,4 +18,4 @@ class PictureType(bytes, Enum):
 
     @classmethod
     def list(cls) -> List[PictureType]:
-        return list(map(lambda c: PictureType(c.value), cls))
+        return [PictureType(e.value) for e in cls]

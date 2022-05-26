@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import cast, Generic, Optional, Type, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, cast
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget, QComboBox
+from PyQt5.QtWidgets import QComboBox, QWidget
 
-from ...core import VideoOutput, AudioOutput, PictureType
+from ...core import AudioOutput, PictureType, VideoOutput
 from ...models import SceningList
 
 T = TypeVar('T', VideoOutput, AudioOutput, SceningList, PictureType, float, str)
@@ -26,7 +26,7 @@ class ComboBox(QComboBox, Generic[T]):
     indexChanged = pyqtSignal(int, int)
     content_type: Type[T]
 
-    def __init__(self, parent: QWidget | None = None, **kwargs) -> None:
+    def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)
 
         self.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)

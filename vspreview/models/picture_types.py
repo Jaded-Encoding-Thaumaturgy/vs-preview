@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from typing import Any, Iterator, cast
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex
+
+from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from ..core import PictureType
 

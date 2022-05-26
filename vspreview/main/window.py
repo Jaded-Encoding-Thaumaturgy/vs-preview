@@ -43,8 +43,8 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_RESIZER_KWARGS = {
         'dither_type': 'error_diffusion',
     }
-    VSP_VERSION = 2.0
-    BREAKING_CHANGES_VERSIONS = []
+    VSP_VERSION = 2.1
+    BREAKING_CHANGES_VERSIONS: List[float] = []
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -54,8 +54,8 @@ class MainWindow(AbstractMainWindow):
 
     storable_attrs = ('settings', 'toolbars')
 
-    __slots__ = storable_attrs + (
-        'app', 'display_scale', 'clipboard',
+    __slots__ = (
+        *storable_attrs, 'app', 'display_scale', 'clipboard',
         'script_path', 'timeline', 'main_layout',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
@@ -100,7 +100,7 @@ class MainWindow(AbstractMainWindow):
 
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
-        self.storage_not_found = None
+        self.storage_not_found = False
         self.script_globals: Dict[str, Any] = dict()
 
         # global
@@ -127,7 +127,7 @@ class MainWindow(AbstractMainWindow):
         self.timeline.clicked.connect(self.on_timeline_clicked)
 
         # init toolbars and outputs
-        self.app_settings = SettingsDialog(self)
+        self.app_settings = SettingsDialog(self)  # type: ignore
         self.toolbars = Toolbars(self)
 
         for toolbar in self.toolbars:
@@ -261,7 +261,7 @@ class MainWindow(AbstractMainWindow):
         if not reloading:
             self.switch_output(self.settings.output_index)
 
-    @set_status_label('Loading...')
+    @set_status_label(label='Loading...')
     def load_storage(self) -> None:
         if self.storage_not_found:
             logging.info('No storage found. Using defaults.')
@@ -318,7 +318,7 @@ class MainWindow(AbstractMainWindow):
             loader.dispose()
 
     @fire_and_forget
-    @set_status_label('Saving...')
+    @set_status_label(label='Saving...')
     def dump_storage_async(self) -> None:
         self.dump_storage()
 
@@ -366,7 +366,7 @@ class MainWindow(AbstractMainWindow):
         # but i'm referencing settings objects before in the dict
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
-        data = self.__getstate__()
+        data = cast(dict, self.__getstate__())
         data['_globals'] = {
             'settings': data['settings']
         }
@@ -438,7 +438,7 @@ class MainWindow(AbstractMainWindow):
             logging.debug('switch_frame: position is None!')
             return
 
-        frame = Frame(min(max(0, int(Frame(pos))), self.current_output.total_frames))
+        frame = Frame(min(max(0, int(Frame(pos))), int(self.current_output.total_frames)))
 
         if self.current_output.last_showed_frame == frame > self.current_output.end_frame:
             return
@@ -508,7 +508,7 @@ class MainWindow(AbstractMainWindow):
 
     @property
     def outputs(self) -> VideoOutputs:
-        return cast(VideoOutputs, self.toolbars.main.outputs)
+        return self.toolbars.main.outputs
 
     def handle_script_error(self, message: str) -> None:
         self.script_error_dialog.label.setText(message)

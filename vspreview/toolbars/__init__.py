@@ -1,6 +1,7 @@
-import logging
-from typing import Mapping, Any, Iterator, cast, TYPE_CHECKING
+from __future__ import annotations
 
+import logging
+from typing import Mapping, Any, Iterator, List, cast, overload, TYPE_CHECKING
 
 from ..core import storage_err_msg
 from ..core.bases import AbstractYAMLObjectSingleton
@@ -44,7 +45,15 @@ class Toolbars(AbstractYAMLObjectSingleton):
         for name in self.all_toolbars_names:
             self.__getattribute__(name).setObjectName(f'Toolbars.{name}')
 
+    @overload
     def __getitem__(self, _sub: int) -> AbstractToolbar:
+        ...
+
+    @overload
+    def __getitem__(self, _sub: slice) -> List[AbstractToolbar]:
+        ...
+
+    def __getitem__(self, _sub: int | slice) -> AbstractToolbar | List[AbstractToolbar]:
         length = len(self.all_toolbars_names)
         if isinstance(_sub, slice):
             return [self[i] for i in range(*_sub.indices(length))]

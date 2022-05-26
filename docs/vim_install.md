@@ -14,6 +14,7 @@ The following is a way to integrate VS-Preview into Vim.
     1. Check `Always use this app to open .vpy files`.
     1. Scroll down and click `More apps`, then `Look for another app on this PC`.
     1. Browse to Vim and click `Open`.
+        * To get correct syntax highlighting, add `au BufReadPost,BufNewFile *.vpy setlocal syntax=python` to your `_vimrc`.
 
 ## Running scripts with VSPreview in Vim
 

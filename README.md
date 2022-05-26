@@ -30,3 +30,4 @@ It can then be used by running `vspreview script.vpy` or your preferred way in y
 # IDE Integration
 
 * [VSCode](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/vscode_install.md)
+* [Vim](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/vim_install.md)

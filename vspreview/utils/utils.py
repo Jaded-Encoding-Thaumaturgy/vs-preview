@@ -83,7 +83,7 @@ def set_status_label(func: F_SL | None = None, /, *, label: str) -> F_SL | Calla
     @wraps(func)
     def _wrapper(*args: Any, **kwargs: Any) -> T:
         assert func
-        
+
         main = main_window()
 
         main.statusbar.label.setText(label)

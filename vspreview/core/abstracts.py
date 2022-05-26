@@ -38,11 +38,17 @@ class Stretch:
 
 class ExtendedLayout(QBoxLayout):
     @overload
-    def __init__(self) -> None: ...
+    def __init__(self) -> None:
+        ...
+
     @overload
-    def __init__(self, init_value: QWidget | QBoxLayout | None) -> None: ...
+    def __init__(self, init_value: QWidget | QBoxLayout | None) -> None:
+        ...
+
     @overload
-    def __init__(self, init_value: Sequence[QWidget | QBoxLayout] | None) -> None: ...
+    def __init__(self, init_value: Sequence[QWidget | QBoxLayout] | None) -> None:
+        ...
+
     @overload
     def __init__(
         self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None

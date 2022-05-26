@@ -29,7 +29,7 @@ setup(
             'Tracker': 'https://github.com/Setsugennoao/vapoursynth-preview/issues'
     },
     classifiers=[
-        "Topic :: Multimedia :: Graphics"
+        "Topic :: Multimedia :: Graphics",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",

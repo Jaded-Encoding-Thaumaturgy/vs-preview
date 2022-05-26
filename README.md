@@ -14,6 +14,13 @@ This program is meant to be paired with a code editor with integrated terminal l
 
 # Installation and usage
 
+Install latest stable via pypi:
+```bash
+pip install vspreview
+```
+
+
+Install latest git:
 ```bash
 pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git
 ```

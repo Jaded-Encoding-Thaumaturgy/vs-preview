@@ -187,6 +187,10 @@ class VideoOutput(AbstractYAMLObject):
                 clip, format=self._ALPHA_FMT.id, **self.main.VS_OUTPUT_RESIZER_KWARGS
             )
 
+        # patch until cid fixes to_rgb
+        if clip.format.bits_per_sample > 16:
+            clip = clip.resize.Point(format=clip.format.replace(bits_per_sample=16).id)
+
         rgb_clip = to_rgb(
             clip, None, **{
                 'bits_per_sample': self._NORML_FMT.bits_per_sample,

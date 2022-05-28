@@ -11,7 +11,7 @@ from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QLabel
 
-from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput
+from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput, PushButton
 from .colorview import ColorView
 from .settings import PipetteSettings
 
@@ -25,7 +25,8 @@ class PipetteToolbar(AbstractToolbar):
 
     __slots__ = (
         'color_view', 'outputs', 'tracking',
-        'src_dec_fmt', 'src_hex_fmt', *labels
+        'src_dec_fmt', 'src_hex_fmt', *labels,
+        'copy_position_button'
     )
 
     data_types = {
@@ -90,8 +91,10 @@ class PipetteToolbar(AbstractToolbar):
             label.setFont(font)
             label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
+        self.copy_position_button = PushButton('⎘', self, clicked=self.on_copy_position_clicked)
+
         self.hlayout.addWidgets([
-            self.color_view, self.position,
+            self.color_view, self.position, self.copy_position_button,
             self.rgb_label, self.rgb_hex, self.rgb_dec, self.rgb_norm,
             self.src_label, self.src_hex, self.src_dec, self.src_norm
         ])
@@ -223,6 +226,9 @@ class PipetteToolbar(AbstractToolbar):
         self.src_norm_fmt = ('{:0.5f},' * src_num_planes)[:-1]
 
         self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))  # type: ignore
+
+    def on_copy_position_clicked(self, checked: bool | None = None) -> None:
+        self.main.clipboard.setText(self.position.text().strip())
 
     def on_toggle(self, new_state: bool) -> None:
         super().on_toggle(new_state)

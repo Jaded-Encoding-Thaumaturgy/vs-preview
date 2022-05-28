@@ -13,7 +13,7 @@ from traceback import FrameSummary, TracebackException
 from typing import Any, cast, List, Mapping, Tuple, Dict
 
 from PyQt5.QtCore import pyqtSignal, QRectF, QEvent
-from PyQt5.QtGui import QCloseEvent, QPalette, QShowEvent, QPixmap
+from PyQt5.QtGui import QCloseEvent, QColorSpace, QPalette, QShowEvent, QPixmap, QMoveEvent
 from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
 
 from ..toolbars import Toolbars
@@ -26,6 +26,14 @@ from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxL
 from .timeline import Timeline
 from .settings import MainSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
+
+if sys.platform == 'win32':
+    import win32gui  # type: ignore
+
+    try:
+        from PIL import _imagingcms  # type: ignore
+    except ImportError:
+        _imagingcms = None
 
 
 class MainWindow(AbstractMainWindow):
@@ -125,6 +133,10 @@ class MainWindow(AbstractMainWindow):
 
         # timeline
         self.timeline.clicked.connect(self.on_timeline_clicked)
+
+        # display profile
+        self.display_profile: QColorSpace | None = None
+        self.current_screen = 0
 
         # init toolbars and outputs
         self.app_settings = SettingsDialog(self)  # type: ignore
@@ -317,6 +329,11 @@ class MainWindow(AbstractMainWindow):
         finally:
             loader.dispose()
 
+        if self.settings.color_management:
+            assert self.app
+            self.current_screen = self.app.desktop().screenNumber(self)
+            self.update_display_profile()
+
     @fire_and_forget
     @set_status_label('Saving...')
     def dump_storage_async(self) -> None:
@@ -445,9 +462,9 @@ class MainWindow(AbstractMainWindow):
 
         if render_frame:
             if isinstance(render_frame, bool):
-                self.current_output.render_frame(frame)
+                self.current_output.render_frame(frame, output_colorspace=self.display_profile)
             else:
-                self.current_output.render_frame(frame, *render_frame)
+                self.current_output.render_frame(frame, *render_frame, output_colorspace=self.display_profile)
 
         self.current_output.last_showed_frame = frame
 
@@ -530,6 +547,28 @@ class MainWindow(AbstractMainWindow):
         else:
             self.switch_frame(start)
 
+    def update_display_profile(self) -> None:
+        if sys.platform == 'win32':
+            if _imagingcms is None:
+                return
+
+            assert self.app
+
+            screen_name = self.app.screens()[self.current_screen].name()
+
+            dc = win32gui.CreateDC(screen_name, None, None)
+
+            logging.info(f'Changed screen: {screen_name}')
+
+            icc_path = _imagingcms.get_display_profile_win32(dc, 1)
+
+            if icc_path is not None:
+                with open(icc_path, 'rb') as icc:
+                    self.display_profile = QColorSpace.fromIccProfile(icc.read())
+
+        if hasattr(self, 'current_output') and self.display_profile is not None:
+            self.switch_frame(self.current_output.last_showed_frame)
+
     def show_message(self, message: str) -> None:
         self.statusbar.showMessage(
             message, round(float(self.settings.statusbar_message_timeout) * 1000)
@@ -567,6 +606,14 @@ class MainWindow(AbstractMainWindow):
             self.dump_storage_async()
 
         self.reload_signal.emit()
+
+    def moveEvent(self, _move_event: QMoveEvent) -> None:
+        if self.settings.color_management:
+            assert self.app
+            screen_number = self.app.desktop().screenNumber(self)
+            if self.current_screen != screen_number:
+                self.current_screen = screen_number
+                self.update_display_profile()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {

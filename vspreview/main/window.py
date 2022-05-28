@@ -22,6 +22,7 @@ from ..core.vsenv import get_policy
 from ..utils import fire_and_forget, set_status_label
 from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget
+from ..core.types.enums import Resizer, Matrix, Transfer, Primaries, ColorRange, ChromaLocation
 
 from .timeline import Timeline
 from .settings import MainSettings

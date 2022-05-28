@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
+from vsengine.convert import yuv_heuristic
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout,
@@ -158,7 +159,6 @@ class MiscToolbar(AbstractToolbar):
 
         frame_props = self.main.current_output.props
 
-        # will be replaced with vsengine heuristics
         resize_props = {
             'matrix_in_s': Matrix[int(frame_props['_Matrix'])] if '_Matrix' in frame_props else None,
             'primaries_in_s': Primaries[int(frame_props['_Primaries'])] if '_Primaries' in frame_props else None,
@@ -166,9 +166,12 @@ class MiscToolbar(AbstractToolbar):
             'transfer_in_s': Transfer[int(frame_props['_Transfer'])] if '_Transfer' in frame_props else None,
         }
 
+        heuristics = yuv_heuristic(curr_out.width, curr_out.height)
+        heuristics.update({k: v for (k, v) in resize_props.items() if v})
+
         substitutions = {
             **frame_props,
-            **resize_props,
+            **heuristics,
             'format': fmt.name,
             'fps_den': self.main.current_output.fps_den,
             'fps_num': self.main.current_output.fps_num,

@@ -10,7 +10,7 @@ from typing import Any, List, Mapping, Tuple, cast
 import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPainter, QPixmap
+from PyQt5.QtGui import QColorSpace, QImage, QPixmap, QPainter
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from ..vsenv import __name__ as _venv  # noqa: F401
@@ -469,7 +469,8 @@ class VideoOutput(AbstractYAMLObject):
 
     def render_frame(
         self, frame: Frame | None, vs_frame: vs.VideoFrame | None = None,
-        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = True
+        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = True,
+        output_colorspace: QColorSpace | None = None
     ) -> QPixmap:
         if frame is None or not self._stateset:
             return QPixmap()
@@ -481,6 +482,10 @@ class VideoOutput(AbstractYAMLObject):
         self.props = cast(vs.FrameProps, vs_frame.props.copy())
 
         frame_image = self.frame_to_qimage(vs_frame, False)
+
+        if output_colorspace is not None:
+            frame_image.setColorSpace(QColorSpace(QColorSpace.SRgb))
+            frame_image.convertToColorSpace(output_colorspace)
 
         if not vs_frame.closed:
             vs_frame.close()

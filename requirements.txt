@@ -8,3 +8,5 @@ QDarkStyle>=3.0.3
 VapourSynth>=57
 requests>=2.27.1
 requests_toolbelt>=0.9.1
+pywin32 >= 304 ; platform_system=="Windows"
+Pillow >= 9.0.1 ; platform_system=="Windows"

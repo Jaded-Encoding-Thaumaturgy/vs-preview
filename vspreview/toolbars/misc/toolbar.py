@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Any, Mapping, Dict, cast
+from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
-from vsengine.convert import yuv_heuristic
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout,
@@ -15,7 +14,7 @@ from ...core import (
 from ...core.custom import ComboBox, Switch
 from ...core.types.enums import ColorRange, Matrix, Primaries, Transfer
 from ...models import GeneralModel
-from ...utils import get_prop, qt_silent_call
+from ...utils import qt_silent_call, video_heuristics
 from .settings import MiscSettings
 
 
@@ -159,15 +158,7 @@ class MiscToolbar(AbstractToolbar):
 
         props = self.main.current_output.props
 
-        resize_props = {
-            'matrix_in_s': Matrix[get_prop(props, '_Matrix', int)] if '_Matrix' in props else None,
-            'primaries_in_s': Primaries[get_prop(props, '_Primaries', int)] if '_Primaries' in props else None,
-            'range_in_s': ColorRange[get_prop(props, '_ColorRange', int)] if '_ColorRange' in props else None,
-            'transfer_in_s': Transfer[get_prop(props, '_Transfer', int)] if '_Transfer' in props else None,
-        }
-
-        heuristics = cast(Dict[str, str], yuv_heuristic(curr_out.width, curr_out.height))
-        heuristics.update({k: v for (k, v) in resize_props.items() if v})
+        heuristics = video_heuristics(self.main.current_output, props)
 
         substitutions = {
             **props, **heuristics,

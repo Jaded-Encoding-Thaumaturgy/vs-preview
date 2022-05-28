@@ -8,7 +8,6 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, List, Literal, cast
 
-import pretty_traceback
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import QApplication
 
@@ -18,7 +17,6 @@ from .core.vsenv import get_policy
 from .main import MainSettings, MainWindow
 from .utils import check_versions, get_temp_screen_resolution
 
-pretty_traceback.install()
 get_policy()
 
 

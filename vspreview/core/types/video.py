@@ -17,7 +17,6 @@ from ..abstracts import AbstractYAMLObject, main_window, try_load
 from ..vsenv import __name__ as _venv  # noqa: F401
 from .dataclasses import CroppingInfo, NumpyVideoPHelp, VideoOutputNode
 from .units import Frame, Time
-from .enums import Resizer
 
 core = vs.core
 
@@ -106,10 +105,10 @@ class VideoOutput(AbstractYAMLObject):
     def clear(self) -> None:
         self.source = self.prepared = None  # type: ignore
 
-    def __init__(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
+    def __init__(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
         self.setValue(vs_output, index, new_storage)
 
-    def setValue(self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False) -> None:
+    def setValue(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
         from ..custom import GraphicsImageItem
 
         self._stateset = not new_storage
@@ -183,8 +182,8 @@ class VideoOutput(AbstractYAMLObject):
         assert clip.format
 
         if is_alpha:
-            return clip if clip.format.id == self._ALPHA_FMT.id else Resizer.Point(
-                clip, format=self._ALPHA_FMT.id, **self.main.VS_OUTPUT_RESIZER_KWARGS
+            return clip if clip.format.id == self._ALPHA_FMT.id else clip.resize.Point(
+                format=self._ALPHA_FMT.id, **self.main.VS_OUTPUT_RESIZER_KWARGS
             )
 
         # patch until cid fixes to_rgb

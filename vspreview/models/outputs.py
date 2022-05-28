@@ -13,6 +13,7 @@ T = TypeVar('T', VideoOutput, AudioOutput)
 
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     out_type: Type[T]
+    _items: List[T]
 
     __slots__ = ('items')
 
@@ -42,6 +43,8 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
                 output = self.out_type(vs_output, i, newstorage)
 
             self.items.append(output)
+
+        self._items = list(self.items)
 
     def clear_outputs(self) -> None:
         for o in self.items:

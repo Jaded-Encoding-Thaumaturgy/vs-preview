@@ -15,7 +15,7 @@ from ...core import (
 from ...core.custom import ComboBox, Switch
 from ...core.types.enums import ColorRange, Matrix, Primaries, Transfer
 from ...models import GeneralModel
-from ...utils import get_prop, qt_silent_call 
+from ...utils import get_prop, qt_silent_call
 from .settings import MiscSettings
 
 

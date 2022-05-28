@@ -5,7 +5,7 @@ from typing import Any, cast, Iterator, List, Mapping, Type, TypeVar, OrderedDic
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractListModel
 
-from ..core import AbstractMainWindow, QYAMLObject, VideoOutput, AudioOutput, try_load, main_window
+from ..core import AbstractMainWindow, QYAMLObject, VideoOutput, AudioOutput, try_load, main_window, VideoOutputNode
 
 
 T = TypeVar('T', VideoOutput, AudioOutput)
@@ -132,6 +132,9 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
+
+    def switchToNormalView(self) -> None:
+        self.items = list(self._items)
 
 
 class AudioOutputs(Outputs[AudioOutput]):

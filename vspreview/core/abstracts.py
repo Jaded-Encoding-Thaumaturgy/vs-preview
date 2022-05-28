@@ -4,6 +4,7 @@ import inspect
 import logging
 from abc import abstractmethod
 from dataclasses import dataclass
+from enum import IntEnum, auto
 from functools import lru_cache
 from pathlib import Path
 from typing import (
@@ -29,6 +30,11 @@ if TYPE_CHECKING:
 
 
 T = TypeVar('T')
+
+
+class ViewMode(IntEnum):
+    NORMAL = auto()
+    FFTSPECTRUM = auto()
 
 
 @dataclass
@@ -269,6 +275,8 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
 class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     __slots__ = ()
 
+    current_viewmode: ViewMode
+
     @abstractmethod
     def load_script(
         self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False
@@ -296,6 +304,18 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     @abstractmethod
     def show_message(self, message: str) -> None:
         raise NotImplementedError
+
+    def change_video_viewmode(self, new_viewmode: ViewMode) -> None:
+        if new_viewmode == ViewMode.NORMAL:
+            self.outputs.switchToNormalView()
+        else:
+            raise ValueError('Invalid ViewMode passed!')
+
+        self.current_viewmode = new_viewmode
+
+        self.init_outputs()
+
+        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
 
     if TYPE_CHECKING:
         @property

@@ -47,7 +47,7 @@ class AbstractYAMLObjectMeta(YAMLObjectMetaclass, ABCMeta):
     pass
 
 
-class AbstractYAMLObject(YAMLObject, metaclass=AbstractYAMLObjectMeta):
+class AbstractYAMLObjectMetaClass(YAMLObject, metaclass=AbstractYAMLObjectMeta):
     pass
 
 
@@ -55,7 +55,7 @@ class AbstractYAMLObjectSingletonMeta(SingletonMeta, AbstractYAMLObjectMeta):
     pass
 
 
-class AbstractYAMLObjectSingleton(AbstractYAMLObject, Singleton, metaclass=AbstractYAMLObjectSingletonMeta):
+class AbstractYAMLObjectSingleton(AbstractYAMLObjectMetaClass, Singleton, metaclass=AbstractYAMLObjectSingletonMeta):
     pass
 
 

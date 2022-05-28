@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import sys
 import logging
-import vapoursynth as vs
-from string import Template
-from platform import python_version
+import sys
+from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
-from pkg_resources import get_distribution
-from asyncio import get_running_loop, get_event_loop_policy
-from typing import Any, Callable, TypeVar, Tuple, cast, overload
+from platform import python_version
+from string import Template
+from typing import Any, Callable, Tuple, TypeVar, cast, overload
 
+import vapoursynth as vs
+from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication
 
-from ..core import main_window, Frame, Time
+from ..core import Frame, Time, main_window
 
 T = TypeVar('T')
 F_SL = TypeVar('F_SL', bound=Callable)

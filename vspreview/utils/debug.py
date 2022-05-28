@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import re
 import inspect
 import logging
-import vapoursynth as vs
+import re
 from functools import wraps
 from time import perf_counter_ns
-from typing import Any, Callable, cast, Dict, Type, TypeVar, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, TypeVar, cast
 
+import vapoursynth as vs
 from PyQt5 import sip
-from PyQt5.QtCore import QObject, QEvent
+from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
-
 
 T = TypeVar('T')
 
@@ -126,7 +125,7 @@ def profile_cpu(func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
     def decorator(*args: Any, **kwargs: Any) -> T:
         from cProfile import Profile
-        from pstats import Stats, SortKey
+        from pstats import SortKey, Stats
 
         p = Profile(perf_counter_ns, 0.000_000_001, True, False)
         ret = p.runcall(func, *args, **kwargs)

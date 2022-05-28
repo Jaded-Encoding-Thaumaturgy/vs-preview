@@ -133,7 +133,14 @@ class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
 
+    def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
+        new.last_showed_frame = old.last_showed_frame
+        new.title = old.title
+
     def switchToNormalView(self) -> None:
+        for new, old in zip(self._items, self.items):
+            self.copy_output_props(new, old)
+
         self.items = list(self._items)
 
 

@@ -66,7 +66,7 @@ def fire_and_forget(f: F_SL) -> F_SL:
         except RuntimeError:
             loop = get_event_loop_policy().get_event_loop()
         return loop.run_in_executor(None, partial(f, *args, **kwargs))
-    return wrapped
+    return cast(F_SL, wrapped)
 
 
 def set_status_label(label: str) -> Callable[[F_SL], F_SL]:
@@ -84,7 +84,7 @@ def set_status_label(label: str) -> Callable[[F_SL], F_SL]:
             return ret
         return _wrapped
 
-    return cast(Callable[[...], F_SL], _decorator)
+    return cast(Callable[[F_SL], F_SL], _decorator)
 
 
 def vs_clear_cache() -> None:

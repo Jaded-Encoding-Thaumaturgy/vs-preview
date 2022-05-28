@@ -42,12 +42,12 @@ class MainWindow(AbstractMainWindow):
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
     )
     # used for formats with subsampling
-    VS_OUTPUT_RESIZER = VideoOutput.Resizer.Bicubic
-    VS_OUTPUT_MATRIX = VideoOutput.Matrix.BT709
-    VS_OUTPUT_TRANSFER = VideoOutput.Transfer.BT709
-    VS_OUTPUT_PRIMARIES = VideoOutput.Primaries.BT709
-    VS_OUTPUT_RANGE = VideoOutput.Range.LIMITED
-    VS_OUTPUT_CHROMALOC = VideoOutput.ChromaLoc.LEFT
+    VS_OUTPUT_RESIZER = Resizer.Bicubic
+    VS_OUTPUT_MATRIX = Matrix.BT709
+    VS_OUTPUT_TRANSFER = Transfer.BT709
+    VS_OUTPUT_PRIMARIES = Primaries.BT709
+    VS_OUTPUT_RANGE = ColorRange.LIMITED
+    VS_OUTPUT_CHROMALOC = ChromaLocation.LEFT
     VS_OUTPUT_RESIZER_KWARGS = {
         'dither_type': 'error_diffusion',
     }

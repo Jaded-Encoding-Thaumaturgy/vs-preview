@@ -12,7 +12,7 @@ from ...core import (
     LineEdit, PushButton, SpinBox, Stretch, Time, Timer, VBoxLayout, try_load
 )
 from ...core.custom import ComboBox, Switch
-from ...core.types import VideoOutput
+from ...core.types.enums import ColorRange, Matrix, Primaries, Transfer
 from ...models import GeneralModel
 from ...utils import qt_silent_call
 from .settings import MiscSettings
@@ -148,7 +148,8 @@ class MiscToolbar(AbstractToolbar):
             self.autosave_timer.start(round(float(new_value) * 1000))
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
-        fmt = self.main.current_output.source.clip.format
+        curr_out = self.main.current_output.source.clip
+        fmt = curr_out.format
         assert fmt
 
         filter_str = ''.join([file_type + ';;' for file_type in self.save_file_types.keys()])[0:-2]
@@ -159,18 +160,10 @@ class MiscToolbar(AbstractToolbar):
 
         # will be replaced with vsengine heuristics
         resize_props = {
-            'matrix': VideoOutput.Matrix.values[
-                int(str(frame_props['_Matrix']))
-            ] if '_Matrix' in frame_props else VideoOutput.Matrix.BT709,
-            'primaries': VideoOutput.Primaries.values[
-                int(str(frame_props['_Primaries']))
-            ] if '_Primaries' in frame_props else VideoOutput.Primaries.BT709,
-            'range': VideoOutput.Range.values[
-                int(str(frame_props['_ColorRange']))
-            ] if '_ColorRange' in frame_props else VideoOutput.Range.LIMITED,
-            'transfer': VideoOutput.Transfer.values[
-                int(str(frame_props['_Transfer']))
-            ] if '_Transfer' in frame_props else VideoOutput.Transfer.BT709,
+            'matrix_in_s': Matrix[int(frame_props['_Matrix'])] if '_Matrix' in frame_props else None,
+            'primaries_in_s': Primaries[int(frame_props['_Primaries'])] if '_Primaries' in frame_props else None,
+            'range_in_s': ColorRange[int(frame_props['_ColorRange'])] if '_ColorRange' in frame_props else None,
+            'transfer_in_s': Transfer[int(frame_props['_Transfer'])] if '_Transfer' in frame_props else None,
         }
 
         substitutions = {

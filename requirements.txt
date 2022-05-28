@@ -1,4 +1,3 @@
-pretty-traceback>=2022.1018
 psutil>=5.9.0
 PyYAML>=6.0
 PyQt5>=5.15.6

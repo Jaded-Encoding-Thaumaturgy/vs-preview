@@ -135,7 +135,7 @@ class VideoOutput(AbstractYAMLObject):
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        if not hasattr(self, 'last_showed_frame') or 0 > self.last_showed_frame > self.end_frame:
+        if not hasattr(self, 'last_showed_frame') or (0 > self.last_showed_frame > self.end_frame):
             self.last_showed_frame = Frame(0)
 
         self.graphics_scene_item: GraphicsImageItem
@@ -400,5 +400,8 @@ class VideoOutput(AbstractYAMLObject):
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', float, self.__setattr__)
         try_load(state, 'crop_values', CroppingInfo, self.__setattr__)
+
+        if 0 > self.last_showed_frame > self.end_frame:
+            self.last_showed_frame = Frame(0)
 
         self._stateset = True

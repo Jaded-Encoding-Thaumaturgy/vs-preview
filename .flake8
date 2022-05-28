@@ -1,0 +1,6 @@
+[flake8]
+count = True
+max-line-length = 120
+exclude = stubs/*
+show-source = True
+statistics = True

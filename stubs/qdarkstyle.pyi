@@ -1,3 +1,0 @@
-# pylint: skip-file
-
-def load_stylesheet_pyqt5() -> str: ...

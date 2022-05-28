@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, overload, Protocol, Union, cast
+from typing import Dict, Protocol, Union
 
 import vapoursynth as vs
 
@@ -16,7 +16,7 @@ class CustomEnum(type):
 
     def __getitem__(cls, item: int) -> str:
         values = object.__getattribute__(cls, 'values')
-        
+
         return next(values[value].lower() for value in values if value == item)
 
 

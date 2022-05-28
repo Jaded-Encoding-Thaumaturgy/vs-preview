@@ -12,6 +12,7 @@ from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
 
+from .utils import get_prop
 from ..core.types.enums import Matrix, Primaries, ColorRange, Transfer
 
 T = TypeVar('T')
@@ -143,10 +144,10 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
     props = vs_output.get_frame(0).props
 
     logging.debug('Matrix: {}, Transfer: {}, Primaries: {}, Range: {}'.format(
-        Matrix[int(props['_Matrix'])] if '_Matrix' in props else None,
-        Transfer[int(props['_Transfer'])] if '_Transfer' in props else None,
-        Primaries[int(props['_Primaries'])] if '_Primaries' in props else None,
-        ColorRange[int(props['_ColorRange'])] if '_ColorRange' in props else None,
+        Matrix[get_prop(props, '_Matrix', int)] if '_Matrix' in props else None,
+        Transfer[get_prop(props, '_Transfer', int)] if '_Transfer' in props else None,
+        Primaries[get_prop(props, '_Primaries', int)] if '_Primaries' in props else None,
+        ColorRange[get_prop(props, '_ColorRange', int)] if '_ColorRange' in props else None,
     ))
 
 

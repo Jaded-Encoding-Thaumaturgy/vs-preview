@@ -6,7 +6,7 @@ from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
 from platform import python_version
 from string import Template
-from typing import Any, Callable, Tuple, TypeVar, cast, overload
+from typing import Any, Callable, Tuple, TypeVar, cast, Type
 
 import vapoursynth as vs
 from pkg_resources import get_distribution
@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QApplication
 from ..core import Frame, Time, main_window
 
 T = TypeVar('T')
+S = TypeVar('S')
 F_SL = TypeVar('F_SL', bound=Callable)
 
 
@@ -123,3 +124,17 @@ def get_temp_screen_resolution() -> Tuple[int, int]:
 
     geometry = app.desktop().screenGeometry()
     return (geometry.width(), geometry.height())
+
+
+def get_prop(frame: vs.VideoFrame | vs.FrameProps, key: str, t: Type[T]) -> T:
+    props = frame if isinstance(frame, vs.FrameProps) else frame.props
+
+    try:
+        prop = props[key]
+    except KeyError:
+        raise KeyError(f'get_prop: Key {key} not present in props!')
+
+    if not isinstance(prop, t):
+        raise ValueError(f'get_prop: Key {key} did not contain expected type: Expected {t}, got {type(prop)}!')
+
+    return prop

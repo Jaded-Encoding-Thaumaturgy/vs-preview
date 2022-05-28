@@ -9,10 +9,9 @@ from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout,
-    LineEdit, PushButton, SpinBox, Stretch, Time, Timer, VBoxLayout, try_load
+    LineEdit, PushButton, SpinBox, Stretch, Time, Timer, VBoxLayout, ViewMode, try_load
 )
 from ...core.custom import ComboBox, Switch
-from ...core.types.enums import ColorRange, Matrix, Primaries, Transfer
 from ...models import GeneralModel
 from ...utils import qt_silent_call, video_heuristics
 from .settings import MiscSettings
@@ -80,6 +79,16 @@ class MiscToolbar(AbstractToolbar):
                 self.copy_frame_button, Stretch()
             ]),
             HBoxLayout([self.save_frame_as_button, self.save_template_lineedit, Stretch()])
+        ])
+
+        self.fftspectrum_view_switch = Switch(
+            10, 22, checked=True, clicked=lambda checked: self.main.change_video_viewmode(
+                ViewMode.FFTSPECTRUM if checked else ViewMode.NORMAL
+            )
+        )
+
+        VBoxLayout(self.hlayout, [
+            HBoxLayout([QLabel('FFT Spectrum View:'), self.fftspectrum_view_switch]),
         ])
 
         self.hlayout.addStretch()

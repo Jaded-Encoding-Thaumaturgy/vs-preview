@@ -308,6 +308,8 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     def change_video_viewmode(self, new_viewmode: ViewMode) -> None:
         if new_viewmode == ViewMode.NORMAL:
             self.outputs.switchToNormalView()
+        elif new_viewmode == ViewMode.FFTSPECTRUM:
+            self.outputs.switchToFFTSpectrumView()
         else:
             raise ValueError('Invalid ViewMode passed!')
 

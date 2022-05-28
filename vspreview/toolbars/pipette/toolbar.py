@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import ctypes
 from math import ceil, floor, log
 from struct import unpack
-from typing import Generator, Tuple, cast
+from typing import Generator, Tuple, Union, cast
 from weakref import WeakKeyDictionary
 
 import vapoursynth as vs

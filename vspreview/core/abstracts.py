@@ -4,7 +4,7 @@ import inspect
 import logging
 from abc import abstractmethod
 from dataclasses import dataclass
-from enum import IntEnum, auto
+from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import (
@@ -32,9 +32,9 @@ if TYPE_CHECKING:
 T = TypeVar('T')
 
 
-class ViewMode(IntEnum):
-    NORMAL = auto()
-    FFTSPECTRUM = auto()
+class ViewMode(str, Enum):
+    NORMAL = 'Normal'
+    FFTSPECTRUM = 'FFTSpectrum'
 
 
 @dataclass

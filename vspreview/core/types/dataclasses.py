@@ -1,20 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import vapoursynth as vs
 from PyQt5 import sip
 
 
 @dataclass
 class NumpyVideoPHelp:
-    if TYPE_CHECKING:
-        import numpy as np
-
-        data: np.typing.NDArray = None  # type: ignore
-    else:
-        data: Any = None
+    data: np.typing.NDArray = None  # type: ignore
     pointer: sip.voidptr = None  # type: ignore
     stride: int = 8
 

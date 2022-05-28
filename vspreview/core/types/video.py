@@ -7,6 +7,7 @@ import os
 import sys
 from typing import Any, List, Mapping, Tuple, cast
 
+import numpy as np
 import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
@@ -68,17 +69,11 @@ else:
         "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
     ))
 
-    try:
-        import numpy  # noqa
-
-        # temp forced defaults until I have all the settings sorted out
-        if _default_10bits:
-            PACKING_TYPE = PackingType.NONE_numpy_10bit if True else PackingType.numpy_10bit
-        else:
-            PACKING_TYPE = PackingType.NONE_numpy_8bit if True else PackingType.numpy_8bit
-    except ImportError:
-        logging.error(RuntimeError("Numpy isn't installed either. Exiting..."))
-        exit(1)
+    # temp forced defaults until I have all the settings sorted out
+    if _default_10bits:
+        PACKING_TYPE = PackingType.NONE_numpy_10bit if True else PackingType.numpy_10bit
+    else:
+        PACKING_TYPE = PackingType.NONE_numpy_8bit if True else PackingType.numpy_8bit
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -223,7 +218,6 @@ class VideoOutput(AbstractYAMLObject):
             )
 
         if PACKING_TYPE in {PackingType.numpy_8bit, PackingType.numpy_10bit}:
-            import numpy as np
 
             bits = PACKING_TYPE.vs_format.bits_per_sample
 
@@ -257,8 +251,6 @@ class VideoOutput(AbstractYAMLObject):
         ctype_pointer = ctypes.POINTER(point_size * stride)
 
         if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
-            import numpy as np
-
             if not self._curr_pointers.data:
                 bytesps = PACKING_TYPE.vs_format.bytes_per_sample
                 self._curr_pointers.data = np.empty(

@@ -37,7 +37,7 @@
 | Ctrl+Space | Toggle inclusion of current frame |
 | Ctrl+LeftArrow | X |
 | Ctrl+RightArrow | X |
-| Shift+NumRow{0-1} | Switch to list {0-9} |
+| Shift+NumRow{1-0} | Switch to list {0-9} |
 | Q | Toggle whether current frame is first frame |
 | W | Toggle whether current frame is last frame |
 | A | Toggle whether current frame is first frame (AZERTY layout) |

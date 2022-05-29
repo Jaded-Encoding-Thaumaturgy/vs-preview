@@ -25,6 +25,8 @@ Install latest git:
 pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git
 ```
 
+[Keyboard shortcut usage](https://github.com/Irrational-Encoding-Wizardry/vs-preview/blob/master/docs/shortcuts.md)
+
 It can then be used by running `vspreview script.vpy` or your preferred way in your IDE.
 
 # IDE Integration

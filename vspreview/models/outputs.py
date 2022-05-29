@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-import itertools
-import multiprocessing
-from functools import partial
-from math import floor
-from typing import Any, Callable, Dict, Generic, Iterator, List, Mapping, OrderedDict, Tuple, Type, TypeVar, cast
+from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, Type, TypeVar, cast
 
-import numpy as np
 import vapoursynth as vs
-from pyfftw import FFTW, empty_aligned  # type: ignore
+from vsdfft import FFTSpectrum
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
 
 T = TypeVar('T', VideoOutput, AudioOutput)
-nthread = multiprocessing.cpu_count()
 
 
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
@@ -135,37 +129,24 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         self.setValue(main_window(), state)
 
 
-def _fftspectrum_vmode_modifyframe(
-    f: List[vs.VideoFrame], n: int, fftw_args: Dict[str, Any],
-    fastroll_copy: Callable[[np.typing.NDArray, np.typing.NDArray], None]
-) -> vs.VideoFrame:
-    fdst = f[1].copy()
-
-    farr = np.asarray(f[0][0]).astype(np.complex64)
-
-    fftexec = FFTW(farr, **fftw_args)
-
-    fastroll_copy(fftexec().real, np.asarray(fdst[0]))
-
-    return fdst
-
-
-def _fftspectrum_vmode_fastroll_copy(
-    fft: np.typing.NDArray, fdst: np.typing.NDArray, rolls_indices: List[Tuple[slice, slice]]
-) -> None:
-    for arr_index, res_index in rolls_indices:
-        fdst[res_index] = fft[arr_index]
-
-
 class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
-    _fft_output_cache: Dict[Tuple[int, int], Any] = {}
+
     _fft_spectr_items: List[VideoOutput] = []
 
     def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
         new.last_showed_frame = old.last_showed_frame
         new.title = old.title
+
+    def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
+        new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
+
+        new_output = VideoOutput(new_videonode, old_output.index)
+
+        self.copy_output_props(new_output, old_output)
+
+        return new_output
 
     def switchToNormalView(self) -> None:
         for new, old in zip(self._items, self.items):
@@ -173,70 +154,17 @@ class VideoOutputs(Outputs[VideoOutput]):
 
         self.items = list(self._items)
 
-    def switchToFFTSpectrumView(self) -> None:
-        if not self._fft_spectr_items:
+    def switchToFFTSpectrumView(self, force_cache: bool = False) -> None:
+        if not self._fft_spectr_items or not force_cache:
             max_width = max(*(x.width for x in self._items), 140)
             max_height = max(*(x.height for x in self._items), 140)
 
-            fftw_kwargs = {
-                'axes': (0, 1), 'flags': ['FFTW_ESTIMATE', 'FFTW_UNALIGNED'], 'threads': nthread
-            }
+            for old in self._items:
+                fftspectrum = FFTSpectrum(old.source.clip, target_size=(max_width, max_height))
 
-            for out in self._items:
-                assert out.source.clip.format
-
-                src = out.source.clip.resize.Bicubic(
-                    format=out.source.clip.format.replace(
-                        sample_type=vs.INTEGER, bits_per_sample=8
-                    ).id, dither_type='error_diffusion'
+                self._fft_spectr_items.append(
+                    self.get_new_output(fftspectrum, old)
                 )
-
-                if (shape := (src.height, src.width)) not in self._fft_output_cache:
-                    yh = src.height // 2
-                    xh = src.width // 2
-
-                    self._fft_output_cache[shape] = (
-                        empty_aligned(shape, np.complex64), [
-                            tuple(zip(*indices)) for indices in itertools.product(
-                                (
-                                    (slice(None, -yh, None), slice(yh, None, None)),
-                                    (slice(-yh, None, None), slice(None, yh, None))
-                                ),
-                                (
-                                    (slice(None, -xh, None), slice(xh, None, None)),
-                                    (slice(-xh, None, None), slice(None, xh, None))
-                                )
-                            )
-                        ]
-                    )
-
-                blankclip = src.std.BlankClip(format=vs.GRAYS, color=0, keep=True)
-
-                fftclip = blankclip.std.ModifyFrame([src, blankclip], partial(
-                    _fftspectrum_vmode_modifyframe, fastroll_copy=partial(
-                        _fftspectrum_vmode_fastroll_copy, rolls_indices=self._fft_output_cache[shape][1],
-                    ), fftw_args={**fftw_kwargs, 'output_array': self._fft_output_cache[shape][0]}
-                ))
-
-                if fftclip.width != max_width or fftclip.height != max_height:
-                    w_diff, h_diff = max_width - fftclip.width, max_height - fftclip.height
-                    w_pad, w_mod = (floor(w_diff / 2), w_diff % 2) if w_diff > 0 else (0, 0)
-                    h_pad, h_mod = (floor(h_diff / 2), h_diff % 2) if h_diff > 0 else (0, 0)
-
-                    fftclip = fftclip.std.AddBorders(w_pad, w_pad + w_mod, h_pad, h_pad + h_mod)
-
-                    if w_mod or h_mod:
-                        fftclip = fftclip.resize.Bicubic(src_top=h_mod / 2, src_left=w_mod / 2)
-
-                fftresample = fftclip.akarin.Expr('x abs sqrt log abs 25.5 *', vs.GRAY8)
-
-                fftfps = fftresample.std.AssumeFPS(src)
-
-                fft_output = VideoOutput(VideoOutputNode(fftfps, out.source.alpha), out.index)
-
-                self.copy_output_props(fft_output, out)
-
-                self._fft_spectr_items.append(fft_output)
         else:
             for new, old in zip(self._fft_spectr_items, self._items):
                 self.copy_output_props(new, old)

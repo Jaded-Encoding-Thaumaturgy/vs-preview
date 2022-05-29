@@ -21,7 +21,7 @@ from ..models import VideoOutputs
 from ..core.vsenv import get_policy
 from ..utils import fire_and_forget, set_status_label
 from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
-from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget
+from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget, ViewMode
 from ..core.types.enums import Resizer, Matrix, Transfer, Primaries, ColorRange, ChromaLocation
 
 from .timeline import Timeline
@@ -152,6 +152,8 @@ class MainWindow(AbstractMainWindow):
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
         )
 
+        self.current_viewmode = ViewMode.NORMAL
+
         self.set_qobject_names()
         self.setObjectName('MainWindow')
 
@@ -268,6 +270,9 @@ class MainWindow(AbstractMainWindow):
 
         if not self.storage_not_found:
             self.load_storage()
+
+
+        self.change_video_viewmode(self.current_viewmode)
 
         self.toolbars.misc.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
 

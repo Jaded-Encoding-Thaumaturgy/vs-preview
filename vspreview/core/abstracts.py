@@ -305,11 +305,11 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     def show_message(self, message: str) -> None:
         raise NotImplementedError
 
-    def change_video_viewmode(self, new_viewmode: ViewMode) -> None:
+    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
         if new_viewmode == ViewMode.NORMAL:
             self.outputs.switchToNormalView()
         elif new_viewmode == ViewMode.FFTSPECTRUM:
-            self.outputs.switchToFFTSpectrumView()
+            self.outputs.switchToFFTSpectrumView(force_cache)
         else:
             raise ValueError('Invalid ViewMode passed!')
 

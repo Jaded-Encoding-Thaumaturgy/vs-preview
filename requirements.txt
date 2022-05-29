@@ -10,6 +10,6 @@ requests>=2.27.1
 requests_toolbelt>=0.9.1
 vsengine>=0.1
 numpy>=1.22.3
-pyFFTW>=0.13.0
+vsdfft>=0.0.1
 pywin32>= 304;platform_system=="Windows"
 Pillow>= 9.0.1;platform_system=="Windows"

@@ -139,6 +139,15 @@ class VideoOutputs(Outputs[VideoOutput]):
         new.last_showed_frame = old.last_showed_frame
         new.title = old.title
 
+    def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
+        new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
+
+        new_output = VideoOutput(new_videonode, old_output.index)
+
+        self.copy_output_props(new_output, old_output)
+
+        return new_output
+
     def switchToNormalView(self) -> None:
         for new, old in zip(self._items, self.items):
             self.copy_output_props(new, old)
@@ -150,16 +159,14 @@ class VideoOutputs(Outputs[VideoOutput]):
             max_width = max(*(x.width for x in self._items), 140)
             max_height = max(*(x.height for x in self._items), 140)
 
-            for out in self._items:
+            for old in self._items:
                 fftspectrum = FFTSpectrum(
-                    out.source.clip, normal_precision=True, target_size=(max_width, max_height)
+                    old.source.clip, False, 2.25, None, True, (max_width, max_height)
                 )
 
-                fft_output = VideoOutput(VideoOutputNode(fftspectrum, out.source.alpha), out.index)
-
-                self.copy_output_props(fft_output, out)
-
-                self._fft_spectr_items.append(fft_output)
+                self._fft_spectr_items.append(
+                    self.get_new_output(fftspectrum, old)
+                )
         else:
             for new, old in zip(self._fft_spectr_items, self._items):
                 self.copy_output_props(new, old)

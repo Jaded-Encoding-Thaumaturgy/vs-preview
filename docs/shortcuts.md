@@ -37,3 +37,30 @@
 | PageDown | Seek forward n frames |
 | Home | Seek to first frame |
 | End | Seek to last frame |
+
+
+
+#Main
+| Shortcut | Function |
+| ------------- | ------------- |
+| NumRow{1-0} | Vew output node {0-9} |
+| NumPad{1-0} | Vew output node {0-9} |
+| Ctrl+NumRow{1-0} | Vew output node {0-9} counting down from the highest-indexed node |
+| Ctrl+NumPad{1-0} | Vew output node {0-9} counting down from the highest-indexed node |
+
+#Playback
+
+
+#Scening
+
+
+#Pipette
+
+
+#Benchmark
+
+
+#Misc
+
+
+#Comp

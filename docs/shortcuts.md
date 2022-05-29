@@ -1,6 +1,6 @@
 | Key  | Function |
 | ------------- | ------------- |
-| Ctrl+NumPad{0-9}  | See output {0-9}  |
+| Ctrl+NumPad{0-9}  | View output {0-9}  |
 | Ctrl+Tab  | Switch to next output  |
 | Ctrl+Shift+Tab  | Switch to previous output  |
 | Ctrl+R | Reload script |

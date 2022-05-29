@@ -11,7 +11,7 @@ with open("requirements.txt") as fh:
 
 setup(
     name="vspreview",
-    version="0.2.3a0",
+    version="0.2.4",
     author="Endilll",
     maintainer='Setsugennoao',
     maintainer_email='setsugen@setsugen.dev',

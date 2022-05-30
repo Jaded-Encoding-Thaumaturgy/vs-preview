@@ -143,7 +143,6 @@ class MiscToolbar(AbstractToolbar):
         self.main.add_shortcut(Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
         self.main.add_shortcut(Qt.SHIFT + Qt.Key_F, self.fftspectrum_view_switch.click)
 
-
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(
             self.main.current_output.graphics_scene_item.pixmap()

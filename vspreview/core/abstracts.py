@@ -306,6 +306,11 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
+        playback_active = self.toolbars.playback.play_timer.isActive()
+
+        if playback_active:
+            self.toolbars.playback.stop()
+
         if new_viewmode == ViewMode.NORMAL:
             self.outputs.switchToNormalView()
         elif new_viewmode == ViewMode.FFTSPECTRUM:
@@ -318,6 +323,9 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         self.init_outputs()
 
         self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
+
+        if playback_active:
+            self.toolbars.playback.play()
 
     if TYPE_CHECKING:
         @property

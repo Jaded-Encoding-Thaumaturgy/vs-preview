@@ -167,7 +167,7 @@ class VideoOutputs(Outputs[VideoOutput]):
                 )
         else:
             for new, old in zip(self._fft_spectr_items, self._items):
-                self.copy_output_props(new, old)
+                self.copy_output_props(old, new)
 
         self.items = self._fft_spectr_items
 

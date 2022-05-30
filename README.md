@@ -12,7 +12,7 @@ This program is meant to be paired with a code editor with integrated terminal l
 
 **Note:** If you're on Python 3.10, you'll need VapourSynth R58.
 
-# Installation and usage
+# Installation
 
 Install latest stable via pypi:
 ```bash
@@ -25,7 +25,11 @@ Install latest git:
 pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git
 ```
 
-It can then be used by running `vspreview script.vpy` or your preferred way in your IDE.
+# Usage
+
+It can be used by running `vspreview script.vpy` or your preferred way in [your IDE](#ide-integration).
+
+[Keyboard Shortcut](https://github.com/Irrational-Encoding-Wizardry/vs-preview/blob/master/docs/shortcuts.md)
 
 # IDE Integration
 

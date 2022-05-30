@@ -141,6 +141,8 @@ class MiscToolbar(AbstractToolbar):
         self.main.add_shortcut(Qt.ALT + Qt.Key_S, self.save_storage_button.click)
         self.main.add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
         self.main.add_shortcut(Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
+        self.main.add_shortcut(Qt.SHIFT + Qt.Key_F, self.fftspectrum_view_switch.click)
+
 
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(

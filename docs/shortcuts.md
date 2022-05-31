@@ -58,6 +58,7 @@
 | W (AZERTY layout: Z) | Toggle whether current frame is last frame               |
 | E                    | Add current A-B selection to current scene list          |
 | R                    | Remove scene you're currently in from current scene list |
+| Shift + R            | Remove current frame from scene                          |
 | Ctrl + Left Arrow    | Seek to previous scene start                             |
 | Ctrl + Right Arrow   | Seek to next scene start                                 |
 | Shift + NumKey{1-0}  | Switch to scene list {0-9}                               |

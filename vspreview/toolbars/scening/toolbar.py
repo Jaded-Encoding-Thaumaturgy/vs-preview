@@ -189,6 +189,7 @@ class SceningToolbar(AbstractToolbar):
             self.add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
         self.add_shortcut(Qt.Key_E, self.add_to_list_button.click)
         self.add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
+        self.add_shortcut(Qt.SHIFT + Qt.Key_R, self.remove_at_current_frame_button.click)
         self.add_shortcut(
             Qt.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
                 str(self.main.current_output.last_showed_frame)

@@ -46,6 +46,7 @@ class GraphicsView(QGraphicsView):
         self.zoomValue = 0.0
         self.currentZoom = 0.0
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.drag_mode = self.dragMode()
 
     def setZoom(self, value: float | None) -> None:
         if self.underReload or value == 0:

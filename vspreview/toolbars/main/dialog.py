@@ -88,7 +88,7 @@ _frame_props_lut = {
         'Transfer': [
             'Reserved',
             'BT.709',
-            'Unspecified'
+            'Unspecified',
             'Reserved',
             'BT.470m',
             'BT.470bg',

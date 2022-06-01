@@ -30,12 +30,13 @@ def _getattribute(cls: CustomEnum, item: str | int) -> str | int:
     if isinstance(item, str):
         cvalue = object.__getattribute__(cls, item.upper())
 
-        if cvalue is not None:
-            return int(cvalue)
+        items: Dict[str, int] = object.__getattribute__(cls, 'items')
+
+        if cvalue is not None and cvalue in items:
+            return int(items[cvalue])
 
         item = item.lower()
 
-        items: Dict[str, int] = object.__getattribute__(cls, 'items')
         if item in items:
             return int(items[item])
     else:
@@ -82,7 +83,7 @@ class Matrix(metaclass=CustomEnum):
         13: 'chromacl',
         14: 'ictcp',
     }
-    items = dict(zip(values.items(), values.keys()))
+    items = {k: v for v, k in values.items()}
 
     RGB = values[0]
     BT709 = values[1]
@@ -121,7 +122,7 @@ class Transfer(metaclass=CustomEnum):
         17: 'st428',  # not supported by zimg 2.8
         18: 'std-b67',
     }
-    items = dict(zip(values.items(), values.keys()))
+    items = {k: v for v, k in values.items()}
 
     BT709 = values[1]
     UNSPEC = values[2]
@@ -159,7 +160,7 @@ class Primaries(metaclass=CustomEnum):
         12: 'st431-1',
         22: 'jedec-p22',
     }
-    items = dict(zip(values.items(), values.keys()))
+    items = {k: v for v, k in values.items()}
 
     BT709 = values[1]
     UNSPEC = values[2]
@@ -182,7 +183,7 @@ class ColorRange(metaclass=CustomEnum):
         0: 'full',
         1: 'limited'
     }
-    items = dict(zip(values.items(), values.keys()))
+    items = {k: v for v, k in values.items()}
 
     LIMITED = values[1]
     FULL = values[0]
@@ -197,7 +198,7 @@ class ChromaLocation(metaclass=CustomEnum):
         4: 'bottom_left',
         5: 'bottom',
     }
-    items = dict(zip(values.items(), values.keys()))
+    items = {k: v for v, k in values.items()}
 
     LEFT = values[0]
     CENTER = values[1]

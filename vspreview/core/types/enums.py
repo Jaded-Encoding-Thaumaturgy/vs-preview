@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Protocol, Union
+from typing import Dict, Protocol, Union, overload
 
 import vapoursynth as vs
 
@@ -9,29 +9,39 @@ class CustomEnum(type):
     items: Dict[str, int]
     values: Dict[int, str]
 
-    def __getattribute__(cls, item: str) -> int:
+    @overload
+    def __getattribute__(cls, item: str) -> int: ...
+    @overload
+    def __getattribute__(cls, item: int) -> str: ...
+
+    def __getattribute__(cls, item: str | int) -> int | str:
         return _getattribute(cls, item)
 
-    def __getitem__(cls, item: int) -> str:
+    @overload
+    def __getitem__(cls, item: int) -> str: ...
+    @overload
+    def __getitem__(cls, item: str) -> int: ...
+
+    def __getitem__(cls, item: int | str) -> str | int:
         return _getattribute(cls, item)
 
 
 def _getattribute(cls: CustomEnum, item: str | int) -> str | int:
-    cvalue = object.__getattribute__(cls, item.upper())
-    
-    if cvalue is not None:
-        return cvalue
-    
     if isinstance(item, str):
+        cvalue = object.__getattribute__(cls, item.upper())
+
+        if cvalue is not None:
+            return int(cvalue)
+
         item = item.lower()
 
-    items = object.__getattribute__(cls, 'items')
-    if item in items:
-        return items[item]
+        items: Dict[str, int] = object.__getattribute__(cls, 'items')
+        if item in items:
+            return int(items[item])
     else:
-        values = object.__getattribute__(cls, 'values')
+        values: Dict[int, str] = object.__getattribute__(cls, 'values')
         if item in values:
-            return values[item]
+            return str(values[item])
 
     raise KeyError
 

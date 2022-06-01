@@ -6,18 +6,34 @@ import vapoursynth as vs
 
 
 class CustomEnum(type):
+    items: Dict[str, int]
     values: Dict[int, str]
 
     def __getattribute__(cls, item: str) -> int:
-        values = object.__getattribute__(cls, 'values')
-        cvalue = object.__getattribute__(cls, item)
-
-        return cvalue or next(value for value in values if values[value].lower() == item.lower())
+        return _getattribute(cls, item)
 
     def __getitem__(cls, item: int) -> str:
-        values = object.__getattribute__(cls, 'values')
+        return _getattribute(cls, item)
 
-        return next(values[value].lower() for value in values if value == item)
+
+def _getattribute(cls: CustomEnum, item: str | int) -> str | int:
+    cvalue = object.__getattribute__(cls, item.upper())
+    
+    if cvalue is not None:
+        return cvalue
+    
+    if isinstance(item, str):
+        item = item.lower()
+
+    items = object.__getattribute__(cls, 'items')
+    if item in items:
+        return items[item]
+    else:
+        values = object.__getattribute__(cls, 'values')
+        if item in values:
+            return values[item]
+
+    raise KeyError
 
 
 _dataT = Union[str, bytes, bytearray, None]
@@ -38,43 +54,6 @@ class _ResizerType(Protocol):
         ...
 
 
-class Resizer:
-    @property
-    def Bicubic(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Bicubic
-
-    @property
-    def Bilinear(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Bilinear
-
-    @property
-    def Lanczos(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Lanczos
-
-    @property
-    def Point(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Point
-
-    @property
-    def Spline16(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Spline16
-
-    @property
-    def Spline36(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Spline36
-
-    @property
-    def Spline64(cls) -> _ResizerType:
-        from vapoursynth import core
-        return core.resize.Spline64
-
-
 class Matrix(metaclass=CustomEnum):
     values = {
         0: 'rgb',
@@ -93,6 +72,7 @@ class Matrix(metaclass=CustomEnum):
         13: 'chromacl',
         14: 'ictcp',
     }
+    items = dict(zip(values.items(), values.keys()))
 
     RGB = values[0]
     BT709 = values[1]
@@ -131,6 +111,7 @@ class Transfer(metaclass=CustomEnum):
         17: 'st428',  # not supported by zimg 2.8
         18: 'std-b67',
     }
+    items = dict(zip(values.items(), values.keys()))
 
     BT709 = values[1]
     UNSPEC = values[2]
@@ -168,6 +149,7 @@ class Primaries(metaclass=CustomEnum):
         12: 'st431-1',
         22: 'jedec-p22',
     }
+    items = dict(zip(values.items(), values.keys()))
 
     BT709 = values[1]
     UNSPEC = values[2]
@@ -190,6 +172,7 @@ class ColorRange(metaclass=CustomEnum):
         0: 'full',
         1: 'limited'
     }
+    items = dict(zip(values.items(), values.keys()))
 
     LIMITED = values[1]
     FULL = values[0]
@@ -204,6 +187,7 @@ class ChromaLocation(metaclass=CustomEnum):
         4: 'bottom_left',
         5: 'bottom',
     }
+    items = dict(zip(values.items(), values.keys()))
 
     LEFT = values[0]
     CENTER = values[1]

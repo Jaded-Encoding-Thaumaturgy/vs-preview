@@ -178,11 +178,11 @@ class VideoOutput(AbstractYAMLObject):
         assert clip.format
 
         is_subsampled = (clip.format.subsampling_w != 0 or clip.format.subsampling_h != 0)
-        
-        resizer = self.main.VS_OUTPUT_RESIZER if is_subsampled else self.Resizer.Point
+
+        resizer = core.resize.Bicubic if is_subsampled else core.resize.Point
 
         heuristics = video_heuristics(clip, None)
-        
+
         resizer_kwargs = {
             'format': self._NORML_FMT.id,
             'matrix_in_s': self.main.VS_OUTPUT_MATRIX,

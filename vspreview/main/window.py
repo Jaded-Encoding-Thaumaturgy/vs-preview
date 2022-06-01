@@ -22,7 +22,7 @@ from ..core.vsenv import get_policy
 from ..utils import fire_and_forget, set_status_label
 from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget, ViewMode
-from ..core.types.enums import Resizer, Matrix, Transfer, Primaries, ColorRange, ChromaLocation
+from ..core.types.enums import Matrix, Transfer, Primaries, ColorRange, ChromaLocation
 
 from .timeline import Timeline
 from .settings import MainSettings
@@ -43,7 +43,6 @@ class MainWindow(AbstractMainWindow):
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
     )
     # used for formats with subsampling
-    VS_OUTPUT_RESIZER = Resizer.Bicubic
     VS_OUTPUT_MATRIX = Matrix.BT709
     VS_OUTPUT_TRANSFER = Transfer.BT709
     VS_OUTPUT_PRIMARIES = Primaries.BT709
@@ -270,7 +269,6 @@ class MainWindow(AbstractMainWindow):
 
         if not self.storage_not_found:
             self.load_storage()
-
 
         self.change_video_viewmode(self.current_viewmode)
 

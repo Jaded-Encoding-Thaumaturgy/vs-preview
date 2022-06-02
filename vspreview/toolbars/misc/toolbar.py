@@ -26,7 +26,8 @@ class MiscToolbar(AbstractToolbar):
         'toggle_button', 'save_file_types', 'copy_frame_button',
         'crop_top_spinbox', 'crop_left_spinbox', 'crop_width_spinbox',
         'crop_bottom_spinbox', 'crop_right_spinbox', 'crop_height_spinbox',
-        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button'
+        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button',
+        'view_mode_layout', 'view_mode_combox'
     )
 
     def __init__(self, main: AbstractMainWindow) -> None:
@@ -81,16 +82,21 @@ class MiscToolbar(AbstractToolbar):
             HBoxLayout([self.save_frame_as_button, self.save_template_lineedit, Stretch()])
         ])
 
-        self.fftspectrum_view_switch = Switch(
-            10, 22, checked=True, clicked=lambda checked: self.main.change_video_viewmode(
-                ViewMode.FFTSPECTRUM if checked else ViewMode.NORMAL
-            )
+        self.view_mode_combox = ComboBox[str](
+            self, model=GeneralModel[str]([str(x.value) for x in ViewMode], False),
+            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+        )
+        self.view_mode_combox.currentTextChanged.connect(
+            lambda mode: self.main.change_video_viewmode(ViewMode(mode))
         )
 
-        VBoxLayout(self.hlayout, [
-            HBoxLayout([QLabel('FFT Spectrum View:'), self.fftspectrum_view_switch]),
+        self.view_mode_layout = VBoxLayout(self.hlayout, [
+            HBoxLayout([QLabel('View mode:'), self.view_mode_combox]),
         ])
 
+        self.view_mode_layout.setAlignment(Qt.AlignTop)
+
+        self.hlayout.addStretch()
         self.hlayout.addStretch()
 
         self.crop_active_switch = Switch(10, 22, checked=True, clicked=self.crop_active_onchange)
@@ -141,7 +147,11 @@ class MiscToolbar(AbstractToolbar):
         self.main.add_shortcut(Qt.ALT + Qt.Key_S, self.save_storage_button.click)
         self.main.add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
         self.main.add_shortcut(Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
-        self.main.add_shortcut(Qt.SHIFT + Qt.Key_F, self.fftspectrum_view_switch.click)
+        self.main.add_shortcut(
+            Qt.SHIFT + Qt.Key_F, lambda: self.view_mode_combox.setCurrentText(
+                ViewMode.FFTSPECTRUM if self.main.current_viewmode != ViewMode.FFTSPECTRUM else ViewMode.NORMAL
+            )
+        )
 
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(

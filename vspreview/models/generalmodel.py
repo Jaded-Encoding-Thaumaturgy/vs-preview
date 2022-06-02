@@ -18,10 +18,12 @@ class GeneralModel(QAbstractListModel):
         }[content_type]
 
     content_type: Type[T]
+    to_title: bool
 
-    def __init__(self, init_seq: Sequence[content_type]) -> None:
+    def __init__(self, init_seq: Sequence[content_type], to_title: bool = True) -> None:
         super().__init__()
         self.items = list(init_seq)
+        self.to_title = to_title
 
     def __getitem__(self, i: int) -> content_type:
         return self.items[i]
@@ -40,7 +42,11 @@ class GeneralModel(QAbstractListModel):
             return None
 
         if role == Qt.DisplayRole:
-            return self._displayValue(self.items[index.row()])
+            value = self.items[index.row()]
+            if self.content_type is str:
+                return self._displayValue(value, self.to_title)
+            else:
+                return self._displayValue(value)
         if role == Qt.UserRole:
             return self.items[index.row()]
         return None
@@ -69,5 +75,5 @@ class _GeneralModel_int(GeneralModel):
 class _GeneralModel_string(GeneralModel):
     content_type = str
 
-    def _displayValue(self, value: content_type) -> str:
-        return value.title()
+    def _displayValue(self, value: content_type, to_tile: bool) -> str:
+        return value.title() if to_tile else value

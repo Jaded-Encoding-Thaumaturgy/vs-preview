@@ -73,6 +73,7 @@ class SceningToolbar(AbstractToolbar):
             'x264/x265 2 Pass Log (*.log)': self.import_x264_2pass_log,
             'x264/x265 QP File (*.qp *.txt)': self.import_qp,
             'XviD Log (*.txt)': self.import_xvid,
+            'Generic Mappings (*.txt)': self.import_generic,
         }
 
         self.items_combobox.valueChanged.connect(self.on_current_list_changed)
@@ -768,6 +769,18 @@ class SceningToolbar(AbstractToolbar):
                 continue
             try:
                 scening_list.add(Frame(i - 3))
+            except ValueError:
+                out_of_range_count += 1
+                
+    def import_generic(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
+        '''
+        Import generic (rfs style) frame mappings: {start end}
+        
+        '''
+        for line in path.read_text().splitlines():
+            try:
+                fnumbers = [int(n) for n in line.split()]
+                scening_list.add(Frame(fnumbers[0]), Frame(fnumbers[1]))
             except ValueError:
                 out_of_range_count += 1
 

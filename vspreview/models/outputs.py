@@ -155,7 +155,7 @@ class VideoOutputs(Outputs[VideoOutput]):
         self.items = list(self._items)
 
     def switchToFFTSpectrumView(self, force_cache: bool = False) -> None:
-        if not self._fft_spectr_items or not force_cache:
+        if not self._fft_spectr_items or force_cache:
             max_width = max(*(x.width for x in self._items), 140)
             max_height = max(*(x.height for x in self._items), 140)
 

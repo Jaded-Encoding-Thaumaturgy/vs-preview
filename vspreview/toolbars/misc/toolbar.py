@@ -178,7 +178,7 @@ class MiscToolbar(AbstractToolbar):
 
         props = self.main.current_output.props
 
-        heuristics = video_heuristics(self.main.current_output, props)
+        heuristics = video_heuristics(self.main.current_output.source.clip, props)
 
         substitutions = {
             **props, **heuristics,

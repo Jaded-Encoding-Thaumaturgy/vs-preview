@@ -159,12 +159,11 @@ class VideoOutputs(Outputs[VideoOutput]):
             max_width = max(*(x.width for x in self._items), 140)
             max_height = max(*(x.height for x in self._items), 140)
 
-            for old in self._items:
-                fftspectrum = FFTSpectrum(old.source.clip, target_size=(max_width, max_height))
-
-                self._fft_spectr_items.append(
-                    self.get_new_output(fftspectrum, old)
-                )
+            self._fft_spectr_items = [
+                self.get_new_output(
+                    FFTSpectrum(old.source.clip, target_size=(max_width, max_height)), old
+                ) for old in self._items
+            ]
         else:
             for new, old in zip(self._fft_spectr_items, self.items):
                 self.copy_output_props(new, old)

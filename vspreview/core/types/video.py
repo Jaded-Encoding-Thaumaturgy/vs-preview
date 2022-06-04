@@ -152,10 +152,12 @@ class VideoOutput(AbstractYAMLObject):
 
     @property
     def name(self) -> str:
-        if 'Name' in self.props:
-            self.title = cast(bytes, self.props['Name']).decode('utf-8')
-        else:
-            self.title = 'Video Node %d' % self.index
+        placeholder = 'Video Node %d' % self.index
+        if not hasattr(self, 'title') or self.title in {None, placeholder}:
+            if 'Name' in self.props:
+                self.title = cast(bytes, self.props['Name']).decode('utf-8')
+            elif not self.title:
+                self.title = placeholder
 
         return self.title
 

@@ -5,7 +5,7 @@ import itertools
 import logging
 import os
 import sys
-from typing import Any, List, Mapping, Tuple, cast
+from typing import Any, List, Mapping, cast
 
 import numpy as np
 import vapoursynth as vs
@@ -89,9 +89,7 @@ class VideoOutput(AbstractYAMLObject):
 
     source: VideoOutputNode
     prepared: VideoOutputNode
-    format: vs.VideoFormat
     title: str | None
-    curr_rendered_frame: Tuple[vs.VideoFrame, vs.VideoFrame | None]
     last_showed_frame: Frame
     crop_values: CroppingInfo
     _stateset: bool
@@ -134,7 +132,7 @@ class VideoOutput(AbstractYAMLObject):
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        if not hasattr(self, 'last_showed_frame') or (0 > self.last_showed_frame > self.end_frame):
+        if not hasattr(self, 'last_showed_frame') or not (0 <= self.last_showed_frame <= self.end_frame):
             self.last_showed_frame = Frame(0)
 
         self.graphics_scene_item: GraphicsImageItem
@@ -159,7 +157,7 @@ class VideoOutput(AbstractYAMLObject):
             elif not self.title:
                 self.title = placeholder
 
-        return self.title
+        return self.title or placeholder
 
     @name.setter
     def name(self, newname: str) -> None:
@@ -414,8 +412,5 @@ class VideoOutput(AbstractYAMLObject):
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', float, self.__setattr__)
         try_load(state, 'crop_values', CroppingInfo, self.__setattr__)
-
-        if 0 > self.last_showed_frame > self.end_frame:
-            self.last_showed_frame = Frame(0)
 
         self._stateset = True

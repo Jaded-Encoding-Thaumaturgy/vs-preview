@@ -137,7 +137,7 @@ class VideoOutputs(Outputs[VideoOutput]):
 
     def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
         new.last_showed_frame = old.last_showed_frame
-        new.title = old.title
+        new.name = old.name
 
     def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
         new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
@@ -166,8 +166,8 @@ class VideoOutputs(Outputs[VideoOutput]):
                     self.get_new_output(fftspectrum, old)
                 )
         else:
-            for new, old in zip(self._fft_spectr_items, self._items):
-                self.copy_output_props(old, new)
+            for new, old in zip(self._fft_spectr_items, self.items):
+                self.copy_output_props(new, old)
 
         self.items = self._fft_spectr_items
 

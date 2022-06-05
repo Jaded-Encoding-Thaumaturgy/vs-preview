@@ -1,4 +1,4 @@
-#Save frame placeholders
+# Save frame placeholders
 |Placeholder    |Description|Example|
 |---------------|-|-|
 |{format}       |Pixel format of the frame            |YUV420P10|

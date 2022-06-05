@@ -63,10 +63,10 @@ class MiscToolbar(AbstractToolbar):
 
         self.save_template_lineedit = LineEdit(
             self.settings.SAVE_TEMPLATE, self, tooltip=(
-                r'Available placeholders: {format}, {fps_den}, {fps_num}, {frame},\n'
-                r' {height}, {index}, {matrix}, {primaries}, {range},\n'
-                r' {script_name}, {total_frames}, {transfer}, {width}.\n'
-                r' Frame props can be accessed as well using their names.\n'
+                '''Available placeholders: {format}, {fps_den}, {fps_num}, {frame},
+{height}, {index}, {matrix}, {primaries}, {range},
+{script_name}, {total_frames}, {transfer}, {width}.
+Frame props can be accessed as well using their names.'''
             )
         )
 

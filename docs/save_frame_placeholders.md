@@ -7,12 +7,12 @@
 |{frame}        |Current frame number (zero-indexed)|55369|
 |{height}       |Height of frame in pixels|960|
 |{index}        |Video node number (zero-indexed)|0|
-|{matrix}*      |Matrix coefficients of frame|BT709|
-|{primaries}*   |Color primaries of frame|BT709|
+|{matrix}*      |Matrix coefficients of frame|BT.709|
+|{primaries}*   |Color primaries of frame|BT.709|
 |{range}*       |Color range of frame|Limited|
 |{script_name}  |Script name without extension|the-outfit-2022|
 |{total_frames} |Number of frames in clip|151008|
-|{transfer}*    |Transfer characteristics of frame|BT709|
+|{transfer}*    |Transfer characteristics of frame|BT.709|
 |{width}        |Width of frame in pixels|1920|
 
 *currently crashes vspreview when used so example may be malformed

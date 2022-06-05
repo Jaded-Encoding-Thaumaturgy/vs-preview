@@ -1,6 +1,6 @@
 # Save frame placeholders
 |Placeholder    |Description|Example|
-|---------------|-|-|
+|---------------|-------------------------------------|---------------|
 |{format}       |Pixel format of the frame            |YUV420P10|
 |{fps_den}      |FPS denominator                      |1001|
 |{fps_num}      |FPS numerator                        |24000|

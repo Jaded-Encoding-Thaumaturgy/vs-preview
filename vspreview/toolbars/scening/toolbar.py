@@ -743,11 +743,30 @@ class SceningToolbar(AbstractToolbar):
         Imports bookmarks as single-frame scenes
         '''
 
+        frames = []
+
         for bookmark in path.read_text().split(', '):
             try:
-                scening_list.add(Frame(int(bookmark)))
+                frames.append(int(bookmark))
             except ValueError:
                 out_of_range_count += 1
+
+        ranges: List[List[int]] = []
+        prev_x: int
+        for x in frames:
+            if not ranges:
+                ranges.append([x])
+            elif x - prev_x == 1:
+                ranges[-1].append(x)
+            else:
+                ranges.append([x])
+            prev_x = int(x)
+
+        for rang in ranges:
+            scening_list.add(
+                Frame(rang[0]),
+                Frame(rang[-1]) if len(rang) > 1 else None
+            )
 
     def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
@@ -771,11 +790,11 @@ class SceningToolbar(AbstractToolbar):
                 scening_list.add(Frame(i - 3))
             except ValueError:
                 out_of_range_count += 1
-                
+
     def import_generic(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
         Import generic (rfs style) frame mappings: {start end}
-        
+
         '''
         for line in path.read_text().splitlines():
             try:

@@ -62,12 +62,13 @@ class MiscToolbar(AbstractToolbar):
         self.save_frame_as_button = PushButton('Save Frame as', self, clicked=self.on_save_frame_as_clicked)
 
         self.save_template_lineedit = LineEdit(
-            self.settings.SAVE_TEMPLATE, self, tooltip=(
-                '''Available placeholders: {format}, {fps_den}, {fps_num}, {frame},
-{height}, {index}, {matrix}, {primaries}, {range},
-{script_name}, {total_frames}, {transfer}, {width}.
-Frame props can be accessed as well using their names.'''
-            )
+            self.settings.SAVE_TEMPLATE, self, tooltip='''
+                Available placeholders:
+                    {format}, {fps_den}, {fps_num}, {frame},
+                    {height}, {index}, {matrix}, {primaries}, {range},
+                    {script_name}, {total_frames}, {transfer}, {width}.
+                Frame props can be accessed as well using their names.
+            '''.replace(' ' * 16, ' ').strip()
         )
 
         self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)

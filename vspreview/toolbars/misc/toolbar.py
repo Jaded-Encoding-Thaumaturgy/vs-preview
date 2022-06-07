@@ -178,7 +178,7 @@ Frame props can be accessed as well using their names.'''
 
         props = self.main.current_output.props
 
-        heuristics = video_heuristics(self.main.current_output.source.clip, props)
+        heuristics = video_heuristics(self.main.current_output.source.clip, props, string_only=True)
 
         substitutions = {
             **props, **heuristics,
@@ -195,9 +195,9 @@ Frame props can be accessed as well using their names.'''
 
         try:
             suggested_path_str = template.format(**substitutions)
-        except ValueError:
-            suggested_path_str = self.settings.SAVE_TEMPLATE.format(**substitutions)
+        except KeyError:
             self.main.show_message('Save name template is invalid')
+            return
 
         save_path_str, file_type = QFileDialog.getSaveFileName(
             self.main, 'Save as', suggested_path_str, filter_str

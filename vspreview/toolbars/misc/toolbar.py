@@ -62,12 +62,13 @@ class MiscToolbar(AbstractToolbar):
         self.save_frame_as_button = PushButton('Save Frame as', self, clicked=self.on_save_frame_as_clicked)
 
         self.save_template_lineedit = LineEdit(
-            self.settings.SAVE_TEMPLATE, self, tooltip=(
-                r'Available placeholders: {format}, {fps_den}, {fps_num}, {frame},\n'
-                r' {height}, {index}, {matrix}, {primaries}, {range},\n'
-                r' {script_name}, {total_frames}, {transfer}, {width}.\n'
-                r' Frame props can be accessed as well using their names.\n'
-            )
+            self.settings.SAVE_TEMPLATE, self, tooltip='''
+                Available placeholders:
+                    {format}, {fps_den}, {fps_num}, {frame},
+                    {height}, {index}, {matrix}, {primaries}, {range},
+                    {script_name}, {total_frames}, {transfer}, {width}.
+                Frame props can be accessed as well using their names.
+            '''.replace(' ' * 16, ' ').strip()
         )
 
         self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
@@ -178,7 +179,7 @@ class MiscToolbar(AbstractToolbar):
 
         props = self.main.current_output.props
 
-        heuristics = video_heuristics(self.main.current_output.source.clip, props)
+        heuristics = video_heuristics(self.main.current_output.source.clip, props, string_only=True)
 
         substitutions = {
             **props, **heuristics,
@@ -195,9 +196,9 @@ class MiscToolbar(AbstractToolbar):
 
         try:
             suggested_path_str = template.format(**substitutions)
-        except ValueError:
-            suggested_path_str = self.settings.SAVE_TEMPLATE.format(**substitutions)
+        except KeyError:
             self.main.show_message('Save name template is invalid')
+            return
 
         save_path_str, file_type = QFileDialog.getSaveFileName(
             self.main, 'Save as', suggested_path_str, filter_str

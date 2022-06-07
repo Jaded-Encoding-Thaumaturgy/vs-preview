@@ -142,7 +142,9 @@ def get_prop(frame: vs.VideoFrame | vs.FrameProps, key: str, t: Type[T]) -> T:
     return prop
 
 
-def video_heuristics(clip: vs.VideoNode, props: vs.FrameProps | None = None, prop_in: bool = True) -> Dict[str, str]:
+def video_heuristics(
+    clip: vs.VideoNode, props: vs.FrameProps | None = None, prop_in: bool = True, string_only: bool = False
+) -> Dict[str, str]:
     heuristics = cast(Dict[str, str], yuv_heuristic(clip.width, clip.height))
 
     if props:
@@ -153,12 +155,13 @@ def video_heuristics(clip: vs.VideoNode, props: vs.FrameProps | None = None, pro
             'transfer_in_s': Transfer[get_prop(props, '_Transfer', int)] if '_Transfer' in props else None,
         }
 
-        for key in resize_props:
-            if resize_props[key] == 'unspec':
-                resize_props[key] = None
+        if not string_only:
+            for key in resize_props:
+                if resize_props[key] == 'unspec':
+                    resize_props[key] = None
 
-    if not prop_in:
-        heuristics = {f'{k[:-5]}_s': v for k, v in heuristics.items()}
+    if not prop_in or string_only:
+        heuristics = {f'{k[:-5]}{"" if string_only else "_s"}': v for k, v in heuristics.items()}
 
     if props:
         heuristics.update({k: v for (k, v) in resize_props.items() if v})

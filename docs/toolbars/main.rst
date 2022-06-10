@@ -12,7 +12,7 @@ All the options in the image are numbered and correspond to an explanation.
 \1. Video Node
 ^^^^^^^^^^^^^^
 
-This dropdown menu shows a list of all available `Video Nodes`.
+Dropdown menu of all available `Video Nodes`.
 Clicking on a node switches ``vs-preview``\'s output to that node.
 
 .. image:: img/main/nodes.png
@@ -50,13 +50,13 @@ Automatically fit the current frame into the preview window.
 Sets the zoom level.
 Default is 100%.
 
-1. Switch Timeline Mode
+\7. Switch Timeline Mode
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Switches timeline between frame numbers and timestamps
 Default is timestamp mode.
 
-8. Frame Props
+\8. Frame Props
 ^^^^^^^^^^^^^^
 
 Displays the frame properties of the clip on screen.

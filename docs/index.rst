@@ -26,6 +26,7 @@ Meant to be paired with a code editor with integrated terminal like Visual Studi
     :caption: Accessibility
 
     accessibility/keybinds.rst
+    accessibility/placeholders.rst
 
 
 Special Credits

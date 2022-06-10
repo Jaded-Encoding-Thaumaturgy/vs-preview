@@ -67,7 +67,7 @@ html_static_path = ['_static']
 
 autosummary_generate = True
 
-autodoc_mock_imports = ["vsutil", "vapoursynth", "vskernels"]
+autodoc_mock_imports = ["vsutil", "vapoursynth", "vskernels", "vsdfft"]
 
 # -- Extension configuration -------------------------------------------------
 

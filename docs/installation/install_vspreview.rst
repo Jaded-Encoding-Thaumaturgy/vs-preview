@@ -19,7 +19,7 @@ run the following command in a terminal:
 
 .. code-block:: bash
 
-    python3 -m pip install vspreview -U
+    pip install vspreview -U
 
 To install the nightly build,
 run the following command instead.
@@ -27,7 +27,7 @@ Note that these may be unstable!
 
 .. code-block:: bash
 
-    python3 -m pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git -U
+    pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git -U
 
 Updating
 ^^^^^^^^
@@ -38,10 +38,10 @@ try running the following command instead:
 
 .. code-block:: bash
 
-    python3 -m pip install vspreview -U --force-reinstall
+    pip install vspreview -U --force-reinstall
 
 Or this command for the nightly build:
 
 .. code-block:: bash
 
-    python3 -m pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git -U --force-reinstall
+    pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git -U --force-reinstall

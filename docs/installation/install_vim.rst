@@ -2,7 +2,7 @@ With VIM
 --------
 
 ``vs-preview`` is intended to work with an IDE that can use an integrated terminal.
-One IDE that can do that is `Vim <https://www.vim.org/>`_.
+One IDE that can do that is Vim.
 
 Requirements
 ^^^^^^^^^^^^

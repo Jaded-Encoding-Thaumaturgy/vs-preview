@@ -4,8 +4,31 @@ vs-preview Documentation
 About
 -----
 
-Standalone preview for VapourSynth scripts.
-Meant to be paired with a code editor with integrated terminal like Visual Studio Code.
+``vs-preview`` is a standalone previewer for VapourSynth scripts.
+It's meant to be paired with an IDE that has an integrated terminal,
+like Visual Studio Code.
+``vs-preview`` is the de facto VapourSynth previewer featuring many core features
+to help make writing your VapourSynth scripts as easy as possible.
+
+Features
+^^^^^^^^
+
+* Simple design that is easy to understand for newer users
+* Seamless integration with any IDE (code editor) that has an integrated terminal
+* Video previewer to easily check your VapourSynth filtering
+* Video playback (with audio support!)
+* AviSynth support
+* Supports multiple output nodes, quickly check different filtered outputs
+* Scening tools to help faciliate easier scene-filtering
+* Built-in cropping tool
+* Viewing modes to help your filtering, like FFTSpectrum
+* Descaling menu to help with all your descaling needs
+* Bookmarking to easily jump between frames
+* Pipette tool
+* Comparison output, upload comparisons to `slow.pics <https://slow.pics/>`_ straight from your previewer
+* Benchmarking
+
+and much, much more!
 
 .. automodule:: vspreview
     :members:

@@ -30,30 +30,22 @@ To easily run ``vs-preview`` on your script,
 we'll create a "launch" file.
 
 1. Open VSCode
-2. Press F1 and search for ``Preferences: Open Settings (JSON)``
+2. Press F1 and search for ``Preferences: Open Keyboard Shortcuts (JSON)``
 3. Paste the following code in the file, within the curly braces:
 
 .. code-block:: json
 
-    "launch": {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Launch VapourSynth-previewer with current file",
-                "type": "python",
-                "request": "launch",
-                "console": "integratedTerminal",
-                "argsExpansion": "none",
-                "module": "vspreview",
-                "args": [
-                    "${file}"
-                ],
-                "showReturnValue": true,
-                "subProcess": true
-            }
-        ]
+    // Binding for previewing a VapourSynth filterchain using vspreview
+    {
+        "key": "F5",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+            "text": "python -m vspreview \"${file}\"\u000D"
+        },
+        "when": "resourceExtname == '.vpy'"
     }
 
+You can change the "key" to whatever keybind you prefer.
 
 Running your scripts
 ^^^^^^^^^^^^^^^^^^^^

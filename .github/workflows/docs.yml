@@ -1,10 +1,10 @@
 name: check if docs build
 
-on:
-  push:
-    paths:
-      - "**.py"
-      - "**.rst"
+on: push
+  # push:
+    # paths:
+    #   - "**.py"
+    #   - "**.rst"
 
 jobs:
   docs:

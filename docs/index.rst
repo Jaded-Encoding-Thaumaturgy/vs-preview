@@ -56,6 +56,8 @@ and much, much more!
     :caption: Toolbars
 
     toolbars/main
+    toolbars/playback
+    toolbars/scening
 
 
 Special Credits

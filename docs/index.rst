@@ -1,12 +1,6 @@
 vs-preview Documentation
 ------------------------
 
-.. warning::
-
-    | Anything **MAY** change at any time. The public API **SHOULD NOT** be considered stable.
-    | If you use lvsfunc in any of your projects, consider hardcoding a version requirement.
-
-
 About
 -----
 
@@ -26,6 +20,12 @@ Meant to be paired with a code editor with integrated terminal like Visual Studi
     installation/install_vspreview
     installation/install_vscode
     installation/install_vim
+
+.. toctree::
+    :maxdepth: 4
+    :caption: Accessibility
+
+    accessibility/keybinds.rst
 
 
 Special Credits

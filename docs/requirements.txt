@@ -13,6 +13,7 @@ MarkupSafe==2.1.1
 packaging==21.3
 Pygments==2.12.0
 pyparsing==3.0.8
+PyYAML>=6.0
 PyQt5-Qt5>=5.15.2
 PyQt5-sip>=12.9.1
 PyQt5-stubs>=5.15.2.0

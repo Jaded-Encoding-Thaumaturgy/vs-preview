@@ -51,6 +51,12 @@ and much, much more!
     accessibility/keybinds.rst
     accessibility/placeholders.rst
 
+.. toctree::
+    :maxdepth: 4
+    :caption: Toolbars
+
+    toolbars/main
+
 
 Special Credits
 ---------------

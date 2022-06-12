@@ -18,7 +18,6 @@
 | S                  | Toggle whether output nodes are synced                 |
 | V                  | Copy current frame number to clipboard                 |
 | Ctrl + R           | Reload script                                          |
-| Ctrl + Space       | Press/Toggle the selected button/checkbox              | 
 
 
 
@@ -73,10 +72,11 @@
 
 ### Settings dialog
 
-| Shortcut   | Description                                              |
-| ---------- | -------------------------------------------------------- |
-| Ctrl + Del | Remove selected level from zoom levels list              |
-| B          | Paste current frame number into active scening model     |
+| Shortcut     | Description                                              |
+| ------------ | -------------------------------------------------------- |
+| Ctrl + Del   | Remove selected level from zoom levels list              |
+| B            | Paste current frame number into active scening model     |
+| Ctrl + Space | Press/Toggle the selected button/checkbox                |
 
 
 

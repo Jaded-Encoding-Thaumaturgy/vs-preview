@@ -16,7 +16,7 @@ The following is a way to integrate vs-preview into VS Code.
     1. Select the "Add Item" button.
     1. Enter `*.vpy` for the "Item".
     1. Enter `python` for the "Value".
-    1. Select the "Okay" button.
+    1. Select the "OK" button.
 
 ## Setting Up a `launch.json` File
 

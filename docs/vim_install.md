@@ -1,8 +1,8 @@
 # Installation in Vim
 
-Vapoursynth Preview can be used in a number of different ways.<br>One of them is directly in the free code editor [Vim](https://www.vim.org/).
+vs-preview can be used in a number of different ways.<br>One of them is directly in the free code editor [Vim](https://www.vim.org/).
 
-The following is a way to integrate VS-Preview into Vim. 
+The following is a way to integrate vs-preview into Vim. 
 
 ### Make sure you have the prerequisites installed!
 
@@ -16,14 +16,14 @@ The following is a way to integrate VS-Preview into Vim.
     1. Browse to Vim and click `Open`.
         * To get correct syntax highlighting, add `au BufReadPost,BufNewFile *.vpy setlocal syntax=python` to your `_vimrc`.
 
-## Running scripts with VSPreview in Vim
+## Running scripts with vs-preview in Vim
 
-Now that you've configured your current project to use Vim. It's time to run it. 
+Now that you've configured your scripts to use Vim, it's time to run them. 
 
 1. Open your `.vpy` file in Vim.
 1. Type `:` to enter command mode.
 1. Run the `.vpy` file with `!vspreview "%:p"`.
-    * The easiest way to run your .vpy file in Vim is by adding `:map r :!vspreview "%:p"<enter>` to your `_vimrc` and pressing `r` in Vim. 
+    * The easiest way to run your .vpy file in Vim is by adding `:map r :w<enter>:!vspreview "%:p"<enter>` to your `_vimrc` and pressing `r` in Vim. 
 1. You should see a terminal open in front of your script with something like this:
     ```cmd
     2021-03-19 03:43:03.324: INFO: QSS file sucessfuly loaded.

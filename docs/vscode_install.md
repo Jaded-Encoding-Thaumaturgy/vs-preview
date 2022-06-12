@@ -1,8 +1,8 @@
 # Installation in VS Code
 
-Vapoursynth Preview can be used in a number of different ways.<br>One of them is directly in Microsoft's free code editor [Visual Studio Code](https://code.visualstudio.com).
+vs-preview can be used in a number of different ways.<br>One of them is directly in Microsoft's free code editor [VS Code](https://code.visualstudio.com).
 
-The following is a way to integrate VS-Preview into VSCode. 
+The following is a way to integrate vs-preview into VS Code. 
 
 ### Make sure you have the prerequisites installed!
 
@@ -16,12 +16,12 @@ The following is a way to integrate VS-Preview into VSCode.
     1. Select the "Add Item" button.
     1. Enter `*.vpy` for the "Item".
     1. Enter `python` for the "Value".
-    1. Select the "OK" button.
+    1. Select the "Okay" button.
 
 ## Setting Up a `launch.json` File
 
 To be able to run the file you're currently working on,<br>you'll need to set up a launch.json file,
-which tells Visual Studio Code what to do to run it with VS Preview
+which tells VS Code what to do to run it with vs-preview
 
 This is easier said then done
 
@@ -36,11 +36,11 @@ This is easier said then done
     ```
 1. Congratulations, you can now write and preview beautiful filterchains!
 
-**Note:** Step 3 will need to be completed for every new project unless you've saved your `launch.json` directly in `~/.vscode`.
+**Note:** Step 3 will need to be completed for every new project unless you've saved your `launch.json` directly in `~/.vscode`, or `%USERPROFILE/.vscode%` on Windows.
 
-## Running scripts with VSPreview in VSCode
+## Running scripts with vs-preview in VS Code
 
-Now that you've configured your current project to use VSPreview. It's time to run it. 
+Now that you've configured your current project to use vs-preview, it's time to run it. 
 
 1. Add your `.vpy` file to your workspace either by creating a new file or copying in an existing one. 
 1. Open the `.vpy` file.

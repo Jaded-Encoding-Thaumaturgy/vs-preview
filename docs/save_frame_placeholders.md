@@ -3,9 +3,9 @@
 | Placeholder  | Description                          | Example   |
 | ------------ | ------------------------------------ | --------- |  
 | script_name  | Script name without extension        | haruhi_01 |
-| index        | Video node number (zero-based)       | 0         |
+| index        | Video node number (zero-indexed)     | 0         |
 | format       | Video format of the clip             | YUV420P10 |
-| frame        | Current frame number (zero-based)    | 55369     |
+| frame        | Current frame number (zero-indexed)  | 55369     |
 | total_frames | Number of frames in clip             | 151008    |
 | width        | Width of frame in pixels             | 1920      |
 | height       | Height of frame in pixels            | 1080      |

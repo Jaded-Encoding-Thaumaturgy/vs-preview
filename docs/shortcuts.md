@@ -18,6 +18,7 @@
 | S                  | Toggle whether output nodes are synced                 |
 | V                  | Copy current frame number to clipboard                 |
 | Ctrl + R           | Reload script                                          |
+| Ctrl + Space       | Press/Toggle the selected button/checkbox              | 
 
 
 

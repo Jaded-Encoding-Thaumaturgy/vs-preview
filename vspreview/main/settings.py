@@ -81,7 +81,7 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Default output index'), self.output_index_spinbox])
 
-        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 for max)'), self.png_compressing_spinbox])
+        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 - max)'), self.png_compressing_spinbox])
 
         HBoxLayout(self.vlayout, [QLabel('Status bar message timeout'), self.statusbar_timeout_control])
 

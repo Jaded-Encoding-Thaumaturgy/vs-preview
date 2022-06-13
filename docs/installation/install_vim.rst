@@ -29,10 +29,10 @@ Running your script
 
 .. note::
 
-    The easiest way to run your .vpy file in Vim is by adding `:map r :!vspreview "%:p"<enter>` to your `_vimrc` and pressing `r` in Vim.
+    The easiest way to run your .vpy file in Vim is by adding `:map r :w<enter>:!vspreview "%:p"<enter>` to your `_vimrc` and pressing `r` in Vim.
 
 1. Open your ``_vimrc``
-2. Add ``:map r :!vspreview "%:p"<enter>`` to your ``_vimrc`` file
+2. Add ``:map r :w<enter>:!vspreview "%:p"<enter>`` to your ``_vimrc`` file
 
 You can now open the VapourSynth script you want to run in Vim
 and run ``vs-preview`` by pressing ``r``.

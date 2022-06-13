@@ -9,7 +9,7 @@ Requirements
 
 The following programs must be installed before you begin:
 
-* `VSCode <https://code.visualstudio.com/download>`_
+* `Visual Studio Code <https://code.visualstudio.com/download>`_
 
 Configuring VSCode
 ^^^^^^^^^^^^^^^^^^
@@ -50,7 +50,7 @@ You can change the "key" to whatever keybind you prefer.
 Running your scripts
 ^^^^^^^^^^^^^^^^^^^^
 
-You can now open the VapourSynth script you want to run in VSCode
+You can now open the VapourSynth script you want to run in Visual Studio Code
 and run ``vs-preview`` by pressing ``F5`` or the ▷ button in "Run and Debug".
 
 If everything works properly,

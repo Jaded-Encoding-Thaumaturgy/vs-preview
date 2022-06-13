@@ -11,10 +11,10 @@ The following programs must be installed before you begin:
 
 * `Vim <https://www.vim.org/download.php>`_
 
-Configuring VSCode
-^^^^^^^^^^^^^^^^^^
+Configuring Vim
+^^^^^^^^^^^^^^^
 
-1. Associate ``.vpy``` files with Vim
+1. Associate ``.vpy`` files with Vim
     1. Right-click a ``.vpy`` file and press ``Open with > Choose another app``
     2. Check "Always use this app to open .vpy files"
     3. Scroll down and click "More apps", then "Look for another app on this PC"
@@ -41,7 +41,7 @@ If everything works properly,
 it should open up a terminal at the bottom of the screen
 and start printing something like this:
 
-.. code-block:: bash
+.. code-block:: powershell
 
     2021-03-19 03:43:03.324: INFO: QSS file successfuly loaded.
     2021-03-19 03:43:03.328: INFO: Found application patches to be applied.
@@ -50,4 +50,4 @@ and start printing something like this:
 If there's an error with your script,
 it will print it in the terminal.
 If your script is fine,
-it will open ``vspreview`` with the current script.
+it will open ``vs-preview`` with the current script.

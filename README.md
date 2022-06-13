@@ -35,5 +35,6 @@ It can be used by running `vspreview script.vpy` or your preferred way in [your 
 
 # IDE Integration
 
-* [Visual Studio Code](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/vscode_install.md)
-* [Vim](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/vim_install.md)
+* [Notepad++](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_notepad++.rst)
+* [Vim](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_vim.rst)
+* [Visual Studio Code](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_vscode.rst)

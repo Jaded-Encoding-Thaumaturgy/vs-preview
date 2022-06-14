@@ -279,14 +279,20 @@ class MainWindow(AbstractMainWindow):
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:
+        storage_paths = [self.global_storage_path, self.current_storage_path]
+
         if self.storage_not_found:
             logging.info('No storage found. Using defaults.')
-            return
+
+            if not self.global_storage_path.exists():
+                return
+
+            storage_paths = storage_paths[:1]
 
         storage_contents = ''
         broken_storage = False
         global_length = 0
-        for i, storage_path in enumerate((self.global_storage_path, self.current_storage_path)):
+        for i, storage_path in enumerate(storage_paths):
             try:
                 with io.open(storage_path, 'r', encoding='utf-8') as storage_file:
                     version = storage_file.readline()

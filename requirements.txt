@@ -1,15 +1,17 @@
-psutil>=5.9.0
+psutil>=5.9.1
 PyYAML>=6.0
-PyQt5>=5.15.6
+PyQt5>=5.15.7
 PyQt5-Qt5>=5.15.2
-PyQt5-sip>=12.9.1
-PyQt5-stubs>=5.15.2.0
-QDarkStyle>=3.0.3
-VapourSynth>=57
-requests>=2.27.1
+PyQt5-sip>=12.11.0
+PyQt5-stubs>=5.15.6.0
+QDarkStyle>=3.1
+VapourSynth>=59
+requests>=2.28
 requests_toolbelt>=0.9.1
-vsengine>=0.1
-numpy>=1.22.3
+vsengine>=0.1.1
+numpy>=1.23
 vsdfft>=0.0.1
+cueparser>=1.0.0
+pysubs2>=1.4.2
 pywin32>= 304;platform_system=="Windows"
-Pillow>= 9.0.1;platform_system=="Windows"
+Pillow>= 9.1.1;platform_system=="Windows"

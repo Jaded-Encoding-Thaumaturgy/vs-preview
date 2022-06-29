@@ -21,7 +21,7 @@ setup(
     url="https://github.com/Irrational-Encoding-Wizardry/vs-preview",
     packages=find_packages('.', ("docs", "stubs")),
     install_requires=install_requires,
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     zip_safe=False,
     project_urls={
         'Documentation': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/#readme',

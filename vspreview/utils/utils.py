@@ -98,9 +98,9 @@ def vs_clear_cache() -> None:
 
 
 def check_versions() -> bool:
-    if sys.version_info < (3, 9, 0, 'final', 0):
+    if sys.version_info < (3, 10, 0, 'final', 0):
         logging.warning(
-            'VSPreview is not tested on Python versions prior to 3.9, but you have {} {}. Use at your own risk.'
+            'VSPreview is not tested on Python versions prior to 3.10, but you have {} {}. Use at your own risk.'
             .format(python_version(), sys.version_info.releaselevel)
         )
         return False
@@ -111,9 +111,9 @@ def check_versions() -> bool:
             .format(get_distribution('PyQt5').version))
         return False
 
-    if vs.core.version_number() < 57:
+    if vs.core.version_number() < 59:
         logging.warning(
-            'VSPreview is not tested on VapourSynth versions prior to 57, but you have {}. Use at your own risk.'
+            'VSPreview is not tested on VapourSynth versions prior to 59, but you have {}. Use at your own risk.'
             .format(vs.core.version_number())
         )
         return False

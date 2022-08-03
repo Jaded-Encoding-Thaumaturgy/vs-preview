@@ -330,8 +330,12 @@ class MainWindow(AbstractMainWindow):
                     if not isglobal:
                         line -= global_length
                     logging.warning(
-                        'Storage ({}) parsing failed on line {} column {}. Exiting...'
-                        .format('Global' if isglobal else 'Local', line, exc.problem_mark.column + 1)
+                        'Storage ({}) parsing failed on line {} column {}. \n({})\n Exiting...'
+                        .format(
+                            'Global' if isglobal else 'Local',
+                            line, exc.problem_mark.column + 1,
+                            str(exc).partition('in "<unicode string>"')[0].strip()
+                        )
                     )
                     sys.exit(1)
             else:

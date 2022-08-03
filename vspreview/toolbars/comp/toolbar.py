@@ -382,10 +382,27 @@ class CompToolbar(AbstractToolbar):
             script_name=self.main.script_path.stem
         )
 
+        sample_frames = list(sorted(set(samples)))
+
+        check_frame = sample_frames and sample_frames[0] or 0
+
+        filtered_outputs = []
+
+        for output in self.main.outputs:
+            props = output.props
+
+            if not props:
+                props = output.source.clip.get_frame(check_frame).props
+
+            if '_VSPDisableComp' in props and props._DisableComp == 1:
+                continue
+
+            filtered_outputs.append(output)
+
         return WorkerConfiguration(
-            self.main.outputs, collection_name,
+            filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, None, sorted(set(samples)), -1, path, self.main, self.settings.delete_cache_enabled
+            True, None, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled
         )
 
     def upload_to_slowpics(self) -> bool:

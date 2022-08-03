@@ -576,7 +576,7 @@ class MainWindow(AbstractMainWindow):
                 with open(icc_path, 'rb') as icc:
                     self.display_profile = QColorSpace.fromIccProfile(icc.read())
 
-        if hasattr(self, 'current_output') and self.display_profile is not None:
+        if hasattr(self, 'current_output') and self.current_output is not None and self.display_profile is not None:
             self.switch_frame(self.current_output.last_showed_frame)
 
     def show_message(self, message: str) -> None:

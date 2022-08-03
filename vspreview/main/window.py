@@ -302,6 +302,8 @@ class MainWindow(AbstractMainWindow):
                         raise FileNotFoundError
 
                     storage_contents += storage_file.read()
+                    storage_contents += '\n'
+
                     if i == 0:
                         global_length = storage_contents.count('\n')
             except FileNotFoundError:

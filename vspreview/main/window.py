@@ -25,7 +25,7 @@ from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxL
 from ..core.types.enums import Matrix, Transfer, Primaries, ColorRange, ChromaLocation
 
 from .timeline import Timeline
-from .settings import MainSettings
+from .settings import MainSettings, WindowSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
 
 if sys.platform == 'win32':
@@ -401,7 +401,8 @@ class MainWindow(AbstractMainWindow):
         # which really are the original objects, to those copied in _globals :poppo:
         data = cast(dict, self.__getstate__())
         data['_globals'] = {
-            'settings': data['settings']
+            'settings': data['settings'],
+            'window_settings': data['window_settings']
         }
 
         data['_globals']['toolbars'] = data['toolbars'].__getstate__()
@@ -411,9 +412,10 @@ class MainWindow(AbstractMainWindow):
             gtoolbars[toolbar_name].clear()
             gtoolbars[toolbar_name] = getattr(data['toolbars'], toolbar_name).settings
 
-        data['_toolbars_settings'] = [None] * len(gtoolbars)
+        data['_toolbars_settings'] = [None] * (len(gtoolbars) + 1)
         for i, toolbar_name in enumerate(gtoolbars.keys()):
             data['_toolbars_settings'][i] = gtoolbars[toolbar_name]
+        data['_toolbars_settings'][-1] = data['_globals']['window_settings']
 
         return data
 
@@ -633,13 +635,24 @@ class MainWindow(AbstractMainWindow):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
-            'timeline_mode': self.timeline.mode,
-            'window_geometry': bytes(cast(bytearray, self.saveGeometry())),
-            'window_state': bytes(cast(bytearray, self.saveState()))
+            'window_settings': WindowSettings(
+                self.timeline.mode,
+                bytes(cast(bytearray, self.saveGeometry())),
+                bytes(cast(bytearray, self.saveState()))
+            )
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         # toolbars is singleton, so it initialize itself right in its __setstate__()
-        try_load(state, 'timeline_mode', str, self.timeline.mode)
-        try_load(state, 'window_geometry', bytes, self.restoreGeometry)
-        try_load(state, 'window_state', bytes, self.restoreState)
+        self.window_settings = {}
+
+        try:
+            try_load(state, 'window_settings', dict, self)
+        except BaseException:
+            try_load(state, 'timeline_mode', str, self.window_settings)
+            try_load(state, 'window_geometry', bytes, self.window_settings)
+            try_load(state, 'window_state', bytes, self.window_settings)
+
+        self.timeline.mode = self.window_settings.timeline_mode
+        self.restoreGeometry(self.window_settings.window_geometry)
+        self.restoreState(self.window_settings.window_state)

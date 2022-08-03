@@ -11,6 +11,7 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QComboBox, QLabel, QShortcut
 
 from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
+from ..core.bases import QYAMLObjectSingleton
 from ..core.custom import ComboBox, TimeEdit
 from ..models import GeneralModel
 from ..utils import main_window
@@ -296,3 +297,28 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
         try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
+
+
+class WindowSettings(QYAMLObjectSingleton):
+    __slots__ = (
+        'timeline_mode', 'window_geometry', 'window_state'
+    )
+
+    def __init__(self, timeline_mode: str, window_geometry: bytes, window_state: bytes) -> None:
+        self.timeline_mode = timeline_mode
+        self.window_geometry = window_geometry
+        self.window_state = window_state
+
+        super().__init__()
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {
+            'timeline_mode': self.timeline_mode,
+            'window_geometry': self.window_geometry,
+            'window_state': self.window_state
+        }
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(state, 'timeline_mode', str, self.__setattr__)
+        try_load(state, 'window_geometry', bytes, self.__setattr__)
+        try_load(state, 'window_state', bytes, self.__setattr__)

@@ -28,7 +28,7 @@ class PackingTypeInfo():
         self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool
     ):
         self.id = next(self._getid)
-        self.vs_format = core.get_format(vs_format)
+        self.vs_format = core.get_video_format(vs_format)
         self.qt_format = qt_format
         self.shuffle = shuffle
 
@@ -164,7 +164,7 @@ class VideoOutput(AbstractYAMLObject):
         self.title = newname
 
     _NORML_FMT = PACKING_TYPE.vs_format
-    _ALPHA_FMT = core.get_format(vs.GRAY8)
+    _ALPHA_FMT = core.get_video_format(vs.GRAY8)
     _FRAME_CONV_INFO = {
         False: (_NORML_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, PACKING_TYPE.qt_format),
         True: (_ALPHA_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, QImage.Format_Alpha8)

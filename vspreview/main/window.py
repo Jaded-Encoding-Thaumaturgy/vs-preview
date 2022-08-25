@@ -36,6 +36,10 @@ if sys.platform == 'win32':
     except ImportError:
         _imagingcms = None
 
+try:
+    from yaml import CLoader as yaml_Loader, CDumper as yaml_Dumper
+except ImportError:
+    from yaml import Loader as yaml_Loader, Dumper as yaml_Dumper
 
 class MainWindow(AbstractMainWindow):
     VSP_DIR_NAME = '.vspreview'
@@ -321,7 +325,7 @@ class MainWindow(AbstractMainWindow):
         if broken_storage:
             return
 
-        loader = yaml.CLoader(storage_contents)
+        loader = yaml_Loader(storage_contents)
         try:
             loader.get_single_data()
         except yaml.YAMLError as exc:
@@ -422,7 +426,7 @@ class MainWindow(AbstractMainWindow):
     def _dump_serialize(self, data: Any) -> str:
         storage_dump = io.StringIO()
 
-        dumper = yaml.CDumper(
+        dumper = yaml_Dumper(
             storage_dump, default_style=None, default_flow_style=False,
             canonical=None, indent=4, width=120, allow_unicode=True,
             line_break='\n', encoding='utf-8', version=None, tags=None,

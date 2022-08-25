@@ -408,9 +408,14 @@ class SceningToolbar(AbstractToolbar):
         Imports lines as scenes.
         Text is ignored.
         '''
-        import pysubs2
+        try:
+            from pysubs2 import load as pysubs2_load
+        except ModuleNotFoundError:
+            raise RuntimeError(
+                'vspreview: Can\'t import scenes from ass file, you\'re missing the `pysubs2` package!'
+            )
 
-        subs = pysubs2.load(str(path))
+        subs = pysubs2_load(str(path))
         for line in subs:
             t_start = Time(milliseconds=line.start)
             t_end = Time(milliseconds=line.end)
@@ -435,7 +440,12 @@ class SceningToolbar(AbstractToolbar):
         Imports tracks as scenes.
         Uses TITLE for scene label.
         '''
-        from cueparser import CueSheet
+        try:
+            from cueparser import CueSheet
+        except ModuleNotFoundError:
+            raise RuntimeError(
+                'vspreview: Can\'t import scenes from cue file, you\'re missing the `cueparser` package!'
+            )
 
         def offset_to_time(offset: str) -> Time | None:
             pattern = re.compile(r'(\d{1,2}):(\d{1,2}):(\d{1,2})')

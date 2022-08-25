@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, Type, TypeVar, cast
 
 import vapoursynth as vs
-from vsdfft import FFTSpectrum
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
@@ -155,6 +154,13 @@ class VideoOutputs(Outputs[VideoOutput]):
         self.items = list(self._items)
 
     def switchToFFTSpectrumView(self, force_cache: bool = False) -> None:
+        try:
+            from vsdfft import FFTSpectrum
+        except ModuleNotFoundError:
+            raise RuntimeError(
+                'vspreview: You can\'t chage to this view mode. You\'re missing the `vsdfft` package!'
+            )
+
         if not self._fft_spectr_items or force_cache:
             max_width = max(*(x.width for x in self._items), 140)
             max_height = max(*(x.height for x in self._items), 140)

@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import ctypes
 import itertools
-import logging
 import os
-import sys
 from typing import Any, Mapping, cast
 
 import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColorSpace, QImage, QPixmap, QPainter
+from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from ..vsenv import __name__ as _venv  # noqa: F401
@@ -51,16 +49,16 @@ class PackingType(PackingTypeInfo):
 
 
 # From fastest to slowest
-if hasattr(core, 'libp2p'):
-    PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
-elif hasattr(core, 'akarin'):
+if hasattr(core, 'akarin'):
     PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
+elif hasattr(core, 'libp2p'):
+    PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
 else:
-    logging.error(RuntimeError(
+    raise ImportError(
         "\n\tLibP2P and Akarin plugin are missing, one is required to prepare output clips correctly!\n"
         "\t  You can get them here: \n"
         "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
-    ))
+    )
 
 
 class VideoOutput(AbstractYAMLObject):

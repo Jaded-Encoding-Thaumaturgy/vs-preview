@@ -2,7 +2,7 @@ from __future__ import annotations
 
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
-from .core import vsenv
+from .core.vsenv import set_vsengine_loop
 
 import json
 import logging
@@ -97,6 +97,8 @@ def main() -> None:
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, hidpi)
 
     app = Application(sys.argv)
+    set_vsengine_loop()
+
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     main_window.load_script(script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False)
     main_window.show()

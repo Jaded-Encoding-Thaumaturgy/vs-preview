@@ -229,7 +229,7 @@ class PipetteToolbar(AbstractToolbar):
             self.src_dec_fmt = ('{: 0.5f},' * src_num_planes)[:-1]
         self.src_norm_fmt = ('{:0.5f},' * src_num_planes)[:-1]
 
-        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))  # type: ignore
+        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))
 
     def on_copy_position_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.position.text().strip())
@@ -262,7 +262,7 @@ class PipetteToolbar(AbstractToolbar):
         for plane in range(fmt.num_planes):
             stride = vs_frame.get_stride(plane)
             pointer = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
+                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
             ))
 
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:

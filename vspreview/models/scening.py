@@ -311,7 +311,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
         if not index.isValid():
             return Qt.ItemFlags(Qt.ItemIsEnabled)
 
-        return super().flags(index) | Qt.ItemIsEditable  # type: ignore
+        return super().flags(index) | Qt.ItemIsEditable
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid():

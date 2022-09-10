@@ -25,7 +25,7 @@ F_SL = TypeVar('F_SL', bound=Callable)
 # it is a BuiltinMethodType at the same time
 def qt_silent_call(qt_method: F_SL, *args: Any, **kwargs: Any) -> T:
     # https://github.com/python/typing/issues/213
-    qobject = qt_method.__self__  # type: ignore
+    qobject = qt_method.__self__
     block = QSignalBlocker(qobject)
     ret = qt_method(*args, **kwargs)
     del block

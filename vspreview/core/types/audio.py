@@ -71,7 +71,7 @@ class AudioOutput(AbstractYAMLObject):
             self.name = 'Audio Node ' + str(self.index)
 
     def clear(self) -> None:
-        self.source_vs_output = self.vs_output = None  # type: ignore
+        self.source_vs_output = self.vs_output = None
 
     def render_audio_frame(self, frame: Frame) -> None:
         self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))

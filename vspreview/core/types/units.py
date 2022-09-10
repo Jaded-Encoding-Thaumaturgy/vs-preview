@@ -79,7 +79,7 @@ class Frame(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', int, self.__init__,  # type: ignore
+            state, 'value', int, self.__init__,
             'Failed to load Frame instance'
         )
 
@@ -144,6 +144,6 @@ class Time(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', timedelta, self.__init__,  # type: ignore
+            state, 'value', timedelta, self.__init__,
             'Failed to load Time instance'
         )

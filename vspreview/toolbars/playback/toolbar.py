@@ -64,7 +64,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_start_frame = Frame(0)
         self.play_end_time = 0
         self.play_end_frame = Frame(0)
-        self.audio_outputs: AudioOutputs = []  # type: ignore
+        self.audio_outputs: AudioOutputs = []
         self.last_frame = Frame(0)
 
         self.setVolume(50, True)

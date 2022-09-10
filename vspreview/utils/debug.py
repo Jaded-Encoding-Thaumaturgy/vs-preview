@@ -152,7 +152,7 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
 
 
 class DebugMeta(sip.wrappertype):
-    def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:  # type: ignore
+    def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
         from functools import partialmethod
 
         base = bases[0]
@@ -174,7 +174,7 @@ class DebugMeta(sip.wrappertype):
             if not attr.endswith('__') and callable(getattr(base, attr)):
                 dct[attr] = partialmethod(DebugMeta.dummy_method, attr)
 
-        return super(DebugMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
+        return super(DebugMeta, cls).__new__(cls, name, bases, dct)
 
     def dummy_method(self, name: str, *args: Any, **kwargs: Any) -> Any:
         method = getattr(super(GraphicsScene, GraphicsScene), name)
@@ -182,7 +182,7 @@ class DebugMeta(sip.wrappertype):
         return method(self, *args, **kwargs)
 
 
-class GraphicsScene(QGraphicsScene, metaclass=DebugMeta):  # type: ignore
+class GraphicsScene(QGraphicsScene, metaclass=DebugMeta):
     def event(self, event: QEvent) -> bool:
         t0 = perf_counter_ns()
         ret = super().event(event)

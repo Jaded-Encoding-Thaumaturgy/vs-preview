@@ -12,8 +12,8 @@ T = TypeVar('T')
 
 class SingletonMeta(type):
     def __init__(cls: Type[T], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> None:
-        super().__init__(name, bases, dct)  # type: ignore
-        cls.instance: T | None = None  # type: ignore
+        super().__init__(name, bases, dct)
+        cls.instance: T | None = None
 
     def __call__(cls, *args: Any, **kwargs: Any) -> T:
         if cls.instance is None:
@@ -21,7 +21,7 @@ class SingletonMeta(type):
         return cls.instance
 
     def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
-        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
+        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)
         singleton_new = None
         for entry in subcls.__mro__:
             if entry.__class__ is SingletonMeta:

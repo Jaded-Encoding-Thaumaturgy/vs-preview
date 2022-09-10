@@ -81,7 +81,7 @@ class VideoOutput(AbstractYAMLObject):
     _stateset: bool
 
     def clear(self) -> None:
-        self.source = self.prepared = None  # type: ignore
+        self.source = self.prepared = None
 
     def __init__(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
         self.setValue(vs_output, index, new_storage)

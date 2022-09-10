@@ -43,4 +43,4 @@ class PictureTypes(QAbstractListModel):
         if not index.isValid():
             return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
 
-        return super().flags(index) | Qt.ItemIsEditable  # type: ignore
+        return super().flags(index) | Qt.ItemIsEditable

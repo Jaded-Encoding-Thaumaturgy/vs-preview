@@ -95,7 +95,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         if not index.isValid():
             return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
 
-        return super().flags(index) | Qt.ItemIsEditable  # type: ignore
+        return super().flags(index) | Qt.ItemIsEditable
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid():

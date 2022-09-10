@@ -29,10 +29,10 @@ from .settings import MainSettings, WindowSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
 
 if sys.platform == 'win32':
-    import win32gui  # type: ignore
+    import win32gui
 
     try:
-        from PIL import _imagingcms  # type: ignore
+        from PIL import _imagingcms
     except ImportError:
         _imagingcms = None
 
@@ -40,6 +40,7 @@ try:
     from yaml import CLoader as yaml_Loader, CDumper as yaml_Dumper
 except ImportError:
     from yaml import Loader as yaml_Loader, Dumper as yaml_Dumper
+
 
 class MainWindow(AbstractMainWindow):
     VSP_DIR_NAME = '.vspreview'
@@ -143,7 +144,7 @@ class MainWindow(AbstractMainWindow):
         self.current_screen = 0
 
         # init toolbars and outputs
-        self.app_settings = SettingsDialog(self)  # type: ignore
+        self.app_settings = SettingsDialog(self)
         self.toolbars = Toolbars(self)
 
         for toolbar in self.toolbars:

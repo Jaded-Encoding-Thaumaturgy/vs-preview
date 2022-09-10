@@ -67,6 +67,7 @@ def main() -> None:
     parser.add_argument(
         '--arg', '-a', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
     )
+    parser.add_argument('-f', '--frame', type=int, help='Frame to load initially (defaults to 0)')
     parser.add_argument(
         '--vscode-setup', type=str, choices=['override', 'append', 'ignore'], nargs='?', const='append',
         help='Installs launch settings in cwd\'s .vscode'
@@ -98,7 +99,9 @@ def main() -> None:
 
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
-    main_window.load_script(script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False)
+    main_window.load_script(
+        script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False, start_frame=args.frame or 0
+    )
     main_window.show()
 
     app.exec_()

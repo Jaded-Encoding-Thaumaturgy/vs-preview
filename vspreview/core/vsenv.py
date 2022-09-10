@@ -9,16 +9,18 @@ from vsengine.policy import Policy, GlobalStore, ManagedEnvironment
 policy: Policy = Policy(GlobalStore())
 policy.register()
 environment: ManagedEnvironment = policy.new_environment()
+environment.switch()
 
 
-def reload_environment():
+def get_current_environment():
+    return environment
+
+
+def make_environment():
     global environment
     assert policy is not None
-    environment.dispose()
     environment = policy.new_environment()
     environment.switch()
-
-reload_environment()
 
 
 atexit.register(lambda: environment.dispose())

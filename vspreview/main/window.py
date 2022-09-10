@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget,
 
 from ..toolbars import Toolbars
 from ..models import VideoOutputs
-from ..core.vsenv import reload_environment
+from ..core.vsenv import get_current_environment, make_environment
 from ..utils import fire_and_forget, set_status_label
 from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
 from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget, ViewMode
@@ -459,13 +459,20 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene.clear()
 
         self.outputs.clear()
-        reload_environment()
-
+        gc.collect()
+        old_environment = get_current_environment()
+        make_environment()
         gc.collect(generation=0)
         gc.collect(generation=1)
         gc.collect(generation=2)
 
-        self.load_script(self.script_path, reloading=True)
+        try:
+            self.load_script(self.script_path, reloading=True)
+        finally:
+            old_environment.dispose()
+            gc.collect()
+            gc.collect()
+            gc.collect()
 
         self.reload_after_signal.emit()
 

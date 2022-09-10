@@ -36,7 +36,7 @@ class Application(QApplication):
 
 
 def main() -> None:
-    logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=MainSettings.LOG_LEVEL)
+    logging.basicConfig(format='{asctime}: {name}: {levelname}: {message}', style='{', level=MainSettings.LOG_LEVEL)
     logging.Formatter.default_msec_format = '%s.%03d'
     if sys.stdout.isatty():
         logging.addLevelName(
@@ -71,8 +71,16 @@ def main() -> None:
         '--vscode-setup', type=str, choices=['override', 'append', 'ignore'], nargs='?', const='append',
         help='Installs launch settings in cwd\'s .vscode'
     )
+    parser.add_argument(
+        "--verbose", help="Set the logging to verbose.", action="store_true"
+    )
 
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().level = logging.DEBUG
+    else:
+        logging.getLogger().level = logging.WARNING
 
     if args.vscode_setup is not None:
         install_vscode_launch(args.vscode_setup)

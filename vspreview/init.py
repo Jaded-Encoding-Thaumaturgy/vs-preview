@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# import vsenv as early as possible:
+# This is so other modules cannot accidentally use and lock us into a different policy.
+from .core import vsenv
+
 import json
 import logging
 import os
@@ -11,13 +15,9 @@ from typing import Dict, List, Literal, cast
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import QApplication
 
-# import vsenv as early as possible:
-# This is so other modules cannot accidentally use and lock us into a different policy.
-from .core.vsenv import get_policy
 from .main import MainSettings, MainWindow
 from .utils import check_versions, get_temp_screen_resolution
 
-get_policy()
 
 
 class Application(QApplication):

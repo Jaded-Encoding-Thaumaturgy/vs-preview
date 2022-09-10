@@ -193,8 +193,9 @@ class MainWindow(AbstractMainWindow):
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
     def load_script(
-            self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
-            start_frame: int = 0) -> None:
+        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
+        start_frame: int = 0
+    ) -> None:
         self.external_args = external_args or []
 
         self.toolbars.playback.stop()

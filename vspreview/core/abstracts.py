@@ -7,17 +7,15 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, Type, TypeVar, cast, overload
-)
+from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, Type, TypeVar, cast, overload
 
 import vapoursynth as vs
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QClipboard, QKeySequence
 from PyQt5.QtWidgets import (
-    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene,
-    QGraphicsView, QHBoxLayout, QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut,
-    QSpacerItem, QSpinBox, QStatusBar, QTableView, QVBoxLayout, QWidget
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
+    QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut, QSpacerItem, QSpinBox, QStatusBar, QTableView,
+    QVBoxLayout, QWidget
 )
 
 from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, cast, TypeVar
 from abc import ABCMeta as NativeABCMeta
-
+from typing import Any, TypeVar, cast
 
 T = TypeVar('T')
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import vapoursynth as vs
 from datetime import timedelta
-from typing import cast, Any, Mapping, Union, SupportsFloat, SupportsInt
+from typing import Any, Mapping, SupportsFloat, SupportsInt, Union, cast
 
-from .yaml import YAMLObjectWrapper
+import vapoursynth as vs
+
 from ..abstracts import main_window, try_load
-
+from .yaml import YAMLObjectWrapper
 
 core = vs.core
 

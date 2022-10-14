@@ -9,10 +9,10 @@ from string import Template
 from typing import Any, Callable, Dict, Mapping, Tuple, Type, TypeVar, cast
 
 import vapoursynth as vs
-from vsengine.convert import yuv_heuristic
 from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication
+from vsengine.convert import yuv_heuristic
 
 from ..core import Frame, Time, main_window
 from ..core.types.enums import ColorRange, Matrix, Primaries, Transfer

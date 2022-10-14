@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from bisect import bisect_right
+from copy import deepcopy
 from typing import Any, Iterator, List, Mapping, Tuple
 
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel, QAbstractListModel
+from PyQt5.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
 
 from ..core import Frame, QYAMLObject, Scene, Time, main_window
 

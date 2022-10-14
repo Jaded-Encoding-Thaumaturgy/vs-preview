@@ -12,8 +12,8 @@ from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
 
+from ..core.types.enums import ColorRange, Matrix, Primaries, Transfer
 from .utils import get_prop
-from ..core.types.enums import Matrix, Primaries, ColorRange, Transfer
 
 T = TypeVar('T')
 

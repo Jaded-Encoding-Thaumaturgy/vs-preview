@@ -1,32 +1,31 @@
 from __future__ import annotations
 
-import io
 import gc
-import sys
-import yaml
+import io
 import logging
-import vapoursynth as vs
-from pathlib import Path
+import sys
 from itertools import count
-from os.path import expandvars, expanduser
+from os.path import expanduser, expandvars
+from pathlib import Path
 from traceback import FrameSummary, TracebackException
-from typing import Any, cast, List, Mapping, Tuple, Dict
+from typing import Any, Dict, List, Mapping, Tuple, cast
 
-from PyQt5.QtCore import pyqtSignal, QRectF, QEvent
-from PyQt5.QtGui import QCloseEvent, QColorSpace, QPalette, QShowEvent, QPixmap, QMoveEvent
-from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
+import vapoursynth as vs
+import yaml
+from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
+from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
+from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
 
-from ..toolbars import Toolbars
-from ..models import VideoOutputs
+from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
+from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
+from ..core.types.enums import ChromaLocation, ColorRange, Matrix, Primaries, Transfer
 from ..core.vsenv import get_policy
+from ..models import VideoOutputs
+from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
-from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
-from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget, ViewMode
-from ..core.types.enums import Matrix, Transfer, Primaries, ColorRange, ChromaLocation
-
-from .timeline import Timeline
-from .settings import MainSettings, WindowSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
+from .settings import MainSettings, WindowSettings
+from .timeline import Timeline
 
 if sys.platform == 'win32':
     import win32gui
@@ -37,9 +36,11 @@ if sys.platform == 'win32':
         _imagingcms = None
 
 try:
-    from yaml import CLoader as yaml_Loader, CDumper as yaml_Dumper
+    from yaml import CDumper as yaml_Dumper
+    from yaml import CLoader as yaml_Loader
 except ImportError:
-    from yaml import Loader as yaml_Loader, Dumper as yaml_Dumper
+    from yaml import Dumper as yaml_Dumper
+    from yaml import Loader as yaml_Loader
 
 
 class MainWindow(AbstractMainWindow):

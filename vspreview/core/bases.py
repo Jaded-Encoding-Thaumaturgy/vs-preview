@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from typing import Any, Dict, Tuple, Type, TypeVar, cast, no_type_check
+
 from PyQt5 import sip
 from yaml import YAMLObject, YAMLObjectMetaclass
-from typing import Any, Dict, no_type_check, Type, TypeVar, Tuple, cast
 
 from .better_abc import ABCMeta
-
 
 T = TypeVar('T')
 

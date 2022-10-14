@@ -1,24 +1,23 @@
 from __future__ import annotations
 
-import re
 import logging
-from pathlib import Path
+import re
 from copy import deepcopy
 from functools import partial
-from typing import Any, Callable, cast, List, Mapping, Set
+from pathlib import Path
+from typing import Any, Callable, List, Mapping, Set, cast
 
+from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QModelIndex
-from PyQt5.QtWidgets import QLabel, QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QLabel
 
+from ...core import (
+    AbstractMainWindow, AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load
+)
 from ...core.custom import ComboBox
 from ...main.timeline import Notches
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
-from ...core import (
-    AbstractMainWindow, AbstractToolbar, Frame, Time, HBoxLayout, PushButton, LineEdit, CheckBox, try_load
-)
-
 from .dialog import SceningListDialog
 from .settings import SceningSettings
 

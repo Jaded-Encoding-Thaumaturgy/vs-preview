@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, Sequence, TypeVar, Type
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex
+from typing import Any, Iterator, Sequence, Type, TypeVar
 
+from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
 
 T = TypeVar('T', float, str)
 

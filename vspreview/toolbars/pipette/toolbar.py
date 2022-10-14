@@ -11,7 +11,7 @@ from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QLabel
 
-from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput, PushButton
+from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
 from .colorview import ColorView
 from .settings import PipetteSettings
 

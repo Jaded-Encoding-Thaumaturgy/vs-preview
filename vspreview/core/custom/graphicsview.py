@@ -9,7 +9,6 @@ from PyQt5.QtGui import (
 from PyQt5.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
 
 from ...core import AbstractMainWindow
-
 from ..types.dataclasses import CroppingInfo
 
 

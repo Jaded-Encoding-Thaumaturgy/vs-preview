@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import ctypes
+from fractions import Fraction
 import itertools
 import os
-from typing import Any, Mapping, cast
+import sys
+from typing import Any, Dict, List, Mapping, Tuple, cast
 
 import vapoursynth as vs
 from PyQt5 import sip
@@ -83,10 +85,16 @@ class VideoOutput(AbstractYAMLObject):
     def clear(self) -> None:
         self.source = self.prepared = None
 
-    def __init__(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
-        self.setValue(vs_output, index, new_storage)
+    def __init__(
+        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int,
+        new_storage: bool = False, timecodes: List[int] | None = None
+    ) -> None:
+        self.setValue(vs_output, index, new_storage, timecodes)
 
-    def setValue(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
+    def setValue(
+        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False,
+        timecodes: str | Dict[Tuple[int | None, int | None], Fraction] | List[int] | None = None
+    ) -> None:
         from ..custom import GraphicsImageItem
 
         self._stateset = not new_storage
@@ -96,6 +104,9 @@ class VideoOutput(AbstractYAMLObject):
         # runtime attributes
         self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha)
+
+        if timecodes:
+            print('aaaa')
 
         if self.source.alpha is not None:
             self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)

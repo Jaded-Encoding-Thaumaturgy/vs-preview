@@ -1,4 +1,5 @@
 from __future__ import annotations
+from fractions import Fraction
 
 import io
 import gc
@@ -114,7 +115,9 @@ class MainWindow(AbstractMainWindow):
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = False
-        self.script_globals: Dict[str, Any] = dict()
+        self.script_globals: Dict[str, Any] = {}
+
+        self.timecodes: Dict[int, str | Dict[Tuple[int | None, int | None], Fraction] | List[int]] = {}
 
         # global
         self.clipboard = self.app.clipboard()
@@ -461,6 +464,7 @@ class MainWindow(AbstractMainWindow):
         vs.clear_outputs()
         self.graphics_scene.clear()
 
+        self.timecodes.clear()
         self.outputs.clear()
         get_policy().reload_core()
         gc.collect(generation=0)
@@ -614,6 +618,11 @@ class MainWindow(AbstractMainWindow):
             )
         else:
             self.statusbar.fps_label.setText('{}/{} fps '.format(output.fps_num, output.fps_den))
+
+    def update_timecodes_info(
+        self, index: int, timecodes: str | Dict[Tuple[int | None, int | None], Fraction] | List[int]
+    ) -> None:
+        self.timecodes[index] = timecodes
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.LayoutRequest:

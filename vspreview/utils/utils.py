@@ -8,7 +8,7 @@ from platform import python_version
 from string import Template
 from typing import Any, Callable, Dict, Mapping, Tuple, Type, TypeVar, cast
 
-import vapoursynth as vs
+from vstools import vs
 from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication

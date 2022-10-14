@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import vapoursynth as vs
+from vstools import vs
 
 
 @dataclass

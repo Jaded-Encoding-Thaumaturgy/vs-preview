@@ -5,7 +5,7 @@ import itertools
 import os
 from typing import Any, Mapping, cast
 
-import vapoursynth as vs
+from vstools import vs, core
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
@@ -14,8 +14,6 @@ from ..abstracts import AbstractYAMLObject, main_window, try_load
 from ..vsenv import __name__ as _venv  # noqa: F401
 from .dataclasses import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
-
-core = vs.core
 
 
 class PackingTypeInfo():

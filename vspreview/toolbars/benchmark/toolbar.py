@@ -6,7 +6,7 @@ from copy import deepcopy
 from time import perf_counter
 from typing import Deque
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5.QtCore import QMetaObject, Qt
 from PyQt5.QtWidgets import QLabel
 

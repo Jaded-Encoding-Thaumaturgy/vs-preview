@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, Type, TypeVar, cast
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load

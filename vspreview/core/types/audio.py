@@ -4,13 +4,11 @@ from array import array
 from math import floor
 from typing import Any, Mapping
 
-import vapoursynth as vs
+from vstools import vs, core
 from PyQt5.QtMultimedia import QAudioDeviceInfo, QAudioFormat, QAudioOutput
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .units import Frame, Time
-
-core = vs.core
 
 
 class AudioOutput(AbstractYAMLObject):

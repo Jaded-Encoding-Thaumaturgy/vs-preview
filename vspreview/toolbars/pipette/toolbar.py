@@ -6,7 +6,7 @@ from struct import unpack
 from typing import Generator, Tuple, cast
 from weakref import WeakKeyDictionary
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QLabel

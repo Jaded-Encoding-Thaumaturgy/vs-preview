@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Protocol, Union, overload
 
-import vapoursynth as vs
+from vstools import vs
 
 
 class CustomEnum(type):

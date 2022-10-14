@@ -9,7 +9,7 @@ from math import floor
 from time import perf_counter_ns
 from typing import Any, Deque, Mapping, Tuple, cast
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QSlider
 

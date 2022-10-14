@@ -10,7 +10,7 @@ from pathlib import Path
 from traceback import FrameSummary, TracebackException
 from typing import Any, Dict, List, Mapping, Tuple, cast
 
-import vapoursynth as vs
+from vstools import vs
 import yaml
 from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent

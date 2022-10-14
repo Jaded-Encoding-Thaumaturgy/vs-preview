@@ -7,7 +7,7 @@ from functools import wraps
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, TypeVar, cast
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene

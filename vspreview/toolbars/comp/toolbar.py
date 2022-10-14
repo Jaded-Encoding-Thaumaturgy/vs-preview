@@ -9,7 +9,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QLabel
 from requests import Session

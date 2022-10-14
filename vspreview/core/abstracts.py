@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, Type, TypeVar, cast, overload
 
-import vapoursynth as vs
+from vstools import vs
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QClipboard, QKeySequence
 from PyQt5.QtWidgets import (

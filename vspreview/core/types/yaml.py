@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Tuple, cast
 
-import vapoursynth as vs
-
 from ..abstracts import AbstractYAMLObject
-
-core = vs.core
 
 
 class YAMLObjectWrapper(AbstractYAMLObject):

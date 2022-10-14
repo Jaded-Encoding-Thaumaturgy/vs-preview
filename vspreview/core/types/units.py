@@ -3,12 +3,10 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any, Mapping, SupportsFloat, SupportsInt, Union, cast
 
-import vapoursynth as vs
 
 from ..abstracts import main_window, try_load
 from .yaml import YAMLObjectWrapper
 
-core = vs.core
 
 Number = Union[int, float, SupportsInt, SupportsFloat]
 

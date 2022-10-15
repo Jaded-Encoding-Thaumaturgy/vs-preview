@@ -8,22 +8,18 @@ from platform import python_version
 from string import Template
 from typing import Any, Callable, Dict, Mapping, Tuple, Type, TypeVar, cast
 
-from vstools import vs
 from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication
 from vsengine.convert import yuv_heuristic
+from vstools import vs, T, F
 
 from ..core import Frame, Time, main_window
 from ..core.types.enums import ColorRange, Matrix, Primaries, Transfer
 
-T = TypeVar('T')
-S = TypeVar('S')
-F_SL = TypeVar('F_SL', bound=Callable)
-
 
 # it is a BuiltinMethodType at the same time
-def qt_silent_call(qt_method: F_SL, *args: Any, **kwargs: Any) -> T:
+def qt_silent_call(qt_method: F, *args: Any, **kwargs: Any) -> T:
     # https://github.com/python/typing/issues/213
     qobject = qt_method.__self__
     block = QSignalBlocker(qobject)
@@ -58,7 +54,7 @@ def strfdelta(time: Time, output_format: str) -> str:
     )
 
 
-def fire_and_forget(f: F_SL) -> F_SL:
+def fire_and_forget(f: F) -> F:
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
@@ -66,10 +62,10 @@ def fire_and_forget(f: F_SL) -> F_SL:
         except RuntimeError:
             loop = get_event_loop_policy().get_event_loop()
         return loop.run_in_executor(None, partial(f, *args, **kwargs))
-    return cast(F_SL, wrapped)
+    return cast(F, wrapped)
 
 
-def set_status_label(label: str) -> Callable[[F_SL], F_SL]:
+def set_status_label(label: str) -> Callable[[F], F]:
     def _decorator(func: Callable[..., T]) -> Any:
         @wraps(func)
         def _wrapped(*args: Any, **kwargs: Any) -> T:
@@ -84,7 +80,7 @@ def set_status_label(label: str) -> Callable[[F_SL], F_SL]:
             return ret
         return _wrapped
 
-    return cast(Callable[[F_SL], F_SL], _decorator)
+    return cast(Callable[[F], F], _decorator)
 
 
 def vs_clear_cache() -> None:

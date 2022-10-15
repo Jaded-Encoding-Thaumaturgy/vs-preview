@@ -7,16 +7,13 @@ from functools import wraps
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, TypeVar, cast
 
-from vstools import vs
+from vstools import vs, ColorRange, Matrix, Primaries, Transfer, T
 from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
 
 from ..core.types.enums import ColorRange, Matrix, Primaries, Transfer
 from .utils import get_prop
-
-T = TypeVar('T')
-
 
 def print_var(var: Any) -> None:
     frame = inspect.currentframe()

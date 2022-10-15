@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Mapping, Set, cast
+from typing import Any, Callable, Mapping, cast
 
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QColor
@@ -726,7 +726,7 @@ class SceningToolbar(AbstractToolbar):
             return
         log = log[start_pos:]
 
-        tfm_frames: Set[TFMFrame] = set()
+        tfm_frames: set[TFMFrame] = set()
         for match in tfm_frame_pattern.finditer(log):
             tfm_frame = TFMFrame(int(match[1]))
             tfm_frame.mic = int(match[2])

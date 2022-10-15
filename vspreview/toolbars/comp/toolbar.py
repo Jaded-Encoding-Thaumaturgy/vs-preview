@@ -7,7 +7,7 @@ import shutil
 import string
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Final, NamedTuple, Optional, Set, cast
+from typing import Any, Callable, Final, NamedTuple, Optional, cast
 
 from vstools import vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -288,16 +288,16 @@ class CompToolbar(AbstractToolbar):
 
         self.upload_status_label.setText(f'{message}{moreinfo}...')
 
-    def _rand_num_frames(self, checked: Set[int], rand_func: Callable[[], int]) -> int:
+    def _rand_num_frames(self, checked: set[int], rand_func: Callable[[], int]) -> int:
         rnum = rand_func()
         while rnum in checked:
             rnum = rand_func()
         return rnum
 
     def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
-        samples: Set[int] = set()
+        samples: set[int] = set()
         _max_attempts = 0
-        _rnum_checked: Set[int] = set()
+        _rnum_checked: set[int] = set()
         while len(samples) < k:
             _attempts = 0
             while True:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, Iterator, cast
+from typing import Any, Iterator, cast
 
 from PyQt5.QtCore import QEvent, QLineF, QPoint, QRectF, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
@@ -118,7 +118,7 @@ class Timeline(QWidget):
         # False means that only cursor position'll be recalculated
         self.need_full_repaint = True
 
-        self.toolbars_notches: Dict[AbstractToolbar, Notches] = {}
+        self.toolbars_notches: dict[AbstractToolbar, Notches] = {}
 
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.setMouseTracking(True)

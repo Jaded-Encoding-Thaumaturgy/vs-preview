@@ -7,7 +7,7 @@ import shutil
 import string
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Dict, Final, NamedTuple, Optional, Set, cast
+from typing import Any, Callable, Final, NamedTuple, Optional, Set, cast
 
 from vstools import vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -100,7 +100,7 @@ class Worker(QObject):
         except StopIteration:
             return self.finished.emit()
 
-        fields: Dict[str, Any] = {}
+        fields: dict[str, Any] = {}
 
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -337,7 +337,7 @@ class CompToolbar(AbstractToolbar):
     def get_slowpics_conf(self) -> WorkerConfiguration:
         self.update_upload_status_visibility(True)
 
-        clips: Dict[str, vs.VideoNode]
+        clips: dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
         frames: list[int] = list(
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))

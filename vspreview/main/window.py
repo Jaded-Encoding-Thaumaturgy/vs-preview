@@ -8,7 +8,7 @@ from itertools import count
 from os.path import expanduser, expandvars
 from pathlib import Path
 from traceback import FrameSummary, TracebackException
-from typing import Any, Dict, Mapping, cast
+from typing import Any, Mapping, cast
 
 import yaml
 from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
@@ -114,7 +114,7 @@ class MainWindow(AbstractMainWindow):
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = False
-        self.script_globals: Dict[str, Any] = dict()
+        self.script_globals: dict[str, Any] = dict()
 
         # global
         self.clipboard = self.app.clipboard()

@@ -199,7 +199,7 @@ class MainWindow(AbstractMainWindow):
 
     def load_script(
         self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int = 0
+        start_frame: int | None = None
     ) -> None:
         self.external_args = external_args or []
 
@@ -282,7 +282,8 @@ class MainWindow(AbstractMainWindow):
 
         if not reloading:
             self.switch_output(self.settings.output_index)
-            self.switch_frame(Frame(start_frame))
+            if start_frame is not None:
+                self.switch_frame(Frame(start_frame))
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

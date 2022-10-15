@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, List, Mapping, Set, cast
+from typing import Any, Callable, Mapping, Set, cast
 
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QColor
@@ -630,7 +630,7 @@ class SceningToolbar(AbstractToolbar):
         Imports intervals of constant FPS as scenes.
         Uses FPS for scene label.
         '''
-        timestamps: List[Time] = []
+        timestamps: list[Time] = []
         for line in path.read_text().splitlines():
             try:
                 timestamps.append(Time(milliseconds=float(line)))
@@ -760,7 +760,7 @@ class SceningToolbar(AbstractToolbar):
             except ValueError:
                 out_of_range_count += 1
 
-        ranges: List[List[int]] = []
+        ranges: list[list[int]] = []
         prev_x: int
         for x in frames:
             if not ranges:

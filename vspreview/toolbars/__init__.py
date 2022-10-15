@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Iterator, List, Mapping, cast, overload
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, cast, overload
 
 from ..core import storage_err_msg
 from ..core.abstracts import AbstractMainWindow, AbstractToolbar
@@ -48,10 +48,10 @@ class Toolbars(AbstractYAMLObjectSingleton):
         ...
 
     @overload
-    def __getitem__(self, _sub: slice) -> List[AbstractToolbar]:
+    def __getitem__(self, _sub: slice) -> list[AbstractToolbar]:
         ...
 
-    def __getitem__(self, _sub: int | slice) -> AbstractToolbar | List[AbstractToolbar]:
+    def __getitem__(self, _sub: int | slice) -> AbstractToolbar | list[AbstractToolbar]:
         length = len(self.all_toolbars_names)
         if isinstance(_sub, slice):
             return [self[i] for i in range(*_sub.indices(length))]

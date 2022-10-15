@@ -6,7 +6,7 @@ import os
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, List, Literal, cast
+from typing import Dict, Literal, cast
 
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import QApplication
@@ -164,11 +164,11 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore']) -> None
         current_settings['configurations'] = settings['configurations']
         return _write()
 
-    cast(List, current_settings['configurations']).extend(settings['configurations'])
+    cast(list, current_settings['configurations']).extend(settings['configurations'])
 
     current_settings['configurations'] = list({
         ':'.join(str(row[column]) for column in row.keys()): row
-        for row in cast(List[Dict[str, str]], current_settings['configurations'])
+        for row in cast(list[Dict[str, str]], current_settings['configurations'])
     }.values())
 
     return _write()

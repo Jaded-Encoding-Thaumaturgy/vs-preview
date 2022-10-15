@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
 
 from vstools import vs, T
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
@@ -275,7 +275,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def load_script(
-        self, script_path: Path, external_args: List[tuple[str, str]] | None = None, reloading: bool = False,
+        self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None
     ) -> None:
         raise NotImplementedError

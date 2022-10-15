@@ -7,7 +7,7 @@ import shutil
 import string
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
+from typing import Any, Callable, Dict, Final, NamedTuple, Optional, Set, cast
 
 from vstools import vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -25,7 +25,7 @@ from .settings import CompSettings
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def select_frames(clip: vs.VideoNode, indices: List[int]) -> vs.VideoNode:
+def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
     return clip.std.BlankClip(length=len(indices)).std.FrameEval(lambda n: clip[indices[n]])
 
 
@@ -36,7 +36,7 @@ class WorkerConfiguration(NamedTuple):
     nsfw: bool
     optimise: bool
     remove_after: Optional[int]
-    frames: List[int]
+    frames: list[int]
     compression: int
     path: Path
     main: AbstractMainWindow
@@ -60,7 +60,7 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        all_images: List[List[Path]] = []
+        all_images: list[list[Path]] = []
         conf.path.mkdir(parents=True, exist_ok=False)
 
         try:
@@ -294,7 +294,7 @@ class CompToolbar(AbstractToolbar):
             rnum = rand_func()
         return rnum
 
-    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> List[int]:
+    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
         samples: Set[int] = set()
         _max_attempts = 0
         _rnum_checked: Set[int] = set()
@@ -339,7 +339,7 @@ class CompToolbar(AbstractToolbar):
 
         clips: Dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
-        frames: List[int] = list(
+        frames: list[int] = list(
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
         picture_type = self.pic_type_combox.currentData()

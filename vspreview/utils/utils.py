@@ -6,16 +6,14 @@ from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
 from platform import python_version
 from string import Template
-from typing import Any, Callable, Dict, Mapping, Tuple, Type, TypeVar, cast
+from typing import Any, Callable, Tuple, cast
 
 from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication
-from vsengine.convert import yuv_heuristic
 from vstools import vs, T, F
 
 from ..core import Frame, Time, main_window
-from ..core.types.enums import ColorRange, Matrix, Primaries, Transfer
 
 
 # it is a BuiltinMethodType at the same time
@@ -122,44 +120,3 @@ def get_temp_screen_resolution() -> Tuple[int, int]:
 
     geometry = app.desktop().screenGeometry()
     return (geometry.width(), geometry.height())
-
-
-def get_prop(frame: vs.VideoFrame | vs.FrameProps, key: str, t: Type[T]) -> T:
-    props = frame if isinstance(frame, Mapping) else frame.props
-
-    try:
-        prop = props[key]
-    except KeyError:
-        raise KeyError(f'get_prop: Key {key} not present in props!')
-
-    if not isinstance(prop, t):
-        raise ValueError(f'get_prop: Key {key} did not contain expected type: Expected {t}, got {type(prop)}!')
-
-    return prop
-
-
-def video_heuristics(
-    clip: vs.VideoNode, props: vs.FrameProps | None = None, prop_in: bool = True, string_only: bool = False
-) -> Dict[str, str]:
-    heuristics = cast(Dict[str, str], yuv_heuristic(clip.width, clip.height))
-
-    if props:
-        resize_props = {
-            'matrix_in_s': Matrix[get_prop(props, '_Matrix', int)] if '_Matrix' in props else None,
-            'primaries_in_s': Primaries[get_prop(props, '_Primaries', int)] if '_Primaries' in props else None,
-            'range_in_s': ColorRange[get_prop(props, '_ColorRange', int)] if '_ColorRange' in props else None,
-            'transfer_in_s': Transfer[get_prop(props, '_Transfer', int)] if '_Transfer' in props else None,
-        }
-
-        if not string_only:
-            for key in resize_props:
-                if resize_props[key] == 'unspec':
-                    resize_props[key] = None
-
-    if not prop_in or string_only:
-        heuristics = {f'{k[:-5]}{"" if string_only else "_s"}': v for k, v in heuristics.items()}
-
-    if props:
-        heuristics.update({k: v for (k, v) in resize_props.items() if v})
-
-    return heuristics

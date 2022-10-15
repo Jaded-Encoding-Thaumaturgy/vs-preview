@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Sequence, Tuple, cast
+from typing import Any, Sequence, cast
 
 from PyQt5.QtCore import QRect, Qt
 from PyQt5.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
@@ -47,8 +47,8 @@ class StatusBar(QStatusBar):
 class Switch(PushButton):
     def __init__(
         self, radius: int = 10, width: int = 32, border: int = 1,
-        state_texts: Tuple[str, str, int] = ('OFF', 'ON', 1),
-        state_colors: Tuple[QColor, QColor] = (QColor(69, 83, 100), QColor(96, 121, 139)),
+        state_texts: tuple[str, str, int] = ('OFF', 'ON', 1),
+        state_colors: tuple[QColor, QColor] = (QColor(69, 83, 100), QColor(96, 121, 139)),
         border_color: QColor = QColor(69, 83, 100), text_color: QColor = QColor(224, 225, 226),
         background_color: QColor = QColor(25, 35, 45), **kwargs: Any
     ):

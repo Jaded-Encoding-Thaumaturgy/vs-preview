@@ -5,7 +5,7 @@ import logging
 import re
 from functools import wraps
 from time import perf_counter_ns
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, cast
 
 from vstools import vs, ColorRange, Matrix, Primaries, Transfer, T
 from PyQt5 import sip
@@ -97,9 +97,9 @@ class EventFilter(QObject):
 
 def measure_exec_time_ms(
     func: Callable[..., T], return_exec_time: bool = False, print_exec_time: bool = True
-) -> Callable[..., T | Tuple[T, float]]:
+) -> Callable[..., T | tuple[T, float]]:
     @wraps(func)
-    def decorator(*args: Any, **kwargs: Any) -> T | Tuple[T, float]:
+    def decorator(*args: Any, **kwargs: Any) -> T | tuple[T, float]:
         t1 = perf_counter_ns()
         ret = func(*args, **kwargs)
         t2 = perf_counter_ns()
@@ -147,7 +147,7 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
 
 
 class DebugMeta(sip.wrappertype):
-    def __new__(cls: type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
+    def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: Dict[str, Any]) -> type:
         from functools import partialmethod
 
         base = bases[0]
@@ -429,7 +429,7 @@ class Application(QApplication):
         isex = False
         try:
             self.enter_count += 1
-            ret, time = cast(Tuple[bool, float], measure_exec_time_ms(
+            ret, time = cast(tuple[bool, float], measure_exec_time_ms(
                 QApplication.notify, True, False)(self, obj, event))
             self.enter_count -= 1
 

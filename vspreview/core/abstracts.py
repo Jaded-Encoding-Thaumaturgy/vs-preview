@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, cast, overload
 
 from vstools import vs, T
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
@@ -173,7 +173,7 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
 
 
 class AbstractQItem():
-    __slots__: Tuple[str]
+    __slots__: tuple[str]
     storable_attrs = tuple()
 
     def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
@@ -194,7 +194,7 @@ class AbstractQItem():
                 continue
             attr.setObjectName(type(self).__name__ + '.' + attr_name)
 
-    def __get_storable_attr__(self) -> Tuple[str, ...]:
+    def __get_storable_attr__(self) -> tuple[str, ...]:
         return self.storable_attrs
 
     def __getstate__(self) -> Mapping[str, Any]:
@@ -275,7 +275,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
+        self, script_path: Path, external_args: List[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None
     ) -> None:
         raise NotImplementedError
@@ -294,7 +294,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def switch_frame(
-        self, pos: Frame | Time | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | Time | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
         raise NotImplementedError()
 
@@ -425,8 +425,8 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     _no_visibility_choice = False
-    storable_attrs: Tuple[str, ...] = tuple()
-    class_storable_attrs: Tuple[str, ...] = ('settings', 'visibility')
+    storable_attrs: tuple[str, ...] = tuple()
+    class_storable_attrs: tuple[str, ...] = ('settings', 'visibility')
     num_keys = [
         Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
     ]
@@ -494,7 +494,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
             self.main.timeline.full_repaint()
 
-    def __get_storable_attr__(self) -> Tuple[str, ...]:
+    def __get_storable_attr__(self) -> tuple[str, ...]:
         attributes = list(self.class_storable_attrs + self.storable_attrs)
 
         if self._no_visibility_choice:

@@ -7,7 +7,7 @@ from concurrent.futures import Future
 from functools import partial
 from math import floor
 from time import perf_counter_ns
-from typing import Any, Deque, Mapping, Tuple, cast
+from typing import Any, Deque, Mapping, cast
 
 from vstools import vs
 from PyQt5.QtCore import Qt
@@ -47,7 +47,7 @@ class PlaybackToolbar(AbstractToolbar):
         super().__init__(main, PlaybackSettings())
         self.setup_ui()
 
-        self.play_buffer: Deque[Tuple[int, Future[vs.VideoFrame]]] = deque()
+        self.play_buffer: Deque[tuple[int, Future[vs.VideoFrame]]] = deque()
         self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
 
         self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)

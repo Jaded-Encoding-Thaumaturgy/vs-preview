@@ -6,7 +6,7 @@ from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
 from platform import python_version
 from string import Template
-from typing import Any, Callable, Tuple, cast
+from typing import Any, Callable, cast
 
 from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
@@ -115,7 +115,7 @@ def check_versions() -> bool:
     return True
 
 
-def get_temp_screen_resolution() -> Tuple[int, int]:
+def get_temp_screen_resolution() -> tuple[int, int]:
     app = QApplication(sys.argv)
 
     geometry = app.desktop().screenGeometry()

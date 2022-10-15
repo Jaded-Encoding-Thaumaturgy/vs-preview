@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from copy import deepcopy
-from typing import Any, Iterator, List, Mapping, Tuple
+from typing import Any, Iterator, List, Mapping
 
 from PyQt5.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
 
@@ -339,7 +339,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
     def add(
         self, name: str | None = None, max_value: Frame | None = None, i: int | None = None
-    ) -> Tuple[SceningList, int]:
+    ) -> tuple[SceningList, int]:
         if max_value is None:
             max_value = self.main.current_output.end_frame
         if i is None:

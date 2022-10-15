@@ -8,7 +8,7 @@ from itertools import count
 from os.path import expanduser, expandvars
 from pathlib import Path
 from traceback import FrameSummary, TracebackException
-from typing import Any, Dict, List, Mapping, Tuple, cast
+from typing import Any, Dict, List, Mapping, cast
 
 import yaml
 from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
@@ -118,7 +118,7 @@ class MainWindow(AbstractMainWindow):
 
         # global
         self.clipboard = self.app.clipboard()
-        self.external_args: List[Tuple[str, str]] = []
+        self.external_args: List[tuple[str, str]] = []
         self.script_path = Path()
         self.script_exec_failed = False
         self.current_storage_path = Path()
@@ -198,7 +198,7 @@ class MainWindow(AbstractMainWindow):
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
+        self, script_path: Path, external_args: List[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None
     ) -> None:
         self.external_args = external_args or []
@@ -475,7 +475,7 @@ class MainWindow(AbstractMainWindow):
         self.show_message('Reloaded successfully')
 
     def switch_frame(
-        self, pos: Frame | Time | int | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | Time | int | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
         if pos is None:
             logging.debug('switch_frame: position is None!')

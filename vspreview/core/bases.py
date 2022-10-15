@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, cast, no_type_check
+from typing import Any, Dict, cast, no_type_check
 
 from PyQt5 import sip
 from vstools import T
@@ -10,7 +10,7 @@ from .better_abc import ABCMeta
 
 
 class SingletonMeta(type):
-    def __init__(cls: type[T], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> None:
+    def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: Dict[str, Any]) -> None:
         super().__init__(name, bases, dct)
         cls.instance: T | None = None
 
@@ -19,7 +19,7 @@ class SingletonMeta(type):
             cls.instance = super().__call__(*args, **kwargs)
         return cls.instance
 
-    def __new__(cls: type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
+    def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: Dict[str, Any]) -> type:
         subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)
         singleton_new = None
         for entry in subcls.__mro__:

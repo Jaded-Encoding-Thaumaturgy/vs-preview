@@ -7,7 +7,7 @@ import shutil
 import string
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Final, NamedTuple, Optional, cast
+from typing import Any, Callable, Final, NamedTuple, cast
 
 from vstools import vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -35,7 +35,7 @@ class WorkerConfiguration(NamedTuple):
     public: bool
     nsfw: bool
     optimise: bool
-    remove_after: Optional[int]
+    remove_after: int | None
     frames: list[int]
     compression: int
     path: Path

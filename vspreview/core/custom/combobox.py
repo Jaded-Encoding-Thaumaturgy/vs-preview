@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QWidget
@@ -59,7 +59,7 @@ class _ComboBox_Output(ComboBox):
     content_type = VideoOutput
     T = VideoOutput
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -68,7 +68,7 @@ class _ComboBox_AudioOutput(ComboBox):
     content_type = AudioOutput
     T = AudioOutput
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(object, object)
 
@@ -76,7 +76,7 @@ class _ComboBox_AudioOutput(ComboBox):
 class _ComboBox_SceningList(ComboBox):
     content_type = SceningList
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -84,7 +84,7 @@ class _ComboBox_SceningList(ComboBox):
 class _ComboBox_PictureType(ComboBox):
     content_type = PictureType
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -92,7 +92,7 @@ class _ComboBox_PictureType(ComboBox):
 class _ComboBox_float(ComboBox):
     content_type = float
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -100,7 +100,7 @@ class _ComboBox_float(ComboBox):
 class _ComboBox_int(ComboBox):
     content_type = int
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -108,6 +108,6 @@ class _ComboBox_int(ComboBox):
 class _ComboBox_string(ComboBox):
     content_type = str
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)

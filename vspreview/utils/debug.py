@@ -5,7 +5,7 @@ import logging
 import re
 from functools import wraps
 from time import perf_counter_ns
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, cast
 
 from vstools import vs, ColorRange, Matrix, Primaries, Transfer, T
 from PyQt5 import sip
@@ -147,7 +147,7 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
 
 
 class DebugMeta(sip.wrappertype):
-    def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
+    def __new__(cls: type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
         from functools import partialmethod
 
         base = bases[0]

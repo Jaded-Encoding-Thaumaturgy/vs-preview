@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, Iterator, List, Type, cast
+from typing import Any, Dict, Iterator, List, cast
 
 from PyQt5.QtCore import QEvent, QLineF, QPoint, QRectF, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
@@ -374,7 +374,7 @@ class Timeline(QWidget):
             x = 0
         return x
 
-    def x_to_t(self, x: int, ty: Type[Time]) -> Time:
+    def x_to_t(self, x: int, ty: type[Time]) -> Time:
         width = self.rect_f.width()
         return ty(seconds=(x * float(self.end_t) / width))
 
@@ -386,7 +386,7 @@ class Timeline(QWidget):
             x = 0
         return x
 
-    def x_to_f(self, x: int, ty: Type[Frame]) -> Frame:
+    def x_to_f(self, x: int, ty: type[Frame]) -> Frame:
         width = self.rect_f.width()
         value = round(x / width * int(self.end_f))
         return ty(value)

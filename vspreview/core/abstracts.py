@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, Type, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, cast, overload
 
 from vstools import vs, T
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from ..main.timeline import Notches, Timeline
     from ..models import VideoOutputs
     from .types import Frame, Time, VideoOutput
-
 
 
 class ViewMode(str, Enum):
@@ -56,7 +55,6 @@ class ExtendedLayout(QBoxLayout):
         self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None
     ) -> None:
         ...
-
 
     def __init__(
         self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
@@ -543,7 +541,7 @@ def storage_err_msg(name: str, level: int = 0) -> str:
 
 
 def try_load(
-    state: Mapping[str, Any], name: str, expected_type: Type[T],
+    state: Mapping[str, Any], name: str, expected_type: type[T],
     receiver: T | _OneArgumentFunction | _SetterFunction,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:

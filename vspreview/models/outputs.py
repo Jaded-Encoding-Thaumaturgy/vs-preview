@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, Type, TypeVar, cast
+from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, TypeVar, cast
 
 from vstools import vs
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
@@ -11,7 +11,7 @@ T = TypeVar('T', VideoOutput, AudioOutput)
 
 
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
-    out_type: Type[T]
+    out_type: type[T]
     _items: List[T]
 
     __slots__ = ('items')

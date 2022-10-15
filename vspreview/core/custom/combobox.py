@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QWidget
@@ -12,7 +12,7 @@ ComboBoxT = TypeVar('ComboBoxT', VideoOutput, AudioOutput, SceningList, PictureT
 
 
 class ComboBox(QComboBox, Generic[ComboBoxT]):
-    def __class_getitem__(cls, content_type: Type[ComboBoxT]) -> Type:
+    def __class_getitem__(cls, content_type: type[ComboBoxT]) -> type:
         return {
             VideoOutput: _ComboBox_Output,
             AudioOutput: _ComboBox_AudioOutput,
@@ -24,7 +24,7 @@ class ComboBox(QComboBox, Generic[ComboBoxT]):
         }[content_type]
 
     indexChanged = pyqtSignal(int, int)
-    content_type: Type[ComboBoxT]
+    content_type: type[ComboBoxT]
 
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)

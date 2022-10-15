@@ -28,7 +28,7 @@ class Notch:
 
 class Notches:
     def __init__(self, other: Notches | None = None) -> None:
-        self.items: list[Notch] = []
+        self.items = list[Notch]()
 
         if other is None:
             return
@@ -118,7 +118,7 @@ class Timeline(QWidget):
         # False means that only cursor position'll be recalculated
         self.need_full_repaint = True
 
-        self.toolbars_notches: dict[AbstractToolbar, Notches] = {}
+        self.toolbars_notches = dict[AbstractToolbar, Notches]()
 
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.setMouseTracking(True)

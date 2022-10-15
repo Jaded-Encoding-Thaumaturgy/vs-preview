@@ -57,7 +57,7 @@ class MainWindow(AbstractMainWindow):
         'dither_type': 'error_diffusion',
     }
     VSP_VERSION = 2.1
-    BREAKING_CHANGES_VERSIONS: list[float] = []
+    BREAKING_CHANGES_VERSIONS = list[float]()
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -114,11 +114,11 @@ class MainWindow(AbstractMainWindow):
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = False
-        self.script_globals: dict[str, Any] = dict()
+        self.script_globals = dict[str, Any]()
 
         # global
         self.clipboard = self.app.clipboard()
-        self.external_args: list[tuple[str, str]] = []
+        self.external_args = list[tuple[str, str]]()
         self.script_path = Path()
         self.script_exec_failed = False
         self.current_storage_path = Path()

@@ -425,8 +425,8 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     _no_visibility_choice = False
-    storable_attrs: tuple[str, ...] = tuple()
-    class_storable_attrs: tuple[str, ...] = ('settings', 'visibility')
+    storable_attrs = tuple[str, ...]()
+    class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
     num_keys = [
         Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
     ]

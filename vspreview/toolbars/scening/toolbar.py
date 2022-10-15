@@ -630,7 +630,7 @@ class SceningToolbar(AbstractToolbar):
         Imports intervals of constant FPS as scenes.
         Uses FPS for scene label.
         '''
-        timestamps: list[Time] = []
+        timestamps = list[Time]()
         for line in path.read_text().splitlines():
             try:
                 timestamps.append(Time(milliseconds=float(line)))
@@ -726,7 +726,7 @@ class SceningToolbar(AbstractToolbar):
             return
         log = log[start_pos:]
 
-        tfm_frames: set[TFMFrame] = set()
+        tfm_frames = set[TFMFrame]()
         for match in tfm_frame_pattern.finditer(log):
             tfm_frame = TFMFrame(int(match[1]))
             tfm_frame.mic = int(match[2])
@@ -760,7 +760,7 @@ class SceningToolbar(AbstractToolbar):
             except ValueError:
                 out_of_range_count += 1
 
-        ranges: list[list[int]] = []
+        ranges = list[list[int]]()
         prev_x: int
         for x in frames:
             if not ranges:

@@ -21,7 +21,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
     def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
-        self.items: list[T] = []
+        self.items = list[T]()
 
         local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
 
@@ -132,7 +132,7 @@ class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
 
-    _fft_spectr_items: list[VideoOutput] = []
+    _fft_spectr_items = list[VideoOutput]()
 
     def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
         new.last_showed_frame = old.last_showed_frame

@@ -60,7 +60,7 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        all_images: list[list[Path]] = []
+        all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
         try:
@@ -100,7 +100,7 @@ class Worker(QObject):
         except StopIteration:
             return self.finished.emit()
 
-        fields: dict[str, Any] = {}
+        fields = dict[str, Any]()
 
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -295,9 +295,9 @@ class CompToolbar(AbstractToolbar):
         return rnum
 
     def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
-        samples: set[int] = set()
+        samples = set[int]()
         _max_attempts = 0
-        _rnum_checked: set[int] = set()
+        _rnum_checked = set[int]()
         while len(samples) < k:
             _attempts = 0
             while True:
@@ -339,7 +339,7 @@ class CompToolbar(AbstractToolbar):
 
         clips: dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
-        frames: list[int] = list(
+        frames = list[int](
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
         picture_type = self.pic_type_combox.currentData()

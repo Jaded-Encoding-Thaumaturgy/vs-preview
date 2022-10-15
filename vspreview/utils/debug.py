@@ -5,15 +5,13 @@ import logging
 import re
 from functools import wraps
 from time import perf_counter_ns
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, cast
 
 from vstools import vs, ColorRange, Matrix, Primaries, Transfer, T
 from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
 
-from ..core.types.enums import ColorRange, Matrix, Primaries, Transfer
-from .utils import get_prop
 
 def print_var(var: Any) -> None:
     frame = inspect.currentframe()
@@ -141,10 +139,10 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
     props = vs_output.get_frame(0).props
 
     logging.debug('Matrix: {}, Transfer: {}, Primaries: {}, Range: {}'.format(
-        Matrix[get_prop(props, '_Matrix', int)] if '_Matrix' in props else None,
-        Transfer[get_prop(props, '_Transfer', int)] if '_Transfer' in props else None,
-        Primaries[get_prop(props, '_Primaries', int)] if '_Primaries' in props else None,
-        ColorRange[get_prop(props, '_ColorRange', int)] if '_ColorRange' in props else None,
+        Matrix.from_video(props) if '_Matrix' in props else None,
+        Transfer.from_video(props) if '_Transfer' in props else None,
+        Primaries.from_video(props) if '_Primaries' in props else None,
+        ColorRange.from_video(props) if '_ColorRange' in props else None,
     ))
 
 

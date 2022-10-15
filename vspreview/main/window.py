@@ -10,15 +10,14 @@ from pathlib import Path
 from traceback import FrameSummary, TracebackException
 from typing import Any, Dict, List, Mapping, Tuple, cast
 
-from vstools import vs
 import yaml
 from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
+from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
-from ..core.types.enums import ChromaLocation, ColorRange, Matrix, Primaries, Transfer
 from ..core.vsenv import get_policy
 from ..models import VideoOutputs
 from ..toolbars import Toolbars

@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
+from vstools import video_heuristics
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch,
@@ -13,7 +14,7 @@ from ...core import (
 )
 from ...core.custom import ComboBox, Switch
 from ...models import GeneralModel
-from ...utils import qt_silent_call, video_heuristics
+from ...utils import qt_silent_call
 from .settings import MiscSettings
 
 

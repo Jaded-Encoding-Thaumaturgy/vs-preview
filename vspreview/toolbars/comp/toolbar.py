@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 import os
 import random
+import re
 import shutil
 import string
+import unicodedata
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Final, NamedTuple, cast
@@ -25,6 +27,50 @@ _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
     return clip.std.BlankClip(length=len(indices)).std.FrameEval(lambda n: clip[indices[n]])
+
+
+def clear_filename(filename: str) -> str:
+    blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']
+    reserved = [
+        'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
+        'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5',
+        'LPT6', 'LPT7', 'LPT8', 'LPT9',
+    ]
+
+    filename = ''.join(c for c in filename if c not in blacklist)
+
+    # Remove all charcters below code point 32
+    filename = ''.join(c for c in filename if 31 < ord(c))
+    filename = unicodedata.normalize('NFKD', filename).rstrip('. ').strip()
+
+    if all([x == '.' for x in filename]):
+        filename = '__' + filename
+
+    if filename in reserved:
+        filename = '__' + filename
+
+    if len(filename) > 255:
+        parts = re.split(r'/|\\', filename)[-1].split('.')
+
+        if len(parts) > 1:
+            ext = '.' + parts.pop()
+            filename = filename[:-len(ext)]
+        else:
+            ext = ''
+        if filename == '':
+            filename = '__'
+
+        if len(ext) > 254:
+            ext = ext[254:]
+
+        maxl = 255 - len(ext)
+        filename = filename[:maxl]
+        filename = filename + ext
+
+        # Re-check last character (if there was no extension)
+        filename = filename.rstrip('. ')
+
+    return filename
 
 
 class WorkerConfiguration(NamedTuple):
@@ -164,7 +210,18 @@ class Worker(QObject):
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)
 
-        self.progress_status.emit(f'https://slow.pics/c/{response.text}', 0, 0)
+        url = f'https://slow.pics/c/{response.text}'
+
+        self.progress_status.emit(url, 0, 0)
+
+        url_out = (
+            conf.path.parent / 'Old Comps'
+            / clear_filename(f'{conf.collection_name} - {response.text}')
+        ).with_suffix('.url')
+        url_out.parent.mkdir(parents=True, exist_ok=True)
+        url_out.touch(exist_ok=True)
+        url_out.write_text(f'[InternetShortcut]\nURL={url}')
+
         self.finished.emit()
 
 

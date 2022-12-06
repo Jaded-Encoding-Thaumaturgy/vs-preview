@@ -1,46 +1,44 @@
 from __future__ import annotations
 from fractions import Fraction
 
-import io
 import gc
-import sys
-import yaml
+import io
 import logging
-import vapoursynth as vs
-from pathlib import Path
+import sys
 from itertools import count
-from os.path import expandvars, expanduser
+from os.path import expanduser, expandvars
+from pathlib import Path
 from traceback import FrameSummary, TracebackException
-from typing import Any, cast, List, Mapping, Tuple, Dict
+from typing import Any, Mapping, cast
 
-from PyQt5.QtCore import pyqtSignal, QRectF, QEvent
-from PyQt5.QtGui import QCloseEvent, QColorSpace, QPalette, QShowEvent, QPixmap, QMoveEvent
-from PyQt5.QtWidgets import QLabel, QApplication, QGraphicsScene, QOpenGLWidget, QSizePolicy, QGraphicsView
+import yaml
+from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
+from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
+from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
+from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
-from ..toolbars import Toolbars
+from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
+from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
 from ..models import VideoOutputs
-from ..core.vsenv import get_policy
+from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
-from ..core.custom import StatusBar, GraphicsView, GraphicsImageItem, DragNavigator
-from ..core import AbstractMainWindow, Frame, VideoOutput, Time, try_load, VBoxLayout, ExtendedWidget, ViewMode
-from ..core.types.enums import Matrix, Transfer, Primaries, ColorRange, ChromaLocation
-
-from .timeline import Timeline
-from .settings import MainSettings, WindowSettings
 from .dialog import ScriptErrorDialog, SettingsDialog
+from .settings import MainSettings, WindowSettings
+from .timeline import Timeline
 
 if sys.platform == 'win32':
-    import win32gui
-
     try:
+        import win32gui
         from PIL import _imagingcms
     except ImportError:
         _imagingcms = None
 
 try:
-    from yaml import CLoader as yaml_Loader, CDumper as yaml_Dumper
+    from yaml import CDumper as yaml_Dumper
+    from yaml import CLoader as yaml_Loader
 except ImportError:
-    from yaml import Loader as yaml_Loader, Dumper as yaml_Dumper
+    from yaml import Dumper as yaml_Dumper
+    from yaml import Loader as yaml_Loader
 
 
 class MainWindow(AbstractMainWindow):
@@ -58,7 +56,7 @@ class MainWindow(AbstractMainWindow):
         'dither_type': 'error_diffusion',
     }
     VSP_VERSION = 2.1
-    BREAKING_CHANGES_VERSIONS: List[float] = []
+    BREAKING_CHANGES_VERSIONS = list[float]()
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -115,13 +113,13 @@ class MainWindow(AbstractMainWindow):
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = False
-        self.script_globals: Dict[str, Any] = {}
+        self.script_globals = dict[str, Any]()
 
         self.timecodes: Dict[int, str | Dict[Tuple[int | None, int | None], Fraction] | List[int]] = {}
 
         # global
         self.clipboard = self.app.clipboard()
-        self.external_args: List[Tuple[str, str]] = []
+        self.external_args = list[tuple[str, str]]()
         self.script_path = Path()
         self.script_exec_failed = False
         self.current_storage_path = Path()
@@ -201,8 +199,8 @@ class MainWindow(AbstractMainWindow):
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int = 0
+        self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
+        start_frame: int | None = None
     ) -> None:
         self.external_args = external_args or []
 
@@ -285,7 +283,8 @@ class MainWindow(AbstractMainWindow):
 
         if not reloading:
             self.switch_output(self.settings.output_index)
-            self.switch_frame(Frame(start_frame))
+            if start_frame is not None:
+                self.switch_frame(Frame(start_frame))
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:
@@ -466,19 +465,18 @@ class MainWindow(AbstractMainWindow):
 
         self.timecodes.clear()
         self.outputs.clear()
-        get_policy().reload_core()
         gc.collect(generation=0)
         gc.collect(generation=1)
         gc.collect(generation=2)
 
-        self.load_script(self.script_path, reloading=True)
+        self.load_script(self.script_path, self.external_args, True)
 
         self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
 
     def switch_frame(
-        self, pos: Frame | Time | int | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | Time | int | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
         if pos is None:
             logging.debug('switch_frame: position is None!')
@@ -579,6 +577,10 @@ class MainWindow(AbstractMainWindow):
     def update_display_profile(self) -> None:
         if sys.platform == 'win32':
             if _imagingcms is None:
+                print(ImportWarning(
+                    'You\'re missing packages for the image csm!\n'
+                    'You can install it with "pip install pywin32 Pillow"!'
+                ))
                 return
 
             assert self.app

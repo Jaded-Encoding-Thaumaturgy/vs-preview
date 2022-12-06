@@ -4,27 +4,32 @@ from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
 from PyQt5.QtWidgets import QLabel
 from vapoursynth import FrameProps
+from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
 from ...core import AbstractMainWindow, ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
 
 _frame_props_excluded_keys = {
     # vs internals
     '_AbsoluteTime', '_DurationNum', '_DurationDen', '_PictType', '_Alpha',
+    # Handled separately
     '_SARNum', '_SARDen',
     # source filters
     '_FrameNumber',
-    # stgfunc
+    # vstools set_output
     'Name'
 }
 
+
+def _create_enum_props_lut(enum: PropEnum, pretty_name: str) -> tuple[str, dict[str, dict[int, str]]]:
+    return enum.prop_key, {
+        pretty_name: {
+            idx: enum.from_param(idx).pretty_string if enum.is_valid(idx) else 'Invalid'
+            for idx in range(min(enum) - 1, max(enum) + 1)
+        }
+    }
+
+
 _frame_props_lut = {
-    '_FieldBased': {
-        'Field Type': [
-            'Progressive',
-            'Bottom Field First',
-            'Top Field First'
-        ]
-    },
     '_Combed': {
         'Is Combed': [
             'No',
@@ -48,93 +53,18 @@ _frame_props_lut = {
             'Current Scene',
             'Start of Scene'
         ]
-    },
-    '_ChromaLocation': {
-        'Chroma Location': [
-            'Left',
-            'Center',
-            'Top left',
-            'Top',
-            'Bottom left',
-            'Bottom',
-        ]
-    },
-    '_ColorRange': {
-        'Color Range': [
-            'Full',
-            'Limited'
-        ]
-    },
-    '_Matrix': {
-        'Matrix': [
-            'RGB',
-            'BT.709',
-            'Unspecified',
-            'Reserved',
-            'FCC',
-            'BT.470bg',
-            'ST 170M',
-            'ST 240M',
-            'YCgCo',
-            'BT.2020 non-constant luminance',
-            'BT.2020 constant luminance',
-            'ST2085',
-            'Chromaticity derived non-constant luminance',
-            'Chromaticity derived constant luminance',
-            'ICtCp',
-        ]
-    },
-    '_Transfer': {
-        'Transfer': [
-            'Reserved',
-            'BT.709',
-            'Unspecified',
-            'Reserved',
-            'BT.470m',
-            'BT.470bg',
-            'BT.601',
-            'ST 240M',
-            'Linear',
-            'Log 1:100 contrast',
-            'Log 1:316 contrast',
-            'xvYCC',
-            'BT.1361',
-            'sRGB',
-            'BT.2020_10',
-            'BT.2020_12',
-            'ST 2084 (PQ)',
-            'ST 428',
-            'ARIB std-b67 (HLG)',
-        ]
-    },
-    '_Primaries': {
-        'Primaries': [
-            'Reserved'
-            'BT.709',
-            'Unspecified',
-            'Reserved',
-            'BT.470m',
-            'BT.470bg',
-            'ST 170M',
-            'ST 240M',
-            'Film',
-            'BT.2020',
-            'XYZ',
-            'DCI-P3, DCI white point',
-            'DCI-P3 D65 white point',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            'Reserved',
-            '0JEDEC P22',  # EBU3213
-        ]
     }
-}
+} | dict([
+    _create_enum_props_lut(enum, name)
+    for enum, name in [
+        (FieldBased, 'Field Type'),
+        (Matrix, 'Matrix'),
+        (Transfer, 'Transfer'),
+        (Primaries, 'Primaries'),
+        (ChromaLocation, 'Chroma Location'),
+        (ColorRange, 'Color Range')
+    ]
+])
 
 
 class FramePropsDialog(ExtendedWidget):

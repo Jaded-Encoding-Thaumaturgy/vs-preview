@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, Sequence, TypeVar, Type
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex
+from typing import Any, Iterator, Sequence, TypeVar
 
+from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
 
 T = TypeVar('T', float, str)
 
@@ -10,14 +10,14 @@ T = TypeVar('T', float, str)
 class GeneralModel(QAbstractListModel):
     __slots__ = ('items',)
 
-    def __class_getitem__(cls, content_type: Type[T]) -> Type:
+    def __class_getitem__(cls, content_type: type[T]) -> type:
         return {
             float: _GeneralModel_float,
             int: _GeneralModel_int,
             str: _GeneralModel_string,
         }[content_type]
 
-    content_type: Type[T]
+    content_type: type[T]
     to_title: bool
 
     def __init__(self, init_seq: Sequence[content_type], to_title: bool = True) -> None:

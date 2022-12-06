@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from bisect import bisect_right
-from typing import Any, Iterator, List, Mapping, Tuple
+from copy import deepcopy
+from typing import Any, Iterator, Mapping
 
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractTableModel, QAbstractListModel
+from PyQt5.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
 
 from ..core import Frame, QYAMLObject, Scene, Time, main_window
 
@@ -19,10 +19,10 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     LABEL_COLUMN = 4
     COLUMN_COUNT = 5
 
-    def __init__(self, name: str = '', max_value: Frame | None = None, items: List[Scene] | None = None) -> None:
+    def __init__(self, name: str = '', max_value: Frame | None = None, items: list[Scene] | None = None) -> None:
         self.setValue(name, max_value, items)
 
-    def setValue(self, name: str = '', max_value: Frame | None = None, items: List[Scene] | None = None) -> None:
+    def setValue(self, name: str = '', max_value: Frame | None = None, items: list[Scene] | None = None) -> None:
         super().__init__()
         self.name = name
         self.max_value = max_value if max_value is not None else Frame(2**31)
@@ -270,10 +270,10 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 class SceningLists(QAbstractListModel, QYAMLObject):
     __slots__ = ('items',)
 
-    def __init__(self, items: List[SceningList] | None = None) -> None:
+    def __init__(self, items: list[SceningList] | None = None) -> None:
         self.setValue(items)
 
-    def setValue(self, items: List[SceningList] | None = None) -> None:
+    def setValue(self, items: list[SceningList] | None = None) -> None:
         super().__init__()
         self.main = main_window()
         self.items = items if items is not None else []
@@ -339,7 +339,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
     def add(
         self, name: str | None = None, max_value: Frame | None = None, i: int | None = None
-    ) -> Tuple[SceningList, int]:
+    ) -> tuple[SceningList, int]:
         if max_value is None:
             max_value = self.main.current_output.end_frame
         if i is None:

@@ -3,15 +3,15 @@ from __future__ import annotations
 import ctypes
 from math import ceil, floor, log
 from struct import unpack
-from typing import Generator, Tuple, cast
+from typing import Generator, cast
 from weakref import WeakKeyDictionary
 
-import vapoursynth as vs
 from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QLabel
+from vstools import vs
 
-from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput, PushButton
+from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
 from .colorview import ColorView
 from .settings import PipetteSettings
 
@@ -49,8 +49,8 @@ class PipetteToolbar(AbstractToolbar):
         self.pos_fmt = self.src_hex_fmt = self.src_dec_fmt = self.src_norm_fmt = ''
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
-        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, Tuple[int, vs.VideoNode]]()
-        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, Tuple[int, vs.VideoNode]]()
+        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
+        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
         self._mouse_is_subscribed = False
 
         main.reload_signal.connect(self.clear_outputs)

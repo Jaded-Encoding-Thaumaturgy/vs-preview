@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, Type, TypeVar, cast
+from typing import Any, Generic, Iterator, Mapping, OrderedDict, TypeVar, cast
 
-import vapoursynth as vs
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
+from vstools import vs
 
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
 
@@ -11,8 +11,8 @@ T = TypeVar('T', VideoOutput, AudioOutput)
 
 
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
-    out_type: Type[T]
-    _items: List[T]
+    out_type: type[T]
+    _items: list[T]
 
     __slots__ = ('items')
 
@@ -21,7 +21,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
     def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
-        self.items: List[T] = []
+        self.items = list[T]()
 
         local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
 
@@ -132,7 +132,7 @@ class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
 
-    _fft_spectr_items: List[VideoOutput] = []
+    _fft_spectr_items = list[VideoOutput]()
 
     def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
         new.last_showed_frame = old.last_showed_frame

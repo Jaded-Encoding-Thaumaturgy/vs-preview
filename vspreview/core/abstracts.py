@@ -7,18 +7,16 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING, Any, Callable, List, Mapping, Sequence, Tuple, Type, TypeVar, cast, overload
-)
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
 
-import vapoursynth as vs
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QClipboard, QKeySequence
 from PyQt5.QtWidgets import (
-    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene,
-    QGraphicsView, QHBoxLayout, QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut,
-    QSpacerItem, QSpinBox, QStatusBar, QTableView, QVBoxLayout, QWidget
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
+    QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut, QSpacerItem, QSpinBox, QStatusBar, QTableView,
+    QVBoxLayout, QWidget
 )
+from vstools import T, vs
 
 from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
 from .better_abc import abstract_attribute
@@ -27,9 +25,6 @@ if TYPE_CHECKING:
     from ..main.timeline import Notches, Timeline
     from ..models import VideoOutputs
     from .types import Frame, Time, VideoOutput
-
-
-T = TypeVar('T')
 
 
 class ViewMode(str, Enum):
@@ -58,7 +53,8 @@ class ExtendedLayout(QBoxLayout):
     @overload
     def __init__(
         self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None
-    ) -> None: ...
+    ) -> None:
+        ...
 
     def __init__(
         self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
@@ -177,8 +173,8 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
 
 
 class AbstractQItem():
-    __slots__: Tuple[str]
-    storable_attrs = tuple()
+    __slots__: tuple[str]
+    storable_attrs = ()
 
     def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
         QShortcut(QKeySequence(key), self, activated=handler)
@@ -198,7 +194,7 @@ class AbstractQItem():
                 continue
             attr.setObjectName(type(self).__name__ + '.' + attr_name)
 
-    def __get_storable_attr__(self) -> Tuple[str, ...]:
+    def __get_storable_attr__(self) -> tuple[str, ...]:
         return self.storable_attrs
 
     def __getstate__(self) -> Mapping[str, Any]:
@@ -279,7 +275,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def load_script(
-        self, script_path: Path, external_args: List[Tuple[str, str]] | None = None, reloading: bool = False,
+        self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None
     ) -> None:
         raise NotImplementedError
@@ -298,7 +294,7 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     @abstractmethod
     def switch_frame(
-        self, pos: Frame | Time | None, *, render_frame: bool | Tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | Time | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
         raise NotImplementedError()
 
@@ -330,47 +326,89 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     if TYPE_CHECKING:
         @property
-        def app_settings(self) -> AbstractAppSettings: ...
+        def app_settings(self) -> AbstractAppSettings:
+            ...
+
         @app_settings.setter
-        def app_settings(self) -> None: ...
+        def app_settings(self) -> None:
+            ...
+
         @property
-        def central_widget(self) -> QWidget: ...
+        def central_widget(self) -> QWidget:
+            ...
+
         @central_widget.setter
-        def central_widget(self) -> None: ...
+        def central_widget(self) -> None:
+            ...
+
         @property
-        def clipboard(self) -> QClipboard: ...
+        def clipboard(self) -> QClipboard:
+            ...
+
         @clipboard.setter
-        def clipboard(self) -> None: ...
+        def clipboard(self) -> None:
+            ...
+
         @property
-        def current_output(self) -> VideoOutput: ...
+        def current_output(self) -> VideoOutput:
+            ...
+
         @current_output.setter
-        def current_output(self) -> None: ...
+        def current_output(self) -> None:
+            ...
+
         @property
-        def display_scale(self) -> float: ...
+        def display_scale(self) -> float:
+            ...
+
         @display_scale.setter
-        def display_scale(self) -> None: ...
+        def display_scale(self) -> None:
+            ...
+
         @property
-        def graphics_scene(self) -> QGraphicsScene: ...
+        def graphics_scene(self) -> QGraphicsScene:
+            ...
+
         @graphics_scene.setter
-        def graphics_scene(self) -> None: ...
+        def graphics_scene(self) -> None:
+            ...
+
         @property
-        def graphics_view(self) -> QGraphicsView: ...
+        def graphics_view(self) -> QGraphicsView:
+            ...
+
         @graphics_view.setter
-        def graphics_view(self) -> None: ...
+        def graphics_view(self) -> None:
+            ...
+
         @property
-        def outputs(self) -> VideoOutputs: ...
+        def outputs(self) -> VideoOutputs:
+            ...
+
         @property
-        def timeline(self) -> Timeline: ...
+        def timeline(self) -> Timeline:
+            ...
+
         @timeline.setter
-        def timeline(self) -> None: ...
+        def timeline(self) -> None:
+            ...
+
         @property
-        def script_path(self) -> Path: ...
+        def script_path(self) -> Path:
+            ...
+
         @script_path.setter
-        def script_path(self) -> None: ...
+        def script_path(self) -> None:
+            ...
+
         @property
-        def statusbar(self) -> QStatusBar: ...
+        def statusbar(self) -> QStatusBar:
+            ...
+
         @statusbar.setter
-        def statusbar(self) -> None: ...
+        def statusbar(self) -> None:
+            ...
+
     else:
         app_settings: AbstractAppSettings = abstract_attribute()
         central_widget: QWidget = abstract_attribute()
@@ -387,8 +425,8 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     _no_visibility_choice = False
-    storable_attrs: Tuple[str, ...] = tuple()
-    class_storable_attrs: Tuple[str, ...] = ('settings', 'visibility')
+    storable_attrs = tuple[str, ...]()
+    class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
     num_keys = [
         Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
     ]
@@ -456,7 +494,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
             self.main.timeline.full_repaint()
 
-    def __get_storable_attr__(self) -> Tuple[str, ...]:
+    def __get_storable_attr__(self) -> tuple[str, ...]:
         attributes = list(self.class_storable_attrs + self.storable_attrs)
 
         if self._no_visibility_choice:
@@ -503,7 +541,7 @@ def storage_err_msg(name: str, level: int = 0) -> str:
 
 
 def try_load(
-    state: Mapping[str, Any], name: str, expected_type: Type[T],
+    state: Mapping[str, Any], name: str, expected_type: type[T],
     receiver: T | _OneArgumentFunction | _SetterFunction,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:

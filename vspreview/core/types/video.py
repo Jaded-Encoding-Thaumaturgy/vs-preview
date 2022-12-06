@@ -5,17 +5,14 @@ import itertools
 import os
 from typing import Any, Mapping, cast
 
-import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
+from vstools import core, video_heuristics, vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
-from ..vsenv import __name__ as _venv  # noqa: F401
 from .dataclasses import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
-
-core = vs.core
 
 
 class PackingTypeInfo():
@@ -157,8 +154,6 @@ class VideoOutput(AbstractYAMLObject):
     }
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
-        from ...utils.utils import video_heuristics
-
         assert clip.format
 
         is_subsampled = (clip.format.subsampling_w != 0 or clip.format.subsampling_h != 0)
@@ -169,15 +164,15 @@ class VideoOutput(AbstractYAMLObject):
 
         resizer_kwargs = {
             'format': self._NORML_FMT.id,
-            'matrix_in_s': self.main.VS_OUTPUT_MATRIX,
-            'transfer_in_s': self.main.VS_OUTPUT_TRANSFER,
-            'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
-            'range_in_s': self.main.VS_OUTPUT_RANGE,
-            'chromaloc_in_s': self.main.VS_OUTPUT_CHROMALOC,
+            'matrix_in': int(self.main.VS_OUTPUT_MATRIX),
+            'transfer_in': int(self.main.VS_OUTPUT_TRANSFER),
+            'primaries_in': int(self.main.VS_OUTPUT_PRIMARIES),
+            'range_in': int(self.main.VS_OUTPUT_RANGE),
+            'chromaloc_in': int(self.main.VS_OUTPUT_CHROMALOC),
         } | self.main.VS_OUTPUT_RESIZER_KWARGS | heuristics
 
         if clip.format.color_family == vs.RGB:
-            del resizer_kwargs['matrix_in_s']
+            del resizer_kwargs['matrix_in']
         elif clip.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
 

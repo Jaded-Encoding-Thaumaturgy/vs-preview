@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QWidget
@@ -8,11 +8,11 @@ from PyQt5.QtWidgets import QComboBox, QWidget
 from ...core import AudioOutput, PictureType, VideoOutput
 from ...models import SceningList
 
-T = TypeVar('T', VideoOutput, AudioOutput, SceningList, PictureType, float, str)
+ComboBoxT = TypeVar('ComboBoxT', VideoOutput, AudioOutput, SceningList, PictureType, float, str)
 
 
-class ComboBox(QComboBox, Generic[T]):
-    def __class_getitem__(cls, content_type: Type[T]) -> Type:
+class ComboBox(QComboBox, Generic[ComboBoxT]):
+    def __class_getitem__(cls, content_type: type[ComboBoxT]) -> type:
         return {
             VideoOutput: _ComboBox_Output,
             AudioOutput: _ComboBox_AudioOutput,
@@ -24,7 +24,7 @@ class ComboBox(QComboBox, Generic[T]):
         }[content_type]
 
     indexChanged = pyqtSignal(int, int)
-    content_type: Type[T]
+    content_type: type[ComboBoxT]
 
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)
@@ -47,10 +47,10 @@ class ComboBox(QComboBox, Generic[T]):
         self.oldValue = newValue
         self.oldIndex = newIndex
 
-    def currentValue(self) -> T:
-        return cast(T, self.currentData())
+    def currentValue(self) -> ComboBoxT:
+        return cast(ComboBoxT, self.currentData())
 
-    def setCurrentValue(self, newValue: T) -> None:
+    def setCurrentValue(self, newValue: ComboBoxT) -> None:
         i = self.model().index_of(newValue)
         self.setCurrentIndex(i)
 
@@ -59,7 +59,7 @@ class _ComboBox_Output(ComboBox):
     content_type = VideoOutput
     T = VideoOutput
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -68,7 +68,7 @@ class _ComboBox_AudioOutput(ComboBox):
     content_type = AudioOutput
     T = AudioOutput
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(object, object)
 
@@ -76,7 +76,7 @@ class _ComboBox_AudioOutput(ComboBox):
 class _ComboBox_SceningList(ComboBox):
     content_type = SceningList
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -84,7 +84,7 @@ class _ComboBox_SceningList(ComboBox):
 class _ComboBox_PictureType(ComboBox):
     content_type = PictureType
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -92,7 +92,7 @@ class _ComboBox_PictureType(ComboBox):
 class _ComboBox_float(ComboBox):
     content_type = float
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -100,7 +100,7 @@ class _ComboBox_float(ComboBox):
 class _ComboBox_int(ComboBox):
     content_type = int
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)
 
@@ -108,6 +108,6 @@ class _ComboBox_int(ComboBox):
 class _ComboBox_string(ComboBox):
     content_type = str
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, Optional[content_type])
+        valueChanged = pyqtSignal(content_type, content_type | None)
     else:
         valueChanged = pyqtSignal(content_type, object)

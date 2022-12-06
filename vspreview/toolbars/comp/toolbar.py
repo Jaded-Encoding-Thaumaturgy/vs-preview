@@ -7,13 +7,11 @@ import shutil
 import string
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
+from typing import Any, Callable, Final, NamedTuple, cast
 
-import vapoursynth as vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QLabel
-from requests import Session
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
@@ -25,7 +23,7 @@ from .settings import CompSettings
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def select_frames(clip: vs.VideoNode, indices: List[int]) -> vs.VideoNode:
+def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
     return clip.std.BlankClip(length=len(indices)).std.FrameEval(lambda n: clip[indices[n]])
 
 
@@ -35,8 +33,8 @@ class WorkerConfiguration(NamedTuple):
     public: bool
     nsfw: bool
     optimise: bool
-    remove_after: Optional[int]
-    frames: List[int]
+    remove_after: int | None
+    frames: list[int]
     compression: int
     path: Path
     main: AbstractMainWindow
@@ -60,7 +58,16 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        all_images: List[List[Path]] = []
+        try:
+            from requests import Session
+            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                'You are missing `requests` and `requests` toolbelt!\n'
+                'Install them with "pip install requests requests_toolbelt"!'
+            )
+
+        all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
         try:
@@ -100,7 +107,7 @@ class Worker(QObject):
         except StopIteration:
             return self.finished.emit()
 
-        fields: Dict[str, Any] = {}
+        fields = dict[str, Any]()
 
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -288,16 +295,16 @@ class CompToolbar(AbstractToolbar):
 
         self.upload_status_label.setText(f'{message}{moreinfo}...')
 
-    def _rand_num_frames(self, checked: Set[int], rand_func: Callable[[], int]) -> int:
+    def _rand_num_frames(self, checked: set[int], rand_func: Callable[[], int]) -> int:
         rnum = rand_func()
         while rnum in checked:
             rnum = rand_func()
         return rnum
 
-    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> List[int]:
-        samples: Set[int] = set()
+    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
+        samples = set[int]()
         _max_attempts = 0
-        _rnum_checked: Set[int] = set()
+        _rnum_checked = set[int]()
         while len(samples) < k:
             _attempts = 0
             while True:
@@ -337,9 +344,9 @@ class CompToolbar(AbstractToolbar):
     def get_slowpics_conf(self) -> WorkerConfiguration:
         self.update_upload_status_visibility(True)
 
-        clips: Dict[str, vs.VideoNode]
+        clips: dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
-        frames: List[int] = list(
+        frames = list[int](
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
         picture_type = self.pic_type_combox.currentData()

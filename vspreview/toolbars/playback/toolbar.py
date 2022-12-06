@@ -7,11 +7,11 @@ from concurrent.futures import Future
 from functools import partial
 from math import floor
 from time import perf_counter_ns
-from typing import Any, Deque, Mapping, Tuple, cast
+from typing import Any, Mapping, cast
 
-import vapoursynth as vs
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QSlider
+from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
@@ -47,16 +47,16 @@ class PlaybackToolbar(AbstractToolbar):
         super().__init__(main, PlaybackSettings())
         self.setup_ui()
 
-        self.play_buffer: Deque[Tuple[int, Future[vs.VideoFrame]]] = deque()
+        self.play_buffer = deque[tuple[int, Future[vs.VideoFrame]]]()
         self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
 
         self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
 
         self.current_audio_output = None
         self.current_audio_frame = Frame(0)
-        self.play_buffer_audio: Deque[Future[vs.AudioFrame]] = deque()
+        self.play_buffer_audio = deque[Future[vs.AudioFrame]]()
 
-        self.fps_history: Deque[int] = deque([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
+        self.fps_history = deque[int]([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
         self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
 

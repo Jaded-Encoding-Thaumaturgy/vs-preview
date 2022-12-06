@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import vapoursynth as vs
 from typing import Any, Mapping
 
 from .units import Frame
 from .yaml import YAMLObjectWrapper
-
-
-core = vs.core
 
 
 class Scene(YAMLObjectWrapper):

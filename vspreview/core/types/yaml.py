@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Tuple, cast
-
-import vapoursynth as vs
+from typing import Any, cast
 
 from ..abstracts import AbstractYAMLObject
-
-core = vs.core
 
 
 class YAMLObjectWrapper(AbstractYAMLObject):
@@ -57,5 +53,5 @@ class YAMLObjectWrapper(AbstractYAMLObject):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.value})'
 
-    def __get_storable_attr__(self) -> Tuple[str, ...]:
+    def __get_storable_attr__(self) -> tuple[str, ...]:
         return cast(tuple, self.__slots__)

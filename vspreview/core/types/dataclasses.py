@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import vapoursynth as vs
+from vstools import vs
 
 
 @dataclass
@@ -16,6 +16,6 @@ class CroppingInfo:
 
 
 @dataclass
-class VideoOutputNode():
+class VideoOutputNode:
     clip: vs.VideoNode
     alpha: vs.VideoNode | None

@@ -465,7 +465,7 @@ class MainWindow(AbstractMainWindow):
         gc.collect(generation=1)
         gc.collect(generation=2)
 
-        self.load_script(self.script_path, reloading=True)
+        self.load_script(self.script_path, self.external_args, True)
 
         self.reload_after_signal.emit()
 

@@ -18,7 +18,6 @@ from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
-from ..core.vsenv import get_policy
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -463,7 +462,6 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene.clear()
 
         self.outputs.clear()
-        get_policy().reload_core()
         gc.collect(generation=0)
         gc.collect(generation=1)
         gc.collect(generation=2)

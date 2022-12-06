@@ -11,7 +11,6 @@ from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
 from vstools import core, video_heuristics, vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
-from ..vsenv import __name__ as _venv  # noqa: F401
 from .dataclasses import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 

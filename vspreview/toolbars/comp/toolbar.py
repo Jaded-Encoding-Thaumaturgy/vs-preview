@@ -11,8 +11,6 @@ from typing import Any, Callable, Final, NamedTuple, cast
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QLabel
-from requests import Session
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from vstools import vs
 
 from ...core import (
@@ -60,6 +58,15 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
+        try:
+            from requests import Session
+            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                'You are missing `requests` and `requests` toolbelt!\n'
+                'Install them with "pip install requests requests_toolbelt"!'
+            )
+
         all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 

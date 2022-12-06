@@ -26,9 +26,8 @@ from .settings import MainSettings, WindowSettings
 from .timeline import Timeline
 
 if sys.platform == 'win32':
-    import win32gui
-
     try:
+        import win32gui
         from PIL import _imagingcms
     except ImportError:
         _imagingcms = None
@@ -574,6 +573,10 @@ class MainWindow(AbstractMainWindow):
     def update_display_profile(self) -> None:
         if sys.platform == 'win32':
             if _imagingcms is None:
+                print(ImportWarning(
+                    'You\'re missing packages for the image csm!\n'
+                    'You can install it with "pip install pywin32 Pillow"!'
+                ))
                 return
 
             assert self.app

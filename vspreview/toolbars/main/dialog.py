@@ -4,7 +4,7 @@ from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
 from PyQt5.QtWidgets import QLabel
 from vapoursynth import FrameProps
-from vstools import FieldBased, Matrix, Transfer, Primaries, ChromaLocation, ColorRange, PropEnum
+from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
 from ...core import AbstractMainWindow, ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
 

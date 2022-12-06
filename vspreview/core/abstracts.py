@@ -9,7 +9,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
 
-from vstools import vs, T
 from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QClipboard, QKeySequence
 from PyQt5.QtWidgets import (
@@ -17,6 +16,7 @@ from PyQt5.QtWidgets import (
     QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut, QSpacerItem, QSpinBox, QStatusBar, QTableView,
     QVBoxLayout, QWidget
 )
+from vstools import T, vs
 
 from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
 from .better_abc import abstract_attribute
@@ -174,7 +174,7 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
 
 class AbstractQItem():
     __slots__: tuple[str]
-    storable_attrs = tuple()
+    storable_attrs = ()
 
     def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
         QShortcut(QKeySequence(key), self, activated=handler)

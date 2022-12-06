@@ -9,11 +9,11 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Final, NamedTuple, cast
 
-from vstools import vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QLabel
 from requests import Session
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window

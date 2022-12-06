@@ -9,9 +9,9 @@ from math import floor
 from time import perf_counter_ns
 from typing import Any, Mapping, cast
 
-from vstools import vs
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QSlider
+from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load

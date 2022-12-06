@@ -16,6 +16,6 @@ class CroppingInfo:
 
 
 @dataclass
-class VideoOutputNode():
+class VideoOutputNode:
     clip: vs.VideoNode
     alpha: vs.VideoNode | None

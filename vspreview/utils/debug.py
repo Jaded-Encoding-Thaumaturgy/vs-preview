@@ -7,10 +7,10 @@ from functools import wraps
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from vstools import vs, ColorRange, Matrix, Primaries, Transfer, T
 from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
+from vstools import ColorRange, Matrix, Primaries, T, Transfer, vs
 
 
 def print_var(var: Any) -> None:

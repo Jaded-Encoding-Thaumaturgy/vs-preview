@@ -3,10 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any, Mapping, SupportsFloat, SupportsInt, Union, cast
 
-
 from ..abstracts import main_window, try_load
 from .yaml import YAMLObjectWrapper
-
 
 Number = Union[int, float, SupportsInt, SupportsFloat]
 

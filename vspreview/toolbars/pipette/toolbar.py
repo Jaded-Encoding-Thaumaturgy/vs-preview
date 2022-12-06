@@ -6,10 +6,10 @@ from struct import unpack
 from typing import Generator, cast
 from weakref import WeakKeyDictionary
 
-from vstools import vs
 from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QLabel
+from vstools import vs
 
 from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
 from .colorview import ColorView

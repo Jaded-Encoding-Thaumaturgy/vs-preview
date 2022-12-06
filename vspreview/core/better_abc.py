@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from vstools import T
 
+
 class DummyAttribute:
     _is_abstract_attribute_ = True
 

@@ -1,29 +1,24 @@
 from __future__ import annotations
 
-import logging
 import sys
 from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
-from platform import python_version
 from string import Template
 from typing import Any, Callable, cast
 
-from pkg_resources import get_distribution
 from PyQt5.QtCore import QSignalBlocker
 from PyQt5.QtWidgets import QApplication
-from vstools import vs, T, F
+from vstools import F, P, R, T, vs
 
 from ..core import Frame, Time, main_window
 
 
 # it is a BuiltinMethodType at the same time
-def qt_silent_call(qt_method: F, *args: Any, **kwargs: Any) -> T:
-    # https://github.com/python/typing/issues/213
-    qobject = qt_method.__self__
-    block = QSignalBlocker(qobject)
+def qt_silent_call(qt_method: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
+    block = QSignalBlocker(qt_method.__self__)
     ret = qt_method(*args, **kwargs)
     del block
-    return cast(T, ret)
+    return ret
 
 
 class DeltaTemplate(Template):

@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import sys
 from functools import partial
+from multiprocessing import cpu_count
 from typing import Any, Mapping
 
-from psutil import Process, cpu_count
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QComboBox, QLabel, QShortcut
@@ -218,10 +218,20 @@ class MainSettings(AbstractToolbarSettings):
 
     @staticmethod
     def get_usable_cpus_count() -> int:
+        from os import getpid
         try:
-            return len(Process().cpu_affinity())
-        except AttributeError:
-            return cpu_count()
+            from win32.win32api import OpenProcess
+            from win32.win32process import GetProcessAffinityMask
+            from win32con import PROCESS_QUERY_LIMITED_INFORMATION
+            proc_mask, _ = GetProcessAffinityMask(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, getpid()))
+            cpus = [i for i in range(64) if (1 << i) & proc_mask]
+            return len(cpus)
+        except Exception:
+            try:
+                from os import sched_getaffinity
+                return len(sched_getaffinity(getpid()))
+            except Exception:
+                return cpu_count()
 
     @property
     def dragnavigator_timeout(self) -> int:

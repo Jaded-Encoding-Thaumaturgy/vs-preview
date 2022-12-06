@@ -220,7 +220,7 @@ class VideoOutput(AbstractYAMLObject):
 
         ctype_pointer = ctypes.POINTER(point_size * stride)
 
-        if width % mod:
+        if width % mod or is_alpha:
             self._curr_pointer = cast(
                 sip.voidptr, ctypes.cast(
                     frame.get_read_ptr(0), ctype_pointer

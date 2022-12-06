@@ -12,7 +12,7 @@ from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow
-from .utils import check_versions, get_temp_screen_resolution
+from .utils import get_temp_screen_resolution
 
 
 class Application(QApplication):
@@ -46,8 +46,6 @@ def main() -> None:
         logging.addLevelName(
             logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR)
         )
-
-    check_versions()
 
     parser = ArgumentParser(prog='VSPreview')
     parser.add_argument(

@@ -91,30 +91,6 @@ def vs_clear_cache() -> None:
     vs.core.max_cache_size = cache_size
 
 
-def check_versions() -> bool:
-    if sys.version_info < (3, 10, 0, 'final', 0):
-        logging.warning(
-            'VSPreview is not tested on Python versions prior to 3.10, but you have {} {}. Use at your own risk.'
-            .format(python_version(), sys.version_info.releaselevel)
-        )
-        return False
-
-    if get_distribution('PyQt5').version < '5.15':
-        logging.warning(
-            'VSPreview is not tested on PyQt5 versions prior to 5.15, but you have {}. Use at your own risk.'
-            .format(get_distribution('PyQt5').version))
-        return False
-
-    if vs.core.version_number() < 59:
-        logging.warning(
-            'VSPreview is not tested on VapourSynth versions prior to 59, but you have {}. Use at your own risk.'
-            .format(vs.core.version_number())
-        )
-        return False
-
-    return True
-
-
 def get_temp_screen_resolution() -> tuple[int, int]:
     app = QApplication(sys.argv)
 

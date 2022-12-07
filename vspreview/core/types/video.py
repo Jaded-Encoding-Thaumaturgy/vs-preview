@@ -156,6 +156,11 @@ class VideoOutput(AbstractYAMLObject):
 
                 self.main.norm_timecodes[index] = norm_timecodes
                 self.play_fps = norm_timecodes[self.last_showed_frame]
+        elif not hasattr(self, 'play_fps'):
+            if self.fps_num == 0 and self._stateset:
+                self.play_fps = self.main.toolbars.playback.get_true_fps(self.props)
+            else:
+                self.play_fps = self.fps_num / self.fps_den
 
         if index in self.main.norm_timecodes:
             norm_timecodes = self.main.norm_timecodes[index]

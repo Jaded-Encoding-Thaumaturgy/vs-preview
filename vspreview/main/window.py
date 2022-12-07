@@ -115,7 +115,7 @@ class MainWindow(AbstractMainWindow):
         self.storage_not_found = False
         self.script_globals = dict[str, Any]()
 
-        self.timecodes = dict[int, str | dict[tuple[int | None, int | None], Fraction] | list[int]]()
+        self.timecodes = dict[int, dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]]()
         self.norm_timecodes = dict[int, list[float]]()
 
         # global
@@ -630,7 +630,7 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
     def update_timecodes_info(
-        self, index: int, timecodes: str | dict[tuple[int | None, int | None], Fraction] | list[int]
+        self, index: int, timecodes: dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
     ) -> None:
         self.timecodes[index] = timecodes
 

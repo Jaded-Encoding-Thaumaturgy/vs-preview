@@ -615,12 +615,19 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.duration_label.setText(f'{output.total_time} ')
         self.statusbar.resolution_label.setText(f'{output.width}x{output.height} ')
         self.statusbar.pixel_format_label.setText(f'{fmt.name} ')
+
+        if output.got_timecodes:
+            times = sorted(set(output.timecodes), reverse=True)
+
+            if len(times) >= 2:
+                return self.statusbar.fps_label.setText(f'VFR {",".join(f"{fps:.3f}" for fps in times)} fps ')
+
         if output.fps_den != 0:
-            self.statusbar.fps_label.setText(
-                '{}/{} = {:.3f} fps '.format(output.fps_num, output.fps_den, output.fps_num / output.fps_den)
+            return self.statusbar.fps_label.setText(
+                f'{output.fps_num}/{output.fps_den} = {output.fps_num / output.fps_den:.3f} fps '
             )
-        else:
-            self.statusbar.fps_label.setText('{}/{} fps '.format(output.fps_num, output.fps_den))
+
+        self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
     def update_timecodes_info(
         self, index: int, timecodes: str | dict[tuple[int | None, int | None], Fraction] | list[int]

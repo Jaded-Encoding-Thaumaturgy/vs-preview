@@ -227,7 +227,7 @@ class MainWindow(AbstractMainWindow):
             pass
 
         try:
-            env = vpy.variables(dict(self.external_args), environment=vs.get_current_environment(), module_name="__main__").result()
+            env = vpy.variables(dict(self.external_args), environment=vs.get_current_environment(), module_name="__vspreview__").result()
             env = vpy.script(script_path, environment=env).result()
 
         except vpy.ExecutionFailed as e:

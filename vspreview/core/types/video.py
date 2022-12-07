@@ -233,6 +233,7 @@ class VideoOutput(AbstractYAMLObject):
             'primaries_in': int(self.main.VS_OUTPUT_PRIMARIES),
             'range_in': int(self.main.VS_OUTPUT_RANGE),
             'chromaloc_in': int(self.main.VS_OUTPUT_CHROMALOC),
+            'dither_type': self.main.toolbars.playback.settings.dither_type
         } | self.main.VS_OUTPUT_RESIZER_KWARGS | heuristics
 
         if clip.format.color_family == vs.RGB:

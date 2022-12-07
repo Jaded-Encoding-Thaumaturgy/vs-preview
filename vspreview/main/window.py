@@ -115,8 +115,11 @@ class MainWindow(AbstractMainWindow):
         self.storage_not_found = False
         self.script_globals = dict[str, Any]()
 
-        self.timecodes = dict[int, dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]]()
+        self.timecodes = dict[int, dict[tuple[int | None, int | None],
+                                        float | tuple[int, int] | Fraction] | list[float]]()
         self.norm_timecodes = dict[int, list[float]]()
+
+        self.user_output_names = {vs.VideoNode: {}, vs.AudioNode: {}, vs.RawNode: {}}
 
         # global
         self.clipboard = self.app.clipboard()
@@ -466,6 +469,8 @@ class MainWindow(AbstractMainWindow):
 
         self.timecodes.clear()
         self.norm_timecodes.clear()
+        for v in self.user_output_names.values():
+            v.clear()
         self.outputs.clear()
         gc.collect(generation=0)
         gc.collect(generation=1)
@@ -634,6 +639,9 @@ class MainWindow(AbstractMainWindow):
         self, index: int, timecodes: dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
     ) -> None:
         self.timecodes[index] = timecodes
+
+    def set_node_name(self, node_type: type, index: int, name: str) -> None:
+        self.user_output_names[node_type][index] = name
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.LayoutRequest:

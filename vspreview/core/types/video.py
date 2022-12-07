@@ -108,7 +108,7 @@ class VideoOutput(AbstractYAMLObject):
         self.total_frames = Frame(self.prepared.clip.num_frames)
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
-        self.title = None
+        self.title = self.main.user_output_names[vs.VideoNode].get(self.index)
         self.props = cast(vs.FrameProps, {})
 
         if self.source.alpha:

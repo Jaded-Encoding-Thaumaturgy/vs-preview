@@ -253,6 +253,9 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_audio()
 
     def play_audio(self) -> None:
+        if not len(self.audio_outputs):
+            return
+
         self.current_audio_output = self.audio_outputs_combobox.currentValue()
 
         self.audio_outputs_combobox.setEnabled(False)

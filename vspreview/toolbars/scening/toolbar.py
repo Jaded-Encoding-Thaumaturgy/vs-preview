@@ -1,24 +1,23 @@
 from __future__ import annotations
 
-import re
 import logging
-from pathlib import Path
+import re
 from copy import deepcopy
 from functools import partial
-from typing import Any, Callable, cast, List, Mapping, Set
+from pathlib import Path
+from typing import Any, Callable, Mapping, cast
 
+from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QModelIndex
-from PyQt5.QtWidgets import QLabel, QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QLabel
 
+from ...core import (
+    AbstractMainWindow, AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load
+)
 from ...core.custom import ComboBox
 from ...main.timeline import Notches
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
-from ...core import (
-    AbstractMainWindow, AbstractToolbar, Frame, Time, HBoxLayout, PushButton, LineEdit, CheckBox, try_load
-)
-
 from .dialog import SceningListDialog
 from .settings import SceningSettings
 
@@ -408,9 +407,14 @@ class SceningToolbar(AbstractToolbar):
         Imports lines as scenes.
         Text is ignored.
         '''
-        import pysubs2
+        try:
+            from pysubs2 import load as pysubs2_load
+        except ModuleNotFoundError:
+            raise RuntimeError(
+                'vspreview: Can\'t import scenes from ass file, you\'re missing the `pysubs2` package!'
+            )
 
-        subs = pysubs2.load(str(path))
+        subs = pysubs2_load(str(path))
         for line in subs:
             t_start = Time(milliseconds=line.start)
             t_end = Time(milliseconds=line.end)
@@ -435,7 +439,12 @@ class SceningToolbar(AbstractToolbar):
         Imports tracks as scenes.
         Uses TITLE for scene label.
         '''
-        from cueparser import CueSheet
+        try:
+            from cueparser import CueSheet
+        except ModuleNotFoundError:
+            raise RuntimeError(
+                'vspreview: Can\'t import scenes from cue file, you\'re missing the `cueparser` package!'
+            )
 
         def offset_to_time(offset: str) -> Time | None:
             pattern = re.compile(r'(\d{1,2}):(\d{1,2}):(\d{1,2})')
@@ -621,7 +630,7 @@ class SceningToolbar(AbstractToolbar):
         Imports intervals of constant FPS as scenes.
         Uses FPS for scene label.
         '''
-        timestamps: List[Time] = []
+        timestamps = list[Time]()
         for line in path.read_text().splitlines():
             try:
                 timestamps.append(Time(milliseconds=float(line)))
@@ -717,7 +726,7 @@ class SceningToolbar(AbstractToolbar):
             return
         log = log[start_pos:]
 
-        tfm_frames: Set[TFMFrame] = set()
+        tfm_frames = set[TFMFrame]()
         for match in tfm_frame_pattern.finditer(log):
             tfm_frame = TFMFrame(int(match[1]))
             tfm_frame.mic = int(match[2])
@@ -743,11 +752,30 @@ class SceningToolbar(AbstractToolbar):
         Imports bookmarks as single-frame scenes
         '''
 
+        frames = []
+
         for bookmark in path.read_text().split(', '):
             try:
-                scening_list.add(Frame(int(bookmark)))
+                frames.append(int(bookmark))
             except ValueError:
                 out_of_range_count += 1
+
+        ranges = list[list[int]]()
+        prev_x: int
+        for x in frames:
+            if not ranges:
+                ranges.append([x])
+            elif x - prev_x == 1:
+                ranges[-1].append(x)
+            else:
+                ranges.append([x])
+            prev_x = int(x)
+
+        for rang in ranges:
+            scening_list.add(
+                Frame(rang[0]),
+                Frame(rang[-1]) if len(rang) > 1 else None
+            )
 
     def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
@@ -771,11 +799,11 @@ class SceningToolbar(AbstractToolbar):
                 scening_list.add(Frame(i - 3))
             except ValueError:
                 out_of_range_count += 1
-                
+
     def import_generic(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
         Import generic (rfs style) frame mappings: {start end}
-        
+
         '''
         for line in path.read_text().splitlines():
             try:

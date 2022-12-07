@@ -3,15 +3,15 @@ from __future__ import annotations
 import ctypes
 from math import ceil, floor, log
 from struct import unpack
-from typing import Generator, Tuple, cast
+from typing import Generator, cast
 from weakref import WeakKeyDictionary
 
-import vapoursynth as vs
 from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtGui import QFont, QMouseEvent
 from PyQt5.QtWidgets import QGraphicsView, QLabel
+from vstools import vs
 
-from ...core import AbstractMainWindow, AbstractToolbar, VideoOutput, PushButton
+from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
 from .colorview import ColorView
 from .settings import PipetteSettings
 
@@ -49,8 +49,8 @@ class PipetteToolbar(AbstractToolbar):
         self.pos_fmt = self.src_hex_fmt = self.src_dec_fmt = self.src_norm_fmt = ''
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
-        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, Tuple[int, vs.VideoNode]]()
-        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, Tuple[int, vs.VideoNode]]()
+        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
+        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
         self._mouse_is_subscribed = False
 
         main.reload_signal.connect(self.clear_outputs)
@@ -229,7 +229,7 @@ class PipetteToolbar(AbstractToolbar):
             self.src_dec_fmt = ('{: 0.5f},' * src_num_planes)[:-1]
         self.src_norm_fmt = ('{:0.5f},' * src_num_planes)[:-1]
 
-        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))  # type: ignore
+        self.update_labels(self.main.graphics_view.mapFromGlobal(self.main.cursor().pos()))
 
     def on_copy_position_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.position.text().strip())
@@ -262,7 +262,7 @@ class PipetteToolbar(AbstractToolbar):
         for plane in range(fmt.num_planes):
             stride = vs_frame.get_stride(plane)
             pointer = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
+                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
             ))
 
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:

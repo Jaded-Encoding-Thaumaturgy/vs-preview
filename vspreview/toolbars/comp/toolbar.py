@@ -3,17 +3,17 @@ from __future__ import annotations
 import logging
 import os
 import random
+import re
 import shutil
 import string
+import unicodedata
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Dict, Final, List, NamedTuple, Optional, Set, cast
+from typing import Any, Callable, Final, NamedTuple, cast
 
-import vapoursynth as vs
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QLabel
-from requests import Session
-from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
@@ -25,8 +25,52 @@ from .settings import CompSettings
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def select_frames(clip: vs.VideoNode, indices: List[int]) -> vs.VideoNode:
+def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
     return clip.std.BlankClip(length=len(indices)).std.FrameEval(lambda n: clip[indices[n]])
+
+
+def clear_filename(filename: str) -> str:
+    blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']
+    reserved = [
+        'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
+        'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5',
+        'LPT6', 'LPT7', 'LPT8', 'LPT9',
+    ]
+
+    filename = ''.join(c for c in filename if c not in blacklist)
+
+    # Remove all charcters below code point 32
+    filename = ''.join(c for c in filename if 31 < ord(c))
+    filename = unicodedata.normalize('NFKD', filename).rstrip('. ').strip()
+
+    if all([x == '.' for x in filename]):
+        filename = '__' + filename
+
+    if filename in reserved:
+        filename = '__' + filename
+
+    if len(filename) > 255:
+        parts = re.split(r'/|\\', filename)[-1].split('.')
+
+        if len(parts) > 1:
+            ext = '.' + parts.pop()
+            filename = filename[:-len(ext)]
+        else:
+            ext = ''
+        if filename == '':
+            filename = '__'
+
+        if len(ext) > 254:
+            ext = ext[254:]
+
+        maxl = 255 - len(ext)
+        filename = filename[:maxl]
+        filename = filename + ext
+
+        # Re-check last character (if there was no extension)
+        filename = filename.rstrip('. ')
+
+    return filename
 
 
 class WorkerConfiguration(NamedTuple):
@@ -35,8 +79,8 @@ class WorkerConfiguration(NamedTuple):
     public: bool
     nsfw: bool
     optimise: bool
-    remove_after: Optional[int]
-    frames: List[int]
+    remove_after: int | None
+    frames: list[int]
     compression: int
     path: Path
     main: AbstractMainWindow
@@ -60,7 +104,16 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        all_images: List[List[Path]] = []
+        try:
+            from requests import Session
+            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                'You are missing `requests` and `requests` toolbelt!\n'
+                'Install them with "pip install requests requests_toolbelt"!'
+            )
+
+        all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
         try:
@@ -100,7 +153,7 @@ class Worker(QObject):
         except StopIteration:
             return self.finished.emit()
 
-        fields: Dict[str, Any] = {}
+        fields = dict[str, Any]()
 
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -157,7 +210,18 @@ class Worker(QObject):
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)
 
-        self.progress_status.emit(f'https://slow.pics/c/{response.text}', 0, 0)
+        url = f'https://slow.pics/c/{response.text}'
+
+        self.progress_status.emit(url, 0, 0)
+
+        url_out = (
+            conf.path.parent / 'Old Comps'
+            / clear_filename(f'{conf.collection_name} - {response.text}')
+        ).with_suffix('.url')
+        url_out.parent.mkdir(parents=True, exist_ok=True)
+        url_out.touch(exist_ok=True)
+        url_out.write_text(f'[InternetShortcut]\nURL={url}')
+
         self.finished.emit()
 
 
@@ -288,16 +352,16 @@ class CompToolbar(AbstractToolbar):
 
         self.upload_status_label.setText(f'{message}{moreinfo}...')
 
-    def _rand_num_frames(self, checked: Set[int], rand_func: Callable[[], int]) -> int:
+    def _rand_num_frames(self, checked: set[int], rand_func: Callable[[], int]) -> int:
         rnum = rand_func()
         while rnum in checked:
             rnum = rand_func()
         return rnum
 
-    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> List[int]:
-        samples: Set[int] = set()
+    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
+        samples = set[int]()
         _max_attempts = 0
-        _rnum_checked: Set[int] = set()
+        _rnum_checked = set[int]()
         while len(samples) < k:
             _attempts = 0
             while True:
@@ -337,9 +401,9 @@ class CompToolbar(AbstractToolbar):
     def get_slowpics_conf(self) -> WorkerConfiguration:
         self.update_upload_status_visibility(True)
 
-        clips: Dict[str, vs.VideoNode]
+        clips: dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
-        frames: List[int] = list(
+        frames = list[int](
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
         picture_type = self.pic_type_combox.currentData()
@@ -382,10 +446,27 @@ class CompToolbar(AbstractToolbar):
             script_name=self.main.script_path.stem
         )
 
+        sample_frames = list(sorted(set(samples)))
+
+        check_frame = sample_frames and sample_frames[0] or 0
+
+        filtered_outputs = []
+
+        for output in self.main.outputs:
+            props = output.props
+
+            if not props:
+                props = output.source.clip.get_frame(check_frame).props
+
+            if '_VSPDisableComp' in props and props._DisableComp == 1:
+                continue
+
+            filtered_outputs.append(output)
+
         return WorkerConfiguration(
-            self.main.outputs, collection_name,
+            filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, None, sorted(set(samples)), -1, path, self.main, self.settings.delete_cache_enabled
+            True, None, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled
         )
 
     def upload_to_slowpics(self) -> bool:

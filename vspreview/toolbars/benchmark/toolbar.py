@@ -4,11 +4,10 @@ from collections import deque
 from concurrent.futures import Future
 from copy import deepcopy
 from time import perf_counter
-from typing import Deque
 
-import vapoursynth as vs
 from PyQt5.QtCore import QMetaObject, Qt
 from PyQt5.QtWidgets import QLabel
+from vstools import vs
 
 from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
 from ...core.custom import FrameEdit
@@ -34,7 +33,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.running = False
         self.unsequenced = False
-        self.buffer: Deque[Future[vs.VideoFrame]] = deque()
+        self.buffer = deque[Future[vs.VideoFrame]]()
         self.run_start_time = 0.0
         self.start_frame = Frame(0)
         self.end_frame = Frame(0)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Type
+from typing import Any
 
 from PyQt5.QtCore import QTime, pyqtSignal
 from PyQt5.QtWidgets import QTimeEdit, QWidget
@@ -18,7 +18,7 @@ def to_qtime(time: Time) -> QTime:
     return QTime(hours, minutes, seconds, milliseconds)
 
 
-def from_qtime(qtime: QTime, t: Type[Time]) -> Time:
+def from_qtime(qtime: QTime, t: type[Time]) -> Time:
     return t(milliseconds=qtime.msecsSinceStartOfDay())
 
 

@@ -1,34 +1,29 @@
 from __future__ import annotations
 
 import ctypes
+from fractions import Fraction
 import itertools
-import logging
 import os
-import sys
-from typing import Any, List, Mapping, cast
+from typing import Any, Mapping, cast
 
-import numpy as np
-import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColorSpace, QImage, QPixmap, QPainter
+from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
+from vstools import core, video_heuristics, vs, fallback, FramesLengthError
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
-from ..vsenv import __name__ as _venv  # noqa: F401
-from .dataclasses import CroppingInfo, NumpyVideoPHelp, VideoOutputNode
+from .dataclasses import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 
-core = vs.core
 
-
-class PackingTypeInfo():
+class PackingTypeInfo:
     _getid = itertools.count()
 
     def __init__(
         self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool
     ):
         self.id = next(self._getid)
-        self.vs_format = core.get_format(vs_format)
+        self.vs_format = core.get_video_format(vs_format)
         self.qt_format = qt_format
         self.shuffle = shuffle
 
@@ -41,38 +36,21 @@ class PackingTypeInfo():
         return int(self.id)
 
 
-_iled = (sys.byteorder == 'little')
-_default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
-
-
 class PackingType(PackingTypeInfo):
     libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
     libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
     akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_BGR30, True)
     akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
-    numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
-    numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
-    NONE_numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
-    NONE_numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_RGB30, False)
 
 
-# From fastest to slowest
-if hasattr(core, 'libp2p'):
-    PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
-elif hasattr(core, 'akarin'):
-    PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
-else:
-    logging.warning(Warning(
-        "\n\tLibP2P and Akarin plugin are missing, they're recommended to prepare output clips correctly!\n"
+if not hasattr(core, 'akarin') and not hasattr(core, 'libp2p'):
+    raise ImportError(
+        "\n\tLibP2P and Akarin plugin are missing, one is required to prepare output clips correctly!\n"
         "\t  You can get them here: \n"
         "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
-    ))
+    )
 
-    # temp forced defaults until I have all the settings sorted out
-    if _default_10bits:
-        PACKING_TYPE = PackingType.NONE_numpy_10bit if True else PackingType.numpy_10bit
-    else:
-        PACKING_TYPE = PackingType.NONE_numpy_8bit if True else PackingType.numpy_8bit
+PACKING_TYPE: PackingType = None  # type: ignore
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -95,17 +73,22 @@ class VideoOutput(AbstractYAMLObject):
     _stateset: bool
 
     def clear(self) -> None:
-        self.source = self.prepared = None  # type: ignore
+        self.source = self.prepared = None
 
-    def __init__(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
+    def __init__(
+        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
+    ) -> None:
         self.setValue(vs_output, index, new_storage)
 
-    def setValue(self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False) -> None:
+    def setValue(
+        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
+    ) -> None:
         from ..custom import GraphicsImageItem
 
         self._stateset = not new_storage
 
         self.main = main_window()
+        self.set_fmt_values()
 
         # runtime attributes
         self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
@@ -123,10 +106,9 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
-        self.title = None
+        self.title = self.main.user_output_names[vs.VideoNode].get(self.index)
         self.props = cast(vs.FrameProps, {})
 
         if self.source.alpha:
@@ -137,16 +119,88 @@ class VideoOutput(AbstractYAMLObject):
 
         self.graphics_scene_item: GraphicsImageItem
 
-        if not hasattr(self, 'play_fps'):
+        timecodes = index in self.main.timecodes and self.main.timecodes[index]
+
+        if timecodes:
+            if self.fps_num == 0:
+                try:
+                    play_fps = self.main.toolbars.playback.get_true_fps(0, self.props, True)
+                except Exception:
+                    if isinstance(timecodes, list):
+                        play_fps = timecodes[self.last_showed_frame]
+                    else:
+                        play_fps = 24000 / 1001
+            else:
+                play_fps = self.fps_num / self.fps_den
+
+            self.play_fps = play_fps
+
+            norm_timecodes = [play_fps] * (self.source.clip.num_frames + 1)
+
+            if timecodes:
+                if isinstance(timecodes, dict):
+                    for (start, end), fps in timecodes.items():
+                        start = max(fallback(start, 0), 0)
+                        end = min(fallback(end, self.source.clip.num_frames), self.source.clip.num_frames)
+
+                        norm_timecodes[start:end + 1] = [
+                            float(fps if isinstance(fps, Fraction) else Fraction(*fps))
+                        ] * (end - start)
+                else:
+                    norm_timecodes = timecodes.copy()
+
+                if len(norm_timecodes) != self.source.clip.num_frames:
+                    raise FramesLengthError(
+                        'Timecodes', '', "The timecodes file's length mismatches with the clip's length!"
+                    )
+
+                self.main.norm_timecodes[index] = norm_timecodes
+                self.play_fps = norm_timecodes[self.last_showed_frame]
+        elif not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
                 self.play_fps = self.main.toolbars.playback.get_true_fps(self.props)
-                if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
-                    self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
             else:
                 self.play_fps = self.fps_num / self.fps_den
 
+        if index in self.main.norm_timecodes:
+            norm_timecodes = self.main.norm_timecodes[index]
+
+            if (vfr := len(set(norm_timecodes)) > 1) or self.fps_num == 0:
+                if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
+                    self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
+
+            self.got_timecodes = vfr
+            self.timecodes = norm_timecodes
+        else:
+            self.got_timecodes = False
+
+        if self.got_timecodes:
+            self.total_time = Time(seconds=sum(1 / fps for fps in self.timecodes))
+        else:
+            self.total_time = self.to_time(self.total_frames - Frame(1))
+
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
+
+    def set_fmt_values(self) -> None:
+        global PACKING_TYPE
+
+        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
+
+        # From fastest to slowest
+        if hasattr(core, 'akarin'):
+            PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
+        elif hasattr(core, 'libp2p'):
+            PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+
+        self._NORML_FMT = PACKING_TYPE.vs_format
+        self._ALPHA_FMT = core.get_video_format(vs.GRAY8)
+
+        nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
+        self._FRAME_CONV_INFO = {
+            False: (nbps, ctypes.c_char * nbps, PACKING_TYPE.qt_format),
+            True: (abps, ctypes.c_char * abps, QImage.Format_Alpha8)
+        }
 
     @property
     def name(self) -> str:
@@ -163,18 +217,7 @@ class VideoOutput(AbstractYAMLObject):
     def name(self, newname: str) -> None:
         self.title = newname
 
-    _NORML_FMT = PACKING_TYPE.vs_format
-    _ALPHA_FMT = core.get_format(vs.GRAY8)
-    _FRAME_CONV_INFO = {
-        False: (_NORML_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, PACKING_TYPE.qt_format),
-        True: (_ALPHA_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, QImage.Format_Alpha8)
-    }
-
-    _curr_pointers = NumpyVideoPHelp()
-
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
-        from ...utils.utils import video_heuristics
-
         assert clip.format
 
         is_subsampled = (clip.format.subsampling_w != 0 or clip.format.subsampling_h != 0)
@@ -185,15 +228,15 @@ class VideoOutput(AbstractYAMLObject):
 
         resizer_kwargs = {
             'format': self._NORML_FMT.id,
-            'matrix_in_s': self.main.VS_OUTPUT_MATRIX,
-            'transfer_in_s': self.main.VS_OUTPUT_TRANSFER,
-            'primaries_in_s': self.main.VS_OUTPUT_PRIMARIES,
-            'range_in_s': self.main.VS_OUTPUT_RANGE,
-            'chromaloc_in_s': self.main.VS_OUTPUT_CHROMALOC,
+            'matrix_in': int(self.main.VS_OUTPUT_MATRIX),
+            'transfer_in': int(self.main.VS_OUTPUT_TRANSFER),
+            'primaries_in': int(self.main.VS_OUTPUT_PRIMARIES),
+            'range_in': int(self.main.VS_OUTPUT_RANGE),
+            'chromaloc_in': int(self.main.VS_OUTPUT_CHROMALOC),
         } | self.main.VS_OUTPUT_RESIZER_KWARGS | heuristics
 
         if clip.format.color_family == vs.RGB:
-            del resizer_kwargs['matrix_in_s']
+            del resizer_kwargs['matrix_in']
         elif clip.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
 
@@ -229,29 +272,6 @@ class VideoOutput(AbstractYAMLObject):
                 'y s@ 0x400 * * + z s@ * + 0xc0000000 +', vs.GRAY32, True
             )
 
-        if PACKING_TYPE in {PackingType.numpy_8bit, PackingType.numpy_10bit}:
-
-            bits = PACKING_TYPE.vs_format.bits_per_sample
-
-            def _numpack(n: int, f: List[vs.VideoFrame]) -> vs.VideoFrame:
-                dst_frame = f[1].copy()
-
-                rgb_data = np.asarray(f[0], np.uint32)
-
-                packed = np.einsum(
-                    'kji,k->ji', rgb_data, np.array(
-                        [2 ** (bits * 2), 2 ** bits, 1], np.uint32
-                    ), optimize='greedy'
-                )
-
-                np.copyto(np.asarray(dst_frame[0]), packed)
-
-                return dst_frame
-
-            contiguous_clip = core.std.BlankClip(clip, format=vs.GRAY32)
-
-            return contiguous_clip.std.ModifyFrame([clip, contiguous_clip], _numpack)
-
         return clip
 
     def frame_to_qimage(self, frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
@@ -260,51 +280,20 @@ class VideoOutput(AbstractYAMLObject):
 
         stride = frame.get_stride(0)
         memory_bug_fix = False
-        ctype_pointer = ctypes.POINTER(point_size * stride)
-
-        if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
-            if not self._curr_pointers.data:
-                bytesps = PACKING_TYPE.vs_format.bytes_per_sample
-                self._curr_pointers.data = np.empty(
-                    (height, width * 4 // bytesps), dtype=[np.uint8, np.uint16][bytesps - 1]
-                )
-                self._curr_pointers.stride = self._curr_pointers.data.ctypes.strides[0]
-
-            stride = self._curr_pointers.stride
 
         ctype_pointer = ctypes.POINTER(point_size * stride)
 
-        if PACKING_TYPE in {PackingType.NONE_numpy_8bit, PackingType.NONE_numpy_10bit}:
-            if PACKING_TYPE.vs_format.bits_per_sample == 8:
-                for i in range(1, 4):
-                    self._curr_pointers.data[:, (3 - i) if _iled else i::4] = np.ctypeslib.as_array(frame[i - 1])
-            else:
-                rPlane = np.ctypeslib.as_array(frame[0]).view(np.uint16)
-                gPlane = np.ctypeslib.as_array(frame[1]).view(np.uint16)
-                bPlane = np.ctypeslib.as_array(frame[2]).view(np.uint16)
-
-                if _iled:
-                    self._curr_pointers.data[:, 1::2] = 0xc000 | ((rPlane & 0x3ff) << 4) | ((gPlane & 0x3ff) >> 6)
-                    self._curr_pointers.data[:, 0::2] = ((gPlane & 0x3ff) << 10) | (bPlane & 0x3ff)
-                else:
-                    self._curr_pointers.data[:, 0::2] = ((bPlane & 0x3ff) << 6) | ((gPlane & 0x3ff) >> 4)
-                    self._curr_pointers.data[:, 1::2] = 0x0003 | ((rPlane & 0x3ff) << 2) | ((gPlane & 0x3ff) << 12)
-
-            self._curr_pointers.pointer = cast(
-                sip.voidptr, self._curr_pointers.data.ctypes.data_as(ctype_pointer).contents
+        if width % mod or is_alpha:
+            self._curr_pointer = cast(
+                sip.voidptr, ctypes.cast(
+                    frame.get_read_ptr(0), ctype_pointer
+                ).contents
             )
+            memory_bug_fix = True
         else:
-            if width % mod:
-                self._curr_pointers.pointer = cast(
-                    sip.voidptr, ctypes.cast(
-                        frame.get_read_ptr(0), ctype_pointer
-                    ).contents
-                )
-                memory_bug_fix = True
-            else:
-                self._curr_pointers.pointer = cast(sip.voidptr, frame[0])
+            self._curr_pointer = cast(sip.voidptr, frame[0])
 
-        image = QImage(self._curr_pointers.pointer, width, height, stride, qt_format)
+        image = QImage(self._curr_pointer, width, height, stride, qt_format)
 
         return image.copy() if memory_bug_fix else image
 

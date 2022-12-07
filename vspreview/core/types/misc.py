@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
 
 
 class PictureType(bytes, Enum):
@@ -17,5 +16,5 @@ class PictureType(bytes, Enum):
         return self.decode('utf-8') + ' Frames'
 
     @classmethod
-    def list(cls) -> List[PictureType]:
+    def list(cls) -> list[PictureType]:
         return [PictureType(e.value) for e in cls]

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterator, List, Mapping, OrderedDict, Type, TypeVar, cast
+from typing import Any, Generic, Iterator, Mapping, OrderedDict, TypeVar, cast
 
-import vapoursynth as vs
-from vsdfft import FFTSpectrum
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
+from vstools import vs
 
 from .viewmodes import getnative_graph
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
@@ -13,8 +12,8 @@ T = TypeVar('T', VideoOutput, AudioOutput)
 
 
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
-    out_type: Type[T]
-    _items: List[T]
+    out_type: type[T]
+    _items: list[T]
 
     __slots__ = ('items')
 
@@ -23,7 +22,8 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
     def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
-        self.items: List[T] = []
+        self.items = list[T]()
+        self.main = main
 
         local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
 
@@ -97,7 +97,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         if not index.isValid():
             return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
 
-        return super().flags(index) | Qt.ItemIsEditable  # type: ignore
+        return super().flags(index) | Qt.ItemIsEditable
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
         if not index.isValid():
@@ -134,8 +134,8 @@ class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
 
-    _fft_spectr_items: List[VideoOutput] = []
-    _descaling_help_items: List[VideoOutput] = []
+    _fft_spectr_items = list[VideoOutput]()
+    _descaling_help_items = list[VideoOutput]()
 
     def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
         new.last_showed_frame = old.last_showed_frame
@@ -144,7 +144,7 @@ class VideoOutputs(Outputs[VideoOutput]):
     def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
         new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
 
-        new_output = VideoOutput(new_videonode, old_output.index)
+        new_output = VideoOutput(new_videonode, old_output.index, False, old_output.timecodes)
 
         self.copy_output_props(new_output, old_output)
 
@@ -157,6 +157,13 @@ class VideoOutputs(Outputs[VideoOutput]):
         self.items = list(self._items)
 
     def switchToFFTSpectrumView(self, force_cache: bool = False) -> None:
+        try:
+            from vsdfft import FFTSpectrum
+        except ModuleNotFoundError:
+            raise RuntimeError(
+                'vspreview: You can\'t chage to this view mode. You\'re missing the `vsdfft` package!'
+            )
+
         if not self._fft_spectr_items or force_cache:
             max_width = max(*(x.width for x in self._items), 140)
             max_height = max(*(x.height for x in self._items), 140)

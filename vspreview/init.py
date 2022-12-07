@@ -6,18 +6,13 @@ import os
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, List, Literal, cast
+from typing import Literal, cast
 
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import QApplication
 
-# import vsenv as early as possible:
-# This is so other modules cannot accidentally use and lock us into a different policy.
-from .core.vsenv import get_policy
 from .main import MainSettings, MainWindow
-from .utils import check_versions, get_temp_screen_resolution
-
-get_policy()
+from .utils import get_temp_screen_resolution
 
 
 class Application(QApplication):
@@ -52,8 +47,6 @@ def main() -> None:
             logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR)
         )
 
-    check_versions()
-
     parser = ArgumentParser(prog='VSPreview')
     parser.add_argument(
         'script_path', help='Path to Vapoursynth script', type=Path, nargs='?'
@@ -67,6 +60,7 @@ def main() -> None:
     parser.add_argument(
         '--arg', '-a', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
     )
+    parser.add_argument('-f', '--frame', type=int, help='Frame to load initially (defaults to 0)')
     parser.add_argument(
         '--vscode-setup', type=str, choices=['override', 'append', 'ignore'], nargs='?', const='append',
         help='Installs launch settings in cwd\'s .vscode'
@@ -98,7 +92,9 @@ def main() -> None:
 
     app = Application(sys.argv)
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
-    main_window.load_script(script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False)
+    main_window.load_script(
+        script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False, args.frame or None
+    )
     main_window.show()
 
     app.exec_()
@@ -161,11 +157,11 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore']) -> None
         current_settings['configurations'] = settings['configurations']
         return _write()
 
-    cast(List, current_settings['configurations']).extend(settings['configurations'])
+    cast(list, current_settings['configurations']).extend(settings['configurations'])
 
     current_settings['configurations'] = list({
         ':'.join(str(row[column]) for column in row.keys()): row
-        for row in cast(List[Dict[str, str]], current_settings['configurations'])
+        for row in cast(list[dict[str, str]], current_settings['configurations'])
     }.values())
 
     return _write()

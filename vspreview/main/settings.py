@@ -3,14 +3,15 @@ from __future__ import annotations
 import logging
 import sys
 from functools import partial
-from typing import Any, List, Mapping
+from multiprocessing import cpu_count
+from typing import Any, Mapping
 
-from psutil import Process, cpu_count
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QComboBox, QLabel, QShortcut
 
 from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
+from ..core.bases import QYAMLObjectSingleton
 from ..core.custom import ComboBox, TimeEdit
 from ..models import GeneralModel
 from ..utils import main_window
@@ -81,7 +82,7 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Default output index'), self.output_index_spinbox])
 
-        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 - max)'), self.png_compressing_spinbox])
+        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 for max)'), self.png_compressing_spinbox])
 
         HBoxLayout(self.vlayout, [QLabel('Status bar message timeout'), self.statusbar_timeout_control])
 
@@ -173,14 +174,14 @@ class MainSettings(AbstractToolbarSettings):
         return self.usable_cpus_spinbox.value()
 
     @property
-    def zoom_levels(self) -> List[float]:
+    def zoom_levels(self) -> list[float]:
         return [
             int(self.zoom_levels_combobox.itemText(i)) / 100
             for i in range(self.zoom_levels_combobox.count())
         ]
 
     @zoom_levels.setter
-    def zoom_levels(self, new_levels: List[int]) -> None:
+    def zoom_levels(self, new_levels: list[int]) -> None:
         new_levels = sorted(set(map(int, new_levels)))
 
         if len(new_levels) < 3:
@@ -217,10 +218,20 @@ class MainSettings(AbstractToolbarSettings):
 
     @staticmethod
     def get_usable_cpus_count() -> int:
+        from os import getpid
         try:
-            return len(Process().cpu_affinity())
-        except AttributeError:
-            return cpu_count()
+            from win32.win32api import OpenProcess
+            from win32.win32process import GetProcessAffinityMask
+            from win32con import PROCESS_QUERY_LIMITED_INFORMATION
+            proc_mask, _ = GetProcessAffinityMask(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, getpid()))
+            cpus = [i for i in range(64) if (1 << i) & proc_mask]
+            return len(cpus)
+        except Exception:
+            try:
+                from os import sched_getaffinity
+                return len(sched_getaffinity(getpid()))
+            except Exception:
+                return cpu_count()
 
     @property
     def dragnavigator_timeout(self) -> int:
@@ -292,7 +303,32 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'statusbar_message_timeout', Time, self.statusbar_timeout_control.setValue)
         try_load(state, 'timeline_label_notches_margin', int, self.timeline_notches_margin_spinbox.setValue)
         try_load(state, 'force_old_storages_removal', bool, self.force_old_storages_removal_checkbox.setChecked)
-        try_load(state, 'zoom_levels', List, self)
+        try_load(state, 'zoom_levels', list, self)
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
         try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
+
+
+class WindowSettings(QYAMLObjectSingleton):
+    __slots__ = (
+        'timeline_mode', 'window_geometry', 'window_state'
+    )
+
+    def __init__(self, timeline_mode: str, window_geometry: bytes, window_state: bytes) -> None:
+        self.timeline_mode = timeline_mode
+        self.window_geometry = window_geometry
+        self.window_state = window_state
+
+        super().__init__()
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return {
+            'timeline_mode': self.timeline_mode,
+            'window_geometry': self.window_geometry,
+            'window_state': self.window_state
+        }
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        try_load(state, 'timeline_mode', str, self.__setattr__)
+        try_load(state, 'window_geometry', bytes, self.__setattr__)
+        try_load(state, 'window_state', bytes, self.__setattr__)

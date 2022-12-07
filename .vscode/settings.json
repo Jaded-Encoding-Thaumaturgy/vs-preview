@@ -13,9 +13,11 @@
         "*.pyi": "python"
     },
     "files.encoding": "utf8",
-    "python.linting.pycodestylePath": "pycodestyle",
-    "python.linting.pycodestyleEnabled": true,
-    "python.linting.pycodestyleArgs": [
-        "--config=.pycodestyle"
-    ]
-}
+    "python.formatting.autopep8Args": ["--max-line-length=120", "--experimental", "--aggressive", "--indent-size=4"],
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": ["--max-line-length=120", "--ignore=None"],
+    "python.linting.pydocstyleArgs": ["--ignore=None"],
+    "python.analysis.memory.keepLibraryAst": true,
+    "python.formatting.provider": "autopep8"
+  }
+  

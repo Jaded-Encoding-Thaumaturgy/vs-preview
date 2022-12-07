@@ -1,4 +1,5 @@
 from __future__ import annotations
+from fractions import Fraction
 
 import gc
 import io
@@ -113,6 +114,9 @@ class MainWindow(AbstractMainWindow):
         self.setup_ui()
         self.storage_not_found = False
         self.script_globals = dict[str, Any]()
+
+        self.timecodes = dict[int, dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]]()
+        self.norm_timecodes = dict[int, list[float]]()
 
         # global
         self.clipboard = self.app.clipboard()
@@ -460,6 +464,8 @@ class MainWindow(AbstractMainWindow):
         vs.clear_outputs()
         self.graphics_scene.clear()
 
+        self.timecodes.clear()
+        self.norm_timecodes.clear()
         self.outputs.clear()
         gc.collect(generation=0)
         gc.collect(generation=1)
@@ -610,12 +616,24 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.duration_label.setText(f'{output.total_time} ')
         self.statusbar.resolution_label.setText(f'{output.width}x{output.height} ')
         self.statusbar.pixel_format_label.setText(f'{fmt.name} ')
+
+        if output.got_timecodes:
+            times = sorted(set(output.timecodes), reverse=True)
+
+            if len(times) >= 2:
+                return self.statusbar.fps_label.setText(f'VFR {",".join(f"{fps:.3f}" for fps in times)} fps ')
+
         if output.fps_den != 0:
-            self.statusbar.fps_label.setText(
-                '{}/{} = {:.3f} fps '.format(output.fps_num, output.fps_den, output.fps_num / output.fps_den)
+            return self.statusbar.fps_label.setText(
+                f'{output.fps_num}/{output.fps_den} = {output.fps_num / output.fps_den:.3f} fps '
             )
-        else:
-            self.statusbar.fps_label.setText('{}/{} fps '.format(output.fps_num, output.fps_den))
+
+        self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
+
+    def update_timecodes_info(
+        self, index: int, timecodes: dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
+    ) -> None:
+        self.timecodes[index] = timecodes
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.LayoutRequest:

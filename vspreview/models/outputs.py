@@ -22,6 +22,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
         self.items = list[T]()
+        self.main = main
 
         local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
 
@@ -141,7 +142,7 @@ class VideoOutputs(Outputs[VideoOutput]):
     def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
         new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
 
-        new_output = VideoOutput(new_videonode, old_output.index)
+        new_output = VideoOutput(new_videonode, old_output.index, False, old_output.timecodes)
 
         self.copy_output_props(new_output, old_output)
 

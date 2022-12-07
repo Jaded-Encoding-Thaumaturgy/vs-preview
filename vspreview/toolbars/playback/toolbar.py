@@ -181,7 +181,10 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs = outputs or AudioOutputs(self.main)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-    def get_true_fps(self, frameprops: vs.FrameProps) -> float:
+    def get_true_fps(self, n: int, frameprops: vs.FrameProps, force: bool = False) -> float:
+        if self.main.current_output.got_timecodes and not force:
+            return self.main.current_output.timecodes[n]
+
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(
                 'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
@@ -241,7 +244,7 @@ class PlaybackToolbar(AbstractToolbar):
                 self.fps_timer.start(self.settings.FPS_REFRESH_INTERVAL)
         else:
             if self.fps_variable_checkbox.isChecked() and self.main.current_output._stateset:
-                fps = self.get_true_fps(self.main.current_output.props)
+                fps = self.get_true_fps(self.last_frame, self.main.current_output.props)
             else:
                 fps = self.main.current_output.play_fps
 
@@ -316,7 +319,7 @@ class PlaybackToolbar(AbstractToolbar):
         curr_frame = Frame(frames_futures[0][0])
 
         if self.fps_variable_checkbox.isChecked():
-            self.current_fps = self.get_true_fps(frames_futures[0][1].props)
+            self.current_fps = self.get_true_fps(curr_frame.value, frames_futures[0][1].props)
             self.play_timer.start(floor(1000 / self.current_fps))
             self.fps_spinbox.setValue(self.current_fps)
         elif not self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:

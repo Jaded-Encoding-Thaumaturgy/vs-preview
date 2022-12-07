@@ -30,7 +30,7 @@ class MainToolbar(AbstractToolbar):
 
         self.outputs: VideoOutputs = []
 
-        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
+        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))  # type: ignore
         self.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
 
         self.add_shortcuts()

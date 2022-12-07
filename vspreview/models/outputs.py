@@ -22,6 +22,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
         self.items = list[T]()
+        self.main = main
 
         local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
 
@@ -39,7 +40,10 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
                 output = local_storage[str(i)]
                 output.setValue(vs_output, i, newstorage)
             except KeyError:
-                output = self.out_type(vs_output, i, newstorage)
+                if self.out_type is VideoOutput and i in self.main.timecodes:
+                    output = self.out_type(vs_output, i, newstorage, self.main.timecodes[i])
+                else:
+                    output = self.out_type(vs_output, i, newstorage)
 
             self.items.append(output)
 

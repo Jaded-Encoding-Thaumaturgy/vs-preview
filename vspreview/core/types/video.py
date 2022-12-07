@@ -15,7 +15,7 @@ from .dataclasses import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 
 
-class PackingTypeInfo():
+class PackingTypeInfo:
     _getid = itertools.count()
 
     def __init__(
@@ -35,9 +35,6 @@ class PackingTypeInfo():
         return int(self.id)
 
 
-_default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
-
-
 class PackingType(PackingTypeInfo):
     libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
     libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
@@ -45,17 +42,14 @@ class PackingType(PackingTypeInfo):
     akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
 
 
-# From fastest to slowest
-if hasattr(core, 'akarin'):
-    PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
-elif hasattr(core, 'libp2p'):
-    PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
-else:
+if not hasattr(core, 'akarin') and not hasattr(core, 'libp2p'):
     raise ImportError(
         "\n\tLibP2P and Akarin plugin are missing, one is required to prepare output clips correctly!\n"
         "\t  You can get them here: \n"
         "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
     )
+
+PACKING_TYPE: PackingType = None  # type: ignore
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -89,6 +83,7 @@ class VideoOutput(AbstractYAMLObject):
         self._stateset = not new_storage
 
         self.main = main_window()
+        self.set_fmt_values()
 
         # runtime attributes
         self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
@@ -131,6 +126,26 @@ class VideoOutput(AbstractYAMLObject):
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
+    def set_fmt_values(self) -> None:
+        global PACKING_TYPE
+
+        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
+
+        # From fastest to slowest
+        if hasattr(core, 'akarin'):
+            PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
+        elif hasattr(core, 'libp2p'):
+            PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+
+        self._NORML_FMT = PACKING_TYPE.vs_format
+        self._ALPHA_FMT = core.get_video_format(vs.GRAY8)
+
+        nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
+        self._FRAME_CONV_INFO = {
+            False: (nbps, ctypes.c_char * nbps, PACKING_TYPE.qt_format),
+            True: (abps, ctypes.c_char * abps, QImage.Format_Alpha8)
+        }
+
     @property
     def name(self) -> str:
         placeholder = 'Video Node %d' % self.index
@@ -145,13 +160,6 @@ class VideoOutput(AbstractYAMLObject):
     @name.setter
     def name(self, newname: str) -> None:
         self.title = newname
-
-    _NORML_FMT = PACKING_TYPE.vs_format
-    _ALPHA_FMT = core.get_video_format(vs.GRAY8)
-    _FRAME_CONV_INFO = {
-        False: (_NORML_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, PACKING_TYPE.qt_format),
-        True: (_ALPHA_FMT.bits_per_sample, ctypes.c_char * _NORML_FMT.bytes_per_sample, QImage.Format_Alpha8)
-    }
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         assert clip.format

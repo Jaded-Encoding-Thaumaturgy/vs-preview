@@ -115,7 +115,7 @@ class MainWindow(AbstractMainWindow):
         self.storage_not_found = False
         self.script_globals = dict[str, Any]()
 
-        self.timecodes: Dict[int, str | Dict[Tuple[int | None, int | None], Fraction] | List[int]] = {}
+        self.timecodes = dict[int, str | dict[tuple[int | None, int | None], Fraction] | list[int]]()
 
         # global
         self.clipboard = self.app.clipboard()
@@ -622,7 +622,7 @@ class MainWindow(AbstractMainWindow):
             self.statusbar.fps_label.setText('{}/{} fps '.format(output.fps_num, output.fps_den))
 
     def update_timecodes_info(
-        self, index: int, timecodes: str | Dict[Tuple[int | None, int | None], Fraction] | List[int]
+        self, index: int, timecodes: str | dict[tuple[int | None, int | None], Fraction] | list[int]
     ) -> None:
         self.timecodes[index] = timecodes
 

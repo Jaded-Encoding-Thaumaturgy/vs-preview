@@ -4,13 +4,12 @@ import ctypes
 from fractions import Fraction
 import itertools
 import os
-import sys
-from typing import Any, Dict, List, Mapping, Tuple, cast
+from typing import Any, Mapping, cast
 
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from vstools import core, video_heuristics, vs
+from vstools import core, video_heuristics, vs, fallback
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .dataclasses import CroppingInfo, VideoOutputNode
@@ -83,14 +82,12 @@ class VideoOutput(AbstractYAMLObject):
         self.source = self.prepared = None
 
     def __init__(
-        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int,
-        new_storage: bool = False, timecodes: List[int] | None = None
+        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
     ) -> None:
-        self.setValue(vs_output, index, new_storage, timecodes)
+        self.setValue(vs_output, index, new_storage)
 
     def setValue(
-        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False,
-        timecodes: str | Dict[Tuple[int | None, int | None], Fraction] | List[int] | None = None
+        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
     ) -> None:
         from ..custom import GraphicsImageItem
 
@@ -134,6 +131,7 @@ class VideoOutput(AbstractYAMLObject):
         if not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
                 self.play_fps = self.main.toolbars.playback.get_true_fps(self.props)
+        timecodes = index in self.main.timecodes and self.main.timecodes[index]
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
             else:

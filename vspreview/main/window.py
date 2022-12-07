@@ -116,6 +116,7 @@ class MainWindow(AbstractMainWindow):
         self.script_globals = dict[str, Any]()
 
         self.timecodes = dict[int, str | dict[tuple[int | None, int | None], Fraction] | list[int]]()
+        self.norm_timecodes = dict[int, list[float]]()
 
         # global
         self.clipboard = self.app.clipboard()
@@ -206,8 +207,6 @@ class MainWindow(AbstractMainWindow):
 
         self.toolbars.playback.stop()
         self.setWindowTitle('VSPreview: %s %s' % (script_path, self.external_args))
-
-        self.timecodes = dict[int, str | dict[tuple[int | None, int | None], Fraction] | list[int]]()
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path

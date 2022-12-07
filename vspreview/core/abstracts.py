@@ -302,6 +302,24 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     def show_message(self, message: str) -> None:
         raise NotImplementedError
 
+    def refresh_video_outputs(self) -> None:
+        playback_active = self.toolbars.playback.play_timer.isActive()
+
+        if playback_active:
+            self.toolbars.playback.stop()
+
+        self.outputs.items = [
+            self.outputs.get_new_output(old.source.clip, old)
+            for old in self.outputs.items
+        ]
+
+        self.init_outputs()
+
+        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
+
+        if playback_active:
+            self.toolbars.playback.play()
+
     def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
         playback_active = self.toolbars.playback.play_timer.isActive()
 

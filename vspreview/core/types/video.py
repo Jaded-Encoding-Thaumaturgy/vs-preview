@@ -99,9 +99,6 @@ class VideoOutput(AbstractYAMLObject):
         self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha)
 
-        if timecodes:
-            print('aaaa')
-
         if self.source.alpha is not None:
             self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
 

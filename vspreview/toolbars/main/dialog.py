@@ -4,7 +4,7 @@ from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
 from PyQt5.QtWidgets import QLabel
 from vapoursynth import FrameProps
-from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
+from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer, IS_DOCS
 
 from ...core import AbstractMainWindow, ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
 
@@ -29,42 +29,45 @@ def _create_enum_props_lut(enum: PropEnum, pretty_name: str) -> tuple[str, dict[
     }
 
 
-_frame_props_lut = {
-    '_Combed': {
-        'Is Combed': [
-            'No',
-            'Yes'
+if IS_DOCS:
+    _frame_props_lut = {}
+else:
+    _frame_props_lut = {
+        '_Combed': {
+            'Is Combed': [
+                'No',
+                'Yes'
+            ]
+        },
+        '_Field': {
+            'Frame Field Type': [
+                'Bottom Field',
+                'Top Field'
+            ]
+        },
+        '_SceneChangeNext': {
+            'Scene Cut': [
+                'Current Scene',
+                'End of Scene'
+            ]
+        },
+        '_SceneChangePrev': {
+            'Scene Change': [
+                'Current Scene',
+                'Start of Scene'
+            ]
+        }
+    } | dict([
+        _create_enum_props_lut(enum, name)
+        for enum, name in [
+            (FieldBased, 'Field Type'),
+            (Matrix, 'Matrix'),
+            (Transfer, 'Transfer'),
+            (Primaries, 'Primaries'),
+            (ChromaLocation, 'Chroma Location'),
+            (ColorRange, 'Color Range')
         ]
-    },
-    '_Field': {
-        'Frame Field Type': [
-            'Bottom Field',
-            'Top Field'
-        ]
-    },
-    '_SceneChangeNext': {
-        'Scene Cut': [
-            'Current Scene',
-            'End of Scene'
-        ]
-    },
-    '_SceneChangePrev': {
-        'Scene Change': [
-            'Current Scene',
-            'Start of Scene'
-        ]
-    }
-} | dict([
-    _create_enum_props_lut(enum, name)
-    for enum, name in [
-        (FieldBased, 'Field Type'),
-        (Matrix, 'Matrix'),
-        (Transfer, 'Transfer'),
-        (Primaries, 'Primaries'),
-        (ChromaLocation, 'Chroma Location'),
-        (ColorRange, 'Color Range')
-    ]
-])
+    ])
 
 
 class FramePropsDialog(ExtendedWidget):

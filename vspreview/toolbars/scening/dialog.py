@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from PyQt5.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
 from PyQt5.QtWidgets import QTableView
-from PyQt5.QtCore import Qt, QModelIndex, QItemSelection, QItemSelectionModel, QTimer
 
+from ...core import (
+    AbstractMainWindow, ExtendedDialog, ExtendedTableView, Frame, HBoxLayout, LineEdit, PushButton, Time, VBoxLayout
+)
+from ...core.custom import FrameEdit, TimeEdit
 from ...models import SceningList
 from ...utils import qt_silent_call
-from ...core.custom import TimeEdit, FrameEdit
-from ...core import (
-    AbstractMainWindow, Frame, Time, VBoxLayout, HBoxLayout, PushButton, LineEdit, ExtendedDialog, ExtendedTableView
-)
 
 
 class SceningListDialog(ExtendedDialog):

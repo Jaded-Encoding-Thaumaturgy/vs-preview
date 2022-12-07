@@ -28,9 +28,9 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, main_window.settings)
         self.setup_ui()
 
-        self.outputs: VideoOutputs = []  # type: ignore
+        self.outputs: VideoOutputs = []
 
-        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
+        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))  # type: ignore
         self.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
 
         self.add_shortcuts()
@@ -124,7 +124,7 @@ class MainToolbar(AbstractToolbar):
 
     def auto_fit_button_clicked(self, checked: bool) -> None:
         self.zoom_combobox.setEnabled(not checked)
-        self.main.graphics_view.autofit = checked  # type: ignore
+        self.main.graphics_view.autofit = checked
         if checked:
             self.main.graphics_view.setZoom(None)
         else:
@@ -173,7 +173,7 @@ class MainToolbar(AbstractToolbar):
                 output.last_showed_frame = self.main.current_output.last_showed_frame
         if state == Qt.Unchecked:
             for output in self.main.outputs:
-                output.last_showed_frame = None  # type: ignore
+                output.last_showed_frame = None
 
     def on_zoom_changed(self, text: str | None = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())

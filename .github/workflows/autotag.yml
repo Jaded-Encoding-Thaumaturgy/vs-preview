@@ -20,7 +20,7 @@ jobs:
       - name: Check if version exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: mukunku/tag-exists-action@v1.0.0
+        uses: mukunku/tag-exists-action@v1.1.0
         id: tagcheck
         with:
           tag: ${{ env.CURR_VER }}

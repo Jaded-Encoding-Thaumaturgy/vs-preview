@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import vapoursynth as vs
 from datetime import timedelta
-from typing import cast, Any, Mapping, Union, SupportsFloat, SupportsInt
+from typing import Any, Mapping, SupportsFloat, SupportsInt, Union, cast
 
-from .yaml import YAMLObjectWrapper
 from ..abstracts import main_window, try_load
-
-
-core = vs.core
+from .yaml import YAMLObjectWrapper
 
 Number = Union[int, float, SupportsInt, SupportsFloat]
 
@@ -79,7 +75,7 @@ class Frame(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', int, self.__init__,  # type: ignore
+            state, 'value', int, self.__init__,
             'Failed to load Frame instance'
         )
 
@@ -144,6 +140,6 @@ class Time(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', timedelta, self.__init__,  # type: ignore
+            state, 'value', timedelta, self.__init__,
             'Failed to load Time instance'
         )

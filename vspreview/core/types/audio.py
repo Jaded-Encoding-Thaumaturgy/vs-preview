@@ -4,17 +4,15 @@ from array import array
 from math import floor
 from typing import Any, Mapping
 
-import vapoursynth as vs
 from PyQt5.QtMultimedia import QAudioDeviceInfo, QAudioFormat, QAudioOutput
+from vstools import vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .units import Frame, Time
 
-core = vs.core
-
 
 class AudioOutput(AbstractYAMLObject):
-    SAMPLES_PER_FRAME = 3072  # https://github.com/vapoursynth/vapoursynth/blob/maste/r/include/VapourSynth4.h#L32
+    SAMPLES_PER_FRAME = 3072  # https://github.com/vapoursynth/vapoursynth/blob/master/include/VapourSynth4.h#L32
 
     storable_attrs = ('name', )
 
@@ -71,7 +69,7 @@ class AudioOutput(AbstractYAMLObject):
             self.name = 'Audio Node ' + str(self.index)
 
     def clear(self) -> None:
-        self.source_vs_output = self.vs_output = None  # type: ignore
+        self.source_vs_output = self.vs_output = None
 
     def render_audio_frame(self, frame: Frame) -> None:
         self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))

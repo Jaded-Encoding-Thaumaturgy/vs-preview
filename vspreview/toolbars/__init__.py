@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Mapping, Any, Iterator, List, cast, overload, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, cast, overload
 
 from ..core import storage_err_msg
-from ..core.bases import AbstractYAMLObjectSingleton
 from ..core.abstracts import AbstractMainWindow, AbstractToolbar
-
+from ..core.bases import AbstractYAMLObjectSingleton
 from .benchmark import BenchmarkToolbar
 from .comp import CompToolbar
 from .debug import DebugToolbar
@@ -15,7 +14,6 @@ from .misc import MiscToolbar
 from .pipette import PipetteToolbar
 from .playback import PlaybackToolbar
 from .scening import SceningToolbar
-
 
 all_toolbars = [
     MainToolbar, PlaybackToolbar, SceningToolbar, PipetteToolbar,
@@ -50,10 +48,10 @@ class Toolbars(AbstractYAMLObjectSingleton):
         ...
 
     @overload
-    def __getitem__(self, _sub: slice) -> List[AbstractToolbar]:
+    def __getitem__(self, _sub: slice) -> list[AbstractToolbar]:
         ...
 
-    def __getitem__(self, _sub: int | slice) -> AbstractToolbar | List[AbstractToolbar]:
+    def __getitem__(self, _sub: int | slice) -> AbstractToolbar | list[AbstractToolbar]:
         length = len(self.all_toolbars_names)
         if isinstance(_sub, slice):
             return [self[i] for i in range(*_sub.indices(length))]

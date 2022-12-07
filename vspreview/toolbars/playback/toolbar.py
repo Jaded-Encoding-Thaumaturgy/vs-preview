@@ -7,11 +7,11 @@ from concurrent.futures import Future
 from functools import partial
 from math import floor
 from time import perf_counter_ns
-from typing import Any, Deque, Mapping, Tuple, cast
+from typing import Any, Mapping, cast
 
-import vapoursynth as vs
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QSlider
+from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
@@ -47,16 +47,16 @@ class PlaybackToolbar(AbstractToolbar):
         super().__init__(main, PlaybackSettings())
         self.setup_ui()
 
-        self.play_buffer: Deque[Tuple[int, Future[vs.VideoFrame]]] = deque()
+        self.play_buffer = deque[tuple[int, Future[vs.VideoFrame]]]()
         self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
 
         self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
 
         self.current_audio_output = None
         self.current_audio_frame = Frame(0)
-        self.play_buffer_audio: Deque[Future[vs.AudioFrame]] = deque()
+        self.play_buffer_audio = deque[Future[vs.AudioFrame]]()
 
-        self.fps_history: Deque[int] = deque([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
+        self.fps_history = deque[int]([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
         self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
 
@@ -64,7 +64,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_start_frame = Frame(0)
         self.play_end_time = 0
         self.play_end_frame = Frame(0)
-        self.audio_outputs: AudioOutputs = []  # type: ignore
+        self.audio_outputs: AudioOutputs = []
         self.last_frame = Frame(0)
 
         self.setVolume(50, True)
@@ -181,7 +181,10 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs = outputs or AudioOutputs(self.main)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-    def get_true_fps(self, frameprops: vs.FrameProps) -> float:
+    def get_true_fps(self, n: int, frameprops: vs.FrameProps, force: bool = False) -> float:
+        if self.main.current_output.got_timecodes and not force:
+            return self.main.current_output.timecodes[n]
+
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(
                 'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
@@ -241,7 +244,7 @@ class PlaybackToolbar(AbstractToolbar):
                 self.fps_timer.start(self.settings.FPS_REFRESH_INTERVAL)
         else:
             if self.fps_variable_checkbox.isChecked() and self.main.current_output._stateset:
-                fps = self.get_true_fps(self.main.current_output.props)
+                fps = self.get_true_fps(self.last_frame, self.main.current_output.props)
             else:
                 fps = self.main.current_output.play_fps
 
@@ -253,6 +256,9 @@ class PlaybackToolbar(AbstractToolbar):
             self.play_audio()
 
     def play_audio(self) -> None:
+        if not len(self.audio_outputs):
+            return
+
         self.current_audio_output = self.audio_outputs_combobox.currentValue()
 
         self.audio_outputs_combobox.setEnabled(False)
@@ -313,7 +319,7 @@ class PlaybackToolbar(AbstractToolbar):
         curr_frame = Frame(frames_futures[0][0])
 
         if self.fps_variable_checkbox.isChecked():
-            self.current_fps = self.get_true_fps(frames_futures[0][1].props)
+            self.current_fps = self.get_true_fps(curr_frame.value, frames_futures[0][1].props)
             self.play_timer.start(floor(1000 / self.current_fps))
             self.fps_spinbox.setValue(self.current_fps)
         elif not self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:

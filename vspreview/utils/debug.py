@@ -5,17 +5,12 @@ import logging
 import re
 from functools import wraps
 from time import perf_counter_ns
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
-import vapoursynth as vs
 from PyQt5 import sip
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QGraphicsScene
-
-from .utils import get_prop
-from ..core.types.enums import Matrix, Primaries, ColorRange, Transfer
-
-T = TypeVar('T')
+from vstools import ColorRange, Matrix, Primaries, T, Transfer, vs
 
 
 def print_var(var: Any) -> None:
@@ -102,9 +97,9 @@ class EventFilter(QObject):
 
 def measure_exec_time_ms(
     func: Callable[..., T], return_exec_time: bool = False, print_exec_time: bool = True
-) -> Callable[..., T | Tuple[T, float]]:
+) -> Callable[..., T | tuple[T, float]]:
     @wraps(func)
-    def decorator(*args: Any, **kwargs: Any) -> T | Tuple[T, float]:
+    def decorator(*args: Any, **kwargs: Any) -> T | tuple[T, float]:
         t1 = perf_counter_ns()
         ret = func(*args, **kwargs)
         t2 = perf_counter_ns()
@@ -144,15 +139,15 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
     props = vs_output.get_frame(0).props
 
     logging.debug('Matrix: {}, Transfer: {}, Primaries: {}, Range: {}'.format(
-        Matrix[get_prop(props, '_Matrix', int)] if '_Matrix' in props else None,
-        Transfer[get_prop(props, '_Transfer', int)] if '_Transfer' in props else None,
-        Primaries[get_prop(props, '_Primaries', int)] if '_Primaries' in props else None,
-        ColorRange[get_prop(props, '_ColorRange', int)] if '_ColorRange' in props else None,
+        Matrix.from_video(props) if '_Matrix' in props else None,
+        Transfer.from_video(props) if '_Transfer' in props else None,
+        Primaries.from_video(props) if '_Primaries' in props else None,
+        ColorRange.from_video(props) if '_ColorRange' in props else None,
     ))
 
 
 class DebugMeta(sip.wrappertype):
-    def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:  # type: ignore
+    def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> type:
         from functools import partialmethod
 
         base = bases[0]
@@ -174,7 +169,7 @@ class DebugMeta(sip.wrappertype):
             if not attr.endswith('__') and callable(getattr(base, attr)):
                 dct[attr] = partialmethod(DebugMeta.dummy_method, attr)
 
-        return super(DebugMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
+        return super(DebugMeta, cls).__new__(cls, name, bases, dct)
 
     def dummy_method(self, name: str, *args: Any, **kwargs: Any) -> Any:
         method = getattr(super(GraphicsScene, GraphicsScene), name)
@@ -182,7 +177,7 @@ class DebugMeta(sip.wrappertype):
         return method(self, *args, **kwargs)
 
 
-class GraphicsScene(QGraphicsScene, metaclass=DebugMeta):  # type: ignore
+class GraphicsScene(QGraphicsScene, metaclass=DebugMeta):
     def event(self, event: QEvent) -> bool:
         t0 = perf_counter_ns()
         ret = super().event(event)
@@ -434,7 +429,7 @@ class Application(QApplication):
         isex = False
         try:
             self.enter_count += 1
-            ret, time = cast(Tuple[bool, float], measure_exec_time_ms(
+            ret, time = cast(tuple[bool, float], measure_exec_time_ms(
                 QApplication.notify, True, False)(self, obj, event))
             self.enter_count -= 1
 

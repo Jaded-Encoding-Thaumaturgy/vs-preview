@@ -1,27 +1,26 @@
 from __future__ import annotations
 
+from typing import Any, cast, no_type_check
+
 from PyQt5 import sip
+from vstools import T
 from yaml import YAMLObject, YAMLObjectMetaclass
-from typing import Any, Dict, no_type_check, Type, TypeVar, Tuple, cast
 
 from .better_abc import ABCMeta
 
 
-T = TypeVar('T')
-
-
 class SingletonMeta(type):
-    def __init__(cls: Type[T], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> None:
-        super().__init__(name, bases, dct)  # type: ignore
-        cls.instance: T | None = None  # type: ignore
+    def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
+        super().__init__(name, bases, dct)
+        cls.instance: T | None = None
 
     def __call__(cls, *args: Any, **kwargs: Any) -> T:
         if cls.instance is None:
             cls.instance = super().__call__(*args, **kwargs)
         return cls.instance
 
-    def __new__(cls: Type[type], name: str, bases: Tuple[type, ...], dct: Dict[str, Any]) -> type:
-        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
+    def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> type:
+        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)
         singleton_new = None
         for entry in subcls.__mro__:
             if entry.__class__ is SingletonMeta:
@@ -34,7 +33,7 @@ class SingletonMeta(type):
 
 class Singleton(metaclass=SingletonMeta):
     @no_type_check
-    def __new__(cls: Type[T], *args: Any, **kwargs: Any) -> T:
+    def __new__(cls: type[T], *args: Any, **kwargs: Any) -> T:
         if cls.instance is None:
             if hasattr(cls, '__default_new__'):
                 cls.instance = cls.__default_new__(cls, *args, **kwargs)

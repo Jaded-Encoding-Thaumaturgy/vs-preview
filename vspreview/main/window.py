@@ -465,6 +465,7 @@ class MainWindow(AbstractMainWindow):
         self.graphics_scene.clear()
 
         self.timecodes.clear()
+        self.norm_timecodes.clear()
         self.outputs.clear()
         gc.collect(generation=0)
         gc.collect(generation=1)

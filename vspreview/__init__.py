@@ -11,7 +11,7 @@ from .init import main  # noqa: F401
 def set_timecodes(
     index: int, timecodes: str | Path | dict[
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
-    ] | list[float]
+    ] | list[float], den: int = 1001
 ) -> None:
     from .core import main_window
 
@@ -22,7 +22,7 @@ def set_timecodes(
 
         if 'v1' in version:
             def _norm(xd: str) -> float:
-                return int(float(xd) / 1001) / 1001
+                return int(float(xd) / den) / den
 
             assume = _norm(_timecodes[0][7:])
 
@@ -33,7 +33,7 @@ def set_timecodes(
         elif 'v2' in version:
             timecodes = list(map(float, _timecodes))
             timecodes = [
-                int(1001 / float(f'{round((x - y) * 100, 4) / 100000:.08f}'[:-1])) / 1001
+                int(den / float(f'{round((x - y) * 100, 4) / 100000:.08f}'[:-1])) / den
                 for x, y in zip(timecodes[1:], timecodes[:-1])
             ]
         else:

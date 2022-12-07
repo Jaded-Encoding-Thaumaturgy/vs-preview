@@ -10,8 +10,6 @@ This program is meant to be paired with a code editor with integrated terminal l
     * Make sure to install Python to your `PATH`.
 1. [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases) (R60+ required)
 
-**Note:** If you're on Python 3.10, you'll need VapourSynth R58.
-
 # Installation
 
 Install latest stable via pypi:

@@ -207,6 +207,8 @@ class MainWindow(AbstractMainWindow):
         self.toolbars.playback.stop()
         self.setWindowTitle('VSPreview: %s %s' % (script_path, self.external_args))
 
+        self.timecodes = dict[int, str | dict[tuple[int | None, int | None], Fraction] | list[int]]()
+
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path
 

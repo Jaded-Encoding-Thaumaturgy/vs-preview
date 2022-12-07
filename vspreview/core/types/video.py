@@ -9,7 +9,7 @@ from typing import Any, Mapping, cast
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from vstools import core, video_heuristics, vs, fallback
+from vstools import core, video_heuristics, vs, fallback, FramesLengthError
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .dataclasses import CroppingInfo, VideoOutputNode
@@ -153,6 +153,11 @@ class VideoOutput(AbstractYAMLObject):
                         ] * (end - start)
                 else:
                     norm_timecodes = timecodes.copy()
+
+                if len(norm_timecodes) != self.source.clip.num_frames:
+                    raise FramesLengthError(
+                        'Timecodes', '', "The timecodes file's length mismatches with the clip's length!"
+                    )
 
                 self.main.norm_timecodes[index] = norm_timecodes
                 self.play_fps = norm_timecodes[self.last_showed_frame]

@@ -17,8 +17,11 @@ from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap,
 from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
 from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
+from vsengine import vpy
+
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
+from ..core.vsenv import get_current_environment, make_environment
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -113,10 +116,9 @@ class MainWindow(AbstractMainWindow):
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = False
-        self.script_globals = dict[str, Any]()
-
-        self.timecodes = dict[int, dict[tuple[int | None, int | None],
-                                        float | tuple[int, int] | Fraction] | list[float]]()
+        self.timecodes = dict[
+            int, dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
+        ]()
         self.norm_timecodes = dict[int, list[float]]()
 
         self.user_output_names = {vs.VideoNode: {}, vs.AudioNode: {}, vs.RawNode: {}}
@@ -217,47 +219,32 @@ class MainWindow(AbstractMainWindow):
         sys.path.append(str(self.script_path.parent))
 
         # Rewrite args so external args will be forwarded correctly
+        argv_orig = None
         try:
             argv_orig = sys.argv
             sys.argv = [script_path.name]
         except AttributeError:
             pass
 
-        self.script_globals.clear()
-        self.script_globals = dict([('__file__', sys.argv[0])] + self.external_args)
-
         try:
-            ast_compiled = compile(self.script_path.read_bytes(), sys.argv[0], 'exec', optimize=2)
+            env = vpy.variables(dict(self.external_args), environment=vs.get_current_environment(), module_name="__main__").result()
+            env = vpy.script(script_path, environment=env).result()
 
-            exec(ast_compiled, self.script_globals)
-        except BaseException as e:
-            logging.error(e)
+        except vpy.ExecutionFailed as e:
+            logging.error(e.parent_error)
 
-            te = TracebackException.from_exception(e)
-            # remove the first stack frame, which contains our exec() invocation
-            del te.stack[0]
-
-            # replace <string> with script path only for the first stack frames
-            # in order to keep intact exec() invocations down the stack
-            # that we're not concerned with
-            for i, frame in enumerate(te.stack):
-                if frame.filename == '<string>':
-                    te.stack[i] = FrameSummary(
-                        str(self.script_path), frame.lineno, frame.name
-                    )
-                else:
-                    break
+            te = TracebackException.from_exception(e.parent_error)
             logging.error(''.join(te.format()))
 
             self.script_exec_failed = True
             return self.handle_script_error(
                 '\n'.join([
-                    'An error occured while evaluating script:',
                     str(e), 'See console output for details.'
                 ])
             )
         finally:
-            sys.argv = argv_orig
+            if argv_orig is not None:
+                sys.argv = argv_orig
             sys.path.pop()
 
         if len(vs.get_outputs()) == 0:
@@ -472,11 +459,20 @@ class MainWindow(AbstractMainWindow):
         for v in self.user_output_names.values():
             v.clear()
         self.outputs.clear()
+        gc.collect()
+        old_environment = get_current_environment()
+        make_environment()
         gc.collect(generation=0)
         gc.collect(generation=1)
         gc.collect(generation=2)
 
-        self.load_script(self.script_path, self.external_args, True)
+        try:
+            self.load_script(self.script_path, reloading=True)
+        finally:
+            old_environment.dispose()
+            gc.collect()
+            gc.collect()
+            gc.collect()
 
         self.reload_after_signal.emit()
 

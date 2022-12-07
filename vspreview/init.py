@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# import vsenv as early as possible:
+# This is so other modules cannot accidentally use and lock us into a different policy.
+from .core.vsenv import set_vsengine_loop
+
 import json
 import logging
 import os
@@ -31,7 +35,7 @@ class Application(QApplication):
 
 
 def main() -> None:
-    logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=MainSettings.LOG_LEVEL)
+    logging.basicConfig(format='{asctime}: {name}: {levelname}: {message}', style='{', level=MainSettings.LOG_LEVEL)
     logging.Formatter.default_msec_format = '%s.%03d'
     if sys.stdout.isatty():
         logging.addLevelName(
@@ -65,8 +69,16 @@ def main() -> None:
         '--vscode-setup', type=str, choices=['override', 'append', 'ignore'], nargs='?', const='append',
         help='Installs launch settings in cwd\'s .vscode'
     )
+    parser.add_argument(
+        "--verbose", help="Set the logging to verbose.", action="store_true"
+    )
 
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().level = logging.DEBUG
+    else:
+        logging.getLogger().level = logging.WARNING
 
     if args.vscode_setup is not None:
         install_vscode_launch(args.vscode_setup)
@@ -91,6 +103,8 @@ def main() -> None:
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, hidpi)
 
     app = Application(sys.argv)
+    set_vsengine_loop()
+
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     main_window.load_script(
         script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False, args.frame or None

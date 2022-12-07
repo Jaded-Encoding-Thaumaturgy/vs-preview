@@ -111,7 +111,6 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
         self.end_time = self.to_time(self.end_frame)
         self.title = None
@@ -125,14 +124,55 @@ class VideoOutput(AbstractYAMLObject):
 
         self.graphics_scene_item: GraphicsImageItem
 
-        if not hasattr(self, 'play_fps'):
-            if self.fps_num == 0 and self._stateset:
-                self.play_fps = self.main.toolbars.playback.get_true_fps(self.props)
         timecodes = index in self.main.timecodes and self.main.timecodes[index]
+
+        if timecodes:
+            if self.fps_num == 0:
+                try:
+                    play_fps = self.main.toolbars.playback.get_true_fps(0, self.props, True)
+                except Exception:
+                    if isinstance(timecodes, list):
+                        play_fps = timecodes[self.last_showed_frame]
+                    else:
+                        play_fps = 24000 / 1001
+            else:
+                play_fps = self.fps_num / self.fps_den
+
+            self.play_fps = play_fps
+
+            norm_timecodes = [play_fps] * (self.source.clip.num_frames + 1)
+
+            if timecodes:
+                if isinstance(timecodes, dict):
+                    for (start, end), fps in timecodes.items():
+                        start = max(fallback(start, 0), 0)
+                        end = min(fallback(end, self.source.clip.num_frames), self.source.clip.num_frames)
+
+                        norm_timecodes[start:end + 1] = [
+                            float(fps if isinstance(fps, Fraction) else Fraction(*fps))
+                        ] * (end - start)
+                else:
+                    norm_timecodes = timecodes.copy()
+
+                self.main.norm_timecodes[index] = norm_timecodes
+                self.play_fps = norm_timecodes[self.last_showed_frame]
+
+        if index in self.main.norm_timecodes:
+            norm_timecodes = self.main.norm_timecodes[index]
+
+            if (vfr := len(set(norm_timecodes)) > 1) or self.fps_num == 0:
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
-            else:
-                self.play_fps = self.fps_num / self.fps_den
+
+            self.got_timecodes = vfr
+            self.timecodes = norm_timecodes
+        else:
+            self.got_timecodes = False
+
+        if self.got_timecodes:
+            self.total_time = Time(seconds=sum(1 / fps for fps in self.timecodes))
+        else:
+            self.total_time = self.to_time(self.total_frames - Frame(1))
 
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)

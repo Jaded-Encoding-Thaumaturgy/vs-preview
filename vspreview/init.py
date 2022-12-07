@@ -78,6 +78,8 @@ def main() -> None:
     if args.verbose:
         logging.getLogger().level = logging.DEBUG
     else:
+        from vsengine import _hospice
+        _hospice.logger.setLevel(logging.ERROR)
         logging.getLogger().level = logging.WARNING
 
     if args.vscode_setup is not None:

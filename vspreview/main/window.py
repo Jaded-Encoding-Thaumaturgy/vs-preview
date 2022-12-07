@@ -21,6 +21,7 @@ from vsengine import vpy
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
+from ..core.vsenv import get_current_environment, make_environment
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label

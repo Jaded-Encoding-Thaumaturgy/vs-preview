@@ -73,6 +73,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     def clear(self) -> None:
         self.beginRemoveRows(QModelIndex(), 0, len(self.items))
         self.items.clear()
+        self._items.clear()
         self.endRemoveRows()
 
     def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:

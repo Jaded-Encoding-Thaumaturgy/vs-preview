@@ -1,10 +1,10 @@
 from __future__ import annotations
-from fractions import Fraction
 
 import gc
 import io
 import logging
 import sys
+from fractions import Fraction
 from itertools import count
 from os.path import expanduser, expandvars
 from pathlib import Path
@@ -15,9 +15,8 @@ import yaml
 from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
-from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
-
 from vsengine import vpy
+from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
@@ -224,9 +223,12 @@ class MainWindow(AbstractMainWindow):
             pass
 
         try:
-            env = vpy.variables(dict(self.external_args), environment=vs.get_current_environment(), module_name="__vspreview__").result()
+            env = vpy.variables(
+                dict(self.external_args),
+                environment=vs.get_current_environment(),
+                module_name="__vspreview__"
+            ).result()
             env = vpy.script(script_path, environment=env).result()
-
         except vpy.ExecutionFailed as e:
             logging.error(e.parent_error)
 
@@ -629,7 +631,9 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
     def update_timecodes_info(
-        self, index: int, timecodes: dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
+        self, index: int, timecodes: dict[
+            tuple[int | None, int | None], float | tuple[int, int] | Fraction
+        ] | list[float]
     ) -> None:
         self.timecodes[index] = timecodes
 

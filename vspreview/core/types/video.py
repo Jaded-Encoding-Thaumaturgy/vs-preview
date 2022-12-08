@@ -228,13 +228,14 @@ class VideoOutput(AbstractYAMLObject):
 
         resizer_kwargs = {
             'format': self._NORML_FMT.id,
-            'matrix_in': int(self.main.VS_OUTPUT_MATRIX),
-            'transfer_in': int(self.main.VS_OUTPUT_TRANSFER),
-            'primaries_in': int(self.main.VS_OUTPUT_PRIMARIES),
-            'range_in': int(self.main.VS_OUTPUT_RANGE),
-            'chromaloc_in': int(self.main.VS_OUTPUT_CHROMALOC),
+            'matrix_in': self.main.VS_OUTPUT_MATRIX,
+            'transfer_in': self.main.VS_OUTPUT_TRANSFER,
+            'primaries_in': self.main.VS_OUTPUT_PRIMARIES,
+            'range_in': self.main.VS_OUTPUT_RANGE,
+            'chromaloc_in': self.main.VS_OUTPUT_CHROMALOC
+        } | heuristics | {
             'dither_type': self.main.toolbars.playback.settings.dither_type
-        } | self.main.VS_OUTPUT_RESIZER_KWARGS | heuristics
+        }
 
         if clip.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']

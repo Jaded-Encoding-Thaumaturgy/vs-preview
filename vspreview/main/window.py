@@ -55,10 +55,7 @@ class MainWindow(AbstractMainWindow):
     VS_OUTPUT_PRIMARIES = Primaries.BT709
     VS_OUTPUT_RANGE = ColorRange.LIMITED
     VS_OUTPUT_CHROMALOC = ChromaLocation.LEFT
-    VS_OUTPUT_RESIZER_KWARGS = {
-        'dither_type': 'error_diffusion',
-    }
-    VSP_VERSION = 2.1
+    VSP_VERSION = 3.0
     BREAKING_CHANGES_VERSIONS = list[float]()
 
     # status bar

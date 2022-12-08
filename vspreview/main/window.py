@@ -461,21 +461,24 @@ class MainWindow(AbstractMainWindow):
         gc.collect()
         old_environment = get_current_environment()
         make_environment()
-        gc.collect(generation=0)
-        gc.collect(generation=1)
-        gc.collect(generation=2)
+        self.gc_collect()
 
         try:
             self.load_script(self.script_path, reloading=True)
         finally:
             old_environment.dispose()
-            gc.collect()
-            gc.collect()
-            gc.collect()
+            self.gc_collect()
 
         self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
+
+    def gc_collect(self) -> None:
+        for i in range(3):
+            gc.collect(generation=i)
+
+        for _ in range(3):
+            gc.collect()
 
     def switch_frame(
         self, pos: Frame | Time | int | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True

@@ -9,7 +9,7 @@ from typing import Any, Mapping, cast
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from vstools import core, video_heuristics, vs, fallback, FramesLengthError
+from vstools import core, video_heuristics, vs, fallback, FramesLengthError, ColorRange
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .dataclasses import CroppingInfo, VideoOutputNode
@@ -241,6 +241,9 @@ class VideoOutput(AbstractYAMLObject):
             del resizer_kwargs['matrix_in']
         elif clip.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
+
+        if isinstance(resizer_kwargs['range_in'], ColorRange):
+            resizer_kwargs['range_in'] = resizer_kwargs['range_in'].value_zimg
 
         assert clip.format
 

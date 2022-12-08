@@ -4,6 +4,7 @@ import gc
 import io
 import logging
 import sys
+import weakref
 from fractions import Fraction
 from itertools import count
 from os.path import expanduser, expandvars
@@ -275,6 +276,9 @@ class MainWindow(AbstractMainWindow):
             self.switch_output(self.settings.output_index)
             if start_frame is not None:
                 self.switch_frame(Frame(start_frame))
+
+        with env:
+            weakref.finalize(vs.core.core, self.gc_collect)
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

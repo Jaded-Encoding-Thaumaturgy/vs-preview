@@ -9,7 +9,7 @@ from fractions import Fraction
 from itertools import count
 from os.path import expanduser, expandvars
 from pathlib import Path
-from traceback import FrameSummary, TracebackException
+from traceback import TracebackException
 from typing import Any, Mapping, cast
 
 import yaml
@@ -278,7 +278,7 @@ class MainWindow(AbstractMainWindow):
                 self.switch_frame(Frame(start_frame))
 
         with env:
-            weakref.finalize(vs.core.core, self.gc_collect)
+            vs.register_on_destroy(self.gc_collect)
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

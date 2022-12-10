@@ -178,9 +178,15 @@ class SceningToolbar(AbstractToolbar):
         for i, key in enumerate(self.num_keys[:-2]):
             self.add_shortcut(QKeyCombination(Qt.SHIFT, key), partial(self.switch_list, i))
 
-        self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.on_toggle_single_frame)
-        self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Left).toCombined(), self.seek_to_prev_button.click)
-        self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Right).toCombined(), self.seek_to_next_button.click)
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.on_toggle_single_frame
+        )
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Left).toCombined(), self.seek_to_prev_button.click
+        )
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Right).toCombined(), self.seek_to_next_button.click
+        )
         if self.main.settings.azerty_keybinds:
             self.add_shortcut(Qt.Key.Key_A, self.toggle_first_frame_button.click)
             self.add_shortcut(Qt.Key.Key_Z, self.toggle_second_frame_button.click)
@@ -189,7 +195,9 @@ class SceningToolbar(AbstractToolbar):
             self.add_shortcut(Qt.Key.Key_W, self.toggle_second_frame_button.click)
         self.add_shortcut(Qt.Key.Key_E, self.add_to_list_button.click)
         self.add_shortcut(Qt.Key.Key_R, self.remove_last_from_list_button.click)
-        self.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_R).toCombined(), self.remove_at_current_frame_button.click)
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_R).toCombined(), self.remove_at_current_frame_button.click
+        )
         self.add_shortcut(
             Qt.Key.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
                 str(self.main.current_output.last_showed_frame)

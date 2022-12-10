@@ -7,7 +7,7 @@ from multiprocessing import cpu_count
 from typing import Any, Mapping
 
 from PyQt6.QtCore import Qt, QKeyCombination
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QShortcut
 from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
@@ -220,9 +220,9 @@ class MainSettings(AbstractToolbarSettings):
     def get_usable_cpus_count() -> int:
         from os import getpid
         try:
-            from win32.win32api import OpenProcess
-            from win32.win32process import GetProcessAffinityMask
-            from win32con import PROCESS_QUERY_LIMITED_INFORMATION
+            from win32.win32api import OpenProcess  # type: ignore
+            from win32.win32process import GetProcessAffinityMask  # type: ignore
+            from win32con import PROCESS_QUERY_LIMITED_INFORMATION  # type: ignore
             proc_mask, _ = GetProcessAffinityMask(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, getpid()))
             cpus = [i for i in range(64) if (1 << i) & proc_mask]
             return len(cpus)

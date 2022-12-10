@@ -145,10 +145,18 @@ class MiscToolbar(AbstractToolbar):
         ])
 
     def add_shortcuts(self) -> None:
-        self.main.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.main.reload_script)
-        self.main.add_shortcut(QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined(), self.save_storage_button.click)
-        self.main.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined(), self.copy_frame_button.click)
-        self.main.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click)
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.main.reload_script
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined(), self.save_storage_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined(), self.copy_frame_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click
+        )
         self.main.add_shortcut(
             QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_F).toCombined(),
             lambda: self.view_mode_combox.setCurrentText(

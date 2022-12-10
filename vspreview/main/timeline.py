@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Iterator, cast
 
-from PyQt6.QtCore import QEvent, QLineF, QPoint, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
 from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
 
@@ -13,7 +13,8 @@ from ..utils import strfdelta
 
 class Notch:
     def __init__(
-        self, data: Frame | Time, color: QColor = cast(QColor, Qt.GlobalColor.white), label: str = '', line: QLineF = QLineF()
+        self, data: Frame | Time, color: QColor = cast(QColor, Qt.GlobalColor.white),
+        label: str = '', line: QLineF = QLineF()
     ) -> None:
         self.data = data
         self.color = color

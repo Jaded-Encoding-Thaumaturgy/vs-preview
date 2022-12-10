@@ -99,7 +99,9 @@ class MainToolbar(AbstractToolbar):
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys):
             self.add_shortcut(key, partial(self.main.switch_output, i))
-            self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, key).toCombined(), partial(self.main.switch_output, -(i + 1)))
+            self.add_shortcut(
+                QKeyCombination(Qt.Modifier.CTRL, key).toCombined(), partial(self.main.switch_output, -(i + 1))
+            )
 
         self.add_shortcut(Qt.Key.Key_S, self.sync_outputs_checkbox.click)
         self.add_shortcut(

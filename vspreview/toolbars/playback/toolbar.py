@@ -58,7 +58,9 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.fps_history = deque[int]([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
-        self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.TimerType.PreciseTimer)
+        self.fps_timer = Timer(
+            timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.TimerType.PreciseTimer
+        )
 
         self.play_start_time: int | None = None
         self.play_start_frame = Frame(0)

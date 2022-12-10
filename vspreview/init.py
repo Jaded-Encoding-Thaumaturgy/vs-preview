@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow
 
+
 class Application(QApplication):
     def notify(self, obj: QObject, event: QEvent) -> bool:
         isex = False

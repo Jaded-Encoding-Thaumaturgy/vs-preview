@@ -4,7 +4,6 @@ import gc
 import io
 import logging
 import sys
-import weakref
 from fractions import Fraction
 from itertools import count
 from os.path import expanduser, expandvars
@@ -15,8 +14,8 @@ from typing import Any, Mapping, cast
 import yaml
 from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
-from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
 from vsengine import vpy
 from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 

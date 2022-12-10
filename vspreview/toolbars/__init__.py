@@ -67,7 +67,8 @@ class Toolbars(AbstractYAMLObjectSingleton):
 
     if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/2220
-        def __iter__(self) -> Iterator[AbstractToolbar]: ...
+        def __iter__(self) -> Iterator[AbstractToolbar]:
+            ...
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {

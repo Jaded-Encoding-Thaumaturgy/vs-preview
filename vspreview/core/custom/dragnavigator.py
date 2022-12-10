@@ -32,7 +32,8 @@ class DragNavigator(QWidget):
         rate = self.main.settings.base_ppi / 96
         self.setGeometry(round(10 * rate), round(10 * rate), round(120 * rate), round(120 * rate))
         self.repaint_timer = Timer(
-            timeout=self.repaint_timeout, timerType=Qt.TimerType.PreciseTimer, interval=self.main.settings.dragnavigator_timeout
+            timeout=self.repaint_timeout, timerType=Qt.TimerType.PreciseTimer,
+            interval=self.main.settings.dragnavigator_timeout
         )
         self.graphics_view.verticalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))
         self.graphics_view.horizontalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))

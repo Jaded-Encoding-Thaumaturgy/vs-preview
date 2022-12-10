@@ -331,7 +331,7 @@ class VideoOutput(AbstractYAMLObject):
         frame_image = self.frame_to_qimage(vs_frame, False)
 
         if output_colorspace is not None:
-            frame_image.setColorSpace(QColorSpace(QColorSpace.SRgb))
+            frame_image.setColorSpace(QColorSpace(QColorSpace.NamedColorSpace.SRgb))
             frame_image.convertToColorSpace(output_colorspace)
 
         if not vs_frame.closed:
@@ -339,7 +339,7 @@ class VideoOutput(AbstractYAMLObject):
             del vs_frame
 
         if self.prepared.alpha is None:
-            qpixmap = QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
+            qpixmap = QPixmap.fromImage(frame_image, Qt.ImageConversionFlag.NoFormatConversion)
 
             if do_painting:
                 self.update_graphic_item(qpixmap)
@@ -350,20 +350,20 @@ class VideoOutput(AbstractYAMLObject):
             vs_alpha_frame or self.prepared.alpha.get_frame(frame.value), True
         )
 
-        result_image = QImage(frame_image.size(), QImage.Format_ARGB32_Premultiplied)
+        result_image = QImage(frame_image.size(), QImage.Format.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)
-        painter.setCompositionMode(QPainter.CompositionMode_Source)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
         painter.drawImage(0, 0, frame_image)
-        painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
         painter.drawImage(0, 0, alpha_image)
 
         if self.main.toolbars.playback.settings.CHECKERBOARD_ENABLED:
-            painter.setCompositionMode(QPainter.CompositionMode_DestinationOver)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOver)
             painter.drawImage(0, 0, self.checkerboard)
 
         painter.end()
 
-        qpixmap = QPixmap.fromImage(result_image, Qt.NoFormatConversion)
+        qpixmap = QPixmap.fromImage(result_image, Qt.ImageConversionFlag.NoFormatConversion)
 
         if do_painting:
             self.update_graphic_item(qpixmap)

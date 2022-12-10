@@ -73,11 +73,11 @@ class GraphicsView(QGraphicsView):
 
         if isinstance(event, QNativeGestureEvent):
             typ = event.gestureType()
-            if typ == Qt.BeginNativeGesture:
+            if typ == Qt.NativeGestureType.BeginNativeGesture:
                 self.zoomValue = 0.0
-            elif typ == Qt.ZoomNativeGesture:
+            elif typ == Qt.NativeGestureType.ZoomNativeGesture:
                 self.zoomValue += event.value()
-            if typ == Qt.EndNativeGesture:
+            if typ == Qt.NativeGestureType.EndNativeGesture:
                 self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
 
         return super().event(event)
@@ -106,11 +106,11 @@ class GraphicsView(QGraphicsView):
                 self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
                 self.angleRemainder %= self.WHEEL_STEP
             return
-        elif modifiers == Qt.NoModifier:
+        elif modifiers == Qt.KeyboardModifier.NoModifier:
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().y())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().x())
             return
-        elif modifiers == Qt.ShiftModifier:
+        elif modifiers == Qt.KeyboardModifier.ShiftModifier:
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().x())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().y())
             return
@@ -131,7 +131,7 @@ class GraphicsView(QGraphicsView):
         if self.underReload or self.autofit:
             return event.ignore()
 
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.drag_mode = self.dragMode()
             self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
@@ -146,7 +146,7 @@ class GraphicsView(QGraphicsView):
 
         super().mouseReleaseEvent(event)
 
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.setDragMode(self.drag_mode)
 
         self.mouseReleased.emit(event)
@@ -154,7 +154,7 @@ class GraphicsView(QGraphicsView):
 
     def beforeReload(self) -> None:
         self.underReload = True
-        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.last_positions = (self.verticalScrollBar().value(), self.horizontalScrollBar().value())
 
     def afterReload(self) -> None:

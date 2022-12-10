@@ -186,17 +186,18 @@ class Timeline(QWidget):
 
         cursor_line = QLineF(
             self.cursor_x, self.scroll_rect.top(), self.cursor_x,
-            self.scroll_rect.top() + self.scroll_rect.height() - 1)
+            self.scroll_rect.top() + self.scroll_rect.height() - 1
+        )
 
         # drawing
 
         if self.need_full_repaint:
-            painter.fillRect(self.rect_f, self.palette().color(QPalette.Window))
+            painter.fillRect(self.rect_f, self.palette().color(QPalette.ColorRole.Window))
 
-            painter.setPen(QPen(self.palette().color(QPalette.WindowText)))
-            painter.setRenderHint(QPainter.Antialiasing, False)
+            painter.setPen(QPen(self.palette().color(QPalette.ColorRole.WindowText)))
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
             painter.drawLines([notch.line for notch in labels_notches])
-            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
             for i, notch in enumerate(labels_notches):
                 line = notch.line
@@ -211,26 +212,26 @@ class Timeline(QWidget):
 
                 if i == 0:
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.AlignBottom + Qt.AlignLeft,
-                        label)
+                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft, label
+                    )
                     if self.mode == self.Mode.TIME:
                         rect.moveLeft(-2.5)
                 elif i == (len(labels_notches) - 1):
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.AlignBottom + Qt.AlignHCenter,
-                        label)
+                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, label
+                    )
                     if rect.right() > self.rect_f.right():
                         rect = painter.boundingRect(
-                            anchor_rect, Qt.AlignBottom + Qt.AlignRight,
-                            label)
+                            anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight, label
+                        )
                 else:
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.AlignBottom + Qt.AlignHCenter,
+                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
                         label)
                 painter.drawText(rect, label)
 
-        painter.setRenderHint(QPainter.Antialiasing, False)
-        painter.fillRect(self.scroll_rect, Qt.gray)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.fillRect(self.scroll_rect, Qt.GlobalColor.gray)
 
         for toolbar, notches in self.toolbars_notches.items():
             if not toolbar.is_notches_visible():
@@ -240,7 +241,7 @@ class Timeline(QWidget):
                 painter.setPen(notch.color)
                 painter.drawLine(notch.line)
 
-        painter.setPen(Qt.black)
+        painter.setPen(Qt.GlobalColor.black)
         painter.drawLine(cursor_line)
 
         self.need_full_repaint = False
@@ -258,8 +259,7 @@ class Timeline(QWidget):
         pos = event.pos().toPointF()
         if self.scroll_rect.contains(pos):
             self.set_position(int(pos.x()))
-            self.clicked.emit(self.x_to_f(self.cursor_x, Frame),
-                              self.x_to_t(self.cursor_x, Time))
+            self.clicked.emit(self.x_to_f(self.cursor_x, Frame), self.x_to_t(self.cursor_x, Time))
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
@@ -268,8 +268,8 @@ class Timeline(QWidget):
                 continue
             for notch in notches:
                 line = notch.line
-                if line.x1() - 0.5 <= event.x() <= line.x1() + 0.5:
-                    QToolTip.showText(event.globalPos(), notch.label)
+                if line.x1() - 0.5 <= event.pos().x() <= line.x1() + 0.5:
+                    QToolTip.showText(event.globalPosition(), notch.label)
                     return
 
     def resizeEvent(self, event: QResizeEvent) -> None:

@@ -42,14 +42,14 @@ class EventFilter(QObject):
         self.main = main
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        if (event.type() == QEvent.Show):
+        if (event.type() == QEvent.Type.Show):
             logging.debug('--------------------------------')
             logging.debug(f'{obj.objectName()}')
             logging.debug('event:       Show')
             logging.debug(f'spontaneous: {event.spontaneous()}')
             logging.debug('')
             self.print_toolbars_state()
-        elif (event.type() == QEvent.Hide):
+        elif (event.type() == QEvent.Type.Hide):
             logging.debug('--------------------------------')
             logging.debug(f'{obj.objectName()}')
             logging.debug('event:       Hide')

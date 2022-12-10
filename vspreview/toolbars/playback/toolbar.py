@@ -141,7 +141,7 @@ class PlaybackToolbar(AbstractToolbar):
             duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
-        self.audio_volume_slider = QSlider(Qt.Horizontal, valueChanged=self.setVolume)
+        self.audio_volume_slider = QSlider(Qt.Orientation.Horizontal, valueChanged=self.setVolume)
         self.audio_volume_slider.setFocusPolicy(Qt.NoFocus)
         self.audio_volume_slider.setFixedWidth(120)
         self.audio_volume_slider.setRange(0, 100)

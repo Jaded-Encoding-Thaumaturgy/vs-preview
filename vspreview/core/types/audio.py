@@ -4,8 +4,9 @@ from array import array
 from math import floor
 from typing import Any, Mapping
 
-from PyQt6.QtMultimedia import QAudioDevice, QAudioFormat, QAudioOutput
-from vstools import vs
+from PyQt6.QtCore import Qt
+from PyQt6.QtMultimedia import QAudioDevice, QAudioFormat, QAudioOutput, QAudioSink
+from vstools import vs, CustomRuntimeError
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .units import Frame, Time
@@ -33,9 +34,9 @@ class AudioOutput(AbstractYAMLObject):
         self.is_mono = self.vs_output.num_channels == 1
 
         (self.arrayType, sampleTypeQ) = (
-            'f', QAudioFormat.Float
+            'f', QAudioFormat.SampleFormat.Float
         ) if self.vs_output.sample_type == vs.FLOAT else (
-            'I' if self.vs_output.bits_per_sample <= 16 else 'L', QAudioFormat.SignedInt
+            'I' if self.vs_output.bits_per_sample <= 16 else 'L', QAudioFormat.SampleFormat.Int16
         )
 
         sample_size = 8 * self.vs_output.bytes_per_sample

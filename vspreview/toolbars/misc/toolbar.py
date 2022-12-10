@@ -124,15 +124,15 @@ class MiscToolbar(AbstractToolbar):
             VBoxLayout([
                 HBoxLayout([
                     QLabel('Top'), self.crop_top_spinbox, QSpacerItem(35, 10)
-                ], alignment=Qt.AlignCenter, spacing=0),
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=0),
                 HBoxLayout([
                     QLabel('Left'), self.crop_left_spinbox,
                     self.crop_active_switch,
                     self.crop_right_spinbox, QLabel('Right')
-                ], alignment=Qt.AlignCenter, spacing=5),
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=5),
                 HBoxLayout([
                     QLabel('Bottom'), self.crop_bottom_spinbox, QSpacerItem(51, 10)
-                ], alignment=Qt.AlignCenter, spacing=0)
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=0)
             ]),
             VBoxLayout([
                 HBoxLayout([QLabel('Cropping Type:'), self.crop_mode_combox]),

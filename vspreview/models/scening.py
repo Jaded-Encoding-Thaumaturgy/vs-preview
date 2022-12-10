@@ -40,7 +40,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         if role != Qt.ItemDataRole.DisplayRole:
             return None
 
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             if section == self.START_FRAME_COLUMN:
                 return 'Start'
             if section == self.END_FRAME_COLUMN:
@@ -51,7 +51,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
                 return 'End'
             if section == self.LABEL_COLUMN:
                 return 'Label'
-        if orientation == Qt.Vertical:
+        if orientation == Qt.Orientation.Vertical:
             return section + 1
         return None
 
@@ -307,11 +307,11 @@ class SceningLists(QAbstractListModel, QYAMLObject):
             return self.items[index.row()]
         return None
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return Qt.ItemFlags(Qt.ItemIsEnabled)
+            return Qt.ItemFlag.ItemIsEnabled
 
-        return super().flags(index) | Qt.ItemIsEditable
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():

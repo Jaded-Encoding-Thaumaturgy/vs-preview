@@ -41,10 +41,10 @@ class BenchmarkToolbar(AbstractToolbar):
         self.frames_left = Frame(0)
 
         self.sequenced_timer = Timer(
-            timeout=self._request_next_frame_sequenced, timerType=Qt.PreciseTimer, interval=0
+            timeout=self._request_next_frame_sequenced, timerType=Qt.TimerType.PreciseTimer, interval=0
         )
 
-        self.update_info_timer = Timer(timeout=self.update_info, timerType=Qt.PreciseTimer)
+        self.update_info_timer = Timer(timeout=self.update_info, timerType=Qt.TimerType.PreciseTimer)
 
         self.set_qobject_names()
 

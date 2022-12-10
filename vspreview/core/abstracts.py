@@ -461,7 +461,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         self.name = self.__class__.__name__[:-7]
 
         self.main.app_settings.addTab(self.settings, self.name)
-        self.setFocusPolicy(Qt.ClickFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 

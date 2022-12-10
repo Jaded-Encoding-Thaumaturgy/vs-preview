@@ -48,9 +48,9 @@ class PlaybackToolbar(AbstractToolbar):
         self.setup_ui()
 
         self.play_buffer = deque[tuple[int, Future[vs.VideoFrame]]]()
-        self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
+        self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.TimerType.PreciseTimer)
 
-        self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
+        self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.TimerType.PreciseTimer)
 
         self.current_audio_output = None
         self.current_audio_frame = Frame(0)
@@ -58,7 +58,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.fps_history = deque[int]([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
-        self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
+        self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.TimerType.PreciseTimer)
 
         self.play_start_time: int | None = None
         self.play_start_frame = Frame(0)

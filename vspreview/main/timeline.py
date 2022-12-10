@@ -120,7 +120,7 @@ class Timeline(QWidget):
 
         self.toolbars_notches = dict[AbstractToolbar, Notches]()
 
-        self.setAttribute(Qt.WA_OpaquePaintEvent)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setMouseTracking(True)
 
     def paintEvent(self, event: QPaintEvent) -> None:
@@ -276,7 +276,7 @@ class Timeline(QWidget):
         self.full_repaint()
 
     def event(self, event: QEvent) -> bool:
-        if event.type() in {QEvent.Polish, QEvent.ApplicationPaletteChange}:
+        if event.type() in {QEvent.Type.Polish, QEvent.Type.ApplicationPaletteChange}:
             self.setPalette(self.main.palette())
             self.full_repaint()
             return True

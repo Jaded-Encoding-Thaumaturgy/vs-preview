@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QResizeEvent
 from PyQt6.QtWidgets import QLabel
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
@@ -76,9 +76,9 @@ class FramePropsDialog(ExtendedWidget):
         super().__init__(main_window)
 
         self.main_window = main_window
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setAttribute(Qt.WA_NoSystemBackground, True)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.clicked = False
         self.old_pos = QPointF(0.0, 0.0)
         self.setGeometry(100, 100, 300, 450)

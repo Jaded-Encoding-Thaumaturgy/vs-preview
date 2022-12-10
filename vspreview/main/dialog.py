@@ -11,7 +11,7 @@ class ScriptErrorDialog(ExtendedDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
-        super().__init__(main_window, Qt.Dialog)
+        super().__init__(main_window, Qt.WindowType.Dialog)
         self.main = main_window
 
         self.setWindowTitle('Script Loading Error')

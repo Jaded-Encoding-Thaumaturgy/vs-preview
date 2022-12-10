@@ -172,7 +172,7 @@ class MainWindow(AbstractMainWindow):
         self.setCentralWidget(self.central_widget)
 
         self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
+        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.ColorRole.Window))
         self.graphics_view.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
@@ -649,7 +649,7 @@ class MainWindow(AbstractMainWindow):
         self.user_output_names[node_type][index] = name
 
     def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.LayoutRequest:
+        if event.type() == QEvent.Type.LayoutRequest:
             self.timeline.full_repaint()
 
         return super().event(event)

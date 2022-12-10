@@ -44,17 +44,26 @@ class AudioOutput(AbstractYAMLObject):
         self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.vs_output.num_channels)
         self.qformat.setSampleRate(self.vs_output.sample_rate)
-        self.qformat.setSampleType(sampleTypeQ)
-        self.qformat.setSampleSize(sample_size)
-        self.qformat.setByteOrder(QAudioFormat.LittleEndian)
-        self.qformat.setCodec('audio/pcm')
+        self.qformat.setSampleFormat(sampleTypeQ)
+        # self.qformat.setSampleSize(sample_size)
+        # self.qformat.setByteOrder(Qt.LittleEndian)
+        # self.qformat.setCodec('audio/pcm')
 
-        if not QAudioDevice().isFormatSupported(self.qformat):
+        self.qoutput = QAudioOutput(self.main)
+
+        if not self.qoutput.device().isFormatSupported(self.qformat):
             raise RuntimeError('Audio format not supported')
 
-        self.qoutput = QAudioOutput(self.qformat, self.main)
-        self.qoutput.setBufferSize(sample_size * self.SAMPLES_PER_FRAME)
-        self.iodevice = self.qoutput.start()
+        self.qaudiosink = QAudioSink(self.qoutput.device(), self.qformat, self.main)
+        self.qaudiosink.setBufferSize(sample_size * self.SAMPLES_PER_FRAME)
+
+        self.iodevice = self.qaudiosink.start()
+
+        if self.iodevice is None:
+            raise CustomRuntimeError(
+                'The current QT version has a bug for dll loading, you need to go into '
+                'C:\\System32 and copy "mfplat.dll" into "mfplat.dll.dll".'
+            )
 
         self.fps_num = self.vs_output.sample_rate
         self.fps_den = self.SAMPLES_PER_FRAME

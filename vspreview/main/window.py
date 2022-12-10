@@ -98,11 +98,11 @@ class MainWindow(AbstractMainWindow):
 
         if self.settings.dark_theme_enabled:
             try:
-                from qdarkstyle import load_stylesheet_pyqt5
+                from qdarkstyle import _load_stylesheet  # type: ignore[import]
             except ImportError:
                 self.self.settings.dark_theme_enabled = False
             else:
-                self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
+                self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
                 self.ensurePolished()
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi

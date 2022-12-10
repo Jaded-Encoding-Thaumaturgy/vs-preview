@@ -22,7 +22,7 @@ class Application(QApplication):
         isex = False
         try:
             return QApplication.notify(self, obj, event)
-        except BaseException:
+        except Exception:
             isex = True
             logging.error('Application: unexpected error')
             logging.error(*sys.exc_info())

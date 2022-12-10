@@ -61,7 +61,7 @@ class MainSettings(AbstractToolbarSettings):
 
         self.zoom_levels_lineedit.returnPressed.connect(self.zoom_levels_combobox_on_add)
         QShortcut(
-            QKeySequence(Qt.CTRL + Qt.Key_Delete), self.zoom_levels_combobox,
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Delete).toCombined(), self.zoom_levels_combobox,
             activated=partial(self.zoom_levels_combobox_on_remove, True)
         )
 

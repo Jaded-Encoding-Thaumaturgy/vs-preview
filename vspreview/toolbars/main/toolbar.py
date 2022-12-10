@@ -99,18 +99,18 @@ class MainToolbar(AbstractToolbar):
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys):
             self.add_shortcut(key, partial(self.main.switch_output, i))
-            self.add_shortcut(Qt.CTRL + key, partial(self.main.switch_output, -(i + 1)))
+            self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, key).toCombined(), partial(self.main.switch_output, -(i + 1)))
 
-        self.add_shortcut(Qt.Key_S, self.sync_outputs_checkbox.click)
+        self.add_shortcut(Qt.Key.Key_S, self.sync_outputs_checkbox.click)
         self.add_shortcut(
-            Qt.CTRL + Qt.Key_Tab,
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Tab).toCombined(),
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1)
         )
         self.add_shortcut(
-            Qt.CTRL + Qt.SHIFT + Qt.Key_Tab,
+            QKeyCombination(Qt.Modifier.CTRL | Qt.Modifier.SHIFT, Qt.Key.Key_Tab).toCombined(),
             lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
         )
-        self.add_shortcut(Qt.Key_V, self.on_copy_frame_button_clicked)
+        self.add_shortcut(Qt.Key.Key_V, self.on_copy_frame_button_clicked)
 
     def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
         if checked:

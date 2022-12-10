@@ -120,7 +120,7 @@ class PipetteToolbar(AbstractToolbar):
             self.update_labels(event.pos())
 
     def mouse_pressed(self, event: QMouseEvent) -> None:
-        if event.buttons() == Qt.MouseButtons(Qt.RightButton):
+        if event.buttons() == Qt.MouseButton.RightButton:
             self.tracking = not self.tracking
 
         if self.tracking:

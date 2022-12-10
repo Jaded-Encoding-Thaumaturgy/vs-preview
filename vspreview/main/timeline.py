@@ -254,9 +254,9 @@ class Timeline(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         super().mousePressEvent(event)
-        pos = QPoint(event.pos())
+        pos = event.pos().toPointF()
         if self.scroll_rect.contains(pos):
-            self.set_position(pos.x())
+            self.set_position(int(pos.x()))
             self.clicked.emit(self.x_to_f(self.cursor_x, Frame),
                               self.x_to_t(self.cursor_x, Time))
 

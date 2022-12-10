@@ -48,7 +48,7 @@ class AudioOutput(AbstractYAMLObject):
         self.qformat.setByteOrder(QAudioFormat.LittleEndian)
         self.qformat.setCodec('audio/pcm')
 
-        if not QAudioDeviceInfo(QAudioDeviceInfo.defaultOutputDevice()).isFormatSupported(self.qformat):
+        if not QAudioDevice().isFormatSupported(self.qformat):
             raise RuntimeError('Audio format not supported')
 
         self.qoutput = QAudioOutput(self.qformat, self.main)

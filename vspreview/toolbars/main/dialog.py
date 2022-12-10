@@ -143,19 +143,21 @@ class FramePropsDialog(ExtendedWidget):
         self.main_window.timeline.full_repaint()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        self.old_pos = event.screenPos()
+        self.clicked = True
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.clicked = False
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.clicked:
-            new_x = int(self.pos().x() - (self.old_pos.x() - event.screenPos().x()))
-            new_y = int(self.pos().y() - (self.old_pos.y() - event.screenPos().y()))
+            new_x = int(self.pos().x() - (self.old_pos.x() - event.globalPosition().x()))
+            new_y = int(self.pos().y() - (self.old_pos.y() - event.globalPosition().y()))
 
             if 0 < new_x < self.main_window.width() and 0 < new_y < self.main_window.height():
                 self.move(new_x, new_y)
             else:
                 return
 
-        self.old_pos = event.screenPos()
-        self.clicked = True
+        self.old_pos = event.globalPosition()
 
         return super().mouseMoveEvent(event)

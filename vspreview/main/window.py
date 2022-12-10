@@ -16,7 +16,7 @@ from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
-from vsengine import vpy
+from vsengine import vpy  # type: ignore[import]
 from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
@@ -31,8 +31,8 @@ from .timeline import Timeline
 
 if sys.platform == 'win32':
     try:
-        import win32gui
-        from PIL import _imagingcms
+        import win32gui  # type: ignore[import]
+        from PIL import _imagingcms  # type: ignore[attr-defined]
     except ImportError:
         _imagingcms = None
 

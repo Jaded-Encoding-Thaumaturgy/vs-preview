@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import atexit
-from threading import Lock
-from typing import Any, Callable, TypeVar, Dict
 from concurrent.futures import Future
-from PyQt6.QtCore import QObject, QThreadPool, QRunnable, pyqtSignal
+from threading import Lock
+from typing import Any, Callable, Dict, TypeVar
 
-from vsengine.policy import Policy, GlobalStore, ManagedEnvironment
-from vsengine.loops import EventLoop, set_loop
-
+from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
+from vsengine.loops import EventLoop, set_loop  # type: ignore[import]
+from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ignore[import]
 
 T = TypeVar("T")
 
@@ -38,7 +37,7 @@ class PyQTLoop(QObject, EventLoop):
         self.move.disconnect(self._slot)
         self._signallers = {}
 
-    def _receive_task(self, number: int):
+    def _receive_task(self, number: int) -> None:
         self._signallers.get(number, lambda: None)()
 
     def from_thread(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> Future[T]:
@@ -87,21 +86,21 @@ class PyQTLoop(QObject, EventLoop):
         return fut
 
 
-def set_vsengine_loop():
+def set_vsengine_loop() -> None:
     set_loop(PyQTLoop())
 
 
 policy: Policy = Policy(GlobalStore())
 policy.register()
-environment: ManagedEnvironment = policy.new_environment()
+environment = policy.new_environment()
 environment.switch()
 
 
-def get_current_environment():
+def get_current_environment() -> ManagedEnvironment:
     return environment
 
 
-def make_environment():
+def make_environment() -> None:
     global environment
     assert policy is not None
     environment = policy.new_environment()

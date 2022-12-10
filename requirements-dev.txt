@@ -1,0 +1,2 @@
+types-Pillow>=9.3.0.4
+types-psutil>=5.9.5.5

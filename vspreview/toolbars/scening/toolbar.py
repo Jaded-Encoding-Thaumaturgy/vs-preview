@@ -416,7 +416,7 @@ class SceningToolbar(AbstractToolbar):
         Text is ignored.
         '''
         try:
-            from pysubs2 import load as pysubs2_load
+            from pysubs2 import load as pysubs2_load  # type: ignore[import]
         except ModuleNotFoundError:
             raise RuntimeError(
                 'vspreview: Can\'t import scenes from ass file, you\'re missing the `pysubs2` package!'
@@ -448,7 +448,7 @@ class SceningToolbar(AbstractToolbar):
         Uses TITLE for scene label.
         '''
         try:
-            from cueparser import CueSheet
+            from cueparser import CueSheet  # type: ignore[import]
         except ModuleNotFoundError:
             raise RuntimeError(
                 'vspreview: Can\'t import scenes from cue file, you\'re missing the `cueparser` package!'

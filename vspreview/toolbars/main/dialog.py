@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
-from PyQt5.QtWidgets import QLabel
+from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QLabel
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 

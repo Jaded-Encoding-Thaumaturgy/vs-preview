@@ -6,9 +6,9 @@ import itertools
 import os
 from typing import Any, Mapping, cast
 
-from PyQt5 import sip
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
+from PyQt6 import sip
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
 from vstools import core, video_heuristics, vs, fallback, FramesLengthError, ColorRange
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load

@@ -3,8 +3,8 @@ from __future__ import annotations
 from functools import partial
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtWidgets import QComboBox
 
 from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, VideoOutput, try_load
 from ...core.custom import ComboBox, FrameEdit, TimeEdit

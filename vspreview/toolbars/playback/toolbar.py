@@ -9,8 +9,8 @@ from math import floor
 from time import perf_counter_ns
 from typing import Any, Mapping, cast
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QSlider
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtWidgets import QComboBox, QSlider
 from vstools import vs
 
 from ...core import (

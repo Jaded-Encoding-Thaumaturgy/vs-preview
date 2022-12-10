@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt5.QtCore import QTime, pyqtSignal
-from PyQt5.QtWidgets import QTimeEdit, QWidget
+from PyQt6.QtCore import QTime, pyqtSignal
+from PyQt6.QtWidgets import QTimeEdit, QWidget
 
 from ...core import Frame, SpinBox, Time
 

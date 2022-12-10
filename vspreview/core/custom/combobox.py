@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QComboBox, QWidget
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QWidget
 
 from ...core import AudioOutput, PictureType, VideoOutput
 from ...models import SceningList

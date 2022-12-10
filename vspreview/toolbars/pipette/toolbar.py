@@ -6,9 +6,9 @@ from struct import unpack
 from typing import Generator, cast
 from weakref import WeakKeyDictionary
 
-from PyQt5.QtCore import QPoint, Qt
-from PyQt5.QtGui import QFont, QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView, QLabel
+from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtGui import QFont, QMouseEvent
+from PyQt6.QtWidgets import QGraphicsView, QLabel
 from vstools import vs
 
 from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput

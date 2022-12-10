@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QLabel
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QComboBox, QLabel
 from vstools import DitherType
 
 from ...core import AbstractToolbarSettings, Frame, HBoxLayout, SpinBox, try_load

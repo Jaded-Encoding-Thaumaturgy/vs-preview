@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import QLabel, QTabWidget, QWidget
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtWidgets import QLabel, QTabWidget, QWidget
 
 from ..core import AbstractMainWindow, ExtendedDialog, HBoxLayout, PushButton, VBoxLayout
 

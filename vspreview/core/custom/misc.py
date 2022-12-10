@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Sequence, cast
 
-from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
-from PyQt5.QtWidgets import QLabel, QStatusBar, QWidget
+from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
+from PyQt6.QtWidgets import QLabel, QStatusBar, QWidget
 
 from ..abstracts import PushButton
 

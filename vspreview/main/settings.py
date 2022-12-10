@@ -6,9 +6,9 @@ from functools import partial
 from multiprocessing import cpu_count
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QComboBox, QLabel, QShortcut
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
 from ..core.bases import QYAMLObjectSingleton

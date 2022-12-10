@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
-from PyQt5.QtWidgets import QTableView
+from PyQt6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
+from PyQt6.QtWidgets import QTableView
 
 from ...core import (
     AbstractMainWindow, ExtendedDialog, ExtendedTableView, Frame, HBoxLayout, LineEdit, PushButton, Time, VBoxLayout

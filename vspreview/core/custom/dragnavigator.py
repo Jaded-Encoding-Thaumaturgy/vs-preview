@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from functools import partial
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QPainter, QPaintEvent
-from PyQt5.QtWidgets import QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QWidget
 
 from ..abstracts import AbstractMainWindow, Timer
 from .graphicsview import DragEventType, GraphicsView

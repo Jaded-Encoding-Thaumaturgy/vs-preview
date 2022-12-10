@@ -5,8 +5,8 @@ from concurrent.futures import Future
 from copy import deepcopy
 from time import perf_counter
 
-from PyQt5.QtCore import QMetaObject, Qt
-from PyQt5.QtWidgets import QLabel
+from PyQt6.QtCore import QMetaObject, Qt
+from PyQt6.QtWidgets import QLabel
 from vstools import vs
 
 from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer

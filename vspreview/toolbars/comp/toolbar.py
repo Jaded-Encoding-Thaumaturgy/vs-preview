@@ -11,8 +11,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Final, NamedTuple, cast
 
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
-from PyQt5.QtWidgets import QComboBox, QLabel
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QLabel
 from vstools import vs
 
 from ...core import (

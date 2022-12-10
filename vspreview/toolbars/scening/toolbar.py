@@ -7,9 +7,9 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Mapping, cast
 
-from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QFileDialog, QLabel
+from PyQt6.QtCore import QModelIndex, Qt, QKeyCombination
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QFileDialog, QLabel
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load

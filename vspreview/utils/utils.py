@@ -6,8 +6,8 @@ from functools import partial, wraps
 from string import Template
 from typing import Any, Callable, cast
 
-from PyQt5.QtCore import QSignalBlocker
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtCore import QSignalBlocker
+from PyQt6.QtWidgets import QApplication
 from vstools import F, P, R, T, vs
 
 from ..core import Frame, Time, main_window

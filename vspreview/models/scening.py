@@ -4,7 +4,7 @@ from bisect import bisect_right
 from copy import deepcopy
 from typing import Any, Iterator, Mapping
 
-from PyQt5.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
 
 from ..core import Frame, QYAMLObject, Scene, Time, main_window
 

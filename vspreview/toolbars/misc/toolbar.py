@@ -4,8 +4,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 from vstools import video_heuristics
 
 from ...core import (

@@ -4,7 +4,7 @@ from array import array
 from math import floor
 from typing import Any, Mapping
 
-from PyQt5.QtMultimedia import QAudioDeviceInfo, QAudioFormat, QAudioOutput
+from PyQt6.QtMultimedia import QAudioDevice, QAudioFormat, QAudioOutput
 from vstools import vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load

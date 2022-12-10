@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from enum import IntEnum, auto
 
-from PyQt5.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
-from PyQt5.QtGui import (
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
+from PyQt6.QtGui import (
     QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
-from PyQt5.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
+from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
 
 from ...core import AbstractMainWindow
 from ..types.dataclasses import CroppingInfo

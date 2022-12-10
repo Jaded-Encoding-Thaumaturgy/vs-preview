@@ -9,11 +9,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
 
-from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QClipboard, QKeySequence
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QClipboard, QKeySequence, QShortcut
+from PyQt6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
-    QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut, QSpacerItem, QSpinBox, QStatusBar, QTableView,
+    QLineEdit, QMainWindow, QProgressBar, QPushButton, QSpacerItem, QSpinBox, QStatusBar, QTableView,
     QVBoxLayout, QWidget
 )
 from vstools import T, vs

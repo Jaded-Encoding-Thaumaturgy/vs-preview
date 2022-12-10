@@ -3,9 +3,9 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Iterator, cast
 
-from PyQt5.QtCore import QEvent, QLineF, QPoint, QRectF, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
-from PyQt5.QtWidgets import QApplication, QToolTip, QWidget
+from PyQt6.QtCore import QEvent, QLineF, QPoint, QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
+from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
 
 from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Scene, Time, main_window
 from ..utils import strfdelta

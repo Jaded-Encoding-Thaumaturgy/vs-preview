@@ -12,8 +12,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Literal, cast
 
-from PyQt5.QtCore import QEvent, QObject, Qt
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtCore import QEvent, QObject
+from PyQt6.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow
 from .utils import get_temp_screen_resolution

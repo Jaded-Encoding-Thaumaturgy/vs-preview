@@ -77,7 +77,7 @@ def main() -> None:
     if args.verbose:
         logging.getLogger().level = logging.DEBUG
     else:
-        from vsengine import _hospice
+        from vsengine import _hospice  # type: ignore[import]
         _hospice.logger.setLevel(logging.ERROR)
         logging.getLogger().level = logging.WARNING
 

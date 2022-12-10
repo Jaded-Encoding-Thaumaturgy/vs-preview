@@ -84,10 +84,3 @@ def vs_clear_cache() -> None:
             output.clip.get_frame(int(main_window().current_output.last_showed_frame or Frame(0)))
             break
     vs.core.max_cache_size = cache_size
-
-
-def get_temp_screen_resolution() -> tuple[int, int]:
-    app = QApplication(sys.argv)
-
-    geometry = app.desktop().screenGeometry()
-    return (geometry.width(), geometry.height())

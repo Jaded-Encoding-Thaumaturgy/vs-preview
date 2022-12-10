@@ -16,8 +16,6 @@ from PyQt6.QtCore import QEvent, QObject
 from PyQt6.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow
-from .utils import get_temp_screen_resolution
-
 
 class Application(QApplication):
     def notify(self, obj: QObject, event: QEvent) -> bool:
@@ -97,12 +95,6 @@ def main() -> None:
 
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
-
-    width, height = get_temp_screen_resolution()
-
-    hidpi = width > 1920 and height > 1080
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, hidpi)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, hidpi)
 
     app = Application(sys.argv)
     set_vsengine_loop()

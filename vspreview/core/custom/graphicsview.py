@@ -44,7 +44,7 @@ class GraphicsView(QGraphicsView):
         self.angleRemainder = 0
         self.zoomValue = 0.0
         self.currentZoom = 0.0
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.drag_mode = self.dragMode()
 
     def setZoom(self, value: float | None) -> None:
@@ -91,7 +91,9 @@ class GraphicsView(QGraphicsView):
         modifiers = self.app.keyboardModifiers()
         mouse = event.buttons()
 
-        if modifiers == Qt.ControlModifier or mouse in map(Qt.MouseButtons, {Qt.RightButton, Qt.MiddleButton}):
+        if modifiers == Qt.KeyboardModifier.ControlModifier or mouse in {
+            Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton
+        }:
             angleDelta = event.angleDelta().y()
 
             # check if wheel wasn't rotated the other way since last rotation
@@ -131,7 +133,7 @@ class GraphicsView(QGraphicsView):
 
         if event.button() == Qt.LeftButton:
             self.drag_mode = self.dragMode()
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
         super().mousePressEvent(event)
 
@@ -159,7 +161,7 @@ class GraphicsView(QGraphicsView):
         self.underReload = False
         self.verticalScrollBar().setValue(self.last_positions[0])
         self.horizontalScrollBar().setValue(self.last_positions[1])
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
     def registerReloadEvents(self, main: AbstractMainWindow) -> None:
         self.main = main

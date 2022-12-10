@@ -56,7 +56,7 @@ class MainSettings(AbstractToolbarSettings):
 
         self.azerty_keyboard_checkbox = CheckBox('AZERTY Keyboard', self)
 
-        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.NoInsert)
+        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.InsertPolicy.NoInsert)
         self.zoom_levels_lineedit = self.zoom_levels_combobox.lineEdit()
 
         self.zoom_levels_lineedit.returnPressed.connect(self.zoom_levels_combobox_on_add)

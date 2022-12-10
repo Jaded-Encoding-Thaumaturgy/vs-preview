@@ -86,7 +86,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.view_mode_combox = ComboBox[str](
             self, model=GeneralModel[str]([str(x.value) for x in ViewMode], False),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.view_mode_combox.currentTextChanged.connect(
             lambda mode: self.main.change_video_viewmode(ViewMode(mode))
@@ -114,7 +114,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.crop_mode_combox = ComboBox[str](
             self, model=GeneralModel[str](['relative', 'absolute']),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.crop_mode_combox.currentIndexChanged.connect(self.crop_mode_onchange)
 

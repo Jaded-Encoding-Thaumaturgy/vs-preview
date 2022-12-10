@@ -63,7 +63,7 @@ class MainWindow(AbstractMainWindow):
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
         return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
-    EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     storable_attrs = ('settings', 'toolbars')
 
@@ -173,8 +173,8 @@ class MainWindow(AbstractMainWindow):
 
         self.graphics_view = GraphicsView(self.central_widget)
         self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
-        self.graphics_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphics_view.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
         self.drag_navigator = DragNavigator(self, self.graphics_view)
 

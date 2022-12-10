@@ -26,13 +26,13 @@ class PictureTypes(QAbstractListModel):
     def index_of(self, item: PictureType) -> int:
         return self.items.index(item)
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if (not index.isValid() or index.row() >= len(self.items)):
             return None
 
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return str(self.items[index.row()])
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None
 

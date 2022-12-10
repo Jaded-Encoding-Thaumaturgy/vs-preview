@@ -37,17 +37,17 @@ class GeneralModel(QAbstractListModel):
     def index_of(self, item: content_type) -> int:
         return self.items.index(item)
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if (not index.isValid() or index.row() >= len(self.items)):
             return None
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             value = self.items[index.row()]
             if self.content_type is str:
                 return self._displayValue(value, self.to_title)
             else:
                 return self._displayValue(value)
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None
 

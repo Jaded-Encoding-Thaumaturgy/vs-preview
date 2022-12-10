@@ -135,8 +135,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.mute_button.setFixedWidth(18)
 
         self.audio_outputs_combobox = ComboBox[AudioOutput](
-            self, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
-            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents
+            self, editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
         self.audio_volume_slider = QSlider(Qt.Horizontal, valueChanged=self.setVolume)

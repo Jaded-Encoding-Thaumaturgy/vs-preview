@@ -36,8 +36,8 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return self.COLUMN_COUNT
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Any:
-        if role != Qt.DisplayRole:
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
 
         if orientation == Qt.Horizontal:
@@ -55,7 +55,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
             return section + 1
         return None
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if not index.isValid():
             return None
         row = index.row()
@@ -65,7 +65,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         if column >= self.COLUMN_COUNT:
             return None
 
-        if role in {Qt.DisplayRole, Qt.EditRole}:
+        if role in {Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole}:
             if column == self.START_FRAME_COLUMN:
                 return str(self.items[row].start)
             if column == self.END_FRAME_COLUMN:
@@ -83,7 +83,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
             if column == self.LABEL_COLUMN:
                 return str(self.items[row].label)
 
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             if column == self.START_FRAME_COLUMN:
                 return self.items[row].start
             if column == self.END_FRAME_COLUMN:
@@ -97,10 +97,10 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         return None
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
-        if role not in {Qt.EditRole, Qt.UserRole}:
+        if role not in {Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole}:
             return False
 
         row = index.row()
@@ -295,15 +295,15 @@ class SceningLists(QAbstractListModel, QYAMLObject):
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.items)
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if not index.isValid():
             return None
         if index.row() >= len(self.items):
             return None
 
-        if role in {Qt.DisplayRole, Qt.EditRole}:
+        if role in {Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole}:
             return self.items[index.row()].name
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None
 
@@ -313,10 +313,10 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
         return super().flags(index) | Qt.ItemIsEditable
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
-        if role not in {Qt.EditRole, Qt.UserRole}:
+        if role not in {Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole}:
             return False
         if not isinstance(value, str):
             return False

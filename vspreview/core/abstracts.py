@@ -223,8 +223,8 @@ class ExtendedWidget(AbstractQItem, QWidget):
 
     def get_separator(self) -> QFrame:
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.VLine)
-        separator.setFrameShadow(QFrame.Sunken)
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
 
 
@@ -504,7 +504,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         return self.isVisible()
 
     def resize_main_window(self, expanding: bool) -> None:
-        if self.main.windowState() in map(Qt.WindowStates, {Qt.WindowMaximized, Qt.WindowFullScreen}):
+        if self.main.windowState() in {Qt.WindowState.WindowMaximized, Qt.WindowState.WindowFullScreen}:
             return
 
         if expanding:

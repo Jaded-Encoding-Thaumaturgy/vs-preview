@@ -241,10 +241,10 @@ class PipetteToolbar(AbstractToolbar):
 
         if new_state:
             self.subscribe_on_mouse_events()
-            self.main.graphics_view.setDragMode(QGraphicsView.NoDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.DragMode.NoDrag)
         else:
             self.unsubscribe_from_mouse_events()
-            self.main.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:

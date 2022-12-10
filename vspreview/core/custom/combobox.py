@@ -29,7 +29,7 @@ class ComboBox(QComboBox, Generic[ComboBoxT]):
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)
 
-        self.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
 
         self.oldValue = self.currentData()
         self.oldIndex = self.currentIndex()

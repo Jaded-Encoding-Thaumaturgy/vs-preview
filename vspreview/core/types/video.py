@@ -37,10 +37,10 @@ class PackingTypeInfo:
 
 
 class PackingType(PackingTypeInfo):
-    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
-    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
-    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_BGR30, True)
-    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
+    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_RGB32, False)
+    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
+    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
+    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
 
 
 if not hasattr(core, 'akarin') and not hasattr(core, 'libp2p'):
@@ -199,7 +199,7 @@ class VideoOutput(AbstractYAMLObject):
         nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
         self._FRAME_CONV_INFO = {
             False: (nbps, ctypes.c_char * nbps, PACKING_TYPE.qt_format),
-            True: (abps, ctypes.c_char * abps, QImage.Format_Alpha8)
+            True: (abps, ctypes.c_char * abps, QImage.Format.Format_Alpha8)
         }
 
     @property
@@ -382,7 +382,7 @@ class VideoOutput(AbstractYAMLObject):
         painter.fillRect(0, tile_size, tile_size, tile_size, tile_color_2)
         painter.end()
 
-        result_image = QImage(self.width, self.height, QImage.Format_ARGB32_Premultiplied)
+        result_image = QImage(self.width, self.height, QImage.Format.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)
         painter.drawTiledPixmap(result_image.rect(), macrotile_pixmap)
         painter.end()

@@ -45,8 +45,8 @@ class MainToolbar(AbstractToolbar):
         self.frame_props_dialog = FramePropsDialog(self.main)
 
         self.outputs_combobox = ComboBox[VideoOutput](
-            self, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
-            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents
+            self, editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
         self.outputs_combobox.view().setMinimumWidth(

@@ -13,7 +13,7 @@ from ..utils import strfdelta
 
 class Notch:
     def __init__(
-        self, data: Frame | Time, color: QColor = cast(QColor, Qt.white), label: str = '', line: QLineF = QLineF()
+        self, data: Frame | Time, color: QColor = cast(QColor, Qt.GlobalColor.white), label: str = '', line: QLineF = QLineF()
     ) -> None:
         self.data = data
         self.color = color
@@ -36,7 +36,7 @@ class Notches:
 
     def add(
         self, data: Frame | Scene | Time | Notch,
-        color: QColor = cast(QColor, Qt.white),
+        color: QColor = cast(QColor, Qt.GlobalColor.white),
         label: str = ''
     ) -> None:
         if isinstance(data, Notch):

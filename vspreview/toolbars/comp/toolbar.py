@@ -253,8 +253,8 @@ class CompToolbar(AbstractToolbar):
         self.current_frame_checkbox = CheckBox('Current', self, checked=True)
 
         self.pic_type_combox = ComboBox[PictureType](
-            self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertAtCurrent,
-            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents, currentIndex=0
+            self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents, currentIndex=0
         )
 
         self.pic_type_combox.view().setMinimumWidth(self.pic_type_combox.minimumSizeHint().width())

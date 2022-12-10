@@ -38,16 +38,16 @@ class SceningListDialog(ExtendedDialog):
         self.tableview.doubleClicked.connect(self.on_tableview_clicked)
         self.delete_button.clicked.connect(self.on_delete_clicked)
 
-        self.tableview.add_shortcut(Qt.Key_Delete, self.delete_button.click)
+        self.tableview.add_shortcut(Qt.Key.Key_Delete, self.delete_button.click)
         self.set_qobject_names()
 
     def setup_ui(self) -> None:
         self.name_lineedit = LineEdit()
 
         self.tableview = ExtendedTableView()
-        self.tableview.setSelectionMode(QTableView.SingleSelection)
-        self.tableview.setSelectionBehavior(QTableView.SelectRows)
-        self.tableview.setSizeAdjustPolicy(QTableView.AdjustToContents)
+        self.tableview.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        self.tableview.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.tableview.setSizeAdjustPolicy(QTableView.SizeAdjustPolicy.AdjustToContents)
 
         self.start_frame_control = FrameEdit()
         self.end_frame_control = FrameEdit()
@@ -128,7 +128,7 @@ class SceningListDialog(ExtendedDialog):
         index = index.siblingAtColumn(SceningList.END_FRAME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, frame, Qt.UserRole)
+        self.scening_list.setData(index, frame, Qt.ItemDataRole.UserRole)
 
     def on_end_time_changed(self, time: Time) -> None:
         if self.tableview.selectionModel() is None:
@@ -141,7 +141,7 @@ class SceningListDialog(ExtendedDialog):
         index = index.siblingAtColumn(SceningList.END_TIME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, time, Qt.UserRole)
+        self.scening_list.setData(index, time, Qt.ItemDataRole.UserRole)
 
     def on_label_changed(self, text: str) -> None:
         if self.tableview.selectionModel() is None:
@@ -154,12 +154,12 @@ class SceningListDialog(ExtendedDialog):
         index = self.scening_list.index(index.row(), SceningList.LABEL_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, text, Qt.UserRole)
+        self.scening_list.setData(index, text, Qt.ItemDataRole.UserRole)
 
     def on_name_changed(self, text: str) -> None:
         i = self.main.toolbars.scening.lists.index_of(self.scening_list)
         index = self.main.toolbars.scening.lists.index(i)
-        self.main.toolbars.scening.lists.setData(index, text, Qt.UserRole)
+        self.main.toolbars.scening.lists.setData(index, text, Qt.ItemDataRole.UserRole)
 
     def on_start_frame_changed(self, value: Frame | int) -> None:
         frame = Frame(value)
@@ -172,7 +172,7 @@ class SceningListDialog(ExtendedDialog):
         index = index.siblingAtColumn(SceningList.START_FRAME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, frame, Qt.UserRole)
+        self.scening_list.setData(index, frame, Qt.ItemDataRole.UserRole)
 
     def on_start_time_changed(self, time: Time) -> None:
         try:
@@ -184,7 +184,7 @@ class SceningListDialog(ExtendedDialog):
         index = index.siblingAtColumn(SceningList.START_TIME_COLUMN)
         if not index.isValid():
             return
-        self.scening_list.setData(index, time, Qt.UserRole)
+        self.scening_list.setData(index, time, Qt.ItemDataRole.UserRole)
 
     def on_tableview_clicked(self, index: QModelIndex) -> None:
         if index.column() in {SceningList.START_FRAME_COLUMN, SceningList.END_FRAME_COLUMN}:

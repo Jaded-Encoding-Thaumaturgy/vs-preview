@@ -62,7 +62,7 @@ class TimeEdit(QTimeEdit):
         super().__init__(parent, **kwargs, timeChanged=self._timeChanged)
 
         self.setDisplayFormat('H:mm:ss.zzz')
-        self.setButtonSymbols(QTimeEdit.NoButtons)
+        self.setButtonSymbols(QTimeEdit.ButtonSymbols.NoButtons)
         self.setMinimum(Time())
 
         self.oldValue: Time = self.value()

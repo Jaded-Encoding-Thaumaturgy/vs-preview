@@ -16,8 +16,8 @@ class PlaybackSettings(AbstractToolbarSettings):
     __slots__ = ('buffer_size_spinbox', 'dither_type_combobox')
 
     CHECKERBOARD_ENABLED = True
-    CHECKERBOARD_TILE_COLOR_1 = Qt.white
-    CHECKERBOARD_TILE_COLOR_2 = Qt.lightGray
+    CHECKERBOARD_TILE_COLOR_1 = Qt.GlobalColor.white
+    CHECKERBOARD_TILE_COLOR_2 = Qt.GlobalColor.lightGray
     CHECKERBOARD_TILE_SIZE = 8  # px
     FPS_AVERAGING_WINDOW_SIZE = Frame(100)
     FPS_REFRESH_INTERVAL = 150  # ms
@@ -30,7 +30,7 @@ class PlaybackSettings(AbstractToolbarSettings):
         self.buffer_size_spinbox = SpinBox(self, 1, MainSettings.get_usable_cpus_count())
         self.dither_type_combobox = ComboBox[str](
             self, model=GeneralModel[str]([x.value for x in DitherType][1:]),
-            currentIndex=3, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=3, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
         self.dither_type_combobox.currentTextChanged.connect(lambda _: main_window().refresh_video_outputs())

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import runpy
 from concurrent.futures import Future
 from threading import Lock
 from typing import Any, Callable, Dict, TypeVar
@@ -8,6 +9,19 @@ from typing import Any, Callable, Dict, TypeVar
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 from vsengine.loops import EventLoop, set_loop  # type: ignore[import]
 from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ignore[import]
+
+_monkey_runpy_dicts = {}
+
+orig_runpy_run_code = runpy._run_code
+
+
+def _monkey_runpy_func(*args, **kwargs):
+    test = orig_runpy_run_code(*args, **kwargs)
+    _monkey_runpy_dicts[test['_monkey_runpy']] = test
+    return test
+
+
+runpy._run_code = _monkey_runpy_func
 
 T = TypeVar("T")
 

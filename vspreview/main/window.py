@@ -445,6 +445,9 @@ class MainWindow(AbstractMainWindow):
         return storage_dump.getvalue()
 
     def init_outputs(self) -> None:
+        if not self.outputs:
+            return
+
         self.graphics_scene.clear()
 
         for output in self.outputs:
@@ -466,19 +469,27 @@ class MainWindow(AbstractMainWindow):
         for v in self.user_output_names.values():
             v.clear()
         self.outputs.clear()
-        gc.collect()
+        self.gc_collect()
         old_environment = get_current_environment()
-        if self.env:
-            _monkey_runpy_dicts[self.env.module.__dict__['_monkey_runpy']].clear()
-            _monkey_runpy_dicts.pop(self.env.module.__dict__['_monkey_runpy'])
-        gc.collect()
+        if self.env and '_monkey_runpy' in self.env.module.__dict__:
+            key = self.env.module.__dict__['_monkey_runpy']
+
+            if key in _monkey_runpy_dicts:
+                _monkey_runpy_dicts[key].clear()
+                _monkey_runpy_dicts.pop(key, None)
+            elif _monkey_runpy_dicts:
+                for env in _monkey_runpy_dicts.items():
+                    env.clear()
+                _monkey_runpy_dicts.clear()
+
+        self.gc_collect()
         make_environment()
+        old_environment.dispose()
         self.gc_collect()
 
         try:
             self.load_script(self.script_path, reloading=True)
         finally:
-            old_environment.dispose()
             self.gc_collect()
 
         self.reload_after_signal.emit()
@@ -520,7 +531,7 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
-        if len(self.outputs) == 0:
+        if not self.outputs or len(self.outputs) == 0:
             return
 
         if isinstance(value, VideoOutput):
@@ -565,10 +576,13 @@ class MainWindow(AbstractMainWindow):
 
     @current_output.setter
     def current_output(self, value: VideoOutput) -> None:
+        if not self.outputs:
+            return
+
         self.switch_output(self.outputs.index_of(value))
 
     @property
-    def outputs(self) -> VideoOutputs:
+    def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs
 
     def handle_script_error(self, message: str) -> None:

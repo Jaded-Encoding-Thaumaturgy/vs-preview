@@ -303,6 +303,9 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         raise NotImplementedError
 
     def refresh_video_outputs(self) -> None:
+        if not self.outputs:
+            return
+
         playback_active = self.toolbars.playback.play_timer.isActive()
 
         if playback_active:
@@ -321,6 +324,9 @@ class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
             self.toolbars.playback.play()
 
     def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
+        if not self.outputs:
+            return
+
         playback_active = self.toolbars.playback.play_timer.isActive()
 
         if playback_active:

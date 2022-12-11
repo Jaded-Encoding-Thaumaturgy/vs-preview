@@ -468,8 +468,16 @@ class MainWindow(AbstractMainWindow):
         self.gc_collect()
         old_environment = get_current_environment()
         if self.env and '_monkey_runpy' in self.env.module.__dict__:
-            _monkey_runpy_dicts[self.env.module.__dict__['_monkey_runpy']].clear()
-            _monkey_runpy_dicts.pop(self.env.module.__dict__['_monkey_runpy'])
+            key = self.env.module.__dict__['_monkey_runpy']
+
+            if key in _monkey_runpy_dicts:
+                _monkey_runpy_dicts[key].clear()
+                _monkey_runpy_dicts.pop(key, None)
+            elif _monkey_runpy_dicts:
+                for env in _monkey_runpy_dicts.items():
+                    env.clear()
+                _monkey_runpy_dicts.clear()
+
         self.gc_collect()
         make_environment()
         self.gc_collect()

@@ -149,7 +149,7 @@ class MainToolbar(AbstractToolbar):
             self.main.graphics_view.setZoom(None)
 
     def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
-        self.outputs = outputs or VideoOutputs(self.main)
+        self.outputs = outputs if isinstance(outputs, VideoOutputs) else VideoOutputs(self.main)
         self.main.init_outputs()
         self.outputs_combobox.setModel(self.outputs)
 

@@ -28,7 +28,7 @@ class MainToolbar(AbstractToolbar):
         super().__init__(main_window, main_window.settings)
         self.setup_ui()
 
-        self.outputs: VideoOutputs = []
+        self.outputs: VideoOutputs | None = None
 
         self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))  # type: ignore
         self.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
@@ -113,6 +113,9 @@ class MainToolbar(AbstractToolbar):
         self.add_shortcut(Qt.Key_V, self.on_copy_frame_button_clicked)
 
     def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
+        if not self.outputs:
+            return
+
         if checked:
             if not force_frame:
                 force_frame = self.main.current_output.last_showed_frame
@@ -168,11 +171,14 @@ class MainToolbar(AbstractToolbar):
             self.main.timeline.mode = self.main.timeline.Mode.TIME
 
     def on_sync_outputs_changed(self, state: Qt.CheckState) -> None:
+        if not self.outputs:
+            return
+
         if state == Qt.Checked:
-            for output in self.main.outputs:
+            for output in self.outputs:
                 output.last_showed_frame = self.main.current_output.last_showed_frame
         if state == Qt.Unchecked:
-            for output in self.main.outputs:
+            for output in self.outputs:
                 output.last_showed_frame = None
 
     def on_zoom_changed(self, text: str | None = None) -> None:

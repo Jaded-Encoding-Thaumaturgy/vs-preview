@@ -444,6 +444,9 @@ class MainWindow(AbstractMainWindow):
         return storage_dump.getvalue()
 
     def init_outputs(self) -> None:
+        if not self.outputs:
+            return
+
         self.graphics_scene.clear()
 
         for output in self.outputs:
@@ -527,7 +530,7 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
-        if len(self.outputs) == 0:
+        if not self.outputs or len(self.outputs) == 0:
             return
 
         if isinstance(value, VideoOutput):
@@ -572,10 +575,13 @@ class MainWindow(AbstractMainWindow):
 
     @current_output.setter
     def current_output(self, value: VideoOutput) -> None:
+        if not self.outputs:
+            return
+
         self.switch_output(self.outputs.index_of(value))
 
     @property
-    def outputs(self) -> VideoOutputs:
+    def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs
 
     def handle_script_error(self, message: str) -> None:

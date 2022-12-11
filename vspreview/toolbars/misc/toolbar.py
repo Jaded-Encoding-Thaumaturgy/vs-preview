@@ -249,7 +249,7 @@ class MiscToolbar(AbstractToolbar):
         self.crop_mode_combox.setCurrentIndex(int(crop.is_absolute))
 
     def update_crop(self, index: int | None = None) -> None:
-        if not hasattr(self.main, 'current_output'):
+        if not hasattr(self.main, 'current_output') or not self.main.outputs:
             return
 
         output = self.main.current_output if index is None else self.main.outputs[index]

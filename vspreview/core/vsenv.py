@@ -16,9 +16,10 @@ orig_runpy_run_code = runpy._run_code
 
 
 def _monkey_runpy_func(*args, **kwargs):
-    test = orig_runpy_run_code(*args, **kwargs)
-    _monkey_runpy_dicts[test['_monkey_runpy']] = test
-    return test
+    glob_dict = orig_runpy_run_code(*args, **kwargs)
+    if '_monkey_runpy' in glob_dict:
+        _monkey_runpy_dicts[glob_dict['_monkey_runpy']] = glob_dict
+    return glob_dict
 
 
 runpy._run_code = _monkey_runpy_func

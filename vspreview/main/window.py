@@ -480,12 +480,12 @@ class MainWindow(AbstractMainWindow):
 
         self.gc_collect()
         make_environment()
+        old_environment.dispose()
         self.gc_collect()
 
         try:
             self.load_script(self.script_path, reloading=True)
         finally:
-            old_environment.dispose()
             self.gc_collect()
 
         self.reload_after_signal.emit()

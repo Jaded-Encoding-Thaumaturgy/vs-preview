@@ -5,10 +5,23 @@ from threading import Lock
 from typing import Any, Callable, TypeVar, Dict
 from concurrent.futures import Future
 from PyQt5.QtCore import QObject, QThreadPool, QRunnable, pyqtSignal
+import runpy
 
 from vsengine.policy import Policy, GlobalStore, ManagedEnvironment
 from vsengine.loops import EventLoop, set_loop
 
+_monkey_runpy_dicts = {}
+
+orig_runpy_run_code = runpy._run_code
+
+
+def _monkey_runpy_func(*args, **kwargs):
+    test = orig_runpy_run_code(*args, **kwargs)
+    _monkey_runpy_dicts[test['_monkey_runpy']] = test
+    return test
+
+
+runpy._run_code = _monkey_runpy_func
 
 T = TypeVar("T")
 
@@ -30,7 +43,7 @@ class PyQTLoop(QObject, EventLoop):
         self._signal_lock = Lock()
         self._signal_counter = 0
         self._signallers: Dict[int, Callable[[], None]] = {}
-        
+
         self._slot = self._receive_task
         self.move.connect(self._slot)
 
@@ -70,6 +83,7 @@ class PyQTLoop(QObject, EventLoop):
 
     def to_thread(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> Future[T]:
         fut = Future()
+
         def wrapper():
             if not fut.set_running_or_notify_cancel():
                 return

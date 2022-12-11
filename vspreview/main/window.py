@@ -4,7 +4,7 @@ import gc
 import io
 import logging
 import sys
-import weakref
+from random import random
 from fractions import Fraction
 from itertools import count
 from os.path import expanduser, expandvars
@@ -21,7 +21,7 @@ from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
-from ..core.vsenv import get_current_environment, make_environment
+from ..core.vsenv import get_current_environment, make_environment, _monkey_runpy_dicts
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -165,6 +165,8 @@ class MainWindow(AbstractMainWindow):
         self.set_qobject_names()
         self.setObjectName('MainWindow')
 
+        self.env: vpy.Script | None = None
+
     def setup_ui(self) -> None:
         self.central_widget = ExtendedWidget(self)
         self.main_layout = VBoxLayout(self.central_widget)
@@ -224,12 +226,13 @@ class MainWindow(AbstractMainWindow):
             pass
 
         try:
-            env = vpy.variables(
+            self.env = vpy.variables(
                 dict(self.external_args),
                 environment=vs.get_current_environment(),
                 module_name="__vspreview__"
             ).result()
-            env = vpy.script(script_path, environment=env).result()
+            self.env.module.__dict__['_monkey_runpy'] = random()
+            self.env = vpy.script(script_path, environment=self.env).result()
         except vpy.ExecutionFailed as e:
             logging.error(e.parent_error)
 
@@ -277,7 +280,7 @@ class MainWindow(AbstractMainWindow):
             if start_frame is not None:
                 self.switch_frame(Frame(start_frame))
 
-        with env:
+        with self.env:
             vs.register_on_destroy(self.gc_collect)
 
     @set_status_label('Loading...')
@@ -464,6 +467,10 @@ class MainWindow(AbstractMainWindow):
         self.outputs.clear()
         gc.collect()
         old_environment = get_current_environment()
+        if self.env:
+            _monkey_runpy_dicts[self.env.module.__dict__['_monkey_runpy']].clear()
+            _monkey_runpy_dicts.pop(self.env.module.__dict__['_monkey_runpy'])
+        gc.collect()
         make_environment()
         self.gc_collect()
 

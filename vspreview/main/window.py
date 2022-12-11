@@ -467,7 +467,7 @@ class MainWindow(AbstractMainWindow):
         self.outputs.clear()
         gc.collect()
         old_environment = get_current_environment()
-        if self.env:
+        if self.env and '_monkey_runpy' in self.env.module.__dict__:
             _monkey_runpy_dicts[self.env.module.__dict__['_monkey_runpy']].clear()
             _monkey_runpy_dicts.pop(self.env.module.__dict__['_monkey_runpy'])
         gc.collect()

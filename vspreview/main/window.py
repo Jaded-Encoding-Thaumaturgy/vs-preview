@@ -468,21 +468,26 @@ class MainWindow(AbstractMainWindow):
         self.norm_timecodes.clear()
         for v in self.user_output_names.values():
             v.clear()
-        self.outputs.clear()
+        if self.outputs:
+            self.outputs.clear()
         self.gc_collect()
         old_environment = get_current_environment()
-        if self.env and '_monkey_runpy' in self.env.module.__dict__:
-            key = self.env.module.__dict__['_monkey_runpy']
 
-            if key in _monkey_runpy_dicts:
-                _monkey_runpy_dicts[key].clear()
-                _monkey_runpy_dicts.pop(key, None)
-            elif _monkey_runpy_dicts:
-                for env in _monkey_runpy_dicts.items():
-                    env.clear()
-                _monkey_runpy_dicts.clear()
+        def clear_monkey_runpy():
+            if self.env and '_monkey_runpy' in self.env.module.__dict__:
+                key = self.env.module.__dict__['_monkey_runpy']
 
-        self.gc_collect()
+                if key in _monkey_runpy_dicts:
+                    _monkey_runpy_dicts[key].clear()
+                    _monkey_runpy_dicts.pop(key, None)
+                elif _monkey_runpy_dicts:
+                    for env in _monkey_runpy_dicts.items():
+                        env.clear()
+                    _monkey_runpy_dicts.clear()
+
+            self.gc_collect()
+
+        clear_monkey_runpy()
         make_environment()
         old_environment.dispose()
         self.gc_collect()
@@ -490,7 +495,7 @@ class MainWindow(AbstractMainWindow):
         try:
             self.load_script(self.script_path, reloading=True)
         finally:
-            self.gc_collect()
+            clear_monkey_runpy()
 
         self.reload_after_signal.emit()
 

@@ -472,21 +472,7 @@ class MainWindow(AbstractMainWindow):
         self.gc_collect()
         old_environment = get_current_environment()
 
-        def clear_monkey_runpy():
-            if self.env and '_monkey_runpy' in self.env.module.__dict__:
-                key = self.env.module.__dict__['_monkey_runpy']
-
-                if key in _monkey_runpy_dicts:
-                    _monkey_runpy_dicts[key].clear()
-                    _monkey_runpy_dicts.pop(key, None)
-                elif _monkey_runpy_dicts:
-                    for env in _monkey_runpy_dicts.items():
-                        env.clear()
-                    _monkey_runpy_dicts.clear()
-
-            self.gc_collect()
-
-        clear_monkey_runpy()
+        self.clear_monkey_runpy()
         make_environment()
         old_environment.dispose()
         self.gc_collect()
@@ -494,11 +480,25 @@ class MainWindow(AbstractMainWindow):
         try:
             self.load_script(self.script_path, reloading=True)
         finally:
-            clear_monkey_runpy()
+            self.clear_monkey_runpy()
 
         self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
+
+    def clear_monkey_runpy(self):
+        if self.env and '_monkey_runpy' in self.env.module.__dict__:
+            key = self.env.module.__dict__['_monkey_runpy']
+
+            if key in _monkey_runpy_dicts:
+                _monkey_runpy_dicts[key].clear()
+                _monkey_runpy_dicts.pop(key, None)
+            elif _monkey_runpy_dicts:
+                for env in _monkey_runpy_dicts.items():
+                    env.clear()
+                _monkey_runpy_dicts.clear()
+
+        self.gc_collect()
 
     def gc_collect(self) -> None:
         for i in range(3):
@@ -590,6 +590,7 @@ class MainWindow(AbstractMainWindow):
         return self.toolbars.main.outputs
 
     def handle_script_error(self, message: str) -> None:
+        self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.open()
 

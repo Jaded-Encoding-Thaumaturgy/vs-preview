@@ -202,13 +202,13 @@ class PlaybackToolbar(AbstractToolbar):
                 ) * 2
             ))
             play_buffer_size -= play_buffer_size % 2
-            self.play_buffer = deque([], play_buffer_size)
         else:
             play_buffer_size = int(min(
                 self.settings.playback_buffer_size,
                 self.main.current_output.end_frame - self.main.current_output.last_showed_frame
             ))
-            self.play_buffer = deque([], play_buffer_size)
+
+        self.play_buffer = deque([], play_buffer_size)
 
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if self.main.current_output.last_showed_frame == self.main.current_output.end_frame:
@@ -296,8 +296,7 @@ class PlaybackToolbar(AbstractToolbar):
             return
 
         if self.last_frame <= self.main.current_output.last_showed_frame:
-            self.play_n_frames_button.click()
-            return
+            return self.stop()
 
         n_frames = 1 if self.main.current_output.prepared.alpha is None else 2
         next_buffered_frame = self.main.current_output.last_showed_frame + (

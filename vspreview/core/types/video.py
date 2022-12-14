@@ -174,7 +174,12 @@ class VideoOutput(AbstractYAMLObject):
             self.got_timecodes = False
 
         if self.got_timecodes:
-            self.total_time = Time(seconds=sum(1 / fps for fps in self.timecodes))
+            acc = 0.0
+            self._timecodes_frame_to_time = [0.0]
+            for fps in self.timecodes:
+                acc += 1 / fps
+                self._timecodes_frame_to_time.append(acc)
+            self.total_time = Time(seconds=acc)
         else:
             self.total_time = self.to_time(self.total_frames - Frame(1))
 
@@ -392,6 +397,8 @@ class VideoOutput(AbstractYAMLObject):
         return round(seconds * self.fps)
 
     def _calculate_seconds(self, frame_num: int) -> float:
+        if self.got_timecodes:
+            return self._timecodes_frame_to_time[frame_num]
         return frame_num / (self.fps or 1)
 
     def to_frame(self, time: Time) -> Frame:

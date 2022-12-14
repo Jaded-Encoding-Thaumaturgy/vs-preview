@@ -18,7 +18,7 @@ def set_output(
     node: vs.RawNode, name: str | None = None,
     *, timecodes: str | Path | dict[
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
-    ] | list[float] | None = None, denominator: int = 1001
+    ] | list[Fraction] | None = None, denominator: int = 1001
 ) -> None:
     from ..core import main_window
 

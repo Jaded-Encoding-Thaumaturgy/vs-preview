@@ -137,7 +137,7 @@ class PipetteToolbar(AbstractToolbar):
             cache = self._curr_frame_cache[self.main.current_output]
 
         last_showed_frame = min(
-            int(self.main.current_output.last_showed_frame), int(self.main.current_output.end_frame)
+            int(self.main.current_output.last_showed_frame), int(self.main.current_output.total_frames) - 1
         )
 
         if cache[1] is None or cache[0] != last_showed_frame:
@@ -155,7 +155,7 @@ class PipetteToolbar(AbstractToolbar):
             cache = self._curr_alphaframe_cache[self.main.current_output]
 
         last_showed_frame = min(
-            int(self.main.current_output.last_showed_frame), int(self.main.current_output.end_frame)
+            int(self.main.current_output.last_showed_frame), int(self.main.current_output.total_frames) - 1
         )
 
         if cache[1] is None or cache[0] != last_showed_frame:

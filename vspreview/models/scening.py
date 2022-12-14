@@ -208,7 +208,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         if i >= 0 and i < len(self.items):
             self.beginRemoveRows(QModelIndex(), i, i)
-            del(self.items[i])
+            del self.items[i]
             self.endRemoveRows()
         else:
             raise IndexError
@@ -341,7 +341,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
         self, name: str | None = None, max_value: Frame | None = None, i: int | None = None
     ) -> tuple[SceningList, int]:
         if max_value is None:
-            max_value = self.main.current_output.end_frame
+            max_value = self.main.current_output.total_frames - 1
         if i is None:
             i = len(self.items)
 
@@ -367,7 +367,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
         if i >= 0 and i < len(self.items):
             self.beginRemoveRows(QModelIndex(), i, i)
-            del(self.items[i])
+            del self.items[i]
             self.endRemoveRows()
         else:
             raise IndexError

@@ -85,9 +85,9 @@ class BenchmarkToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        self.start_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.end_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.total_frames_control.setMaximum(self.main.current_output.total_frames)
+        self.start_frame_control.setMaximum(self.main.current_output.total_frames - 1)
+        self.end_frame_control.setMaximum(self.main.current_output.total_frames - 1)
+        self.total_frames_control.setMaximum(self.main.current_output.total_frames - Frame(1))
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
@@ -212,9 +212,9 @@ class BenchmarkToolbar(AbstractToolbar):
             delta = total - old_total
 
             end += delta
-            if end > self.main.current_output.end_frame:
-                start -= end - self.main.current_output.end_frame
-                end = self.main.current_output.end_frame
+            if end > (e := self.main.current_output.total_frames - 1):
+                start -= end - e
+                end = e
         else:
             return
 

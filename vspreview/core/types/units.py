@@ -38,7 +38,7 @@ class Frame(YAMLObjectWrapper):
     def __sub__(self, other: Number | Frame) -> Frame:
         if isinstance(other, Frame):
             return Frame(self.value - other.value)
-        raise TypeError
+        return self - Frame(other)
 
     def __isub__(self, other: Number | Frame) -> Frame:
         if not isinstance(other, Frame):
@@ -84,6 +84,9 @@ class Time(YAMLObjectWrapper):
     __slots__ = ('value', )
 
     def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
+        if isinstance(init_value, int):
+            init_value = Frame(init_value)
+
         if isinstance(init_value, timedelta):
             self.value = init_value
         elif isinstance(init_value, Time):
@@ -107,7 +110,7 @@ class Time(YAMLObjectWrapper):
     def __sub__(self, other: Time) -> Time:
         if isinstance(other, Time):
             return Time(self.value - other.value)
-        raise TypeError
+        return self - Time(other)
 
     def __isub__(self, other: Time) -> Time:
         self.value -= other.value

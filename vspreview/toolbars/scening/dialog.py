@@ -106,10 +106,10 @@ class SceningListDialog(ExtendedDialog):
         self.delete_button.setEnabled(False)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        self.start_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.end_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.start_time_control.setMaximum(self.main.current_output.total_time)
-        self.end_time_control.setMaximum(self.main.current_output.total_time)
+        self.start_frame_control.setMaximum(self.main.current_output.total_frames - 1)
+        self.end_frame_control.setMaximum(self.main.current_output.total_frames - 1)
+        self.start_time_control.setMaximum(self.main.current_output.total_time - Frame(1))
+        self.end_time_control.setMaximum(self.main.current_output.total_time - Frame(1))
 
     def on_delete_clicked(self, checked: bool | None = None) -> None:
         for model_index in self.tableview.selectionModel().selectedRows():
@@ -188,11 +188,11 @@ class SceningListDialog(ExtendedDialog):
 
     def on_tableview_clicked(self, index: QModelIndex) -> None:
         if index.column() in {SceningList.START_FRAME_COLUMN, SceningList.END_FRAME_COLUMN}:
-            self.main.switch_frame(self.scening_list.data(index))
+            self.main.switch_frame(Frame(self.scening_list.data(index)))
         if index.column() == SceningList.START_TIME_COLUMN:
-            self.main.switch_frame(self.scening_list.data(index.siblingAtColumn(SceningList.START_FRAME_COLUMN)))
+            self.main.switch_frame(Frame(self.scening_list.data(index.siblingAtColumn(SceningList.START_FRAME_COLUMN))))
         if index.column() == SceningList.END_TIME_COLUMN:
-            self.main.switch_frame(self.scening_list.data(index.siblingAtColumn(SceningList.END_FRAME_COLUMN)))
+            self.main.switch_frame(Frame(self.scening_list.data(index.siblingAtColumn(SceningList.END_FRAME_COLUMN))))
 
     def on_tableview_rows_moved(
         self, parent_index: QModelIndex, start_i: int, end_i: int, dest_index: QModelIndex, dest_i: int

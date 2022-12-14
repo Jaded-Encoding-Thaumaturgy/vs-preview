@@ -512,9 +512,7 @@ class MainWindow(AbstractMainWindow):
     ) -> None:
         frame = Frame(pos)
 
-        if not self.current_output._stateset and (
-            self.current_output.last_showed_frame == frame or frame >= self.current_output.total_frames
-        ):
+        if (not 0 <= frame < self.current_output.total_frames):
             return
 
         if render_frame:

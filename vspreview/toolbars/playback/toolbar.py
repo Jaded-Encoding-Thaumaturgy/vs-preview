@@ -413,7 +413,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.main.current_output.last_showed_frame = self.main.current_output.total_frames - 1
 
     def seek_offset(self, offset: int) -> None:
-        new_pos = Frame(self.main.current_output.last_showed_frame) + offset
+        new_pos = self.main.current_output.last_showed_frame + offset
 
         if not 0 <= new_pos < self.main.current_output.total_frames:
             return

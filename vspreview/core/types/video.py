@@ -118,9 +118,9 @@ class VideoOutput(AbstractYAMLObject):
 
         self.graphics_scene_item: GraphicsImageItem
 
-        timecodes, tden = index in self.main.timecodes and self.main.timecodes[index]
+        if index in self.main.timecodes:
+            timecodes, tden = self.main.timecodes[index]
 
-        if timecodes:
             if self.fps_num == 0:
                 try:
                     play_fps = self.main.toolbars.playback.get_true_fps(0, self.props, True)

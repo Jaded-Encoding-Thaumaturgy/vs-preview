@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import ctypes
-from fractions import Fraction
 import itertools
 import os
+from fractions import Fraction
+from pathlib import Path
 from typing import Any, Mapping, cast
 
 from PyQt5 import sip
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from vstools import core, video_heuristics, vs, fallback, FramesLengthError, ColorRange
+from vstools import ColorRange, DependencyNotFoundError, FramesLengthError, core, video_heuristics, vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .dataclasses import CroppingInfo, VideoOutputNode
@@ -127,36 +128,41 @@ class VideoOutput(AbstractYAMLObject):
                 except Exception:
                     if isinstance(timecodes, list):
                         play_fps = timecodes[self.last_showed_frame]
-                        if isinstance(play_fps, Fraction):
-                            play_fps = play_fps.numerator / play_fps.denominator
                     else:
-                        play_fps = 24000 / 1001
+                        play_fps = Fraction(24000, 1001)
             else:
-                play_fps = self.fps_num / self.fps_den
+                play_fps = Fraction(self.fps_num, self.fps_den)
 
-            self.play_fps = play_fps
-
-            norm_timecodes = [play_fps] * (self.source.clip.num_frames + 1)
+            self.play_fps = float(play_fps)
 
             if timecodes:
-                if isinstance(timecodes, dict):
-                    for (start, end), fps in timecodes.items():
-                        start = max(fallback(start, 0), 0)
-                        end = min(fallback(end, self.source.clip.num_frames), self.source.clip.num_frames)
+                if not isinstance(timecodes, list):
+                    try:
+                        from vsdeinterlace import get_timecodes, normalize_range_timecodes, normalize_timecodes
 
-                        norm_timecodes[start:end + 1] = [
-                            float(fps if isinstance(fps, Fraction) else Fraction(*fps))
-                        ] * (end - start)
+                        if isinstance(timecodes, (str, Path)):
+                            timecodes = get_timecodes(self.source.clip, timecodes, tden, 'set_timecodes')
+                            timecodes = normalize_timecodes(timecodes)
+                        vsdeint_available = True
+                    except Exception:
+                        vsdeint_available = False
+                        raise DependencyNotFoundError('set_timecodes', 'vsdeinterlace')
+
+                if isinstance(timecodes, dict):
+                    if not vsdeint_available:
+                        raise DependencyNotFoundError('set_timecodes', 'vsdeinterlace')
+                    norm_timecodes = normalize_range_timecodes(timecodes, self.source.clip.num_frames, play_fps)
                 else:
                     norm_timecodes = timecodes.copy()
 
                 if len(norm_timecodes) != self.source.clip.num_frames:
                     raise FramesLengthError(
-                        'Timecodes', '', "The timecodes file's length mismatches with the clip's length!"
+                        'set_timecodes', '', 'timecodes file length mismatch with clip\'s length!',
+                        reason=dict(timecodes=len(norm_timecodes), clip=self.source.clip.num_frames)
                     )
 
                 self.main.norm_timecodes[index] = norm_timecodes
-                self.play_fps = norm_timecodes[self.last_showed_frame]
+                self.play_fps = float(norm_timecodes[self.last_showed_frame])
         elif not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
                 self.play_fps = self.main.toolbars.playback.get_true_fps(

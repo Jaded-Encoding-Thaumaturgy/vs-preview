@@ -61,7 +61,7 @@ class VideoOutput(AbstractYAMLObject):
     __slots__ = (
         *storable_attrs, 'index', 'width', 'height', 'fps_num', 'fps_den',
         'total_frames', 'total_time', 'graphics_scene_item',
-        'end_frame', 'end_time', 'fps', 'source', 'prepared',
+        'end_frame', 'fps', 'source', 'prepared',
         'main', 'checkerboard', 'props', '_stateset'
     )
 
@@ -107,7 +107,6 @@ class VideoOutput(AbstractYAMLObject):
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
         self.end_frame = Frame(int(self.total_frames) - 1)
-        self.end_time = self.to_time(self.end_frame)
         self.title = self.main.user_output_names[vs.VideoNode].get(self.index)
         self.props = cast(vs.FrameProps, {})
 

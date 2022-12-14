@@ -508,15 +508,13 @@ class MainWindow(AbstractMainWindow):
             gc.collect()
 
     def switch_frame(
-        self, pos: Frame | Time | int | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | int, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
     ) -> None:
-        if pos is None:
-            logging.debug('switch_frame: position is None!')
-            return
+        frame = Frame(pos)
 
-        frame = Frame(min(max(0, int(Frame(pos))), int(self.current_output.total_frames)))
-
-        if self.current_output.last_showed_frame == frame > self.current_output.end_frame:
+        if not self.current_output._stateset and (
+            self.current_output.last_showed_frame == frame or frame >= self.current_output.total_frames
+        ):
             return
 
         if render_frame:

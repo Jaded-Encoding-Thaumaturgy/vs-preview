@@ -137,7 +137,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.frame_control.setValue, frame)
         qt_silent_call(self.time_control.setValue, Time(frame))
 
-        if self.sync_outputs_checkbox.isChecked():
+        if len(self.outputs) > 1 and self.sync_outputs_checkbox.isChecked():
             self.on_sync_outputs_clicked(True, force_frame=frame)
 
         if not self.frame_props_dialog.isHidden():

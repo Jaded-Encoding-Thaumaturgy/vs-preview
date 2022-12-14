@@ -182,8 +182,11 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
     def get_true_fps(self, n: int, frameprops: vs.FrameProps, force: bool = False) -> float:
-        if self.main.current_output.got_timecodes and not force:
-            return self.main.current_output.timecodes[n]
+        if (
+            hasattr(self.main.current_output, 'got_timecodes')
+            and self.main.current_output.got_timecodes and not force
+        ):
+            return float(self.main.current_output.timecodes[n])
 
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(

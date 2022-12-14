@@ -221,6 +221,8 @@ class PlaybackToolbar(AbstractToolbar):
             self.allocate_buffer(False)
             for i in range(cast(int, self.play_buffer.maxlen)):
                 nextFrame = int(Frame(self.main.current_output.last_showed_frame) + i + 1)
+                if nextFrame >= self.main.current_output.total_frames:
+                    break
                 self.play_buffer.appendleft(
                     (nextFrame, self.main.current_output.prepared.clip.get_frame_async(nextFrame))
                 )
@@ -228,6 +230,8 @@ class PlaybackToolbar(AbstractToolbar):
             self.allocate_buffer(True)
             for i in range(cast(int, self.play_buffer.maxlen) // 2):
                 nextFrame = int(Frame(self.main.current_output.last_showed_frame) + i + 1)
+                if nextFrame >= self.main.current_output.total_frames:
+                    break
                 self.play_buffer.appendleft(
                     (nextFrame, self.main.current_output.prepared.clip.get_frame_async(nextFrame))
                 )

@@ -208,7 +208,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         if i >= 0 and i < len(self.items):
             self.beginRemoveRows(QModelIndex(), i, i)
-            del(self.items[i])
+            del self.items[i]
             self.endRemoveRows()
         else:
             raise IndexError
@@ -367,7 +367,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
         if i >= 0 and i < len(self.items):
             self.beginRemoveRows(QModelIndex(), i, i)
-            del(self.items[i])
+            del self.items[i]
             self.endRemoveRows()
         else:
             raise IndexError

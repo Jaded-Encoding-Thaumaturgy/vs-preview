@@ -403,6 +403,36 @@ class VideoOutput(AbstractYAMLObject):
         return result_image
 
     def _calculate_frame(self, seconds: float) -> int:
+        if self.got_timecodes:
+            size = 6
+            low, high = 0, int(self.total_frames) - 1
+
+            ref, maxx = int(self.last_showed_frame), int(self.total_frames)
+            low, high = max(ref - size, 0), min(ref + size, maxx - 1)
+
+            if (
+                li := self._timecodes_frame_to_time[low] > seconds
+            ) or (
+                hi := self._timecodes_frame_to_time[high] < seconds
+            ):
+                while self._timecodes_frame_to_time[low] > seconds and low > 0:
+                    low -= size * li
+                    li += 1
+
+                while self._timecodes_frame_to_time[high] < seconds and high < maxx:
+                    high += size * hi
+                    hi += 1
+
+                low, high = max(low - 1, 0), min(high + 1, maxx - 1)
+
+            for i, time in enumerate(self._timecodes_frame_to_time[low:high + 1], low):
+                if time == seconds:
+                    return i
+                elif time > seconds:
+                    if i == high or i == low:
+                        return i
+                    return i - 1
+
         return round(seconds * self.fps)
 
     def _calculate_seconds(self, frame_num: int) -> float:

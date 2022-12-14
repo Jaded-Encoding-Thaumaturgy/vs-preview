@@ -4,11 +4,11 @@ import gc
 import io
 import logging
 import sys
-from random import random
 from fractions import Fraction
 from itertools import count
 from os.path import expanduser, expandvars
 from pathlib import Path
+from random import random
 from traceback import TracebackException
 from typing import Any, Mapping, cast
 
@@ -21,7 +21,7 @@ from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
-from ..core.vsenv import get_current_environment, make_environment, _monkey_runpy_dicts
+from ..core.vsenv import _monkey_runpy_dicts, get_current_environment, make_environment
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -665,11 +665,11 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
     def update_timecodes_info(
-        self, index: int, timecodes: dict[
+        self, index: int, timecodes: str | dict[
             tuple[int | None, int | None], float | tuple[int, int] | Fraction
-        ] | list[float]
+        ] | list[Fraction], den: int = None
     ) -> None:
-        self.timecodes[index] = timecodes
+        self.timecodes[index] = (timecodes, den)
 
     def set_node_name(self, node_type: type, index: int, name: str) -> None:
         self.user_output_names[node_type][index] = name

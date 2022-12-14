@@ -118,7 +118,7 @@ class VideoOutput(AbstractYAMLObject):
 
         self.graphics_scene_item: GraphicsImageItem
 
-        timecodes = index in self.main.timecodes and self.main.timecodes[index]
+        timecodes, tden = index in self.main.timecodes and self.main.timecodes[index]
 
         if timecodes:
             if self.fps_num == 0:
@@ -127,6 +127,8 @@ class VideoOutput(AbstractYAMLObject):
                 except Exception:
                     if isinstance(timecodes, list):
                         play_fps = timecodes[self.last_showed_frame]
+                        if isinstance(play_fps, Fraction):
+                            play_fps = play_fps.numerator / play_fps.denominator
                     else:
                         play_fps = 24000 / 1001
             else:

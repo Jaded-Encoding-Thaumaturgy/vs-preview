@@ -19,7 +19,7 @@ class AudioOutput(AbstractYAMLObject):
 
     __slots__ = (
         *storable_attrs, 'vs_output', 'index', 'fps_num', 'fps_den', 'format',
-        'total_frames', 'total_time', 'end_frame', 'end_time', 'fps', 'is_mono',
+        'total_frames', 'total_time', 'end_frame', 'fps', 'is_mono',
         'source_vs_output', 'main', 'qformat', 'qoutput', 'iodevice', 'flags'
     )
 
@@ -71,7 +71,6 @@ class AudioOutput(AbstractYAMLObject):
         self.total_frames = Frame(self.vs_output.num_frames)
         self.total_time = self.to_time(self.total_frames - Frame(1))
         self.end_frame = Frame(int(self.total_frames) - 1)
-        self.end_time = self.to_time(self.end_frame)
 
         self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * (self.vs_output.bytes_per_sample // 2))
 

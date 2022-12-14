@@ -556,7 +556,7 @@ class MainWindow(AbstractMainWindow):
 
         # current_output relies on outputs_combobox
         self.toolbars.main.on_current_output_changed(index, prev_index)
-        self.timeline.set_end_frame(self.current_output.end_frame)
+        self.timeline.set_end_frame(self.current_output)
 
         if self.current_output.last_showed_frame:
             self.switch_frame(self.current_output.last_showed_frame)

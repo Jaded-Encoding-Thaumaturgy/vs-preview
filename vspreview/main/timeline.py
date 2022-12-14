@@ -7,7 +7,7 @@ from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
 from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
 
-from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Scene, Time, main_window
+from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Scene, Time, main_window, VideoOutput
 from ..utils import strfdelta
 
 
@@ -348,9 +348,9 @@ class Timeline(QWidget):
         else:
             return '%m:%S'
 
-    def set_end_frame(self, end_f: Frame) -> None:
-        self.end_f = end_f
-        self.end_t = Time(end_f)
+    def set_end_frame(self, node: VideoOutput) -> None:
+        self.end_f = node.total_frames
+        self.end_t = node.total_time
         self.full_repaint()
 
     def set_position(self, pos: Frame | Time | int) -> None:

@@ -107,14 +107,13 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.end_frame = Frame(int(self.total_frames) - 1)
         self.title = self.main.user_output_names[vs.VideoNode].get(self.index)
         self.props = cast(vs.FrameProps, {})
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
 
-        if not hasattr(self, 'last_showed_frame') or not (0 <= self.last_showed_frame <= self.end_frame):
+        if not hasattr(self, 'last_showed_frame') or not (0 <= self.last_showed_frame < self.total_frames):
             self.last_showed_frame = Frame(0)
 
         self.graphics_scene_item: GraphicsImageItem
@@ -336,7 +335,7 @@ class VideoOutput(AbstractYAMLObject):
         if frame is None or not self._stateset:
             return QPixmap()
 
-        frame = min(max(frame, Frame(0)), self.end_frame)
+        frame = min(max(frame, Frame(0)), self.total_frames - 1)
 
         vs_frame = vs_frame or self.prepared.clip.get_frame(frame.value)
 

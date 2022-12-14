@@ -145,8 +145,8 @@ class MainToolbar(AbstractToolbar):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
-        qt_silent_call(self.frame_control.setMaximum, self.main.current_output.end_frame)
-        qt_silent_call(self.time_control.setMaximum, self.main.current_output.total_time)
+        qt_silent_call(self.frame_control.setMaximum, self.main.current_output.total_frames - 1)
+        qt_silent_call(self.time_control.setMaximum, self.main.current_output.total_time - Frame(1))
 
         if self.main.graphics_view.autofit:
             self.main.graphics_view.setZoom(None)

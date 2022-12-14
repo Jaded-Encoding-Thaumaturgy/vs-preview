@@ -655,7 +655,9 @@ class MainWindow(AbstractMainWindow):
             times = sorted(set(output.timecodes), reverse=True)
 
             if len(times) >= 2:
-                return self.statusbar.fps_label.setText(f'VFR {",".join(f"{fps:.3f}" for fps in times)} fps ')
+                return self.statusbar.fps_label.setText(
+                    f'VFR {",".join(f"{float(fps):.3f}" for fps in times)} fps '
+                )
 
         if output.fps_den != 0:
             return self.statusbar.fps_label.setText(

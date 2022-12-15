@@ -426,10 +426,9 @@ class VideoOutput(AbstractYAMLObject):
 
             for i, time in zip(range(high, low - 1, -1), reversed(self._timecodes_frame_to_time[low:high + 1])):
                 if time == seconds:
-                    print('eq', time, seconds, i)
                     return i
+
                 if time < seconds:
-                    print('min', time, seconds, i + 1)
                     return i + 1
 
         return round(seconds * self.fps)

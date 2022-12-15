@@ -58,7 +58,7 @@ class ExtendedLayout(QBoxLayout):
 
     def __init__(
         self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
-        spacing: int | None = None, alignment: Qt.Alignment | Qt.AlignmentFlag | None = None, **kwargs
+        spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs
     ) -> ExtendedLayout:
         try:
             if isinstance(arg0, QBoxLayout):
@@ -100,17 +100,10 @@ class ExtendedLayout(QBoxLayout):
             self.addLayout(layout)
 
     def clear(self) -> None:
-        while(item := self.takeAt(0)):
-            if (widget := item.widget()):
-                widget.deleteLater()
-
-            if (layout := item.layout()):
-                try:
-                    layout.clear()
-                except BaseException:
-                    del layout
-
-            del item
+        for i in reversed(range(self.count())):
+            widget = self.itemAt(i).widget()
+            self.removeWidget(widget)
+            widget.setParent(None)  # type: ignore
 
     @staticmethod
     def stretch(amount: int | None) -> Stretch:

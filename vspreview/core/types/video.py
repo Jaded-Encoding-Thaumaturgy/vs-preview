@@ -186,8 +186,8 @@ class VideoOutput(AbstractYAMLObject):
             acc = 0.0
             self._timecodes_frame_to_time = [0.0]
             for fps in self.timecodes:
-                acc += 1 / fps
-                self._timecodes_frame_to_time.append(acc)
+                acc += round(1 / float(fps), 7)
+                self._timecodes_frame_to_time.append(round(acc, 3))
             self.total_time = Time(seconds=acc)
         else:
             self.total_time = self.to_time(self.total_frames - Frame(1))
@@ -404,11 +404,10 @@ class VideoOutput(AbstractYAMLObject):
 
     def _calculate_frame(self, seconds: float) -> int:
         if self.got_timecodes:
-            size = 6
-            low, high = 0, int(self.total_frames) - 1
+            seconds = float(f'{round(seconds, 7):.6f}')
 
             ref, maxx = int(self.last_showed_frame), int(self.total_frames)
-            low, high = max(ref - size, 0), min(ref + size, maxx - 1)
+            low, high = max(ref - 6, 0), min(ref + 6, maxx - 1)
 
             if (
                 li := self._timecodes_frame_to_time[low] > seconds
@@ -416,22 +415,22 @@ class VideoOutput(AbstractYAMLObject):
                 hi := self._timecodes_frame_to_time[high] < seconds
             ):
                 while self._timecodes_frame_to_time[low] > seconds and low > 0:
-                    low -= size * li
+                    low -= 6 * li
                     li += 1
 
                 while self._timecodes_frame_to_time[high] < seconds and high < maxx:
-                    high += size * hi
+                    high += 6 * hi
                     hi += 1
 
                 low, high = max(low - 1, 0), min(high + 1, maxx - 1)
 
-            for i, time in enumerate(self._timecodes_frame_to_time[low:high + 1], low):
+            for i, time in zip(range(high, low - 1, -1), reversed(self._timecodes_frame_to_time[low:high + 1])):
                 if time == seconds:
+                    print('eq', time, seconds, i)
                     return i
-                elif time > seconds:
-                    if i == high or i == low:
-                        return i
-                    return i - 1
+                if time < seconds:
+                    print('min', time, seconds, i + 1)
+                    return i + 1
 
         return round(seconds * self.fps)
 

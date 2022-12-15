@@ -64,7 +64,16 @@ class AudioOutput(AbstractYAMLObject):
         self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * (self.vs_output.bytes_per_sample // 2))
 
         if not hasattr(self, 'name'):
-            self.name = self.main.user_output_names[vs.AudioNode].get(self.index, 'Track ' + str(self.index))
+            from ...models.outputs import AudioOutputs
+
+            if vs_output in (vs_outputs := list(vs.get_outputs().values())):
+                self.name = self.main.user_output_names[vs.AudioNode].get(
+                    vs_outputs.index(vs_output), 'Track ' + str(self.index)
+                )
+                if isinstance(self.main.toolbars.playback.audio_outputs, AudioOutputs):
+                    self.main.toolbars.playback.audio_outputs.setData(
+                        self.main.toolbars.playback.audio_outputs.index(index), self.name
+                    )
 
     def clear(self) -> None:
         self.source_vs_output = self.vs_output = None

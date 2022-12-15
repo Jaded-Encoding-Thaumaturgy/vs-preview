@@ -547,6 +547,9 @@ class MainWindow(AbstractMainWindow):
 
         prev_index = self.toolbars.main.outputs_combobox.currentIndex()
 
+        if prev_index == index and self.toolbars.main.main.current_output._stateset:
+            return
+
         self.toolbars.playback.stop()
 
         # current_output relies on outputs_combobox

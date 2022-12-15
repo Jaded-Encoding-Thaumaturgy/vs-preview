@@ -471,6 +471,10 @@ class CompToolbar(AbstractToolbar):
 
     def upload_to_slowpics(self) -> bool:
         try:
+            self.main.current_output.graphics_scene_item.setPixmap(
+                self.main.current_output.graphics_scene_item.pixmap().copy()
+            )
+
             config = self.get_slowpics_conf()
 
             self.upload_thread = QThread()

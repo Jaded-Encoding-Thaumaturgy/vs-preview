@@ -1,12 +1,13 @@
 
 from __future__ import annotations
 
-from fractions import Fraction
 import inspect
+from fractions import Fraction
 from pathlib import Path
 
 from vstools import vs
 
+from .info import is_preview
 from .timecodes import set_timecodes
 
 __all__ = [
@@ -20,8 +21,6 @@ def set_output(
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
     ] | list[Fraction] | None = None, denominator: int = 1001
 ) -> None:
-    from ..core import main_window
-
     index = len(vs.get_outputs())
 
     ref_id = str(id(node))
@@ -47,9 +46,13 @@ def set_output(
                 break
 
     node.set_output(index)
-    main_window().set_node_name(node_type, index, name.title())  # type: ignore
 
-    if timecodes:
-        set_timecodes(index, timecodes, (
-            node.fps_den if (node.fps_den and node.fps_num) else 1001
-        ) if denominator is None else denominator)
+    if is_preview():
+        from ..core import main_window
+
+        main_window().set_node_name(node_type, index, name.title())  # type: ignore
+
+        if timecodes:
+            set_timecodes(index, timecodes, (
+                node.fps_den if (node.fps_den and node.fps_num) else 1001
+            ) if denominator is None else denominator)

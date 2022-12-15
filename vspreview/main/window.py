@@ -547,19 +547,13 @@ class MainWindow(AbstractMainWindow):
 
         prev_index = self.toolbars.main.outputs_combobox.currentIndex()
 
-        if prev_index == index and self.toolbars.main.main.current_output._stateset:
-            return
-
         self.toolbars.playback.stop()
 
         # current_output relies on outputs_combobox
         self.toolbars.main.on_current_output_changed(index, prev_index)
         self.timeline.set_end_frame(self.current_output)
 
-        if self.current_output.last_showed_frame:
-            self.switch_frame(self.current_output.last_showed_frame)
-        else:
-            self.switch_frame(0)
+        self.switch_frame(self.current_output.last_showed_frame)
 
         for output in self.outputs:
             output.graphics_scene_item.hide()

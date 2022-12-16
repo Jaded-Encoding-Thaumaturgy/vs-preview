@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
-from PyQt5.QtWidgets import QLabel
+from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QLabel
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
@@ -76,9 +76,9 @@ class FramePropsDialog(ExtendedWidget):
         super().__init__(main_window)
 
         self.main_window = main_window
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setAttribute(Qt.WA_NoSystemBackground, True)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.clicked = False
         self.old_pos = QPointF(0.0, 0.0)
         self.setGeometry(100, 100, 300, 450)
@@ -143,19 +143,21 @@ class FramePropsDialog(ExtendedWidget):
         self.main_window.timeline.full_repaint()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        self.old_pos = event.screenPos()
+        self.clicked = True
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.clicked = False
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.clicked:
-            new_x = int(self.pos().x() - (self.old_pos.x() - event.screenPos().x()))
-            new_y = int(self.pos().y() - (self.old_pos.y() - event.screenPos().y()))
+            new_x = int(self.pos().x() - (self.old_pos.x() - event.globalPosition().x()))
+            new_y = int(self.pos().y() - (self.old_pos.y() - event.globalPosition().y()))
 
             if 0 < new_x < self.main_window.width() and 0 < new_y < self.main_window.height():
                 self.move(new_x, new_y)
             else:
                 return
 
-        self.old_pos = event.screenPos()
-        self.clicked = True
+        self.old_pos = event.globalPosition()
 
         return super().mouseMoveEvent(event)

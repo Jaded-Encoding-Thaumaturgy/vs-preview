@@ -7,9 +7,9 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Mapping, cast
 
-from PyQt5 import sip
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColorSpace, QImage, QPainter, QPixmap
+from PyQt6 import sip
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
 from vstools import ColorRange, DependencyNotFoundError, FramesLengthError, core, video_heuristics, vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
@@ -38,10 +38,10 @@ class PackingTypeInfo:
 
 
 class PackingType(PackingTypeInfo):
-    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_RGB32, False)
-    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
-    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format_BGR30, True)
-    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format_BGR30, True)
+    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_RGB32, False)
+    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
+    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
+    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
 
 
 if not hasattr(core, 'akarin') and not hasattr(core, 'libp2p'):
@@ -215,7 +215,7 @@ class VideoOutput(AbstractYAMLObject):
         nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
         self._FRAME_CONV_INFO = {
             False: (nbps, ctypes.c_char * nbps, PACKING_TYPE.qt_format),
-            True: (abps, ctypes.c_char * abps, QImage.Format_Alpha8)
+            True: (abps, ctypes.c_char * abps, QImage.Format.Format_Alpha8)
         }
 
     @property
@@ -347,7 +347,7 @@ class VideoOutput(AbstractYAMLObject):
         frame_image = self.frame_to_qimage(vs_frame, False)
 
         if output_colorspace is not None:
-            frame_image.setColorSpace(QColorSpace(QColorSpace.SRgb))
+            frame_image.setColorSpace(QColorSpace(QColorSpace.NamedColorSpace.SRgb))
             frame_image.convertToColorSpace(output_colorspace)
 
         if not vs_frame.closed:
@@ -355,7 +355,7 @@ class VideoOutput(AbstractYAMLObject):
             del vs_frame
 
         if self.prepared.alpha is None:
-            qpixmap = QPixmap.fromImage(frame_image, Qt.NoFormatConversion)
+            qpixmap = QPixmap.fromImage(frame_image, Qt.ImageConversionFlag.NoFormatConversion)
 
             if do_painting:
                 self.update_graphic_item(qpixmap)
@@ -366,20 +366,20 @@ class VideoOutput(AbstractYAMLObject):
             vs_alpha_frame or self.prepared.alpha.get_frame(frame.value), True
         )
 
-        result_image = QImage(frame_image.size(), QImage.Format_ARGB32_Premultiplied)
+        result_image = QImage(frame_image.size(), QImage.Format.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)
-        painter.setCompositionMode(QPainter.CompositionMode_Source)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
         painter.drawImage(0, 0, frame_image)
-        painter.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
         painter.drawImage(0, 0, alpha_image)
 
         if self.main.toolbars.playback.settings.CHECKERBOARD_ENABLED:
-            painter.setCompositionMode(QPainter.CompositionMode_DestinationOver)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOver)
             painter.drawImage(0, 0, self.checkerboard)
 
         painter.end()
 
-        qpixmap = QPixmap.fromImage(result_image, Qt.NoFormatConversion)
+        qpixmap = QPixmap.fromImage(result_image, Qt.ImageConversionFlag.NoFormatConversion)
 
         if do_painting:
             self.update_graphic_item(qpixmap)
@@ -398,7 +398,7 @@ class VideoOutput(AbstractYAMLObject):
         painter.fillRect(0, tile_size, tile_size, tile_size, tile_color_2)
         painter.end()
 
-        result_image = QImage(self.width, self.height, QImage.Format_ARGB32_Premultiplied)
+        result_image = QImage(self.width, self.height, QImage.Format.Format_ARGB32_Premultiplied)
         painter = QPainter(result_image)
         painter.drawTiledPixmap(result_image.rect(), macrotile_pixmap)
         painter.end()

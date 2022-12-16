@@ -9,11 +9,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
 
-from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QClipboard, QKeySequence
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QClipboard, QKeySequence, QShortcut
+from PyQt6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
-    QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut, QSpacerItem, QSpinBox, QStatusBar, QTableView,
+    QLineEdit, QMainWindow, QProgressBar, QPushButton, QSpacerItem, QSpinBox, QStatusBar, QTableView,
     QVBoxLayout, QWidget
 )
 from vstools import T, vs
@@ -58,7 +58,7 @@ class ExtendedLayout(QBoxLayout):
 
     def __init__(
         self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
-        spacing: int | None = None, alignment: Qt.Alignment | Qt.AlignmentFlag | None = None, **kwargs
+        spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs
     ) -> ExtendedLayout:
         try:
             if isinstance(arg0, QBoxLayout):
@@ -100,17 +100,10 @@ class ExtendedLayout(QBoxLayout):
             self.addLayout(layout)
 
     def clear(self) -> None:
-        while(item := self.takeAt(0)):
-            if (widget := item.widget()):
-                widget.deleteLater()
-
-            if (layout := item.layout()):
-                try:
-                    layout.clear()
-                except BaseException:
-                    del layout
-
-            del item
+        for i in reversed(range(self.count())):
+            widget = self.itemAt(i).widget()
+            self.removeWidget(widget)
+            widget.setParent(None)  # type: ignore
 
     @staticmethod
     def stretch(amount: int | None) -> Stretch:
@@ -223,8 +216,8 @@ class ExtendedWidget(AbstractQItem, QWidget):
 
     def get_separator(self) -> QFrame:
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.VLine)
-        separator.setFrameShadow(QFrame.Sunken)
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
 
 
@@ -452,7 +445,8 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     storable_attrs = tuple[str, ...]()
     class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
     num_keys = [
-        Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
+        Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4, Qt.Key.Key_5, Qt.Key.Key_6,
+        Qt.Key.Key_7, Qt.Key.Key_8, Qt.Key.Key_9, Qt.Key.Key_0
     ]
 
     __slots__ = ('main', 'toggle_button', *class_storable_attrs)
@@ -466,7 +460,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         self.name = self.__class__.__name__[:-7]
 
         self.main.app_settings.addTab(self.settings, self.name)
-        self.setFocusPolicy(Qt.ClickFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 
@@ -509,7 +503,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         return self.isVisible()
 
     def resize_main_window(self, expanding: bool) -> None:
-        if self.main.windowState() in map(Qt.WindowStates, {Qt.WindowMaximized, Qt.WindowFullScreen}):
+        if self.main.windowState() in {Qt.WindowState.WindowMaximized, Qt.WindowState.WindowFullScreen}:
             return
 
         if expanding:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Generic, Iterator, Mapping, OrderedDict, TypeVar, cast
 
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 from vstools import vs
 
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
@@ -76,33 +76,33 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         self._items.clear()
         self.endRemoveRows()
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if not index.isValid():
             return None
         if index.row() >= len(self.items):
             return None
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self.items[index.row()].name
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
             return self.items[index.row()].name
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.items)
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
+            return Qt.ItemFlag.ItemIsEnabled
 
-        return super().flags(index) | Qt.ItemIsEditable
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
-        if not role == Qt.EditRole:
+        if not role == Qt.ItemDataRole.EditRole:
             return False
         if not isinstance(value, str):
             return False

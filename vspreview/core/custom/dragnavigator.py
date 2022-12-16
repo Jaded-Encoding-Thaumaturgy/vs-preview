@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from functools import partial
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QPainter, QPaintEvent
-from PyQt5.QtWidgets import QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QWidget
 
 from ..abstracts import AbstractMainWindow, Timer
 from .graphicsview import DragEventType, GraphicsView
@@ -27,12 +27,13 @@ class DragNavigator(QWidget):
         self.main = main
         self.graphics_view = graphics_view
         self.graphics_view.dragEvent.connect(self.on_drag)
-        self.setAttribute(Qt.WA_NoSystemBackground)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         rate = self.main.settings.base_ppi / 96
         self.setGeometry(round(10 * rate), round(10 * rate), round(120 * rate), round(120 * rate))
         self.repaint_timer = Timer(
-            timeout=self.repaint_timeout, timerType=Qt.PreciseTimer, interval=self.main.settings.dragnavigator_timeout
+            timeout=self.repaint_timeout, timerType=Qt.TimerType.PreciseTimer,
+            interval=self.main.settings.dragnavigator_timeout
         )
         self.graphics_view.verticalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))
         self.graphics_view.horizontalScrollBar().valueChanged.connect(partial(self.on_drag, DragEventType.repaint))
@@ -88,9 +89,9 @@ class DragNavigator(QWidget):
 
     def paintEvent(self, event: QPaintEvent) -> None:
         if(
-            (self.contentsW == 0) or (self.contentsH == 0) or
-            (self.viewportW == 0) or (self.viewportH == 0) or
-            (self.viewportX >= self.contentsW) or (self.viewportY >= self.contentsH)
+            (self.contentsW == 0) or (self.contentsH == 0)
+            or (self.viewportW == 0) or (self.viewportH == 0)
+            or (self.viewportX >= self.contentsW) or (self.viewportY >= self.contentsH)
         ):
             event.ignore()
             return

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from enum import IntEnum, auto
 
-from PyQt5.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
-from PyQt5.QtGui import (
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
+from PyQt6.QtGui import (
     QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
-from PyQt5.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
+from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
 
 from ...core import AbstractMainWindow
 from ..types.dataclasses import CroppingInfo
@@ -44,7 +44,7 @@ class GraphicsView(QGraphicsView):
         self.angleRemainder = 0
         self.zoomValue = 0.0
         self.currentZoom = 0.0
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.drag_mode = self.dragMode()
 
     def setZoom(self, value: float | None) -> None:
@@ -73,11 +73,11 @@ class GraphicsView(QGraphicsView):
 
         if isinstance(event, QNativeGestureEvent):
             typ = event.gestureType()
-            if typ == Qt.BeginNativeGesture:
+            if typ == Qt.NativeGestureType.BeginNativeGesture:
                 self.zoomValue = 0.0
-            elif typ == Qt.ZoomNativeGesture:
+            elif typ == Qt.NativeGestureType.ZoomNativeGesture:
                 self.zoomValue += event.value()
-            if typ == Qt.EndNativeGesture:
+            if typ == Qt.NativeGestureType.EndNativeGesture:
                 self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
 
         return super().event(event)
@@ -91,7 +91,9 @@ class GraphicsView(QGraphicsView):
         modifiers = self.app.keyboardModifiers()
         mouse = event.buttons()
 
-        if modifiers == Qt.ControlModifier or mouse in map(Qt.MouseButtons, {Qt.RightButton, Qt.MiddleButton}):
+        if modifiers == Qt.KeyboardModifier.ControlModifier or mouse in {
+            Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton
+        }:
             angleDelta = event.angleDelta().y()
 
             # check if wheel wasn't rotated the other way since last rotation
@@ -104,11 +106,11 @@ class GraphicsView(QGraphicsView):
                 self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
                 self.angleRemainder %= self.WHEEL_STEP
             return
-        elif modifiers == Qt.NoModifier:
+        elif modifiers == Qt.KeyboardModifier.NoModifier:
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().y())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().x())
             return
-        elif modifiers == Qt.ShiftModifier:
+        elif modifiers == Qt.KeyboardModifier.ShiftModifier:
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().x())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().y())
             return
@@ -129,9 +131,9 @@ class GraphicsView(QGraphicsView):
         if self.underReload or self.autofit:
             return event.ignore()
 
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.drag_mode = self.dragMode()
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
         super().mousePressEvent(event)
 
@@ -144,7 +146,7 @@ class GraphicsView(QGraphicsView):
 
         super().mouseReleaseEvent(event)
 
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.setDragMode(self.drag_mode)
 
         self.mouseReleased.emit(event)
@@ -152,14 +154,14 @@ class GraphicsView(QGraphicsView):
 
     def beforeReload(self) -> None:
         self.underReload = True
-        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.last_positions = (self.verticalScrollBar().value(), self.horizontalScrollBar().value())
 
     def afterReload(self) -> None:
         self.underReload = False
         self.verticalScrollBar().setValue(self.last_positions[0])
         self.horizontalScrollBar().setValue(self.last_positions[1])
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
     def registerReloadEvents(self, main: AbstractMainWindow) -> None:
         self.main = main

@@ -1,7 +1,7 @@
 VapourSynth>=60
 vstools>=1.6.7
 vsengine>=0.2.0
-PyQt5>=5.15.7
-PyQt5-sip>=12.11.0
+PyQt6>=6.4.0
+PyQt6-sip>=13.4.0
 QDarkStyle>=3.1
 PyYAML>=6.0

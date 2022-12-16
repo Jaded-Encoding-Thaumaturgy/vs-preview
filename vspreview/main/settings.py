@@ -6,9 +6,9 @@ from functools import partial
 from multiprocessing import cpu_count
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QComboBox, QLabel, QShortcut
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtGui import QShortcut
+from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
 from ..core.bases import QYAMLObjectSingleton
@@ -56,12 +56,12 @@ class MainSettings(AbstractToolbarSettings):
 
         self.azerty_keyboard_checkbox = CheckBox('AZERTY Keyboard', self)
 
-        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.NoInsert)
+        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.InsertPolicy.NoInsert)
         self.zoom_levels_lineedit = self.zoom_levels_combobox.lineEdit()
 
         self.zoom_levels_lineedit.returnPressed.connect(self.zoom_levels_combobox_on_add)
         QShortcut(
-            QKeySequence(Qt.CTRL + Qt.Key_Delete), self.zoom_levels_combobox,
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Delete).toCombined(), self.zoom_levels_combobox,
             activated=partial(self.zoom_levels_combobox_on_remove, True)
         )
 
@@ -220,9 +220,9 @@ class MainSettings(AbstractToolbarSettings):
     def get_usable_cpus_count() -> int:
         from os import getpid
         try:
-            from win32.win32api import OpenProcess
-            from win32.win32process import GetProcessAffinityMask
-            from win32con import PROCESS_QUERY_LIMITED_INFORMATION
+            from win32.win32api import OpenProcess  # type: ignore
+            from win32.win32process import GetProcessAffinityMask  # type: ignore
+            from win32con import PROCESS_QUERY_LIMITED_INFORMATION  # type: ignore
             proc_mask, _ = GetProcessAffinityMask(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, getpid()))
             cpus = [i for i in range(64) if (1 << i) & proc_mask]
             return len(cpus)

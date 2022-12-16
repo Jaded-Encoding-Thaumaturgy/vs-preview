@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel
 
 from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit
 

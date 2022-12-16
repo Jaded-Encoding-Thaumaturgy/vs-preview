@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Sequence, cast
 
-from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
-from PyQt5.QtWidgets import QLabel, QStatusBar, QWidget
+from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
+from PyQt6.QtWidgets import QLabel, QStatusBar, QWidget
 
 from ..abstracts import PushButton
 
@@ -69,7 +69,7 @@ class Switch(PushButton):
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.translate(self.rect().center())
         painter.setBrush(self.background_color)
 
@@ -96,4 +96,4 @@ class Switch(PushButton):
         textpen.setWidth(self.state_texts[2])
 
         painter.setPen(textpen)
-        painter.drawText(switch_rect, Qt.AlignCenter, cast(str, self.state_texts[int(self.isChecked())]))
+        painter.drawText(switch_rect, Qt.AlignmentFlag.AlignCenter, cast(str, self.state_texts[int(self.isChecked())]))

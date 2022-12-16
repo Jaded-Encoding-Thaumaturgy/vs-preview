@@ -13,10 +13,11 @@ from traceback import TracebackException
 from typing import Any, Mapping, cast
 
 import yaml
-from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
-from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
-from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
-from vsengine import vpy
+from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
+from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
+from vsengine import vpy  # type: ignore[import]
 from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
@@ -31,8 +32,8 @@ from .timeline import Timeline
 
 if sys.platform == 'win32':
     try:
-        import win32gui
-        from PIL import _imagingcms
+        import win32gui  # type: ignore[import]
+        from PIL import _imagingcms  # type: ignore[attr-defined]
     except ImportError:
         _imagingcms = None
 
@@ -62,7 +63,7 @@ class MainWindow(AbstractMainWindow):
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
         return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
-    EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     storable_attrs = ('settings', 'toolbars')
 
@@ -98,11 +99,11 @@ class MainWindow(AbstractMainWindow):
 
         if self.settings.dark_theme_enabled:
             try:
-                from qdarkstyle import load_stylesheet_pyqt5
+                from qdarkstyle import _load_stylesheet  # type: ignore[import]
             except ImportError:
                 self.self.settings.dark_theme_enabled = False
             else:
-                self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
+                self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
                 self.ensurePolished()
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
@@ -173,9 +174,9 @@ class MainWindow(AbstractMainWindow):
         self.setCentralWidget(self.central_widget)
 
         self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
-        self.graphics_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.ColorRole.Window))
+        self.graphics_view.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
         self.drag_navigator = DragNavigator(self, self.graphics_view)
 
@@ -670,7 +671,7 @@ class MainWindow(AbstractMainWindow):
         self.user_output_names[node_type][index] = name
 
     def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.LayoutRequest:
+        if event.type() == QEvent.Type.LayoutRequest:
             self.timeline.full_repaint()
 
         return super().event(event)

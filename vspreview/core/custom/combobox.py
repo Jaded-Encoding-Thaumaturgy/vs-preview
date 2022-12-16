@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QComboBox, QWidget
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QWidget
 
 from ...core import AudioOutput, PictureType, VideoOutput
 from ...models import SceningList
@@ -29,7 +29,7 @@ class ComboBox(QComboBox, Generic[ComboBoxT]):
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)
 
-        self.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
 
         self.oldValue = self.currentData()
         self.oldIndex = self.currentIndex()

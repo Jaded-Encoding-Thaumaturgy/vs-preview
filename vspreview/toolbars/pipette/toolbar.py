@@ -6,9 +6,9 @@ from struct import unpack
 from typing import Generator, cast
 from weakref import WeakKeyDictionary
 
-from PyQt5.QtCore import QPoint, Qt
-from PyQt5.QtGui import QFont, QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView, QLabel
+from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtGui import QFont, QMouseEvent
+from PyQt6.QtWidgets import QGraphicsView, QLabel
 from vstools import vs
 
 from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
@@ -120,7 +120,7 @@ class PipetteToolbar(AbstractToolbar):
             self.update_labels(event.pos())
 
     def mouse_pressed(self, event: QMouseEvent) -> None:
-        if event.buttons() == Qt.MouseButtons(Qt.RightButton):
+        if event.buttons() == Qt.MouseButton.RightButton:
             self.tracking = not self.tracking
 
         if self.tracking:
@@ -241,10 +241,10 @@ class PipetteToolbar(AbstractToolbar):
 
         if new_state:
             self.subscribe_on_mouse_events()
-            self.main.graphics_view.setDragMode(QGraphicsView.NoDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.DragMode.NoDrag)
         else:
             self.unsubscribe_from_mouse_events()
-            self.main.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:

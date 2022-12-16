@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, cast, no_type_check
 
-from PyQt5 import sip
+from PyQt6 import sip
 from vstools import T
 from yaml import YAMLObject, YAMLObjectMetaclass
 

@@ -4,8 +4,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 from vstools import video_heuristics
 
 from ...core import (
@@ -86,7 +86,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.view_mode_combox = ComboBox[str](
             self, model=GeneralModel[str]([str(x.value) for x in ViewMode], False),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.view_mode_combox.currentTextChanged.connect(
             lambda mode: self.main.change_video_viewmode(ViewMode(mode))
@@ -114,7 +114,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.crop_mode_combox = ComboBox[str](
             self, model=GeneralModel[str](['relative', 'absolute']),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.crop_mode_combox.currentIndexChanged.connect(self.crop_mode_onchange)
 
@@ -124,15 +124,15 @@ class MiscToolbar(AbstractToolbar):
             VBoxLayout([
                 HBoxLayout([
                     QLabel('Top'), self.crop_top_spinbox, QSpacerItem(35, 10)
-                ], alignment=Qt.AlignCenter, spacing=0),
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=0),
                 HBoxLayout([
                     QLabel('Left'), self.crop_left_spinbox,
                     self.crop_active_switch,
                     self.crop_right_spinbox, QLabel('Right')
-                ], alignment=Qt.AlignCenter, spacing=5),
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=5),
                 HBoxLayout([
                     QLabel('Bottom'), self.crop_bottom_spinbox, QSpacerItem(51, 10)
-                ], alignment=Qt.AlignCenter, spacing=0)
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=0)
             ]),
             VBoxLayout([
                 HBoxLayout([QLabel('Cropping Type:'), self.crop_mode_combox]),
@@ -145,12 +145,21 @@ class MiscToolbar(AbstractToolbar):
         ])
 
     def add_shortcuts(self) -> None:
-        self.main.add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
-        self.main.add_shortcut(Qt.ALT + Qt.Key_S, self.save_storage_button.click)
-        self.main.add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
-        self.main.add_shortcut(Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
         self.main.add_shortcut(
-            Qt.SHIFT + Qt.Key_F, lambda: self.view_mode_combox.setCurrentText(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.main.reload_script
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined(), self.save_storage_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined(), self.copy_frame_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_F).toCombined(),
+            lambda: self.view_mode_combox.setCurrentText(
                 ViewMode.FFTSPECTRUM if self.main.current_viewmode != ViewMode.FFTSPECTRUM else ViewMode.NORMAL
             )
         )

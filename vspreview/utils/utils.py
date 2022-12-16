@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import sys
 from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
 from string import Template
 from typing import Any, Callable, cast
 
-from PyQt5.QtCore import QSignalBlocker
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtCore import QSignalBlocker
 from vstools import F, P, R, T, vs
 
 from ..core import Frame, Time, main_window
@@ -84,10 +82,3 @@ def vs_clear_cache() -> None:
             output.clip.get_frame(int(main_window().current_output.last_showed_frame or Frame(0)))
             break
     vs.core.max_cache_size = cache_size
-
-
-def get_temp_screen_resolution() -> tuple[int, int]:
-    app = QApplication(sys.argv)
-
-    geometry = app.desktop().screenGeometry()
-    return (geometry.width(), geometry.height())

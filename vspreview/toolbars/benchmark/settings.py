@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from PyQt5.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel
 
 from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, Time, try_load
 from ...core.custom import TimeEdit

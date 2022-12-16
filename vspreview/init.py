@@ -12,11 +12,10 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Literal, cast
 
-from PyQt5.QtCore import QEvent, QObject, Qt
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtCore import QEvent, QObject
+from PyQt6.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow
-from .utils import get_temp_screen_resolution
 
 
 class Application(QApplication):
@@ -24,7 +23,7 @@ class Application(QApplication):
         isex = False
         try:
             return QApplication.notify(self, obj, event)
-        except BaseException:
+        except Exception:
             isex = True
             logging.error('Application: unexpected error')
             logging.error(*sys.exc_info())
@@ -78,7 +77,7 @@ def main() -> None:
     if args.verbose:
         logging.getLogger().level = logging.DEBUG
     else:
-        from vsengine import _hospice
+        from vsengine import _hospice  # type: ignore[import]
         _hospice.logger.setLevel(logging.ERROR)
         logging.getLogger().level = logging.WARNING
 
@@ -97,12 +96,6 @@ def main() -> None:
 
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
-
-    width, height = get_temp_screen_resolution()
-
-    hidpi = width > 1920 and height > 1080
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, hidpi)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, hidpi)
 
     app = Application(sys.argv)
     set_vsengine_loop()

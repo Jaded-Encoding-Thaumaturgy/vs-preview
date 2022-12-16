@@ -9,8 +9,8 @@ from math import floor
 from time import perf_counter_ns
 from typing import Any, Mapping, cast
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QSlider
+from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtWidgets import QComboBox, QSlider
 from vstools import vs
 
 from ...core import (
@@ -48,9 +48,9 @@ class PlaybackToolbar(AbstractToolbar):
         self.setup_ui()
 
         self.play_buffer = deque[tuple[int, Future[vs.VideoFrame]]]()
-        self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.PreciseTimer)
+        self.play_timer = Timer(timeout=self._show_next_frame, timerType=Qt.TimerType.PreciseTimer)
 
-        self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.PreciseTimer)
+        self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.TimerType.PreciseTimer)
 
         self.current_audio_output = None
         self.current_audio_frame = Frame(0)
@@ -58,7 +58,9 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.fps_history = deque[int]([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
-        self.fps_timer = Timer(timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.PreciseTimer)
+        self.fps_timer = Timer(
+            timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.TimerType.PreciseTimer
+        )
 
         self.play_start_time: int | None = None
         self.play_start_frame = Frame(0)
@@ -135,11 +137,11 @@ class PlaybackToolbar(AbstractToolbar):
         self.mute_button.setFixedWidth(18)
 
         self.audio_outputs_combobox = ComboBox[AudioOutput](
-            self, editable=True, insertPolicy=QComboBox.InsertAtCurrent,
-            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents
+            self, editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
-        self.audio_volume_slider = QSlider(Qt.Horizontal, valueChanged=self.setVolume)
+        self.audio_volume_slider = QSlider(Qt.Orientation.Horizontal, valueChanged=self.setVolume)
         self.audio_volume_slider.setFocusPolicy(Qt.NoFocus)
         self.audio_volume_slider.setFixedWidth(120)
         self.audio_volume_slider.setRange(0, 100)
@@ -160,15 +162,15 @@ class PlaybackToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def add_shortcuts(self) -> None:
-        self.main.add_shortcut(Qt.Key_Space, self.play_pause_button.click)
-        self.main.add_shortcut(Qt.Key_Left, self.seek_to_prev_button.click)
-        self.main.add_shortcut(Qt.Key_Right, self.seek_to_next_button.click)
-        self.main.add_shortcut(Qt.SHIFT + Qt.Key_Left, self.seek_n_frames_b_button.click)
-        self.main.add_shortcut(Qt.SHIFT + Qt.Key_Right, self.seek_n_frames_f_button.click)
-        self.main.add_shortcut(Qt.Key_PageUp, self.seek_n_frames_b_button.click)
-        self.main.add_shortcut(Qt.Key_PageDown, self.seek_n_frames_f_button.click)
-        self.main.add_shortcut(Qt.Key_Home, self.seek_to_start_button.click)
-        self.main.add_shortcut(Qt.Key_End, self.seek_to_end_button.click)
+        self.main.add_shortcut(Qt.Key.Key_Space, self.play_pause_button.click)
+        self.main.add_shortcut(Qt.Key.Key_Left, self.seek_to_prev_button.click)
+        self.main.add_shortcut(Qt.Key.Key_Right, self.seek_to_next_button.click)
+        self.main.add_shortcut(QKeyCombination(Qt.SHIFT, Qt.Key.Key_Left), self.seek_n_frames_b_button.click)
+        self.main.add_shortcut(QKeyCombination(Qt.SHIFT, Qt.Key.Key_Right), self.seek_n_frames_f_button.click)
+        self.main.add_shortcut(Qt.Key.Key_PageUp, self.seek_n_frames_b_button.click)
+        self.main.add_shortcut(Qt.Key.Key_PageDown, self.seek_n_frames_f_button.click)
+        self.main.add_shortcut(Qt.Key.Key_Home, self.seek_to_start_button.click)
+        self.main.add_shortcut(Qt.Key.Key_End, self.seek_to_end_button.click)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)

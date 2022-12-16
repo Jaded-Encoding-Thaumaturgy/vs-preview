@@ -7,9 +7,9 @@ from functools import wraps
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from PyQt5 import sip
-from PyQt5.QtCore import QEvent, QObject
-from PyQt5.QtWidgets import QApplication, QGraphicsScene
+from PyQt6 import sip
+from PyQt6.QtCore import QEvent, QObject
+from PyQt6.QtWidgets import QApplication, QGraphicsScene
 from vstools import ColorRange, Matrix, Primaries, T, Transfer, vs
 
 
@@ -42,14 +42,14 @@ class EventFilter(QObject):
         self.main = main
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        if (event.type() == QEvent.Show):
+        if (event.type() == QEvent.Type.Show):
             logging.debug('--------------------------------')
             logging.debug(f'{obj.objectName()}')
             logging.debug('event:       Show')
             logging.debug(f'spontaneous: {event.spontaneous()}')
             logging.debug('')
             self.print_toolbars_state()
-        elif (event.type() == QEvent.Hide):
+        elif (event.type() == QEvent.Type.Hide):
             logging.debug('--------------------------------')
             logging.debug(f'{obj.objectName()}')
             logging.debug('event:       Hide')

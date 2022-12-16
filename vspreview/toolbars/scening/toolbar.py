@@ -7,9 +7,9 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Mapping, cast
 
-from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QFileDialog, QLabel
+from PyQt6.QtCore import QModelIndex, Qt, QKeyCombination
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QFileDialog, QLabel
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load
@@ -176,22 +176,30 @@ class SceningToolbar(AbstractToolbar):
 
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys[:-2]):
-            self.add_shortcut(Qt.SHIFT + key, partial(self.switch_list, i))
+            self.add_shortcut(QKeyCombination(Qt.SHIFT, key), partial(self.switch_list, i))
 
-        self.add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
-        self.add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_prev_button.click)
-        self.add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_next_button.click)
-        if self.main.settings.azerty_keybinds:
-            self.add_shortcut(Qt.Key_A, self.toggle_first_frame_button.click)
-            self.add_shortcut(Qt.Key_Z, self.toggle_second_frame_button.click)
-        else:
-            self.add_shortcut(Qt.Key_Q, self.toggle_first_frame_button.click)
-            self.add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
-        self.add_shortcut(Qt.Key_E, self.add_to_list_button.click)
-        self.add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
-        self.add_shortcut(Qt.SHIFT + Qt.Key_R, self.remove_at_current_frame_button.click)
         self.add_shortcut(
-            Qt.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.on_toggle_single_frame
+        )
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Left).toCombined(), self.seek_to_prev_button.click
+        )
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Right).toCombined(), self.seek_to_next_button.click
+        )
+        if self.main.settings.azerty_keybinds:
+            self.add_shortcut(Qt.Key.Key_A, self.toggle_first_frame_button.click)
+            self.add_shortcut(Qt.Key.Key_Z, self.toggle_second_frame_button.click)
+        else:
+            self.add_shortcut(Qt.Key.Key_Q, self.toggle_first_frame_button.click)
+            self.add_shortcut(Qt.Key.Key_W, self.toggle_second_frame_button.click)
+        self.add_shortcut(Qt.Key.Key_E, self.add_to_list_button.click)
+        self.add_shortcut(Qt.Key.Key_R, self.remove_last_from_list_button.click)
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_R).toCombined(), self.remove_at_current_frame_button.click
+        )
+        self.add_shortcut(
+            Qt.Key.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
                 str(self.main.current_output.last_showed_frame)
             )
         )
@@ -408,7 +416,7 @@ class SceningToolbar(AbstractToolbar):
         Text is ignored.
         '''
         try:
-            from pysubs2 import load as pysubs2_load
+            from pysubs2 import load as pysubs2_load  # type: ignore[import]
         except ModuleNotFoundError:
             raise RuntimeError(
                 'vspreview: Can\'t import scenes from ass file, you\'re missing the `pysubs2` package!'
@@ -440,7 +448,7 @@ class SceningToolbar(AbstractToolbar):
         Uses TITLE for scene label.
         '''
         try:
-            from cueparser import CueSheet
+            from cueparser import CueSheet  # type: ignore[import]
         except ModuleNotFoundError:
             raise RuntimeError(
                 'vspreview: Can\'t import scenes from cue file, you\'re missing the `cueparser` package!'

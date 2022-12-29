@@ -101,9 +101,18 @@ class ExtendedLayout(QBoxLayout):
 
     def clear(self) -> None:
         for i in reversed(range(self.count())):
-            widget = self.itemAt(i).widget()
-            self.removeWidget(widget)
-            widget.setParent(None)  # type: ignore
+            item = self.itemAt(i)
+            widget = item.widget()
+            self.removeItem(item)
+            if widget:
+                # removeItem only takes it out of the layout. The widget
+                # still exists inside its parent widget.
+                widget.deleteLater()
+            else:
+                # Clear and delete sub-layouts
+                if isinstance(item, ExtendedLayout):
+                    item.clear()
+                item.deleteLater()
 
     @staticmethod
     def stretch(amount: int | None) -> Stretch:

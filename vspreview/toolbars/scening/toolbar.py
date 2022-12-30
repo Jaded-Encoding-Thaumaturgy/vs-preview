@@ -318,7 +318,7 @@ class SceningToolbar(AbstractToolbar):
     def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()
-        cast(SceningList, self.current_list).add(self.main.current_output.last_showed_frame)
+        cast(SceningList, self.current_list).add(self.main.current_output.last_showed_frame, label=self.label_lineedit.text())
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: bool | None = None) -> None:

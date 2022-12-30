@@ -85,9 +85,8 @@ class SceningListDialog(ExtendedDialog):
                 selection.select(index, index)
         self.tableview.selectionModel().select(
             selection,
-            QItemSelectionModel.SelectionFlags(
-                QItemSelectionModel.Rows + QItemSelectionModel.ClearAndSelect
-            )
+            QItemSelectionModel.SelectionFlag.Rows
+            | QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
 
     def on_current_list_changed(self, scening_list: SceningList | None = None) -> None:

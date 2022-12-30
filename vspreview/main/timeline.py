@@ -269,7 +269,7 @@ class Timeline(QWidget):
             for notch in notches:
                 line = notch.line
                 if line.x1() - 0.5 <= event.pos().x() <= line.x1() + 0.5:
-                    QToolTip.showText(event.globalPosition(), notch.label)
+                    QToolTip.showText(event.globalPosition().toPoint(), notch.label)
                     return
 
     def resizeEvent(self, event: QResizeEvent) -> None:

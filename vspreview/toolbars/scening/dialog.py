@@ -85,9 +85,8 @@ class SceningListDialog(ExtendedDialog):
                 selection.select(index, index)
         self.tableview.selectionModel().select(
             selection,
-            QItemSelectionModel.SelectionFlags(
-                QItemSelectionModel.Rows + QItemSelectionModel.ClearAndSelect
-            )
+            QItemSelectionModel.SelectionFlag.Rows
+            | QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
 
     def on_current_list_changed(self, scening_list: SceningList | None = None) -> None:
@@ -121,8 +120,10 @@ class SceningListDialog(ExtendedDialog):
 
         frame = Frame(value)
 
-        index = self.tableview.selectionModel().selectedRows()[0]
-
+        try:
+            index = self.tableview.selectionModel().selectedRows()[0]
+        except IndexError:
+            return
         if not index.isValid():
             return
         index = index.siblingAtColumn(SceningList.END_FRAME_COLUMN)
@@ -133,9 +134,10 @@ class SceningListDialog(ExtendedDialog):
     def on_end_time_changed(self, time: Time) -> None:
         if self.tableview.selectionModel() is None:
             return
-
-        index = self.tableview.selectionModel().selectedRows()[0]
-
+        try:
+            index = self.tableview.selectionModel().selectedRows()[0]
+        except IndexError:
+            return
         if not index.isValid():
             return
         index = index.siblingAtColumn(SceningList.END_TIME_COLUMN)
@@ -146,9 +148,10 @@ class SceningListDialog(ExtendedDialog):
     def on_label_changed(self, text: str) -> None:
         if self.tableview.selectionModel() is None:
             return
-
-        index = self.tableview.selectionModel().selectedRows()[0]
-
+        try:
+            index = self.tableview.selectionModel().selectedRows()[0]
+        except IndexError:
+            return
         if not index.isValid():
             return
         index = self.scening_list.index(index.row(), SceningList.LABEL_COLUMN)

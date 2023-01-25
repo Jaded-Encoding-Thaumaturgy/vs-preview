@@ -296,27 +296,15 @@ class VideoOutput(AbstractYAMLObject):
         return clip
 
     def frame_to_qimage(self, frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
-        width, height = frame.width, frame.height
+        width, height, stride = frame.width, frame.height, frame.get_stride(0)
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
-        stride = frame.get_stride(0)
-        memory_bug_fix = False
-
-        ctype_pointer = ctypes.POINTER(point_size * stride)
-
-        if width % mod or is_alpha:
-            self._curr_pointer = cast(
-                sip.voidptr, ctypes.cast(
-                    frame.get_read_ptr(0), ctype_pointer
-                ).contents
-            )
-            memory_bug_fix = True
+        if stride % mod or is_alpha:
+            pointer = cast(sip.voidptr, ctypes.cast(frame.get_read_ptr(0), ctypes.POINTER(point_size * stride)).contents)
         else:
-            self._curr_pointer = cast(sip.voidptr, frame[0])
+            pointer = cast(sip.voidptr, frame[0])
 
-        image = QImage(self._curr_pointer, width, height, stride, qt_format)
-
-        return image.copy() if memory_bug_fix else image
+        return QImage(pointer, width, height, stride, qt_format).copy()
 
     def update_graphic_item(
         self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None

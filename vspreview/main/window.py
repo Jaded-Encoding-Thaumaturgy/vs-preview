@@ -257,32 +257,49 @@ class MainWindow(AbstractMainWindow):
             self.handle_script_error('Script has no outputs set.')
             return
 
+        reload_from_error = self.script_exec_failed and reloading
         self.script_exec_failed = False
         self.current_storage_path = (self.current_config_dir / self.script_path.stem).with_suffix('.yml')
 
         self.storage_not_found = not self.current_storage_path.exists()
 
-        if self.storage_not_found:
-            self.load_storage()
+        load_error = None
 
-        if not reloading:
-            self.toolbars.main.rescan_outputs()
-            self.toolbars.playback.rescan_outputs()
+        try:
+            if self.storage_not_found or reload_from_error:
+                self.load_storage()
 
-        if not self.storage_not_found:
-            self.load_storage()
+            if not reloading:
+                self.toolbars.main.rescan_outputs()
+                self.toolbars.playback.rescan_outputs()
 
-        self.change_video_viewmode(self.current_viewmode)
-
-        self.toolbars.misc.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
-
-        if not reloading:
-            self.switch_output(self.settings.output_index)
-            if start_frame is not None:
-                self.switch_frame(Frame(start_frame))
+            if not self.storage_not_found:
+                self.load_storage()
+        except Exception as e:
+            load_error = e
 
         with self.env:
             vs.register_on_destroy(self.gc_collect)
+
+        if load_error is None:
+            self.change_video_viewmode(self.current_viewmode)
+
+            self.toolbars.misc.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
+
+            if not reloading:
+                self.switch_output(self.settings.output_index)
+                if start_frame is not None:
+                    self.switch_frame(Frame(start_frame))
+        else:
+            error_string = "There was an error while loading the script!\n"
+
+            logging.error(error_string + vpy.textwrap.indent(vpy.ExecutionFailed.extract_traceback(load_error), '| '))
+
+            self.script_exec_failed = True
+
+            return self.handle_script_error(
+                f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.'
+            )
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

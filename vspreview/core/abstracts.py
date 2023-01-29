@@ -587,16 +587,28 @@ def try_load(
         if nullable:
             value = None
 
+    func_error = None
+
     if isinstance(receiver, expected_type):
         receiver = value
     elif callable(receiver):
         try:
             cast(_SetterFunction, receiver)(name, value)
-        except BaseException:
-            cast(_OneArgumentFunction, receiver)(value)
+        except Exception as e:
+            if 'positional arguments but' not in str(e):
+                func_error = e
+
+            try:
+                cast(_OneArgumentFunction, receiver)(value)
+                func_error = None
+            except Exception as e:
+                func_error = e
     elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
         try:
             receiver.__setattr__(name, value)
         except AttributeError as e:
             logging.error(e)
             logging.warning(error_msg)
+
+    if func_error:
+        raise func_error from None

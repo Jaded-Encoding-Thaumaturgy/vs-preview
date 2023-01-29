@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, QKeyCombination
+import sys
+
+from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QLabel, QTabWidget, QWidget
 
@@ -45,7 +47,8 @@ class ScriptErrorDialog(ExtendedDialog):
     def on_exit_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
         self.script_exec_failed = True
-        self.main.app.exit()
+
+        sys.exit(1)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.on_exit_clicked()

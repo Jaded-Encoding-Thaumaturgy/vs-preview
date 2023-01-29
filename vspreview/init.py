@@ -7,30 +7,14 @@ from .core.vsenv import set_vsengine_loop
 import json
 import logging
 import os
+import signal
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Literal, cast
-
-from PyQt6.QtCore import QEvent, QObject
 from PyQt6.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow
-
-
-class Application(QApplication):
-    def notify(self, obj: QObject, event: QEvent) -> bool:
-        isex = False
-        try:
-            return QApplication.notify(self, obj, event)
-        except Exception:
-            isex = True
-            logging.error('Application: unexpected error')
-            logging.error(*sys.exc_info())
-            return False
-        finally:
-            if isex:
-                self.quit()
 
 
 def main() -> None:
@@ -97,8 +81,10 @@ def main() -> None:
     if not args.preserve_cwd:
         os.chdir(script_path.parent)
 
-    app = Application(sys.argv)
+    app = QApplication(sys.argv)
     set_vsengine_loop()
+
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent)
     main_window.load_script(
@@ -106,7 +92,7 @@ def main() -> None:
     )
     main_window.show()
 
-    app.exec_()
+    sys.exit(app.exec_())
 
 
 def install_vscode_launch(mode: Literal['override', 'append', 'ignore']) -> None:

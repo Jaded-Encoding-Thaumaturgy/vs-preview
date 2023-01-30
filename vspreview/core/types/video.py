@@ -108,9 +108,13 @@ class VideoOutput(AbstractYAMLObject):
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
         self.title = None
-        if self.main.outputs and vs_output in (vs_outputs := list(vs.get_outputs().values())):
-            self.title = self.main.user_output_names[vs.VideoNode].get(vs_outputs.index(vs_output))
-            self.main.outputs.setData(self.main.outputs.index(index), self.title)
+
+        with self.main.env:
+            if vs_output in (vs_outputs := list(vs.get_outputs().values())):
+                self.title = self.main.user_output_names[vs.VideoNode].get(vs_outputs.index(vs_output))
+                if self.main.outputs is not None:
+                    self.main.outputs.setData(self.main.outputs.index(index), self.title)
+
         self.props = cast(vs.FrameProps, {})
 
         if self.source.alpha:

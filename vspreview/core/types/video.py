@@ -303,7 +303,7 @@ class VideoOutput(AbstractYAMLObject):
         width, height, stride = frame.width, frame.height, frame.get_stride(0)
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
-        if stride % mod or is_alpha:
+        if width % mod or stride % mod or is_alpha:
             pointer = cast(sip.voidptr, ctypes.cast(frame.get_read_ptr(0), ctypes.POINTER(point_size * stride)).contents)
         else:
             pointer = cast(sip.voidptr, frame[0])

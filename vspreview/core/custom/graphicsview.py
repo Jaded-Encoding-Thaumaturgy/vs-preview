@@ -61,9 +61,9 @@ class GraphicsView(QGraphicsView):
             else:
                 return
 
-        self.currentZoom = value
+        self.currentZoom = value / self.devicePixelRatio()
 
-        self.setTransform(QTransform().scale(value, value))
+        self.setTransform(QTransform().scale(self.currentZoom, self.currentZoom))
         self.dragEvent.emit(DragEventType.repaint)
 
     def event(self, event: QEvent) -> bool:

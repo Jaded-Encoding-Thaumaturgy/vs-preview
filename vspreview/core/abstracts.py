@@ -601,8 +601,8 @@ def try_load(
             try:
                 cast(_OneArgumentFunction, receiver)(value)
                 func_error = None
-            except Exception as e:
-                func_error = e
+            except Exception as ee:
+                func_error = ee
     elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
         try:
             receiver.__setattr__(name, value)

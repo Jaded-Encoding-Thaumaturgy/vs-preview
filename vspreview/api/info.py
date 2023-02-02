@@ -13,4 +13,6 @@ def is_preview() -> bool:
     while (t := c_frame[-1] and c_frame[-1].f_back):
         c_frame.append(t)
 
-    return c_frame and c_frame[-1].f_code.co_name != '<module>'
+        if t and '__name__' in t.f_locals:
+            if t.f_locals['__name__'] == '__vspreview__':
+                return True

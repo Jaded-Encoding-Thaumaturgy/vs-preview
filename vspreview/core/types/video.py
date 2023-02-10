@@ -10,7 +10,7 @@ from typing import Any, Mapping, cast
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from vstools import ColorRange, DependencyNotFoundError, FramesLengthError, core, video_heuristics, vs
+from vstools import ColorRange, FramesLengthError, Timecodes, core, video_heuristics, vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .dataclasses import CroppingInfo, VideoOutputNode
@@ -143,21 +143,15 @@ class VideoOutput(AbstractYAMLObject):
 
             if timecodes:
                 if not isinstance(timecodes, list):
-                    try:
-                        from vsdeinterlace import get_timecodes, normalize_range_timecodes, normalize_timecodes
-
-                        if isinstance(timecodes, (str, Path)):
-                            timecodes = get_timecodes(self.source.clip, timecodes, tden, 'set_timecodes')
-                            timecodes = normalize_timecodes(timecodes)
-                        vsdeint_available = True
-                    except Exception:
-                        vsdeint_available = False
-                        raise DependencyNotFoundError('set_timecodes', 'vsdeinterlace')
+                    if isinstance(timecodes, (str, Path)):
+                        timecodes = Timecodes.from_file(
+                            timecodes, self.source.clip.num_frames, tden, func='set_timecodes'
+                        ).to_fractions()
 
                 if isinstance(timecodes, dict):
-                    if not vsdeint_available:
-                        raise DependencyNotFoundError('set_timecodes', 'vsdeinterlace')
-                    norm_timecodes = normalize_range_timecodes(timecodes, self.source.clip.num_frames, play_fps)
+                    norm_timecodes = Timecodes.normalize_range_timecodes(
+                        timecodes, self.source.clip.num_frames, play_fps
+                    )
                 else:
                     norm_timecodes = timecodes.copy()
 

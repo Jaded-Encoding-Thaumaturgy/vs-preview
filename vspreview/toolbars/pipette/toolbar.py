@@ -41,6 +41,8 @@ class PipetteToolbar(AbstractToolbar):
         self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoFrame]]()
         self._mouse_is_subscribed = False
 
+        self.last_pos: tuple[VideoOutput, QPoint] | None = None
+
         main.reload_signal.connect(self.clear_outputs)
 
         self.set_qobject_names()
@@ -100,6 +102,10 @@ class PipetteToolbar(AbstractToolbar):
         ])
 
         self.hlayout.addStretch()
+
+    def on_current_frame_changed(self, frame: Frame) -> None:
+        if self.last_pos and self.last_pos[0] is self.main.current_output:
+            self.update_labels(self.last_pos[1])
 
     def subscribe_on_mouse_events(self) -> None:
         if not self._mouse_is_subscribed:
@@ -168,6 +174,8 @@ class PipetteToolbar(AbstractToolbar):
         return cache[1]
 
     def update_labels(self, local_pos: QPoint) -> None:
+        self.last_pos = (self.main.current_output, local_pos)
+
         pos_f = self.main.graphics_view.mapToScene(local_pos)
 
         if not self.main.current_output.graphics_scene_item.contains(pos_f):

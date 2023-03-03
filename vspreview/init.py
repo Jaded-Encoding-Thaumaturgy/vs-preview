@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import set_vsengine_loop
@@ -12,6 +13,7 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Literal, cast
+
 from PyQt6.QtWidgets import QApplication
 
 from .main import MainSettings, MainWindow

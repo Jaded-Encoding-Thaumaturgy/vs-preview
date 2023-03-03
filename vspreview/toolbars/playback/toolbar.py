@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import gc
-import logging
 from collections import deque
 from concurrent.futures import Future
 from functools import partial
@@ -9,9 +7,9 @@ from math import floor
 from time import perf_counter_ns
 from typing import Any, Mapping, cast
 
-from PyQt6.QtCore import Qt, QKeyCombination
+import vapoursynth as vs
+from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QSlider
-from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
@@ -355,6 +353,9 @@ class PlaybackToolbar(AbstractToolbar):
         self.current_audio_frame += 1
 
     def stop(self) -> None:
+        import gc
+        import logging
+
         if not self.play_timer.isActive():
             return
 

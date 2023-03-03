@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import ctypes
 from math import ceil, floor, log
-from struct import unpack
 from typing import Generator, cast
 from weakref import WeakKeyDictionary
 
+import vapoursynth as vs
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QFont, QMouseEvent
 from PyQt6.QtWidgets import QGraphicsView, QLabel
-from vstools import vs
 
 from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
 from .colorview import ColorView
@@ -29,19 +27,9 @@ class PipetteToolbar(AbstractToolbar):
         'copy_position_button'
     )
 
-    data_types = {
-        vs.INTEGER: {
-            1: ctypes.c_uint8,
-            2: ctypes.c_uint16,
-            # 4: ctypes.c_char * 4,
-        },
-        vs.FLOAT: {
-            2: ctypes.c_char,
-            4: ctypes.c_float,
-        }
-    }
-
     def __init__(self, main: AbstractMainWindow) -> None:
+        import ctypes
+
         super().__init__(main, PipetteSettings())
 
         self.setup_ui()
@@ -56,6 +44,18 @@ class PipetteToolbar(AbstractToolbar):
         main.reload_signal.connect(self.clear_outputs)
 
         self.set_qobject_names()
+
+        self.data_types = {
+            vs.INTEGER: {
+                1: ctypes.c_uint8,
+                2: ctypes.c_uint16,
+                # 4: ctypes.c_char * 4,
+            },
+            vs.FLOAT: {
+                2: ctypes.c_char,
+                4: ctypes.c_float,
+            }
+        }
 
     def clear_outputs(self) -> None:
         self.outputs.clear()
@@ -257,11 +257,14 @@ class PipetteToolbar(AbstractToolbar):
         )
 
     def extract_value(self, vs_frame: vs.VideoFrame, pos: QPoint) -> Generator[float, None, None]:
+        from struct import unpack
+        from ctypes import cast as ccast, POINTER
+
         fmt = vs_frame.format
 
         for plane in range(fmt.num_planes):
             stride = vs_frame.get_stride(plane)
-            pointer = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
+            pointer = ccast(vs_frame.get_read_ptr(plane), POINTER(
                 self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
             ))
 

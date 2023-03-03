@@ -4,9 +4,8 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Mapping
 
-from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
-from vstools import video_heuristics
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch,
@@ -179,6 +178,8 @@ class MiscToolbar(AbstractToolbar):
             self.autosave_timer.start(round(float(new_value) * 1000))
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
+        from vstools import video_heuristics
+
         curr_out = self.main.current_output.source.clip
         fmt = curr_out.format
         assert fmt

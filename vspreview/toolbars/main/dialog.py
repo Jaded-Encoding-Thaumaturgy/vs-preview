@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PyQt6.QtCore import QPointF, Qt
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QLabel
 from vapoursynth import FrameProps
-from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
+
+if TYPE_CHECKING:
+    from vstools import PropEnum
 
 from ...core import AbstractMainWindow, ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
 
@@ -29,50 +33,14 @@ def _create_enum_props_lut(enum: PropEnum, pretty_name: str) -> tuple[str, dict[
     }
 
 
-_frame_props_lut = {
-    '_Combed': {
-        'Is Combed': [
-            'No',
-            'Yes'
-        ]
-    },
-    '_Field': {
-        'Frame Field Type': [
-            'Bottom Field',
-            'Top Field'
-        ]
-    },
-    '_SceneChangeNext': {
-        'Scene Cut': [
-            'Current Scene',
-            'End of Scene'
-        ]
-    },
-    '_SceneChangePrev': {
-        'Scene Change': [
-            'Current Scene',
-            'Start of Scene'
-        ]
-    }
-} | dict([
-    _create_enum_props_lut(enum, name)
-    for enum, name in [
-        (FieldBased, 'Field Type'),
-        (Matrix, 'Matrix'),
-        (Transfer, 'Transfer'),
-        (Primaries, 'Primaries'),
-        (ChromaLocation, 'Chroma Location'),
-        (ColorRange, 'Color Range')
-    ]
-])
-
-
 class FramePropsDialog(ExtendedWidget):
     __slots__ = (
         'main_window', 'clicked', 'old_pos', 'header', 'framePropsVLayout'
     )
 
     def __init__(self, main_window: AbstractMainWindow) -> None:
+        from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, Transfer
+
         super().__init__(main_window)
 
         self.main_window = main_window
@@ -88,6 +56,43 @@ class FramePropsDialog(ExtendedWidget):
 
         self.set_qobject_names()
         self.hide()
+
+        self._frame_props_lut = {
+            '_Combed': {
+                'Is Combed': [
+                    'No',
+                    'Yes'
+                ]
+            },
+            '_Field': {
+                'Frame Field Type': [
+                    'Bottom Field',
+                    'Top Field'
+                ]
+            },
+            '_SceneChangeNext': {
+                'Scene Cut': [
+                    'Current Scene',
+                    'End of Scene'
+                ]
+            },
+            '_SceneChangePrev': {
+                'Scene Change': [
+                    'Current Scene',
+                    'Start of Scene'
+                ]
+            }
+        } | dict([
+            _create_enum_props_lut(enum, name)
+            for enum, name in [
+                (FieldBased, 'Field Type'),
+                (Matrix, 'Matrix'),
+                (Transfer, 'Transfer'),
+                (Primaries, 'Primaries'),
+                (ChromaLocation, 'Chroma Location'),
+                (ColorRange, 'Color Range')
+            ]
+        ])
 
     def setup_ui(self) -> None:
         self.framePropsVLayout = VBoxLayout()
@@ -125,9 +130,9 @@ class FramePropsDialog(ExtendedWidget):
             if key in _frame_props_excluded_keys:
                 continue
 
-            if key in _frame_props_lut:
-                title = list(_frame_props_lut[key].keys())[0]
-                value_str = _frame_props_lut[key][title][props[key]]
+            if key in self._frame_props_lut:
+                title = list(self._frame_props_lut[key].keys())[0]
+                value_str = self._frame_props_lut[key][title][props[key]]
             else:
                 title = key[1:] if key.startswith('_') else key
                 value_str = str(props[key])

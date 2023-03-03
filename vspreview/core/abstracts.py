@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import inspect
-import logging
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -9,19 +7,21 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
 
+import vapoursynth as vs
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QClipboard, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
-    QLineEdit, QMainWindow, QProgressBar, QPushButton, QSpacerItem, QSpinBox, QStatusBar, QTableView,
-    QVBoxLayout, QWidget
+    QLineEdit, QMainWindow, QProgressBar, QPushButton, QSpacerItem, QSpinBox, QStatusBar, QTableView, QVBoxLayout,
+    QWidget
 )
-from vstools import T, vs
 
 from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
 from .better_abc import abstract_attribute
 
 if TYPE_CHECKING:
+    from vstools import T
+
     from ..main.timeline import Notches, Timeline
     from ..models import VideoOutputs
     from .types import Frame, Time, VideoOutput
@@ -537,6 +537,8 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 
 @lru_cache()
 def main_window() -> AbstractMainWindow:
+    import logging
+
     app = QApplication.instance()
 
     if app is not None:
@@ -561,6 +563,8 @@ class _SetterFunction():
 
 
 def storage_err_msg(name: str, level: int = 0) -> str:
+    import inspect
+
     pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
     caller_name = inspect.stack()[level + 1][0].f_locals['self'].__class__.__name__
 
@@ -572,6 +576,8 @@ def try_load(
     receiver: T | _OneArgumentFunction | _SetterFunction,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:
+    import logging
+
     if error_msg is None:
         error_msg = storage_err_msg(name, 1)
 

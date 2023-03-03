@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import logging
-
 from ...core import AbstractMainWindow, AbstractToolbar, LineEdit, PushButton
-from ...utils import debug, vs_clear_cache
 from .settings import DebugSettings
 
 
@@ -13,6 +10,8 @@ class DebugToolbar(AbstractToolbar):
     __slots__ = ('exec_lineedit', )
 
     def __init__(self, main: AbstractMainWindow) -> None:
+        from ...utils import debug
+
         super().__init__(main, DebugSettings())
 
         self.setup_ui()
@@ -43,12 +42,15 @@ class DebugToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def test_button_clicked(self, checked: bool | None = None) -> None:
+        from ...utils import vs_clear_cache
         vs_clear_cache()
 
     def exec_button_clicked(self, checked: bool | None = None) -> None:
         try:
             exec(self.exec_lineedit.text())
         except BaseException as e:
+            import logging
+
             logging.error(e)
 
     def break_button_clicked(self, checked: bool | None = None) -> None:

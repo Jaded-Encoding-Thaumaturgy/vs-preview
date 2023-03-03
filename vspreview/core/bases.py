@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, cast, no_type_check
+from typing import TYPE_CHECKING, Any, cast, no_type_check
 
 from PyQt6 import sip
-from vstools import T
 from yaml import YAMLObject, YAMLObjectMetaclass
+
+if TYPE_CHECKING:
+    from vstools import T
 
 from .better_abc import ABCMeta
 

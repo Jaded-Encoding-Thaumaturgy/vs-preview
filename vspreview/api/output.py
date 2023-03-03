@@ -5,7 +5,7 @@ import inspect
 from fractions import Fraction
 from pathlib import Path
 
-from vstools import vs
+import vapoursynth as vs
 
 from .info import is_preview
 from .timecodes import set_timecodes

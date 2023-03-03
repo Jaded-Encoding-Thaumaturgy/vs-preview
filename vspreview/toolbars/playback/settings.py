@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QLabel
-from vstools import DitherType
+from vstools.functions.utils import DitherType
 
 from ...core import AbstractToolbarSettings, Frame, HBoxLayout, SpinBox, try_load
 from ...core.custom import ComboBox

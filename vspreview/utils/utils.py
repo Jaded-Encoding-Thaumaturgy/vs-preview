@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
 from string import Template
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
+import vapoursynth as vs
 from PyQt6.QtCore import QSignalBlocker
-from vstools import F, P, R, T, vs
+
+if TYPE_CHECKING:
+    from vstools import F, P, R, T
 
 from ..core import Frame, Time, main_window
 
@@ -46,6 +48,8 @@ def strfdelta(time: Time, output_format: str) -> str:
 
 
 def fire_and_forget(f: F) -> F:
+    from asyncio import get_event_loop_policy, get_running_loop
+
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
@@ -53,7 +57,7 @@ def fire_and_forget(f: F) -> F:
         except RuntimeError:
             loop = get_event_loop_policy().get_event_loop()
         return loop.run_in_executor(None, partial(f, *args, **kwargs))
-    return cast(F, wrapped)
+    return wrapped
 
 
 def set_status_label(label: str) -> Callable[[F], F]:
@@ -71,14 +75,14 @@ def set_status_label(label: str) -> Callable[[F], F]:
             return ret
         return _wrapped
 
-    return cast(Callable[[F], F], _decorator)
+    return _decorator
 
 
 def vs_clear_cache() -> None:
-    cache_size = vs.core.max_cache_size
-    vs.core.max_cache_size = 1
+    cache_size=vs.core.max_cache_size
+    vs.core.max_cache_size=1
     for output in list(vs.get_outputs().values()):
         if isinstance(output, vs.VideoOutputTuple):
             output.clip.get_frame(int(main_window().current_output.last_showed_frame or Frame(0)))
             break
-    vs.core.max_cache_size = cache_size
+    vs.core.max_cache_size=cache_size

@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import ctypes
-import itertools
-import os
-from fractions import Fraction
-from pathlib import Path
+from itertools import count as iter_count
 from typing import Any, Mapping, cast
 
+import vapoursynth as vs
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from vstools import ColorRange, FramesLengthError, Timecodes, core, video_heuristics, vs
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .dataclasses import CroppingInfo, VideoOutputNode
@@ -18,13 +14,13 @@ from .units import Frame, Time
 
 
 class PackingTypeInfo:
-    _getid = itertools.count()
+    _getid = iter_count()
 
     def __init__(
         self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool
     ):
         self.id = next(self._getid)
-        self.vs_format = core.get_video_format(vs_format)
+        self.vs_format = vs.core.get_video_format(vs_format)
         self.qt_format = qt_format
         self.shuffle = shuffle
 
@@ -43,13 +39,6 @@ class PackingType(PackingTypeInfo):
     akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
     akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
 
-
-if not hasattr(core, 'akarin') and not hasattr(core, 'libp2p'):
-    raise ImportError(
-        "\n\tLibP2P and Akarin plugin are missing, one is required to prepare output clips correctly!\n"
-        "\t  You can get them here: \n"
-        "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
-    )
 
 PACKING_TYPE: PackingType = None  # type: ignore
 
@@ -126,6 +115,8 @@ class VideoOutput(AbstractYAMLObject):
         self.graphics_scene_item: GraphicsImageItem
 
         if index in self.main.timecodes:
+            from fractions import Fraction
+
             timecodes, tden = self.main.timecodes[index]
 
             if self.fps_num == 0:
@@ -142,6 +133,10 @@ class VideoOutput(AbstractYAMLObject):
             self.play_fps = float(play_fps)
 
             if timecodes:
+                from pathlib import Path
+
+                from vstools import Timecodes
+
                 if not isinstance(timecodes, list):
                     if isinstance(timecodes, (str, Path)):
                         timecodes = Timecodes.from_file(
@@ -156,6 +151,7 @@ class VideoOutput(AbstractYAMLObject):
                     norm_timecodes = timecodes.copy()
 
                 if len(norm_timecodes) != self.source.clip.num_frames:
+                    from vstools import FramesLengthError
                     raise FramesLengthError(
                         'set_timecodes', '', 'timecodes file length mismatch with clip\'s length!',
                         reason=dict(timecodes=len(norm_timecodes), clip=self.source.clip.num_frames)
@@ -197,23 +193,32 @@ class VideoOutput(AbstractYAMLObject):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
     def set_fmt_values(self) -> None:
+        import os
+        from ctypes import c_char
+
         global PACKING_TYPE
 
         _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
 
         # From fastest to slowest
-        if hasattr(core, 'akarin'):
+        if hasattr(vs.core, 'akarin'):
             PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
-        elif hasattr(core, 'libp2p'):
+        elif hasattr(vs.core, 'libp2p'):
             PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+        else:
+            raise ImportError(
+                "\n\tLibP2P and Akarin plugin are missing, one is required to prepare output clips correctly!\n"
+                "\t  You can get them here: \n"
+                "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
+            )
 
         self._NORML_FMT = PACKING_TYPE.vs_format
-        self._ALPHA_FMT = core.get_video_format(vs.GRAY8)
+        self._ALPHA_FMT = vs.core.get_video_format(vs.GRAY8)
 
         nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
         self._FRAME_CONV_INFO = {
-            False: (nbps, ctypes.c_char * nbps, PACKING_TYPE.qt_format),
-            True: (abps, ctypes.c_char * abps, QImage.Format.Format_Alpha8)
+            False: (nbps, c_char * nbps, PACKING_TYPE.qt_format),
+            True: (abps, c_char * abps, QImage.Format.Format_Alpha8)
         }
 
     @property
@@ -232,21 +237,23 @@ class VideoOutput(AbstractYAMLObject):
         self.title = newname
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
+        from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, video_heuristics
+
         assert clip.format
 
         is_subsampled = (clip.format.subsampling_w != 0 or clip.format.subsampling_h != 0)
 
-        resizer = core.resize.Bicubic if is_subsampled else core.resize.Point
+        resizer = vs.core.resize.Bicubic if is_subsampled else vs.core.resize.Point
 
         heuristics = video_heuristics(clip, None)
 
         resizer_kwargs = {
             'format': self._NORML_FMT.id,
-            'matrix_in': self.main.VS_OUTPUT_MATRIX,
-            'transfer_in': self.main.VS_OUTPUT_TRANSFER,
-            'primaries_in': self.main.VS_OUTPUT_PRIMARIES,
-            'range_in': self.main.VS_OUTPUT_RANGE,
-            'chromaloc_in': self.main.VS_OUTPUT_CHROMALOC
+            'matrix_in': Matrix.BT709,
+            'transfer_in': Transfer.BT709,
+            'primaries_in': Primaries.BT709,
+            'range_in': ColorRange.LIMITED,
+            'chromaloc_in': ChromaLocation.LEFT
         } | heuristics | {
             'dither_type': self.main.toolbars.playback.settings.dither_type
         }
@@ -278,14 +285,14 @@ class VideoOutput(AbstractYAMLObject):
             clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
 
         if PACKING_TYPE in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
-            return core.libp2p.Pack(clip)
+            return vs.core.libp2p.Pack(clip)
 
         if PACKING_TYPE in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
             # x, y, z => b, g, r
             # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
             # R stays like it is + shift if it's 8 bits (gets applied to all clips), then G gets shifted
             # by 10 bits, (we multiply by 2 ** 10) and same for B but by 20 bits and it all gets summed
-            return core.akarin.Expr(
+            return vs.core.akarin.Expr(
                 clip.std.SplitPlanes(),
                 f'{2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)} s! x s@ 0x100000 * * '
                 'y s@ 0x400 * * + z s@ * + 0xc0000000 +', vs.GRAY32, True
@@ -294,11 +301,16 @@ class VideoOutput(AbstractYAMLObject):
         return clip
 
     def frame_to_qimage(self, frame: vs.VideoFrame, is_alpha: bool = False) -> QImage:
+        from ctypes import POINTER
+        from ctypes import cast as ccast
+
         width, height, stride = frame.width, frame.height, frame.get_stride(0)
         mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
         if width % mod or stride % mod or is_alpha:
-            pointer = cast(sip.voidptr, ctypes.cast(frame.get_read_ptr(0), ctypes.POINTER(point_size * stride)).contents)
+            pointer = cast(
+                sip.voidptr, ccast(frame.get_read_ptr(0), POINTER(point_size * stride)).contents
+            )
         else:
             pointer = cast(sip.voidptr, frame[0])
 

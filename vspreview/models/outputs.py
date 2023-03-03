@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterator, Mapping, OrderedDict, TypeVar, cast
+from typing import Any, Generic, Iterator, Mapping, OrderedDict, TypeVar
 
+import vapoursynth as vs
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
-from vstools import vs
 
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
 

@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import logging
-import os
-import random
-import re
-import shutil
-import string
-import unicodedata
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Final, NamedTuple, cast
 
+import vapoursynth as vs
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
-from vstools import vs
 
 from ...core import (
     AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
@@ -30,6 +23,9 @@ def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
 
 
 def clear_filename(filename: str) -> str:
+    import re
+    import unicodedata
+
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']
     reserved = [
         'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
@@ -104,6 +100,9 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
+        import os
+        import shutil
+
         try:
             from requests import Session
             from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
@@ -359,6 +358,8 @@ class CompToolbar(AbstractToolbar):
         return rnum
 
     def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
+        import random
+
         samples = set[int]()
         _max_attempts = 0
         _rnum_checked = set[int]()
@@ -399,6 +400,10 @@ class CompToolbar(AbstractToolbar):
         return list(samples)
 
     def get_slowpics_conf(self) -> WorkerConfiguration:
+        import logging
+        import random
+        import string
+
         self.update_upload_status_visibility(True)
 
         clips: dict[str, vs.VideoNode]

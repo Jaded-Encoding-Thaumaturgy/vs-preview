@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-import gc
 import io
 import logging
 import sys
 from fractions import Fraction
-from itertools import count
 from os.path import expanduser, expandvars
 from pathlib import Path
-from random import random
-from traceback import TracebackException
 from typing import Any, Mapping, cast
 
-import yaml
+import vapoursynth as vs
 from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
 from vsengine import vpy  # type: ignore[import]
-from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
 
 from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
@@ -44,18 +39,15 @@ except ImportError:
     from yaml import Dumper as yaml_Dumper
     from yaml import Loader as yaml_Loader
 
+from yaml import MarkedYAMLError, YAMLError
+
 
 class MainWindow(AbstractMainWindow):
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
     )
-    # used for formats with subsampling
-    VS_OUTPUT_MATRIX = Matrix.BT709
-    VS_OUTPUT_TRANSFER = Transfer.BT709
-    VS_OUTPUT_PRIMARIES = Primaries.BT709
-    VS_OUTPUT_RANGE = ColorRange.LIMITED
-    VS_OUTPUT_CHROMALOC = ChromaLocation.LEFT
+
     VSP_VERSION = 3.0
     BREAKING_CHANGES_VERSIONS = list[float]()
 
@@ -208,6 +200,8 @@ class MainWindow(AbstractMainWindow):
         self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None
     ) -> None:
+        from random import random
+
         self.external_args = external_args or []
 
         self.toolbars.playback.stop()
@@ -235,6 +229,8 @@ class MainWindow(AbstractMainWindow):
             self.env.module.__dict__['_monkey_runpy'] = random()
             self.env = vpy.script(script_path, environment=self.env).result()
         except vpy.ExecutionFailed as e:
+            from traceback import TracebackException
+
             logging.error(e.parent_error)
 
             te = TracebackException.from_exception(e.parent_error)
@@ -348,8 +344,8 @@ class MainWindow(AbstractMainWindow):
         loader = yaml_Loader(storage_contents)
         try:
             loader.get_single_data()
-        except yaml.YAMLError as exc:
-            if isinstance(exc, yaml.MarkedYAMLError):
+        except YAMLError as exc:
+            if isinstance(exc, MarkedYAMLError):
                 if exc.problem_mark:
                     line = exc.problem_mark.line + 1
                     isglobal = line <= global_length
@@ -380,6 +376,8 @@ class MainWindow(AbstractMainWindow):
         self.dump_storage()
 
     def dump_storage(self, manually: bool = False) -> None:
+        from itertools import count
+
         if self.script_exec_failed:
             return
 
@@ -519,6 +517,8 @@ class MainWindow(AbstractMainWindow):
         self.gc_collect()
 
     def gc_collect(self) -> None:
+        import gc
+
         for i in range(3):
             gc.collect(generation=i)
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABCMeta as NativeABCMeta
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from vstools import T
+if TYPE_CHECKING:
+    from vstools import T
 
 
 class DummyAttribute:
@@ -11,7 +12,7 @@ class DummyAttribute:
 
 
 def abstract_attribute(obj: T | None = None) -> T:
-    return cast(T, obj or DummyAttribute())
+    return obj or DummyAttribute()
 
 
 class ABCMeta(NativeABCMeta):

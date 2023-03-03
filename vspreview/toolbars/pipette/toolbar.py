@@ -37,8 +37,8 @@ class PipetteToolbar(AbstractToolbar):
         self.pos_fmt = self.src_hex_fmt = self.src_dec_fmt = self.src_norm_fmt = ''
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
-        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
-        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
+        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoFrame]]()
+        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoFrame]]()
         self._mouse_is_subscribed = False
 
         main.reload_signal.connect(self.clear_outputs)
@@ -131,39 +131,41 @@ class PipetteToolbar(AbstractToolbar):
 
     @property
     def current_source_frame(self) -> vs.VideoFrame:
-        if self.main.current_output not in self._curr_frame_cache:
-            cache = self._curr_frame_cache[self.main.current_output] = [None, None]
-        else:
+        if self.main.current_output in self._curr_frame_cache:
             cache = self._curr_frame_cache[self.main.current_output]
+        else:
+            cache = None
 
         last_showed_frame = min(
             int(self.main.current_output.last_showed_frame), int(self.main.current_output.total_frames) - 1
         )
 
-        if cache[1] is None or cache[0] != last_showed_frame:
-            cache = (
+        if cache is None or cache[0] != last_showed_frame:
+            cache = self._curr_frame_cache[self.main.current_output] = (
                 last_showed_frame, self.outputs[self.main.current_output].get_frame(last_showed_frame)
             )
 
-        return cast(vs.VideoFrame, cache[1])
+        return cache[1]
 
     @property
     def current_source_alpha_frame(self) -> vs.VideoFrame:
-        if self.main.current_output not in self._curr_alphaframe_cache:
-            cache = self._curr_alphaframe_cache[self.main.current_output] = [None, None]
-        else:
+        assert self.main.current_output.source.alpha
+
+        if self.main.current_output in self._curr_alphaframe_cache:
             cache = self._curr_alphaframe_cache[self.main.current_output]
+        else:
+            cache = None
 
         last_showed_frame = min(
             int(self.main.current_output.last_showed_frame), int(self.main.current_output.total_frames) - 1
         )
 
-        if cache[1] is None or cache[0] != last_showed_frame:
-            cache = (
+        if cache is None or cache[0] != last_showed_frame:
+            cache = self._curr_frame_cache[self.main.current_output] = (
                 last_showed_frame, self.main.current_output.source.alpha.get_frame(last_showed_frame)
             )
 
-        return cast(vs.VideoFrame, cache[1])
+        return cache[1]
 
     def update_labels(self, local_pos: QPoint) -> None:
         pos_f = self.main.graphics_view.mapToScene(local_pos)

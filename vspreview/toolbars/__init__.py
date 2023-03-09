@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Iterator, Mapping, cast, overload
 
 from ..core import storage_err_msg
-from ..core.abstracts import AbstractMainWindow, AbstractToolbar
+from ..core.abstracts import AbstractToolbar
 from ..core.bases import AbstractYAMLObjectSingleton
 from .benchmark import BenchmarkToolbar
 from .comp import CompToolbar
@@ -14,6 +14,9 @@ from .misc import MiscToolbar
 from .pipette import PipetteToolbar
 from .playback import PlaybackToolbar
 from .scening import SceningToolbar
+
+if TYPE_CHECKING:
+    from ..main import MainWindow
 
 all_toolbars = [
     MainToolbar, PlaybackToolbar, SceningToolbar, PipetteToolbar,
@@ -36,7 +39,7 @@ class Toolbars(AbstractYAMLObjectSingleton):
     # 'main' should always be the first
     all_toolbars_names = ['main', 'playback', 'scening', 'pipette', 'benchmark', 'misc', 'comp', 'debug']
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
+    def __init__(self, main_window: MainWindow) -> None:
         for name, toolbar in zip(self.all_toolbars_names, all_toolbars):
             self.__setattr__(name, toolbar(main_window))
 

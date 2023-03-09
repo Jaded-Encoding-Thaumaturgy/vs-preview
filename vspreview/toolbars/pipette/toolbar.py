@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from math import ceil, floor, log
-from typing import Generator, cast
+from typing import TYPE_CHECKING, Generator, cast
 from weakref import WeakKeyDictionary
 
 import vapoursynth as vs
@@ -9,9 +9,12 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QFont, QMouseEvent
 from PyQt6.QtWidgets import QGraphicsView, QLabel
 
-from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
+from ...core import AbstractToolbar, Frame, PushButton, VideoOutput
 from .colorview import ColorView
 from .settings import PipetteSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class PipetteToolbar(AbstractToolbar):
@@ -27,7 +30,9 @@ class PipetteToolbar(AbstractToolbar):
         'copy_position_button'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    settings: PipetteSettings
+
+    def __init__(self, main: MainWindow) -> None:
         import ctypes
 
         super().__init__(main, PipetteSettings())
@@ -50,8 +55,7 @@ class PipetteToolbar(AbstractToolbar):
         self.data_types = {
             vs.INTEGER: {
                 1: ctypes.c_uint8,
-                2: ctypes.c_uint16,
-                # 4: ctypes.c_char * 4,
+                2: ctypes.c_uint16
             },
             vs.FLOAT: {
                 2: ctypes.c_char,
@@ -69,7 +73,7 @@ class PipetteToolbar(AbstractToolbar):
         self.color_view.setFixedSize(self.height() // 2, self.height() // 2)
 
         font = QFont('Consolas', 9)
-        font.setStyleHint(QFont.Monospace)
+        font.setStyleHint(QFont.StyleHint.Monospace)
 
         self.position = QLabel(self)
 
@@ -91,7 +95,7 @@ class PipetteToolbar(AbstractToolbar):
             self.src_hex, self.src_dec, self.src_norm
         ]:
             label.setFont(font)
-            label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         self.copy_position_button = PushButton('⎘', self, clicked=self.on_copy_position_clicked)
 
@@ -267,15 +271,16 @@ class PipetteToolbar(AbstractToolbar):
         )
 
     def extract_value(self, vs_frame: vs.VideoFrame, pos: QPoint) -> Generator[float, None, None]:
+        from ctypes import POINTER
+        from ctypes import cast as ccast
         from struct import unpack
-        from ctypes import cast as ccast, POINTER
 
         fmt = vs_frame.format
 
         for plane in range(fmt.num_planes):
             stride = vs_frame.get_stride(plane)
             pointer = ccast(vs_frame.get_read_ptr(plane), POINTER(
-                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
+                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
             ))
 
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:

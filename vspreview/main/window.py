@@ -9,13 +9,15 @@ from pathlib import Path
 from typing import Any, Mapping, cast
 
 import vapoursynth as vs
-from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
+from PyQt6.QtCore import QEvent, QRectF, pyqtSignal, QByteArray
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
-from vsengine import vpy  # type: ignore[import]
+from vsengine import vpy  # type: ignore
 
-from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
+from ..core import ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
+from ..core.abstracts import ExtendedMainWindow
+from ..core.bases import QAbstractYAMLObjectSingleton
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
 from ..core.vsenv import _monkey_runpy_dicts, get_current_environment, make_environment
 from ..models import VideoOutputs
@@ -36,13 +38,15 @@ try:
     from yaml import CDumper as yaml_Dumper
     from yaml import CLoader as yaml_Loader
 except ImportError:
-    from yaml import Dumper as yaml_Dumper
-    from yaml import Loader as yaml_Loader
+    from yaml import Dumper as yaml_Dumper  # type: ignore
+    from yaml import Loader as yaml_Loader  # type: ignore
 
 from yaml import MarkedYAMLError, YAMLError
 
 
-class MainWindow(AbstractMainWindow):
+class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
+    current_viewmode: ViewMode
+
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
@@ -71,7 +75,10 @@ class MainWindow(AbstractMainWindow):
     reload_signal = pyqtSignal()
     reload_before_signal = pyqtSignal()
     reload_after_signal = pyqtSignal()
+
     toolbars: Toolbars
+    app_settings: SettingsDialog
+    window_settings: WindowSettings
 
     def __init__(self, config_dir: Path) -> None:
         super().__init__()
@@ -86,14 +93,14 @@ class MainWindow(AbstractMainWindow):
         self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
         self.global_storage_path = self.global_config_dir / '.global.yml'
 
-        self.app = QApplication.instance()
+        self.app = cast(QApplication, QApplication.instance())
         assert self.app
 
         if self.settings.dark_theme_enabled:
             try:
                 from qdarkstyle import _load_stylesheet  # type: ignore[import]
             except ImportError:
-                self.self.settings.dark_theme_enabled = False
+                self.settings.dark_theme_enabled = False
             else:
                 self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
                 self.ensurePolished()
@@ -107,11 +114,15 @@ class MainWindow(AbstractMainWindow):
         self.setup_ui()
         self.storage_not_found = False
         self.timecodes = dict[
-            int, dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
+            int, tuple[str | dict[
+                tuple[int | None, int | None], float | tuple[int, int] | Fraction
+            ] | list[Fraction], int | None]
         ]()
         self.norm_timecodes = dict[int, list[float]]()
 
-        self.user_output_names = {vs.VideoNode: {}, vs.AudioNode: {}, vs.RawNode: {}}
+        self.user_output_names = {
+            vs.VideoNode: dict[int, str](), vs.AudioNode: dict[int, str](), vs.RawNode: dict[int, str]()
+        }
 
         # global
         self.clipboard = self.app.clipboard()
@@ -138,7 +149,7 @@ class MainWindow(AbstractMainWindow):
 
         # display profile
         self.display_profile: QColorSpace | None = None
-        self.current_screen = 0
+        self.current_screen = self.app.primaryScreen()
 
         # init toolbars and outputs
         self.app_settings = SettingsDialog(self)
@@ -367,7 +378,7 @@ class MainWindow(AbstractMainWindow):
 
         if self.settings.color_management:
             assert self.app
-            self.current_screen = self.app.desktop().screenNumber(self)
+            self.current_screen = self.app.primaryScreen()
             self.update_display_profile()
 
     @fire_and_forget
@@ -421,7 +432,7 @@ class MainWindow(AbstractMainWindow):
         # but i'm referencing settings objects before in the dict
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
-        data = cast(dict, self.__getstate__())
+        data = cast(dict[str, Any], self.__getstate__())
         data['_globals'] = {
             'settings': data['settings'],
             'window_settings': data['window_settings']
@@ -502,7 +513,7 @@ class MainWindow(AbstractMainWindow):
 
         self.show_message('Reloaded successfully')
 
-    def clear_monkey_runpy(self):
+    def clear_monkey_runpy(self) -> None:
         if self.env and '_monkey_runpy' in self.env.module.__dict__:
             key = self.env.module.__dict__['_monkey_runpy']
 
@@ -510,7 +521,7 @@ class MainWindow(AbstractMainWindow):
                 _monkey_runpy_dicts[key].clear()
                 _monkey_runpy_dicts.pop(key, None)
             elif _monkey_runpy_dicts:
-                for env in _monkey_runpy_dicts.items():
+                for env in _monkey_runpy_dicts.values():
                     env.clear()
                 _monkey_runpy_dicts.clear()
 
@@ -632,7 +643,7 @@ class MainWindow(AbstractMainWindow):
 
             assert self.app
 
-            screen_name = self.app.screens()[self.current_screen].name()
+            screen_name = self.current_screen.name()
 
             dc = win32gui.CreateDC(screen_name, None, None)
 
@@ -642,7 +653,7 @@ class MainWindow(AbstractMainWindow):
 
             if icc_path is not None:
                 with open(icc_path, 'rb') as icc:
-                    self.display_profile = QColorSpace.fromIccProfile(icc.read())
+                    self.display_profile = QColorSpace.fromIccProfile(QByteArray(len(x := icc.read()), x))
 
         if hasattr(self, 'current_output') and self.current_output is not None and self.display_profile is not None:
             self.switch_frame(self.current_output.last_showed_frame)
@@ -680,7 +691,7 @@ class MainWindow(AbstractMainWindow):
     def update_timecodes_info(
         self, index: int, timecodes: str | dict[
             tuple[int | None, int | None], float | tuple[int, int] | Fraction
-        ] | list[Fraction], den: int = None
+        ] | list[Fraction], den: int | None = None
     ) -> None:
         self.timecodes[index] = (timecodes, den)
 
@@ -707,10 +718,56 @@ class MainWindow(AbstractMainWindow):
     def moveEvent(self, _move_event: QMoveEvent) -> None:
         if self.settings.color_management:
             assert self.app
-            screen_number = self.app.desktop().screenNumber(self)
+            screen_number = self.app.primaryScreen()
             if self.current_screen != screen_number:
                 self.current_screen = screen_number
                 self.update_display_profile()
+
+    def refresh_video_outputs(self) -> None:
+        if not self.outputs:
+            return
+
+        playback_active = self.toolbars.playback.play_timer.isActive()
+
+        if playback_active:
+            self.toolbars.playback.stop()
+
+        self.outputs.items = [
+            self.outputs.get_new_output(old.source.clip, old)
+            for old in self.outputs.items
+        ]
+
+        self.init_outputs()
+
+        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
+
+        if playback_active:
+            self.toolbars.playback.play()
+
+    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
+        if not self.outputs:
+            return
+
+        playback_active = self.toolbars.playback.play_timer.isActive()
+
+        if playback_active:
+            self.toolbars.playback.stop()
+
+        if new_viewmode == ViewMode.NORMAL:
+            self.outputs.switchToNormalView()
+        elif new_viewmode == ViewMode.FFTSPECTRUM:
+            self.outputs.switchToFFTSpectrumView(force_cache)
+        else:
+            raise ValueError('Invalid ViewMode passed!')
+
+        self.current_viewmode = new_viewmode
+
+        self.init_outputs()
+
+        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
+
+        if playback_active:
+            self.toolbars.playback.play()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
@@ -723,7 +780,7 @@ class MainWindow(AbstractMainWindow):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         # toolbars is singleton, so it initialize itself right in its __setstate__()
-        self.window_settings = {}
+        self.window_settings = {}  # type: ignore
 
         try:
             try_load(state, 'window_settings', dict, self)
@@ -733,5 +790,5 @@ class MainWindow(AbstractMainWindow):
             try_load(state, 'window_state', bytes, self.window_settings)
 
         self.timeline.mode = self.window_settings.timeline_mode
-        self.restoreGeometry(self.window_settings.window_geometry)
-        self.restoreState(self.window_settings.window_state)
+        self.restoreGeometry(QByteArray(len(x := self.window_settings.window_geometry), x))
+        self.restoreState(QByteArray(len(x := self.window_settings.window_state), x))

@@ -1,15 +1,21 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
 
-from ...core import AbstractMainWindow, AbstractToolbar, LineEdit, PushButton
+from ...core import AbstractToolbar, LineEdit, PushButton
 from .settings import DebugSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class DebugToolbar(AbstractToolbar):
-    _no_visibility_choice = True
-
     __slots__ = ('exec_lineedit', )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    _no_visibility_choice = True
+
+    settings: DebugSettings
+
+    def __init__(self, main: MainWindow) -> None:
         from ...utils import debug
 
         super().__init__(main, DebugSettings())
@@ -18,9 +24,11 @@ class DebugToolbar(AbstractToolbar):
 
         if self.settings.DEBUG_TOOLBAR_BUTTONS_PRINT_STATE:
             self.filter = debug.EventFilter(main)
-            self.main.toolbars.main.widget.installEventFilter(self.filter)
+
+            self.main.toolbars.main.widget.installEventFilter(self.filter)  # type: ignore
+
             for toolbar in self.main.toolbars:
-                toolbar.widget.installEventFilter(self.filter)
+                toolbar.widget.installEventFilter(self.filter)  # type: ignore
 
         self.set_qobject_names()
 

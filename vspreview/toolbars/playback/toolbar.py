@@ -5,19 +5,20 @@ from concurrent.futures import Future
 from functools import partial
 from math import floor
 from time import perf_counter_ns
-from typing import Any, Mapping, cast
+from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QSlider
 
-from ...core import (
-    AbstractMainWindow, AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
-)
+from ...core import AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
 from ...core.custom import ComboBox, FrameEdit, TimeEdit
 from ...models import AudioOutputs
 from ...utils import debug, qt_silent_call
 from .settings import PlaybackSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 def _del_future(f: Future[vs.VideoFrame]) -> None:
@@ -41,7 +42,11 @@ class PlaybackToolbar(AbstractToolbar):
         'audio_volume_slider'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    settings: PlaybackSettings
+
+    fps_spinbox: DoubleSpinBox
+
+    def __init__(self, main: MainWindow) -> None:
         super().__init__(main, PlaybackSettings())
         self.setup_ui()
 
@@ -50,7 +55,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.play_timer_audio = Timer(timeout=self._play_next_audio_frame, timerType=Qt.TimerType.PreciseTimer)
 
-        self.current_audio_output = None
+        self.current_audio_output = cast(AudioOutput | None, None)
         self.current_audio_frame = Frame(0)
         self.play_buffer_audio = deque[Future[vs.AudioFrame]]()
 
@@ -64,7 +69,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_start_frame = Frame(0)
         self.play_end_time = 0
         self.play_end_frame = Frame(0)
-        self.audio_outputs: AudioOutputs = []
+        self.audio_outputs = cast(AudioOutputs, [])
         self.last_frame = Frame(0)
 
         self.setVolume(50, True)
@@ -443,7 +448,12 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
 
     def on_timeline_clicked(self, frame: Frame, time: Time) -> None:
-        if not self.play_timer.isActive() or not self.play_timer_audio.isActive():
+        if (
+            not self.play_timer.isActive()
+            or not self.play_timer_audio.isActive()
+            or self.current_audio_output is None
+            or self.current_audio_output.vs_output is None
+        ):
             return
 
         self.current_audio_output.iodevice.reset()
@@ -451,6 +461,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         for future in self.play_buffer_audio:
             future.add_done_callback(lambda future: future.result())
+
         self.play_buffer_audio.clear()
 
         for i in range(0, cast(int, self.play_buffer_audio.maxlen)):
@@ -479,12 +490,12 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_spinbox.setValue(self.main.current_output.fps_num / self.main.current_output.fps_den)
 
     def on_fps_unlimited_changed(self, state: int) -> None:
-        if state == Qt.Checked:
+        if state == Qt.CheckState.Checked:
             self.fps_spinbox.setEnabled(False)
             self.fps_reset_button.setEnabled(False)
             self.fps_variable_checkbox.setChecked(False)
             self.fps_variable_checkbox.setEnabled(False)
-        elif state == Qt.Unchecked:
+        elif state == Qt.CheckState.Unchecked:
             self.fps_spinbox.setEnabled(True)
             self.fps_reset_button.setEnabled(True)
             self.fps_spinbox.setValue(self.main.current_output.play_fps)
@@ -495,12 +506,12 @@ class PlaybackToolbar(AbstractToolbar):
             self.play()
 
     def on_fps_variable_changed(self, state: int) -> None:
-        if state == Qt.Checked:
+        if state == Qt.CheckState.Checked:
             self.fps_spinbox.setEnabled(False)
             self.fps_reset_button.setEnabled(False)
             self.fps_unlimited_checkbox.setEnabled(False)
             self.fps_unlimited_checkbox.setChecked(False)
-        elif state == Qt.Unchecked:
+        elif state == Qt.CheckState.Unchecked:
             self.fps_spinbox.setEnabled(True)
             self.fps_reset_button.setEnabled(True)
             self.fps_unlimited_checkbox.setEnabled(True)

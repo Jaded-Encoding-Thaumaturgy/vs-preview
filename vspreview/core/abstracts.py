@@ -4,27 +4,23 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, cast, overload
 
-import vapoursynth as vs
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QClipboard, QKeySequence, QShortcut
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
-    QLineEdit, QMainWindow, QProgressBar, QPushButton, QSpacerItem, QSpinBox, QStatusBar, QTableView, QVBoxLayout,
-    QWidget
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QMainWindow,
+    QProgressBar, QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
 
-from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
-from .better_abc import abstract_attribute
+from .bases import QABC, QYAMLObjectSingleton
 
 if TYPE_CHECKING:
     from vstools import T
 
-    from ..main.timeline import Notches, Timeline
-    from ..models import VideoOutputs
-    from .types import Frame, Time, VideoOutput
+    from ..main import MainWindow
+    from ..main.timeline import Notches
+    from .types import Frame
 
 
 class ViewMode(str, Enum):
@@ -43,37 +39,40 @@ class ExtendedLayout(QBoxLayout):
         ...
 
     @overload
-    def __init__(self, init_value: QWidget | QBoxLayout | None) -> None:
+    def __init__(self, init_value: QWidget | QBoxLayout | None, **kwargs: Any) -> None:
         ...
 
     @overload
-    def __init__(self, init_value: Sequence[QWidget | QBoxLayout] | None) -> None:
+    def __init__(self, init_value: Sequence[QWidget | QBoxLayout | Stretch] | None, **kwargs: Any) -> None:
         ...
 
     @overload
     def __init__(
-        self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None
+        self, parent: QWidget | QBoxLayout | None = None,
+        children: Sequence[QWidget | QBoxLayout | Stretch] | None = None, **kwargs: Any
     ) -> None:
         ...
 
-    def __init__(
-        self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
-        spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs
+    def __init__(  # type: ignore
+        self, arg0: QWidget | QBoxLayout | None = None,
+        arg1: Sequence[QWidget | QBoxLayout | Stretch] | None = None,
+        spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
     ) -> ExtendedLayout:
         try:
             if isinstance(arg0, QBoxLayout):
                 super().__init__(**kwargs)
                 arg0.addLayout(self)
-                arg0 = []
+                arg0 = None
             elif isinstance(arg0, QWidget):
-                super().__init__(arg0, **kwargs)
-                arg0 = []
+                super().__init__(arg0, **kwargs)  # type: ignore
+                arg0 = None
             else:
                 raise BaseException()
         except BaseException:
             super().__init__(**kwargs)
+
             if not any((arg0, arg1)):
-                return
+                return  # type: ignore
 
         items = [u for s in (t if isinstance(t, Sequence) else [t] if t else [] for t in [arg0, arg1]) for u in s]
 
@@ -112,25 +111,75 @@ class ExtendedLayout(QBoxLayout):
                 # Clear and delete sub-layouts
                 if isinstance(item, ExtendedLayout):
                     item.clear()
-                item.deleteLater()
+                item.deleteLater()  # type: ignore
 
     @staticmethod
-    def stretch(amount: int | None) -> Stretch:
-        return Stretch(amount)
+    def stretch(amount: int | None) -> Stretch:  # type: ignore
+        return Stretch(amount)  # type: ignore
 
 
 class HBoxLayout(QHBoxLayout, ExtendedLayout):
-    ...
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: QWidget | QBoxLayout | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: Sequence[QWidget | QBoxLayout | Stretch] | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(
+            self, parent: QWidget | QBoxLayout | None = None,
+            children: Sequence[QWidget | QBoxLayout | Stretch] | None = None, **kwargs: Any
+        ) -> None:
+            ...
+
+        def __init__(  # type: ignore
+            self, arg0: QWidget | QBoxLayout | None = None,
+            arg1: Sequence[QWidget | QBoxLayout | Stretch] | None = None,
+            spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
+        ) -> ExtendedLayout:
+            ...
 
 
 class VBoxLayout(QVBoxLayout, ExtendedLayout):
-    ...
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: QWidget | QBoxLayout | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: Sequence[QWidget | QBoxLayout | Stretch] | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(
+            self, parent: QWidget | QBoxLayout | None = None,
+            children: Sequence[QWidget | QBoxLayout | Stretch] | None = None, **kwargs: Any
+        ) -> None:
+            ...
+
+        def __init__(  # type: ignore
+            self, arg0: QWidget | QBoxLayout | None = None,
+            arg1: Sequence[QWidget | QBoxLayout | Stretch] | None = None,
+            spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
+        ) -> ExtendedLayout:
+            ...
 
 
 class SpinBox(QSpinBox):
     def __init__(
         self, parent: QWidget | None = None, minimum: int | None = None,
-        maximum: int | None = None, suffix: str | None = None, tooltip: str | None = None, **kwargs
+        maximum: int | None = None, suffix: str | None = None, tooltip: str | None = None, **kwargs: Any
     ) -> None:
         super().__init__(parent, **kwargs)
         for arg, action in (
@@ -140,18 +189,29 @@ class SpinBox(QSpinBox):
                 getattr(self, action)(arg)
 
 
-class ExtendedItemInit():
-    def __init__(self, *args, tooltip: str | None = None, **kwargs) -> None:
+if TYPE_CHECKING:
+    ExtItemBase = QWidget
+else:
+    ExtItemBase = object
+
+
+class ExtendedItemInit(ExtItemBase):
+    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
         try:
-            super().__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)  # type: ignore
         except TypeError:
-            super().__init__(*args)
+            super().__init__(*args)  # type: ignore
+
         if tooltip:
             super().setToolTip(tooltip)
 
 
 class PushButton(ExtendedItemInit, QPushButton):
-    ...
+    if TYPE_CHECKING:
+        def __init__(
+            self, name: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+        ) -> None:
+            ...
 
 
 class LineEdit(ExtendedItemInit, QLineEdit):
@@ -175,11 +235,11 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
 
 
 class AbstractQItem():
-    __slots__: tuple[str]
-    storable_attrs = ()
+    __slots__: tuple[str, ...]
+    storable_attrs: ClassVar[tuple[str, ...]] = ()
 
     def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
-        QShortcut(QKeySequence(key), self, activated=handler)
+        QShortcut(QKeySequence(key), self, activated=handler)  # type: ignore
 
     def set_qobject_names(self) -> None:
         if not hasattr(self, '__slots__'):
@@ -270,185 +330,6 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
         pass
 
 
-class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
-    __slots__ = ()
-
-    current_viewmode: ViewMode
-
-    @abstractmethod
-    def load_script(
-        self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int | None = None
-    ) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def reload_script(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def init_outputs(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def switch_output(self, value: int | VideoOutput) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def switch_frame(
-        self, pos: Frame | Time | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
-    ) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def show_message(self, message: str) -> None:
-        raise NotImplementedError
-
-    def refresh_video_outputs(self) -> None:
-        if not self.outputs:
-            return
-
-        playback_active = self.toolbars.playback.play_timer.isActive()
-
-        if playback_active:
-            self.toolbars.playback.stop()
-
-        self.outputs.items = [
-            self.outputs.get_new_output(old.source.clip, old)
-            for old in self.outputs.items
-        ]
-
-        self.init_outputs()
-
-        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
-
-        if playback_active:
-            self.toolbars.playback.play()
-
-    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
-        if not self.outputs:
-            return
-
-        playback_active = self.toolbars.playback.play_timer.isActive()
-
-        if playback_active:
-            self.toolbars.playback.stop()
-
-        if new_viewmode == ViewMode.NORMAL:
-            self.outputs.switchToNormalView()
-        elif new_viewmode == ViewMode.FFTSPECTRUM:
-            self.outputs.switchToFFTSpectrumView(force_cache)
-        else:
-            raise ValueError('Invalid ViewMode passed!')
-
-        self.current_viewmode = new_viewmode
-
-        self.init_outputs()
-
-        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
-
-        if playback_active:
-            self.toolbars.playback.play()
-
-    if TYPE_CHECKING:
-        @property
-        def app_settings(self) -> AbstractAppSettings:
-            ...
-
-        @app_settings.setter
-        def app_settings(self) -> None:
-            ...
-
-        @property
-        def central_widget(self) -> QWidget:
-            ...
-
-        @central_widget.setter
-        def central_widget(self) -> None:
-            ...
-
-        @property
-        def clipboard(self) -> QClipboard:
-            ...
-
-        @clipboard.setter
-        def clipboard(self) -> None:
-            ...
-
-        @property
-        def current_output(self) -> VideoOutput:
-            ...
-
-        @current_output.setter
-        def current_output(self) -> None:
-            ...
-
-        @property
-        def display_scale(self) -> float:
-            ...
-
-        @display_scale.setter
-        def display_scale(self) -> None:
-            ...
-
-        @property
-        def graphics_scene(self) -> QGraphicsScene:
-            ...
-
-        @graphics_scene.setter
-        def graphics_scene(self) -> None:
-            ...
-
-        @property
-        def graphics_view(self) -> QGraphicsView:
-            ...
-
-        @graphics_view.setter
-        def graphics_view(self) -> None:
-            ...
-
-        @property
-        def outputs(self) -> VideoOutputs:
-            ...
-
-        @property
-        def timeline(self) -> Timeline:
-            ...
-
-        @timeline.setter
-        def timeline(self) -> None:
-            ...
-
-        @property
-        def script_path(self) -> Path:
-            ...
-
-        @script_path.setter
-        def script_path(self) -> None:
-            ...
-
-        @property
-        def statusbar(self) -> QStatusBar:
-            ...
-
-        @statusbar.setter
-        def statusbar(self) -> None:
-            ...
-
-    else:
-        app_settings: AbstractAppSettings = abstract_attribute()
-        central_widget: QWidget = abstract_attribute()
-        clipboard: QClipboard = abstract_attribute()
-        current_output: VideoOutput = abstract_attribute()
-        display_scale: float = abstract_attribute()
-        graphics_scene: QGraphicsScene = abstract_attribute()
-        graphics_view: QGraphicsView = abstract_attribute()
-        outputs: VideoOutputs = abstract_attribute()
-        timeline: Timeline = abstract_attribute()
-        script_path: Path = abstract_attribute()
-        statusbar: QStatusBar = abstract_attribute()
-
-
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     _no_visibility_choice = False
     storable_attrs = tuple[str, ...]()
@@ -462,13 +343,16 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 
     notches_changed = pyqtSignal(ExtendedWidget)
 
-    def __init__(self, main: AbstractMainWindow, settings: QWidget) -> None:
+    main: MainWindow
+    name: str
+
+    def __init__(self, main: MainWindow, settings: QWidget) -> None:
         super().__init__(main.central_widget)
         self.main = main
         self.settings = settings
         self.name = self.__class__.__name__[:-7]
 
-        self.main.app_settings.addTab(self.settings, self.name)
+        self.main.app_settings.addTab(settings, self.name)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
@@ -536,15 +420,17 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 
 
 @lru_cache()
-def main_window() -> AbstractMainWindow:
+def main_window() -> MainWindow:
     import logging
+
+    from ..main import MainWindow
 
     app = QApplication.instance()
 
     if app is not None:
-        for widget in app.topLevelWidgets():
-            if isinstance(widget, AbstractMainWindow):
-                return cast(AbstractMainWindow, widget)
+        for widget in app.topLevelWidgets():  # type: ignore
+            if isinstance(widget, MainWindow):
+                return cast(MainWindow, widget)
         app.exit()
 
     logging.critical('main_window() failed')

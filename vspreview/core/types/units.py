@@ -75,7 +75,7 @@ class Frame(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', int, self.__init__,
+            state, 'value', int, self.__init__,  # type: ignore
             'Failed to load Frame instance'
         )
 
@@ -83,7 +83,7 @@ class Frame(YAMLObjectWrapper):
 class Time(YAMLObjectWrapper):
     __slots__ = ('value', )
 
-    def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
+    def __init__(self, init_value: int | Time | timedelta | Frame | None = None, **kwargs: Any):
         if isinstance(init_value, int):
             init_value = Frame(init_value)
 
@@ -107,12 +107,14 @@ class Time(YAMLObjectWrapper):
         self.value += other.value
         return self
 
-    def __sub__(self, other: Time) -> Time:
+    def __sub__(self, other: int | Time | timedelta | Frame | None) -> Time:
         if isinstance(other, Time):
             return Time(self.value - other.value)
         return self - Time(other)
 
-    def __isub__(self, other: Time) -> Time:
+    def __isub__(self, other: int | Time | timedelta | Frame | None) -> Time:
+        if not isinstance(other, Time):
+            other = Time(other)
         self.value -= other.value
         return self
 
@@ -143,6 +145,6 @@ class Time(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', timedelta, self.__init__,
+            state, 'value', timedelta, self.__init__,  # type: ignore
             'Failed to load Time instance'
         )

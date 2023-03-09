@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, cast
+from typing import Any, Iterator
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
@@ -12,6 +12,7 @@ class PictureTypes(QAbstractListModel):
 
     def __init__(self) -> None:
         super().__init__()
+
         self.items = PictureType.list()
 
     def __getitem__(self, i: int) -> PictureType:
@@ -34,6 +35,7 @@ class PictureTypes(QAbstractListModel):
             return str(self.items[index.row()])
         if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
+
         return None
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:

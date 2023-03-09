@@ -31,13 +31,13 @@ def print_func_name() -> None:
 
 class EventFilter(QObject):
     if TYPE_CHECKING:
-        from ..core import AbstractMainWindow
+        from ..main import MainWindow
 
     __slots__ = (
         'main',
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    def __init__(self, main: MainWindow) -> None:
         super().__init__()
         self.main = main
 
@@ -61,7 +61,7 @@ class EventFilter(QObject):
         return False
 
     def print_toolbars_state(self) -> None:
-        logging.debug(f'main toolbar:     {self.main.main_toolbar_widget.isVisible()}')
+        logging.debug(f'main toolbar:     {self.main.isVisible()}')
         logging.debug(f'playback toolbar: {self.main.toolbars.playback.isVisible()}')
         logging.debug(f'scening toolbar:  {self.main.toolbars.scening.isVisible()}')
         logging.debug(f'misc toolbar:     {self.main.toolbars.misc.isVisible()}')
@@ -146,7 +146,14 @@ def print_vs_output_colorspace_info(vs_output: vs.VideoNode) -> None:
     ))
 
 
-class DebugMeta(sip.wrappertype):
+if TYPE_CHECKING:
+    class DebugMetaBase(type, sip.wrappertype):
+        ...
+else:
+    DebugMetaBase = sip.wrappertype
+
+
+class DebugMeta(DebugMetaBase):
     def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> type:
         from functools import partialmethod
 
@@ -169,7 +176,7 @@ class DebugMeta(sip.wrappertype):
             if not attr.endswith('__') and callable(getattr(base, attr)):
                 dct[attr] = partialmethod(DebugMeta.dummy_method, attr)
 
-        return super(DebugMeta, cls).__new__(cls, name, bases, dct)
+        return super(DebugMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
 
     def dummy_method(self, name: str, *args: Any, **kwargs: Any) -> Any:
         method = getattr(super(GraphicsScene, GraphicsScene), name)

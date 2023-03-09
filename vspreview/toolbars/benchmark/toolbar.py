@@ -4,15 +4,20 @@ from collections import deque
 from concurrent.futures import Future
 from copy import deepcopy
 from time import perf_counter
+from typing import TYPE_CHECKING
 
 import vapoursynth as vs
 from PyQt6.QtCore import QMetaObject, Qt
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
+from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
 from ...core.custom import FrameEdit
 from ...utils import qt_silent_call, strfdelta, vs_clear_cache
 from .settings import BenchmarkSettings
+
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class BenchmarkToolbar(AbstractToolbar):
@@ -26,7 +31,9 @@ class BenchmarkToolbar(AbstractToolbar):
         'update_info_timer', 'sequenced_timer'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    settings: BenchmarkSettings
+
+    def __init__(self, main: MainWindow) -> None:
         super().__init__(main, BenchmarkSettings())
 
         self.setup_ui()
@@ -172,9 +179,9 @@ class BenchmarkToolbar(AbstractToolbar):
             self.abort()
 
     def on_prefetch_changed(self, new_state: int) -> None:
-        if new_state == Qt.Checked:
+        if new_state == Qt.CheckState.Checked:
             self.unsequenced_checkbox.setEnabled(True)
-        elif new_state == Qt.Unchecked:
+        elif new_state == Qt.CheckState.Unchecked:
             self.unsequenced_checkbox.setChecked(False)
             self.unsequenced_checkbox.setEnabled(False)
 

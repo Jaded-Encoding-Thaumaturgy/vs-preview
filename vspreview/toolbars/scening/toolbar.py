@@ -5,14 +5,14 @@ import re
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Mapping, cast
+from typing import TYPE_CHECKING, Any, Callable, Mapping, cast
 
 from PyQt6.QtCore import QModelIndex, Qt, QKeyCombination
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFileDialog, QLabel
 
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load
+    AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load
 )
 from ...core.custom import ComboBox
 from ...main.timeline import Notches
@@ -20,6 +20,10 @@ from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
 from .dialog import SceningListDialog
 from .settings import SceningSettings
+
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class SceningToolbar(AbstractToolbar):
@@ -40,7 +44,9 @@ class SceningToolbar(AbstractToolbar):
         'seek_to_next_button', 'seek_to_prev_button'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    settings: SceningSettings
+
+    def __init__(self, main: MainWindow) -> None:
         super().__init__(main, SceningSettings())
         self.setup_ui()
 
@@ -224,7 +230,8 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             return marks
         for scene in self.current_list:
-            marks.add(scene, cast(QColor, Qt.green))
+            marks.add(scene, cast(QColor, Qt.GlobalColor.green))
+
         return marks
 
     @property
@@ -318,7 +325,11 @@ class SceningToolbar(AbstractToolbar):
     def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()
-        cast(SceningList, self.current_list).add(self.main.current_output.last_showed_frame, label=self.label_lineedit.text())
+
+        assert self.current_list
+
+        self.current_list.add(self.main.current_output.last_showed_frame, label=self.label_lineedit.text())
+
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: bool | None = None) -> None:
@@ -691,8 +702,8 @@ class SceningToolbar(AbstractToolbar):
         )
 
         assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
-        if len(match := assume_pattern.findall(path.read_text())) > 0:
-            default_fps = float(match[0])
+        if len(mmatch := assume_pattern.findall(path.read_text())) > 0:
+            default_fps = float(mmatch[0])
         else:
             logging.warning('Scening import: "assume" entry not found.')
             return
@@ -704,7 +715,7 @@ class SceningToolbar(AbstractToolbar):
                 continue
 
             interval = Time(seconds=float(match[1]))
-            fps = float(match[2]) if match.lastindex >= 2 else default_fps
+            fps = float(match[2]) if (match.lastindex or 0) >= 2 else default_fps
 
             try:
                 scening_list.add(Frame(pos), Frame(pos + interval), '{:.3f} fps'.format(fps))

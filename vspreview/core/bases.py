@@ -13,16 +13,16 @@ from .better_abc import ABCMeta
 
 class SingletonMeta(type):
     def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
-        super().__init__(name, bases, dct)
-        cls.instance: T | None = None
+        super().__init__(name, bases, dct)  # type: ignore
+        cls.instance: T | None = None  # type: ignore
 
-    def __call__(cls, *args: Any, **kwargs: Any) -> T:
+    def __call__(cls, *args: Any, **kwargs: Any) -> T:  # type: ignore
         if cls.instance is None:
             cls.instance = super().__call__(*args, **kwargs)
         return cls.instance
 
     def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> type:
-        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)
+        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
         singleton_new = None
         for entry in subcls.__mro__:
             if entry.__class__ is SingletonMeta:

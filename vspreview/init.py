@@ -12,7 +12,7 @@ import signal
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from PyQt6.QtWidgets import QApplication
 
@@ -94,7 +94,7 @@ def main() -> None:
     )
     main_window.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def install_vscode_launch(mode: Literal['override', 'append', 'ignore']) -> None:
@@ -154,7 +154,7 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore']) -> None
         current_settings['configurations'] = settings['configurations']
         return _write()
 
-    cast(list, current_settings['configurations']).extend(settings['configurations'])
+    cast(list[Any], current_settings['configurations']).extend(settings['configurations'])
 
     current_settings['configurations'] = list({
         ':'.join(str(row[column]) for column in row.keys()): row

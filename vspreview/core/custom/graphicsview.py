@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum, auto
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
@@ -8,8 +9,11 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
 
-from ...core import AbstractMainWindow
 from ..types.dataclasses import CroppingInfo
+
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class DragEventType(IntEnum):
@@ -35,7 +39,7 @@ class GraphicsView(QGraphicsView):
     last_positions = (0, 0)
 
     autofit = False
-    main: AbstractMainWindow
+    main: MainWindow
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -88,10 +92,10 @@ class GraphicsView(QGraphicsView):
 
         assert self.app
 
-        modifiers = self.app.keyboardModifiers()
+        modifier = event.modifiers()
         mouse = event.buttons()
 
-        if modifiers == Qt.KeyboardModifier.ControlModifier or mouse in {
+        if modifier == Qt.KeyboardModifier.ControlModifier or mouse in {
             Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton
         }:
             angleDelta = event.angleDelta().y()
@@ -106,11 +110,11 @@ class GraphicsView(QGraphicsView):
                 self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
                 self.angleRemainder %= self.WHEEL_STEP
             return
-        elif modifiers == Qt.KeyboardModifier.NoModifier:
+        elif modifier == Qt.KeyboardModifier.NoModifier:
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().y())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().x())
             return
-        elif modifiers == Qt.KeyboardModifier.ShiftModifier:
+        elif modifier == Qt.KeyboardModifier.ShiftModifier:
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().x())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().y())
             return
@@ -163,7 +167,7 @@ class GraphicsView(QGraphicsView):
         self.horizontalScrollBar().setValue(self.last_positions[1])
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
-    def registerReloadEvents(self, main: AbstractMainWindow) -> None:
+    def registerReloadEvents(self, main: MainWindow) -> None:
         self.main = main
         self.main.reload_before_signal.connect(self.beforeReload)
         self.main.reload_after_signal.connect(self.afterReload)

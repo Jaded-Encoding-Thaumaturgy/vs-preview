@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from array import array
 from math import floor
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 import vapoursynth as vs
+from PyQt6.QtCore import QIODevice
 from PyQt6.QtMultimedia import QAudioFormat, QAudioOutput, QAudioSink
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
@@ -56,15 +57,17 @@ class AudioOutput(AbstractYAMLObject):
         self.qaudiosink = QAudioSink(self.qoutput.device(), self.qformat, self.main)
         self.qaudiosink.setBufferSize(sample_size * self.SAMPLES_PER_FRAME)
 
-        self.iodevice = self.qaudiosink.start()
+        iodevice = cast(QIODevice | None, self.qaudiosink.start())
 
-        if self.iodevice is None:
+        if iodevice is None:
             from vstools import CustomRuntimeError
 
             raise CustomRuntimeError(
                 'The current QT version has a bug for dll loading, you need to go into '
                 'C:\\System32 and copy "mfplat.dll" into "mfplat.dll.dll".'
             )
+
+        self.iodevice = iodevice
 
         self.fps_num = self.vs_output.sample_rate
         self.fps_den = self.SAMPLES_PER_FRAME

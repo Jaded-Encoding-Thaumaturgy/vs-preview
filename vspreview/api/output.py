@@ -51,9 +51,9 @@ def set_output(
         from ..core import main_window
 
         if isinstance(name, str):
-            main_window().set_node_name(node_type, index, name.title())  # type: ignore
+            main_window().set_node_name(node_type, index, name.title())
 
         if timecodes:
             set_timecodes(index, timecodes, (
-                node.fps_den if (node.fps_den and node.fps_num) else 1001
-            ) if denominator is None else denominator)
+                node.fps_den if (node.fps_den and node.fps_num) else 1001  # type: ignore[attr-defined]
+            ) if isinstance(node, vs.VideoNode) else denominator)

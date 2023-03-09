@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 from PyQt6.QtCore import Qt, QKeyCombination
 from PyQt6.QtWidgets import QComboBox
 
-from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, VideoOutput, try_load
+from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, VideoOutput, try_load
 from ...core.custom import ComboBox, FrameEdit, TimeEdit
 from ...models import GeneralModel, VideoOutputs
 from ...utils import qt_silent_call
 from .dialog import FramePropsDialog
+
+
+if TYPE_CHECKING:
+    from ...main import MainWindow, MainSettings
 
 
 class MainToolbar(AbstractToolbar):
@@ -24,13 +28,17 @@ class MainToolbar(AbstractToolbar):
         'switch_timeline_mode_button', 'settings_button'
     )
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
+    outputs: VideoOutputs | None
+
+    settings: MainSettings
+
+    def __init__(self, main_window: MainWindow) -> None:
         super().__init__(main_window, main_window.settings)
         self.setup_ui()
 
-        self.outputs: VideoOutputs | None = None
+        self.outputs = None
 
-        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))  # type: ignore
+        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
         self.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
 
         self.add_shortcuts()
@@ -122,7 +130,7 @@ class MainToolbar(AbstractToolbar):
             if not force_frame:
                 force_frame = self.main.current_output.last_showed_frame
 
-            for output in self.main.outputs:
+            for output in self.outputs:
                 output.last_showed_frame = output.to_frame(
                     self.main.current_output.to_time(force_frame)
                 )
@@ -139,7 +147,7 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.frame_control.setValue, frame)
         qt_silent_call(self.time_control.setValue, Time(frame))
 
-        if len(self.outputs) > 1 and self.sync_outputs_checkbox.isChecked():
+        if self.outputs and len(self.outputs) > 1 and self.sync_outputs_checkbox.isChecked():
             self.on_sync_outputs_clicked(True, force_frame=frame)
 
         if not self.frame_props_dialog.isHidden():
@@ -171,17 +179,6 @@ class MainToolbar(AbstractToolbar):
             self.main.timeline.mode = self.main.timeline.Mode.FRAME
         elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
             self.main.timeline.mode = self.main.timeline.Mode.TIME
-
-    def on_sync_outputs_changed(self, state: Qt.CheckState) -> None:
-        if not self.outputs:
-            return
-
-        if state == Qt.Checked:
-            for output in self.outputs:
-                output.last_showed_frame = self.main.current_output.last_showed_frame
-        if state == Qt.Unchecked:
-            for output in self.outputs:
-                output.last_showed_frame = None
 
     def on_zoom_changed(self, text: str | None = None) -> None:
         self.main.graphics_view.setZoom(self.zoom_combobox.currentData())

@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QLabel, QTabWidget, QWidget
 
-from ..core import AbstractMainWindow, ExtendedDialog, HBoxLayout, PushButton, VBoxLayout
+from ..core import ExtendedDialog, HBoxLayout, PushButton, VBoxLayout
+
+if TYPE_CHECKING:
+    from .window import MainWindow
 
 
 class ScriptErrorDialog(ExtendedDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
+    def __init__(self, main_window: MainWindow) -> None:
         super().__init__(main_window, Qt.WindowType.Dialog)
         self.main = main_window
 
@@ -57,7 +61,7 @@ class ScriptErrorDialog(ExtendedDialog):
 class SettingsDialog(ExtendedDialog):
     __slots__ = ('main', 'tab_widget',)
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
+    def __init__(self, main_window: MainWindow) -> None:
         super().__init__(main_window)
 
         self.main = main_window

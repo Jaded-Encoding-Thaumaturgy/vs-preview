@@ -16,3 +16,5 @@ def is_preview() -> bool:
         if t and '__name__' in t.f_locals:
             if t.f_locals['__name__'] == '__vspreview__':
                 return True
+
+    return False

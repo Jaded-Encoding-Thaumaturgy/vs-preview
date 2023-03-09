@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Final, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
 import vapoursynth as vs
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
 
-from ...core import (
-    AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
-)
+from ...core import AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
 from ...core.custom import ComboBox, FrameEdit
-from ...models import PictureTypes, VideoOutputs
+from ...models import PictureTypes, VideoOutput
 from .settings import CompSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
@@ -70,7 +71,7 @@ def clear_filename(filename: str) -> str:
 
 
 class WorkerConfiguration(NamedTuple):
-    outputs: VideoOutputs
+    outputs: list[VideoOutput]
     collection_name: str
     public: bool
     nsfw: bool
@@ -79,7 +80,7 @@ class WorkerConfiguration(NamedTuple):
     frames: list[int]
     compression: int
     path: Path
-    main: AbstractMainWindow
+    main: MainWindow
     delete_cache: bool
 
 
@@ -234,7 +235,9 @@ class CompToolbar(AbstractToolbar):
         'upload_progressbar', 'upload_status_label', 'upload_status_elements'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    settings: CompSettings
+
+    def __init__(self, main: MainWindow) -> None:
         super().__init__(main, CompSettings())
         self.setup_ui()
 
@@ -358,6 +361,7 @@ class CompToolbar(AbstractToolbar):
         return rnum
 
     def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
+        import logging
         import random
 
         samples = set[int]()
@@ -406,7 +410,6 @@ class CompToolbar(AbstractToolbar):
 
         self.update_upload_status_visibility(True)
 
-        clips: dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
         frames = list[int](
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))

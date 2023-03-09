@@ -7,10 +7,13 @@ from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QLabel
 from vapoursynth import FrameProps
 
+from ...core import ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
+
 if TYPE_CHECKING:
     from vstools import PropEnum
 
-from ...core import AbstractMainWindow, ExtendedWidget, HBoxLayout, PushButton, Stretch, VBoxLayout
+    from ...main import MainWindow
+
 
 _frame_props_excluded_keys = {
     # vs internals
@@ -24,11 +27,11 @@ _frame_props_excluded_keys = {
 }
 
 
-def _create_enum_props_lut(enum: PropEnum, pretty_name: str) -> tuple[str, dict[str, dict[int, str]]]:
+def _create_enum_props_lut(enum: type[PropEnum], pretty_name: str) -> tuple[str, dict[str, dict[int, str]]]:
     return enum.prop_key, {
         pretty_name: {
             idx: enum.from_param(idx).pretty_string if enum.is_valid(idx) else 'Invalid'
-            for idx in range(min(enum) - 1, max(enum) + 1)
+            for idx in range(min(enum.__members__.values()) - 1, max(enum.__members__.values()) + 1)
         }
     }
 
@@ -38,8 +41,8 @@ class FramePropsDialog(ExtendedWidget):
         'main_window', 'clicked', 'old_pos', 'header', 'framePropsVLayout'
     )
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
-        from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, Transfer
+    def __init__(self, main_window: MainWindow) -> None:
+        from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, Transfer, PropEnum
 
         super().__init__(main_window)
 
@@ -84,14 +87,14 @@ class FramePropsDialog(ExtendedWidget):
             }
         } | dict([
             _create_enum_props_lut(enum, name)
-            for enum, name in [
+            for enum, name in list[tuple[type[PropEnum], str]]([
                 (FieldBased, 'Field Type'),
                 (Matrix, 'Matrix'),
                 (Transfer, 'Transfer'),
                 (Primaries, 'Primaries'),
                 (ChromaLocation, 'Chroma Location'),
                 (ColorRange, 'Color Range')
-            ]
+            ])
         ])
 
     def setup_ui(self) -> None:
@@ -132,7 +135,7 @@ class FramePropsDialog(ExtendedWidget):
 
             if key in self._frame_props_lut:
                 title = list(self._frame_props_lut[key].keys())[0]
-                value_str = self._frame_props_lut[key][title][props[key]]
+                value_str = self._frame_props_lut[key][title][props[key]]  # type: ignore
             else:
                 title = key[1:] if key.startswith('_') else key
                 value_str = str(props[key])

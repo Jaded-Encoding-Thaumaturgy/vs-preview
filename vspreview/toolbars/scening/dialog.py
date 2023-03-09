@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PyQt6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
 from PyQt6.QtWidgets import QTableView
 
-from ...core import (
-    AbstractMainWindow, ExtendedDialog, ExtendedTableView, Frame, HBoxLayout, LineEdit, PushButton, Time, VBoxLayout
-)
+from ...core import ExtendedDialog, ExtendedTableView, Frame, HBoxLayout, LineEdit, PushButton, Time, VBoxLayout
 from ...core.custom import FrameEdit, TimeEdit
 from ...models import SceningList
 from ...utils import qt_silent_call
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class SceningListDialog(ExtendedDialog):
@@ -20,7 +23,7 @@ class SceningListDialog(ExtendedDialog):
         'label_lineedit',
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    def __init__(self, main: MainWindow) -> None:
         super().__init__(main)
 
         self.main = main

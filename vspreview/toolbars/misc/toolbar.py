@@ -2,19 +2,22 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch,
-    Time, Timer, VBoxLayout, ViewMode, try_load
+    AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time, Timer,
+    VBoxLayout, ViewMode, try_load
 )
 from ...core.custom import ComboBox, Switch
 from ...models import GeneralModel
 from ...utils import qt_silent_call
 from .settings import MiscSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class MiscToolbar(AbstractToolbar):
@@ -30,7 +33,9 @@ class MiscToolbar(AbstractToolbar):
         'view_mode_layout', 'view_mode_combox'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
+    settings: MiscSettings
+
+    def __init__(self, main: MainWindow) -> None:
         super().__init__(main, MiscSettings())
 
         self.setup_ui()
@@ -220,9 +225,9 @@ class MiscToolbar(AbstractToolbar):
             pass
 
     def on_show_debug_changed(self, state: Qt.CheckState) -> None:
-        if state == Qt.Checked:
+        if state == Qt.CheckState.Checked:
             self.main.toolbars.debug.toggle_button.setVisible(True)
-        elif state == Qt.Unchecked:
+        elif state == Qt.CheckState.Unchecked:
             if self.main.toolbars.debug.toggle_button.isChecked():
                 self.main.toolbars.debug.toggle_button.click()
             self.main.toolbars.debug.toggle_button.setVisible(False)

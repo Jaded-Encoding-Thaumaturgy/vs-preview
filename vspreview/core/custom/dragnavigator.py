@@ -1,27 +1,27 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QWidget
 
-from ..abstracts import AbstractMainWindow, Timer
+from ..abstracts import Timer
 from .graphicsview import DragEventType, GraphicsView
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 
 class DragNavigator(QWidget):
     __slots__ = ()
 
     is_tracking = False
-    contentsH = 0
-    contentsW = 0
-    viewportX = 0
-    viewportY = 0
-    viewportH = 0
-    viewportW = 0
 
-    def __init__(self, main: AbstractMainWindow, graphics_view: GraphicsView) -> None:
+    contentsH = contentsW = viewportX = viewportY = viewportH = viewportW = 0
+
+    def __init__(self, main: MainWindow, graphics_view: GraphicsView) -> None:
         super().__init__(graphics_view)
 
         self.main = main

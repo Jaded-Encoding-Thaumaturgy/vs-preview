@@ -40,7 +40,7 @@ class PackingType(PackingTypeInfo):
     akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
 
 
-PACKING_TYPE: PackingType = None  # type: ignore
+PACKING_TYPE: PackingTypeInfo = None  # type: ignore
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -63,7 +63,7 @@ class VideoOutput(AbstractYAMLObject):
     _stateset: bool
 
     def clear(self) -> None:
-        self.source = self.prepared = None
+        self.source = self.prepared = None  # type: ignore
 
     def __init__(
         self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
@@ -73,11 +73,14 @@ class VideoOutput(AbstractYAMLObject):
     def setValue(
         self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
     ) -> None:
-        from ..custom import GraphicsImageItem
+        from ..custom.graphicsview import GraphicsImageItem
 
         self._stateset = not new_storage
 
         self.main = main_window()
+
+        assert self.main.env
+
         self.set_fmt_values()
 
         # runtime attributes
@@ -100,7 +103,7 @@ class VideoOutput(AbstractYAMLObject):
 
         with self.main.env:
             if vs_output in (vs_outputs := list(vs.get_outputs().values())):
-                self.title = self.main.user_output_names[vs.VideoNode].get(vs_outputs.index(vs_output))
+                self.title = self.main.user_output_names[vs.VideoNode].get(vs_outputs.index(vs_output))  # type: ignore
                 if self.main.outputs is not None:
                     self.main.outputs.setData(self.main.outputs.index(index), self.title)
 
@@ -237,17 +240,13 @@ class VideoOutput(AbstractYAMLObject):
         self.title = newname
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
-        from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, video_heuristics
+        from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics
 
         assert clip.format
 
-        is_subsampled = (clip.format.subsampling_w != 0 or clip.format.subsampling_h != 0)
-
-        resizer = vs.core.resize.Bicubic if is_subsampled else vs.core.resize.Point
-
         heuristics = video_heuristics(clip, None)
 
-        resizer_kwargs = {
+        resizer_kwargs = KwargsT({
             'format': self._NORML_FMT.id,
             'matrix_in': Matrix.BT709,
             'transfer_in': Transfer.BT709,
@@ -256,7 +255,7 @@ class VideoOutput(AbstractYAMLObject):
             'chromaloc_in': ChromaLocation.LEFT
         } | heuristics | {
             'dither_type': self.main.toolbars.playback.settings.dither_type
-        }
+        })
 
         if clip.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']
@@ -273,7 +272,7 @@ class VideoOutput(AbstractYAMLObject):
                 return clip
             resizer_kwargs['format'] = self._ALPHA_FMT.id
 
-        clip = resizer(clip, **resizer_kwargs)
+        clip = clip.resize.Bicubic(**resizer_kwargs)
 
         if is_alpha:
             return clip
@@ -314,7 +313,7 @@ class VideoOutput(AbstractYAMLObject):
         else:
             pointer = cast(sip.voidptr, frame[0])
 
-        return QImage(pointer, width, height, stride, qt_format).copy()
+        return QImage(pointer, width, height, stride, qt_format).copy()  # type: ignore
 
     def update_graphic_item(
         self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
@@ -411,9 +410,9 @@ class VideoOutput(AbstractYAMLObject):
             low, high = max(ref - 6, 0), min(ref + 6, maxx - 1)
 
             if (
-                li := self._timecodes_frame_to_time[low] > seconds
+                li := int(self._timecodes_frame_to_time[low] > seconds)
             ) or (
-                hi := self._timecodes_frame_to_time[high] < seconds
+                hi := int(self._timecodes_frame_to_time[high] < seconds)
             ):
                 while self._timecodes_frame_to_time[low] > seconds and low > 0:
                     low -= 6 * li

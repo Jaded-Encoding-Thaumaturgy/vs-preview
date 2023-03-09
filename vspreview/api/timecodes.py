@@ -18,4 +18,4 @@ def set_timecodes(
 ) -> None:
     if is_preview():
         from ..core import main_window
-        main_window().update_timecodes_info(index, timecodes, den)  # type: ignore
+        main_window().update_timecodes_info(index, timecodes, den)

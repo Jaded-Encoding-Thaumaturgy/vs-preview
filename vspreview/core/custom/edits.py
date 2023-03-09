@@ -36,22 +36,22 @@ class FrameEdit(SpinBox):
     def _valueChanged(self, newValue: int) -> None:
         self.valueChanged.emit(self.value(), self.oldValue)
 
-    def value(self) -> Frame:
+    def value(self) -> Frame:  # type: ignore[override]
         return Frame(super().value())
 
-    def setValue(self, newValue: Frame) -> None:
+    def setValue(self, newValue: Frame) -> None:  # type: ignore[override]
         super().setValue(int(newValue))
 
-    def minimum(self) -> Frame:
+    def minimum(self) -> Frame:  # type: ignore[override]
         return Frame(super().minimum())
 
-    def setMinimum(self, newValue: Frame) -> None:
+    def setMinimum(self, newValue: Frame) -> None:  # type: ignore[override]
         super().setMinimum(int(newValue))
 
-    def maximum(self) -> Frame:
+    def maximum(self) -> Frame:  # type: ignore[override]
         return Frame(super().maximum())
 
-    def setMaximum(self, newValue: Frame) -> None:
+    def setMaximum(self, newValue: Frame) -> None:  # type: ignore[override]
         super().setMaximum(int(newValue))
 
 
@@ -59,7 +59,7 @@ class TimeEdit(QTimeEdit):
     valueChanged = pyqtSignal(Time, Time)
 
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
-        super().__init__(parent, **kwargs, timeChanged=self._timeChanged)
+        super().__init__(parent, **kwargs, timeChanged=self._timeChanged)  # type: ignore
 
         self.setDisplayFormat('H:mm:ss.zzz')
         self.setButtonSymbols(QTimeEdit.ButtonSymbols.NoButtons)

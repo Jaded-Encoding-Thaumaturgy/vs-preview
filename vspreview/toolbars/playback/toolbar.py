@@ -47,7 +47,7 @@ class PlaybackToolbar(AbstractToolbar):
     fps_spinbox: DoubleSpinBox
 
     def __init__(self, main: MainWindow) -> None:
-        super().__init__(main, PlaybackSettings())
+        super().__init__(main, PlaybackSettings(self))
         self.setup_ui()
 
         self.play_buffer = deque[tuple[int, Future[vs.VideoFrame]]]()

@@ -18,7 +18,7 @@ class DebugToolbar(AbstractToolbar):
     def __init__(self, main: MainWindow) -> None:
         from ...utils import debug
 
-        super().__init__(main, DebugSettings())
+        super().__init__(main, DebugSettings(self))
 
         self.setup_ui()
 

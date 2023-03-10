@@ -320,8 +320,10 @@ class AbstractAppSettings(ExtendedDialog):
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
-    def __init__(self) -> None:
+    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
         super().__init__()
+
+        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
         self.set_defaults()

@@ -35,7 +35,7 @@ class PipetteToolbar(AbstractToolbar):
     def __init__(self, main: MainWindow) -> None:
         import ctypes
 
-        super().__init__(main, PipetteSettings())
+        super().__init__(main, PipetteSettings(self))
 
         self.setup_ui()
         self.src_max_val: float = 2**8 - 1

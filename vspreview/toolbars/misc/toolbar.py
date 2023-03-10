@@ -36,7 +36,7 @@ class MiscToolbar(AbstractToolbar):
     settings: MiscSettings
 
     def __init__(self, main: MainWindow) -> None:
-        super().__init__(main, MiscSettings())
+        super().__init__(main, MiscSettings(self))
 
         self.setup_ui()
 

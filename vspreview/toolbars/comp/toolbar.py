@@ -238,7 +238,7 @@ class CompToolbar(AbstractToolbar):
     settings: CompSettings
 
     def __init__(self, main: MainWindow) -> None:
-        super().__init__(main, CompSettings())
+        super().__init__(main, CompSettings(self))
         self.setup_ui()
 
         self.set_qobject_names()

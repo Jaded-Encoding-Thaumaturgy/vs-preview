@@ -81,9 +81,11 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     window_settings: WindowSettings
 
     def __init__(self, config_dir: Path) -> None:
+        from ..toolbars.main import MainToolbar
+
         super().__init__()
 
-        self.settings = MainSettings()
+        self.settings = MainSettings(MainToolbar)
 
         # logging
         logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.settings.LOG_LEVEL)

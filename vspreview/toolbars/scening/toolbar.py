@@ -47,7 +47,7 @@ class SceningToolbar(AbstractToolbar):
     settings: SceningSettings
 
     def __init__(self, main: MainWindow) -> None:
-        super().__init__(main, SceningSettings())
+        super().__init__(main, SceningSettings(self))
         self.setup_ui()
 
         self.lists = SceningLists()

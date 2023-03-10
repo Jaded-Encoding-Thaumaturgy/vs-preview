@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QMainWindow,
     QProgressBar, QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
-from vstools import KwargsT, CustomValueError
+from vstools import CustomValueError
 
 from .bases import QABC, QYAMLObjectSingleton
 

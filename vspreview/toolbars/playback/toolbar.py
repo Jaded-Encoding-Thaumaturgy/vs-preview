@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from concurrent.futures import Future
+from fractions import Fraction
 from functools import partial
 from math import floor
 from time import perf_counter_ns
@@ -19,6 +19,9 @@ from .settings import PlaybackSettings
 
 if TYPE_CHECKING:
     from ...main import MainWindow
+    from vapoursynth import _Future as Future
+else:
+    from concurrent.futures import Future
 
 
 def _del_future(f: Future[vs.VideoFrame]) -> None:
@@ -168,8 +171,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.main.add_shortcut(Qt.Key.Key_Space, self.play_pause_button.click)
         self.main.add_shortcut(Qt.Key.Key_Left, self.seek_to_prev_button.click)
         self.main.add_shortcut(Qt.Key.Key_Right, self.seek_to_next_button.click)
-        self.main.add_shortcut(QKeyCombination(Qt.SHIFT, Qt.Key.Key_Left), self.seek_n_frames_b_button.click)
-        self.main.add_shortcut(QKeyCombination(Qt.SHIFT, Qt.Key.Key_Right), self.seek_n_frames_f_button.click)
+        self.main.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Left), self.seek_n_frames_b_button.click)
+        self.main.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Right), self.seek_n_frames_f_button.click)
         self.main.add_shortcut(Qt.Key.Key_PageUp, self.seek_n_frames_b_button.click)
         self.main.add_shortcut(Qt.Key.Key_PageDown, self.seek_n_frames_f_button.click)
         self.main.add_shortcut(Qt.Key.Key_Home, self.seek_to_start_button.click)
@@ -186,7 +189,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.audio_outputs = outputs or AudioOutputs(self.main)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-    def get_true_fps(self, n: int, frameprops: vs.FrameProps, force: bool = False) -> float:
+    def get_true_fps(self, n: int, frameprops: vs.FrameProps, force: bool = False) -> Fraction:
         if (
             hasattr(self.main.current_output, 'got_timecodes')
             and self.main.current_output.got_timecodes and not force
@@ -197,7 +200,7 @@ class PlaybackToolbar(AbstractToolbar):
             raise RuntimeError(
                 'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
             )
-        return cast(float, frameprops['_DurationDen']) / cast(float, frameprops['_DurationNum'])
+        return Fraction(frameprops['_DurationDen']), cast(float, frameprops['_DurationNum'])
 
     def allocate_buffer(self, is_alpha: bool = False) -> None:
         if is_alpha:
@@ -489,7 +492,7 @@ class PlaybackToolbar(AbstractToolbar):
     def reset_fps(self, checked: bool | None = None) -> None:
         self.fps_spinbox.setValue(self.main.current_output.fps_num / self.main.current_output.fps_den)
 
-    def on_fps_unlimited_changed(self, state: int) -> None:
+    def on_fps_unlimited_changed(self, state: Qt.CheckState) -> None:
         if state == Qt.CheckState.Checked:
             self.fps_spinbox.setEnabled(False)
             self.fps_reset_button.setEnabled(False)
@@ -505,7 +508,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
             self.play()
 
-    def on_fps_variable_changed(self, state: int) -> None:
+    def on_fps_variable_changed(self, state: Qt.CheckState) -> None:
         if state == Qt.CheckState.Checked:
             self.fps_spinbox.setEnabled(False)
             self.fps_reset_button.setEnabled(False)

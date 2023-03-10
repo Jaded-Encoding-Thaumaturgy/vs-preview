@@ -8,8 +8,8 @@ from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 
 from ...core import (
-    AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time, Timer,
-    VBoxLayout, ViewMode, try_load
+    AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time, VBoxLayout,
+    ViewMode, try_load
 )
 from ...core.custom import ComboBox, Switch
 from ...models import GeneralModel

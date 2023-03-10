@@ -140,7 +140,7 @@ class BenchmarkToolbar(AbstractToolbar):
             self.update_info()
 
         self.running = False
-        QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.QueuedConnection)
+        QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.ConnectionType.QueuedConnection)
 
         if self.run_abort_button.isChecked():
             self.run_abort_button.click()
@@ -167,7 +167,7 @@ class BenchmarkToolbar(AbstractToolbar):
         if self.running:
             next_frame = self.end_frame + Frame(1) - self.frames_left
             new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
-            new_future.add_done_callback(self._request_next_frame_unsequenced)
+            new_future.add_done_callback(self._request_next_frame_unsequenced)  # type: ignore
 
         if future is not None:
             future.result()

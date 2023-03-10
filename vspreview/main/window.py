@@ -401,7 +401,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
         backup_paths = [
             self.current_storage_path.with_suffix(f'.old{i}.yml')
-            for i in range(self.toolbars.misc.settings.STORAGE_BACKUPS_COUNT, 0, -1)
+            for i in range(self.settings.STORAGE_BACKUPS_COUNT, 0, -1)
         ] + [self.current_storage_path]
 
         for src_path, dest_path in zip(backup_paths[1:], backup_paths[:-1]):

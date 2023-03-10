@@ -30,6 +30,7 @@ class MainSettings(AbstractToolbarSettings):
     INSTANT_FRAME_UPDATE = False
     SYNC_OUTPUTS = True
     LOG_LEVEL = logging.INFO
+    STORAGE_BACKUPS_COUNT = 2
 
     def setup_ui(self) -> None:
         super().setup_ui()

@@ -13,6 +13,13 @@ if TYPE_CHECKING:
 T = TypeVar('T', VideoOutput, AudioOutput)
 
 
+__all__ = [
+    'Outputs',
+    'VideoOutputs',
+    'AudioOutputs'
+]
+
+
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     __slots__ = ('items', )
 

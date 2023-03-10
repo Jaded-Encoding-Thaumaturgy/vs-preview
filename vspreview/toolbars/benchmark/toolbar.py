@@ -22,6 +22,11 @@ else:
     from concurrent.futures import Future
 
 
+__all__ = [
+    'BenchmarkToolbar'
+]
+
+
 class BenchmarkToolbar(AbstractToolbar):
     __slots__ = (
         'start_frame_control',

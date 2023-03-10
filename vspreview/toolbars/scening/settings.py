@@ -4,6 +4,10 @@ from PyQt6.QtWidgets import QLabel
 
 from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit
 
+__all__ = [
+    'SceningSettings'
+]
+
 
 class SceningSettings(AbstractToolbarSettings):
     __slots__ = ('export_template_lineedit', 'always_show_scene_marks_checkbox')

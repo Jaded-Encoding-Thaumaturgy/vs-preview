@@ -12,6 +12,22 @@ from PyQt6.QtCore import QEvent, QObject
 from PyQt6.QtWidgets import QApplication, QGraphicsScene
 from vstools import ColorRange, Matrix, Primaries, T, Transfer, vs
 
+if TYPE_CHECKING:
+    from ..main import MainWindow
+
+__all__ = [
+    'print_var',
+    'print_func_name',
+    'EventFilter',
+    'measure_exec_time_ms',
+    'print_perf_timepoints',
+    'profile_cpu',
+    'print_vs_output_colorspace_info',
+    'DebugMeta',
+    'GraphicsScene',
+    'Application'
+]
+
 
 def print_var(var: Any) -> None:
     frame = inspect.currentframe()
@@ -30,9 +46,6 @@ def print_func_name() -> None:
 
 
 class EventFilter(QObject):
-    if TYPE_CHECKING:
-        from ..main import MainWindow
-
     __slots__ = (
         'main',
     )

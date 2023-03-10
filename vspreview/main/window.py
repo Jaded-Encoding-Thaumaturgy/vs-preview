@@ -4,22 +4,21 @@ import io
 import logging
 import sys
 from fractions import Fraction
-from os.path import expanduser, expandvars
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6.QtCore import QByteArray, QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
+from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QMainWindow, QSizePolicy
 from vsengine import vpy  # type: ignore
 
-from ..core import ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
-from ..core.abstracts import ExtendedMainWindow, Timer
-from ..core.bases import QAbstractYAMLObjectSingleton
-from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
-from ..core.vsenv import _monkey_runpy_dicts, get_current_environment, make_environment
+from ..core import (
+    AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView, QAbstractYAMLObjectSingleton,
+    StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts, get_current_environment,
+    make_environment, try_load
+)
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -34,6 +33,10 @@ if sys.platform == 'win32':
     except ImportError:
         _imagingcms = None
 
+    from os.path import expandvars
+else:
+    from os.path import expanduser
+
 try:
     from yaml import CDumper as yaml_Dumper
     from yaml import CLoader as yaml_Loader
@@ -43,17 +46,21 @@ except ImportError:
 
 from yaml import MarkedYAMLError, YAMLError
 
+__all__ = [
+    'MainWindow'
+]
 
-class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
+
+class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     current_viewmode: ViewMode
 
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
-        expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
+        expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
     )
 
-    VSP_VERSION = 3.0
-    BREAKING_CHANGES_VERSIONS = list[float]()
+    VSP_VERSION = 3.1
+    BREAKING_CHANGES_VERSIONS = list[str](['3.0'])
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -80,8 +87,10 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
     app_settings: SettingsDialog
     window_settings: WindowSettings
 
+    autosave_timer: Timer
+
     def __init__(self, config_dir: Path) -> None:
-        from ..toolbars.main import MainToolbar
+        from ..toolbars import MainToolbar
 
         super().__init__()
 
@@ -116,7 +125,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         self.setup_ui()
         self.storage_not_found = False
         self.timecodes = dict[
-            int, tuple[str | dict[
+            int, tuple[str | Path | dict[
                 tuple[int | None, int | None], float | tuple[int, int] | Fraction
             ] | list[Fraction], int | None]
         ]()
@@ -335,7 +344,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
                 with io.open(storage_path, 'r', encoding='utf-8') as storage_file:
                     version = storage_file.readline()
                     if 'Version' not in version or any({
-                        version.endswith(f'@{v}') for v in self.BREAKING_CHANGES_VERSIONS
+                        version.strip().endswith(f'@{v}') for v in self.BREAKING_CHANGES_VERSIONS
                     }):
                         raise FileNotFoundError
 
@@ -544,7 +553,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
             gc.collect()
 
     def switch_frame(
-        self, pos: Frame | int, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | int, *, render_frame: bool | Iterable[vs.VideoFrame | None] = True
     ) -> None:
         frame = Frame(pos)
 
@@ -555,7 +564,9 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
             if isinstance(render_frame, bool):
                 self.current_output.render_frame(frame, output_colorspace=self.display_profile)
             else:
-                self.current_output.render_frame(frame, *render_frame, output_colorspace=self.display_profile)
+                self.current_output.render_frame(
+                    frame, *render_frame, output_colorspace=self.display_profile  # type: ignore
+                )
 
         self.current_output.last_showed_frame = frame
 
@@ -696,7 +707,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
     def update_timecodes_info(
-        self, index: int, timecodes: str | dict[
+        self, index: int, timecodes: str | Path | dict[
             tuple[int | None, int | None], float | tuple[int, int] | Fraction
         ] | list[Fraction], den: int | None = None
     ) -> None:

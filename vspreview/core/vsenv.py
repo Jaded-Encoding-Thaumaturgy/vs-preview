@@ -10,6 +10,14 @@ from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 from vsengine.loops import EventLoop, set_loop  # type: ignore[import]
 from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ignore[import]
 
+__all__ = [
+    '_monkey_runpy_dicts',
+
+    'set_vsengine_loop',
+    'get_current_environment',
+    'make_environment'
+]
+
 _monkey_runpy_dicts = {}
 
 orig_runpy_run_code = runpy._run_code  # type: ignore

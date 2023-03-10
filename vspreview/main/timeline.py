@@ -1,69 +1,18 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Iterator, cast
+from typing import Any, cast
 
 from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
+from PyQt6.QtGui import QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
 from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
 
-from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Scene, Time, main_window, VideoOutput
+from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Notch, Notches, Time, VideoOutput, main_window
 from ..utils import strfdelta
 
-
-class Notch:
-    def __init__(
-        self, data: Frame | Time, color: QColor = cast(QColor, Qt.GlobalColor.white),
-        label: str = '', line: QLineF = QLineF()
-    ) -> None:
-        self.data = data
-        self.color = color
-        self.label = label
-        self.line = line
-
-    def __repr__(self) -> str:
-        return '{}({}, {}, {}, {})'.format(
-            type(self).__name__, repr(self.data), repr(self.color),
-            repr(self.label), repr(self.line))
-
-
-class Notches:
-    def __init__(self, other: Notches | None = None) -> None:
-        self.items = list[Notch]()
-
-        if other is None:
-            return
-        self.items = other.items
-
-    def add(
-        self, data: Frame | Scene | Time | Notch,
-        color: QColor = cast(QColor, Qt.GlobalColor.white),
-        label: str = ''
-    ) -> None:
-        if isinstance(data, Notch):
-            self.items.append(data)
-        elif isinstance(data, Scene):
-            if label == '':
-                label = data.label
-            self.items.append(Notch(data.start, color, label))
-            if data.end != data.start:
-                self.items.append(Notch(data.end, color, label))
-        elif isinstance(data, (Frame, Time)):
-            self.items.append(Notch(data, color, label))
-        else:
-            raise TypeError
-
-    def __len__(self) -> int:
-        return len(self.items)
-
-    def __getitem__(self, index: int) -> Notch:
-        return self.items[index]
-
-    def __iter__(self) -> Iterator[Notch]:
-        return iter(self.items)
-
-    def __repr__(self) -> str:
-        return '{}({})'.format(type(self).__name__, repr(self.items))
+__all__ = [
+    'Timeline'
+]
 
 
 class Timeline(QWidget):
@@ -196,7 +145,7 @@ class Timeline(QWidget):
 
             painter.setPen(QPen(self.palette().color(QPalette.ColorRole.WindowText)))
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-            painter.drawLines([notch.line for notch in labels_notches])
+            painter.drawLines([notch.line for notch in labels_notches])  # type: ignore
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
             for i, notch in enumerate(labels_notches):
@@ -226,8 +175,8 @@ class Timeline(QWidget):
                         )
                 else:
                     rect = painter.boundingRect(
-                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
-                        label)
+                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, label
+                    )
                 painter.drawText(rect, label)
 
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)

@@ -7,11 +7,15 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QWidget
 
-from ..abstracts import Timer
 from .graphicsview import DragEventType, GraphicsView
 
 if TYPE_CHECKING:
     from ...main import MainWindow
+
+
+__all__ = [
+    'DragNavigator'
+]
 
 
 class DragNavigator(QWidget):
@@ -22,6 +26,8 @@ class DragNavigator(QWidget):
     contentsH = contentsW = viewportX = viewportY = viewportH = viewportW = 0
 
     def __init__(self, main: MainWindow, graphics_view: GraphicsView) -> None:
+        from ..abstracts import Timer
+
         super().__init__(graphics_view)
 
         self.main = main

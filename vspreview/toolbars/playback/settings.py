@@ -6,10 +6,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QLabel
 from vstools.functions.utils import DitherType
 
-from ...core import AbstractToolbarSettings, Frame, HBoxLayout, SpinBox, try_load
-from ...core.custom import ComboBox
-from ...main.settings import MainSettings
+from ...core import AbstractToolbarSettings, ComboBox, Frame, HBoxLayout, SpinBox, try_load
+from ...main import MainSettings
 from ...models import GeneralModel
+
+__all__ = [
+    'PlaybackSettings'
+]
 
 
 class PlaybackSettings(AbstractToolbarSettings):

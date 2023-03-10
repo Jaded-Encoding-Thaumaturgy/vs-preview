@@ -8,6 +8,11 @@ from PyQt6.QtWidgets import QLabel, QStatusBar, QWidget
 
 from ..abstracts import PushButton
 
+__all__ = [
+    'StatusBar',
+    'Switch'
+]
+
 
 class StatusBar(QStatusBar):
     label_names = (

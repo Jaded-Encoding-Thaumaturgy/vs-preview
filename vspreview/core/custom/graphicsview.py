@@ -9,11 +9,16 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
 
-from ..types.dataclasses import CroppingInfo
-
-
 if TYPE_CHECKING:
     from ...main import MainWindow
+    from ..types import CroppingInfo
+
+
+__all__ = [
+    'DragEventType',
+    'GraphicsView',
+    'GraphicsImageItem'
+]
 
 
 class DragEventType(IntEnum):

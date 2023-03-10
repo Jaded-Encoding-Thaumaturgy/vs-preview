@@ -8,6 +8,11 @@ if TYPE_CHECKING:
     from ...main import MainWindow
 
 
+__all__ = [
+    'DebugToolbar'
+]
+
+
 class DebugToolbar(AbstractToolbar):
     __slots__ = ('exec_lineedit', )
 
@@ -36,8 +41,8 @@ class DebugToolbar(AbstractToolbar):
         super().setup_ui()
 
         self.exec_lineedit = LineEdit(
-            self, editingFinished=self.exec_button_clicked,
-            placeholderText='Python statement in context of DebugToolbar.exec_button_clicked()'
+            'Python statement in context of DebugToolbar.exec_button_clicked()',
+            self, editingFinished=self.exec_button_clicked
         )
 
         self.hlayout.addWidgets([

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABCMeta
 from typing import TYPE_CHECKING, Any, cast, no_type_check
 
 from PyQt6 import sip
@@ -8,7 +9,14 @@ from yaml import YAMLObject, YAMLObjectMetaclass
 if TYPE_CHECKING:
     from vstools import T
 
-from .better_abc import ABCMeta
+
+__all__ = [
+    'AbstractYAMLObjectSingleton',
+    'QABC',
+    'QYAMLObject',
+    'QYAMLObjectSingleton',
+    'QAbstractYAMLObjectSingleton'
+]
 
 
 class SingletonMeta(type):
@@ -72,31 +80,11 @@ class QSingletonMeta(SingletonMeta, sip.wrappertype):
     pass
 
 
-class QSingleton(Singleton, metaclass=QSingletonMeta):
-    pass
-
-
-class QAbstractSingletonMeta(QSingletonMeta):
-    pass
-
-
-class QAbstractSingleton(Singleton, metaclass=QAbstractSingletonMeta):
-    pass
-
-
 class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):
     pass
 
 
 class QYAMLObject(YAMLObject, metaclass=QYAMLObjectMeta):
-    pass
-
-
-class QAbstractYAMLObjectMeta(QYAMLObjectMeta, QABC):
-    pass
-
-
-class QAbstractYAMLObject(YAMLObject, metaclass=QAbstractYAMLObjectMeta):
     pass
 
 

@@ -15,6 +15,11 @@ if TYPE_CHECKING:
     from ...main import MainWindow
 
 
+__all__ = [
+    'FramePropsDialog'
+]
+
+
 _frame_props_excluded_keys = {
     # vs internals
     '_AbsoluteTime', '_DurationNum', '_DurationDen', '_PictType', '_Alpha',

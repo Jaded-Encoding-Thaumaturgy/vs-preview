@@ -3,6 +3,11 @@ from __future__ import annotations
 from ...core import AbstractToolbarSettings
 
 
+__all__ = [
+    'MiscSettings'
+]
+
+
 class MiscSettings(AbstractToolbarSettings):
     __slots__ = ()
 

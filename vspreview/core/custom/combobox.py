@@ -8,6 +8,11 @@ from PyQt6.QtWidgets import QComboBox, QWidget
 T = TypeVar('T')
 
 
+__all__ = [
+    'ComboBox'
+]
+
+
 class ComboBox(QComboBox, Generic[T]):
     def __class_getitem__(cls, _content_type: type[T]) -> type[ComboBox[T]]:
         class _ComboBox_inner(ComboBox):  # type: ignore

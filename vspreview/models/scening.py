@@ -8,6 +8,11 @@ from PyQt6.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Q
 
 from ..core import Frame, QYAMLObject, Scene, Time, main_window
 
+__all__ = [
+    'SceningList',
+    'SceningLists'
+]
+
 
 class SceningList(QAbstractTableModel, QYAMLObject):
     __slots__ = ('name', 'items', 'max_value')

@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     from ...main import MainWindow
 
 
+__all__ = [
+    'PipetteToolbar'
+]
+
+
 class PipetteToolbar(AbstractToolbar):
     labels = [
         'position',

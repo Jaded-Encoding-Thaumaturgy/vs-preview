@@ -3,18 +3,23 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any, Mapping
 
-from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox
 
-from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, VideoOutput, try_load
-from ...core.custom import ComboBox, FrameEdit, TimeEdit
+from ...core import (
+    AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, PushButton, Time, TimeEdit, VideoOutput, try_load
+)
 from ...models import GeneralModel, VideoOutputs
 from ...utils import qt_silent_call
 from .dialog import FramePropsDialog
 
-
 if TYPE_CHECKING:
-    from ...main import MainWindow, MainSettings
+    from ...main import MainSettings, MainWindow
+
+
+__all__ = [
+    'MainToolbar'
+]
 
 
 class MainToolbar(AbstractToolbar):
@@ -29,6 +34,7 @@ class MainToolbar(AbstractToolbar):
     )
 
     outputs: VideoOutputs | None
+    zoom_combobox: ComboBox[float]
 
     settings: MainSettings
 

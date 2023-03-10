@@ -20,6 +20,11 @@ if TYPE_CHECKING:
     from ...main import MainWindow
 
 
+__all__ = [
+    'MiscToolbar'
+]
+
+
 class MiscToolbar(AbstractToolbar):
     __slots__ = (
         'reload_script_button',
@@ -97,7 +102,7 @@ class MiscToolbar(AbstractToolbar):
             HBoxLayout([QLabel('View mode:'), self.view_mode_combox]),
         ])
 
-        self.view_mode_layout.setAlignment(Qt.AlignTop)
+        self.view_mode_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.hlayout.addStretch()
         self.hlayout.addStretch()

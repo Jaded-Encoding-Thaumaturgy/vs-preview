@@ -4,6 +4,10 @@ from typing import Any
 
 from ..abstracts import AbstractYAMLObject
 
+__all__ = [
+    'YAMLObjectWrapper'
+]
+
 
 class YAMLObjectWrapper(AbstractYAMLObject):
     value: Any

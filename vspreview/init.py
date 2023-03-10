@@ -1,10 +1,5 @@
 from __future__ import annotations
 
-
-# import vsenv as early as possible:
-# This is so other modules cannot accidentally use and lock us into a different policy.
-from .core.vsenv import set_vsengine_loop
-
 import json
 import logging
 import os
@@ -16,7 +11,14 @@ from typing import Any, Literal, cast
 
 from PyQt6.QtWidgets import QApplication
 
+# import vsenv as early as possible:
+# This is so other modules cannot accidentally use and lock us into a different policy.
+from .core.vsenv import set_vsengine_loop
 from .main import MainSettings, MainWindow
+
+__all__ = [
+    'main'
+]
 
 
 def main() -> None:

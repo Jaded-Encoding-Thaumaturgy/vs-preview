@@ -24,6 +24,20 @@ all_toolbars = [
 ]
 
 
+__all__ = [
+    'BenchmarkToolbar',
+    'CompToolbar',
+    'DebugToolbar',
+    'MainToolbar',
+    'MiscToolbar',
+    'PipetteToolbar',
+    'PlaybackToolbar',
+    'SceningToolbar',
+
+    'Toolbars'
+]
+
+
 class Toolbars(AbstractYAMLObjectSingleton):
     __slots__ = ()
 

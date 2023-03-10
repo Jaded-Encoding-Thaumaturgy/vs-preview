@@ -5,7 +5,12 @@ from typing import Any
 from PyQt6.QtCore import QTime, pyqtSignal
 from PyQt6.QtWidgets import QTimeEdit, QWidget
 
-from ...core import Frame, SpinBox, Time
+from ..abstracts import SpinBox
+from ..types import Frame, Time
+
+__all__ = [
+    'FrameEdit', 'TimeEdit'
+]
 
 
 def to_qtime(time: Time) -> QTime:

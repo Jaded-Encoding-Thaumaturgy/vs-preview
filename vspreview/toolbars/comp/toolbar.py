@@ -8,13 +8,21 @@ import vapoursynth as vs
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
 
-from ...core import AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
-from ...core.custom import ComboBox, FrameEdit
-from ...models import PictureTypes, VideoOutput
+from ...core import (
+    AbstractToolbar, CheckBox, ComboBox, FrameEdit, LineEdit, PictureType, ProgressBar, PushButton, VideoOutput,
+    main_window
+)
+from ...models import PictureTypes
 from .settings import CompSettings
 
 if TYPE_CHECKING:
     from ...main import MainWindow
+
+
+__all__ = [
+    'CompToolbar'
+]
+
 
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
@@ -106,7 +114,7 @@ class Worker(QObject):
 
         try:
             from requests import Session
-            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
         except ModuleNotFoundError:
             raise ModuleNotFoundError(
                 'You are missing `requests` and `requests` toolbelt!\n'
@@ -237,6 +245,9 @@ class CompToolbar(AbstractToolbar):
 
     settings: CompSettings
 
+    upload_thread: QThread
+    upload_worker: Worker
+
     def __init__(self, main: MainWindow) -> None:
         super().__init__(main, CompSettings(self))
         self.setup_ui()
@@ -246,11 +257,11 @@ class CompToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.collection_name_lineedit = LineEdit(self, placeholderText='Collection name')
+        self.collection_name_lineedit = LineEdit('Collection name', self)
 
         self.random_frames_control = FrameEdit(self)
 
-        self.manual_frames_lineedit = LineEdit(self, placeholderText='frame,frame,frame')
+        self.manual_frames_lineedit = LineEdit('frame,frame,frame', self, )
 
         self.current_frame_checkbox = CheckBox('Current', self, checked=True)
 
@@ -367,6 +378,9 @@ class CompToolbar(AbstractToolbar):
         samples = set[int]()
         _max_attempts = 0
         _rnum_checked = set[int]()
+
+        assert self.main.outputs
+
         while len(samples) < k:
             _attempts = 0
             while True:
@@ -407,6 +421,8 @@ class CompToolbar(AbstractToolbar):
         import logging
         import random
         import string
+
+        assert self.main.outputs
 
         self.update_upload_status_visibility(True)
 
@@ -466,7 +482,7 @@ class CompToolbar(AbstractToolbar):
             if not props:
                 props = output.source.clip.get_frame(check_frame).props
 
-            if '_VSPDisableComp' in props and props._DisableComp == 1:
+            if '_VSPDisableComp' in props and props._VSPDisableComp == 1:
                 continue
 
             filtered_outputs.append(output)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from concurrent.futures import Future
 from fractions import Fraction
 from functools import partial
 from math import floor
@@ -11,17 +12,21 @@ import vapoursynth as vs
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QSlider
 
-from ...core import AbstractToolbar, AudioOutput, CheckBox, DoubleSpinBox, Frame, PushButton, Time, Timer, try_load
-from ...core.custom import ComboBox, FrameEdit, TimeEdit
+from ...core import (
+    AbstractToolbar, AudioOutput, CheckBox, ComboBox, DoubleSpinBox, Frame, FrameEdit, PushButton, Time, TimeEdit,
+    Timer, try_load
+)
 from ...models import AudioOutputs
-from ...utils import debug, qt_silent_call
+from ...utils import qt_silent_call
 from .settings import PlaybackSettings
 
 if TYPE_CHECKING:
     from ...main import MainWindow
-    from vapoursynth import _Future as Future
-else:
-    from concurrent.futures import Future
+
+
+__all__ = [
+    'PlaybackToolbar'
+]
 
 
 def _del_future(f: Future[vs.VideoFrame]) -> None:
@@ -47,6 +52,8 @@ class PlaybackToolbar(AbstractToolbar):
 
     settings: PlaybackSettings
 
+    audio_outputs: AudioOutputs
+    seek_frame_control: FrameEdit
     fps_spinbox: DoubleSpinBox
 
     def __init__(self, main: MainWindow) -> None:
@@ -65,7 +72,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.fps_history = deque[int]([], int(self.settings.FPS_AVERAGING_WINDOW_SIZE) + 1)
         self.current_fps = 0.0
         self.fps_timer = Timer(
-            timeout=lambda: self.fps_spinbox.setValue(self.current_fps), timerType=Qt.TimerType.PreciseTimer
+            timeout=lambda: self.fps_spinbox.setValue(float(self.current_fps)), timerType=Qt.TimerType.PreciseTimer
         )
 
         self.play_start_time: int | None = None
@@ -93,7 +100,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.seek_n_frames_b_button = PushButton(
             '⏪', self, tooltip='Seek N Frames Backwards',
-            clicked=lambda _: self.seek_offset(-1 * self.seek_frame_control.value())
+            clicked=lambda _: self.seek_offset(-self.seek_frame_control.value())  # type: ignore
         )
 
         self.seek_to_prev_button = PushButton(
@@ -110,7 +117,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.seek_n_frames_f_button = PushButton(
             '⏩', self, tooltip='Seek N Frames Forward',
-            clicked=lambda _: self.seek_offset(self.seek_frame_control.value())
+            clicked=lambda _: self.seek_offset(self.seek_frame_control.value())  # type: ignore
         )
 
         self.seek_to_end_button = PushButton(
@@ -139,7 +146,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.fps_variable_checkbox = CheckBox('Variable FPS', self, stateChanged=self.on_fps_variable_changed)
 
-        self.mute_button = PushButton(self, clicked=self.on_mute_clicked)
+        self.mute_button = PushButton('', self, clicked=self.on_mute_clicked)
         self.mute_button.setFixedWidth(18)
 
         self.audio_outputs_combobox = ComboBox[AudioOutput](
@@ -147,8 +154,8 @@ class PlaybackToolbar(AbstractToolbar):
             duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
-        self.audio_volume_slider = QSlider(Qt.Orientation.Horizontal, valueChanged=self.setVolume)
-        self.audio_volume_slider.setFocusPolicy(Qt.NoFocus)
+        self.audio_volume_slider = QSlider(Qt.Orientation.Horizontal, valueChanged=self.setVolume)  # type: ignore
+        self.audio_volume_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.audio_volume_slider.setFixedWidth(120)
         self.audio_volume_slider.setRange(0, 100)
         self.audio_volume_slider.setPageStep(5)
@@ -171,8 +178,12 @@ class PlaybackToolbar(AbstractToolbar):
         self.main.add_shortcut(Qt.Key.Key_Space, self.play_pause_button.click)
         self.main.add_shortcut(Qt.Key.Key_Left, self.seek_to_prev_button.click)
         self.main.add_shortcut(Qt.Key.Key_Right, self.seek_to_next_button.click)
-        self.main.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Left), self.seek_n_frames_b_button.click)
-        self.main.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Right), self.seek_n_frames_f_button.click)
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Left).toCombined(), self.seek_n_frames_b_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Right).toCombined(), self.seek_n_frames_f_button.click
+        )
         self.main.add_shortcut(Qt.Key.Key_PageUp, self.seek_n_frames_b_button.click)
         self.main.add_shortcut(Qt.Key.Key_PageDown, self.seek_n_frames_f_button.click)
         self.main.add_shortcut(Qt.Key.Key_Home, self.seek_to_start_button.click)
@@ -183,37 +194,36 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.seek_time_control.setMaximum, self.main.current_output.total_time)
         qt_silent_call(self.seek_time_control.setMinimum, Time(Frame(1)))
         qt_silent_call(self.seek_time_control.setValue, Time(self.seek_frame_control.value()))
-        qt_silent_call(self.fps_spinbox.setValue, self.main.current_output.play_fps)
+        qt_silent_call(self.fps_spinbox.setValue, float(self.main.current_output.play_fps))
 
     def rescan_outputs(self, outputs: AudioOutputs | None = None) -> None:
         self.audio_outputs = outputs or AudioOutputs(self.main)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
-    def get_true_fps(self, n: int, frameprops: vs.FrameProps, force: bool = False) -> Fraction:
+    def get_true_fps(self, n: int | Frame, frameprops: vs.FrameProps, force: bool = False) -> Fraction:
         if (
             hasattr(self.main.current_output, 'got_timecodes')
             and self.main.current_output.got_timecodes and not force
         ):
-            return float(self.main.current_output.timecodes[n])
+            return Fraction(self.main.current_output.timecodes[int(n)])
 
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(
                 'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
             )
-        return Fraction(frameprops['_DurationDen']), cast(float, frameprops['_DurationNum'])
+        return Fraction(frameprops['_DurationDen'], frameprops['_DurationNum'])  # type: ignore
 
     def allocate_buffer(self, is_alpha: bool = False) -> None:
         if is_alpha:
             play_buffer_size = int(min(
-                self.settings.playback_buffer_size, (
-                    self.main.current_output.total_frames - self.main.current_output.last_showed_frame - 1
-                ) * 2
+                self.settings.playback_buffer_size,
+                int(self.main.current_output.total_frames - self.main.current_output.last_showed_frame - 1) * 2
             ))
             play_buffer_size -= play_buffer_size % 2
         else:
             play_buffer_size = int(min(
                 self.settings.playback_buffer_size,
-                self.main.current_output.total_frames - self.main.current_output.last_showed_frame - 1
+                int(self.main.current_output.total_frames - self.main.current_output.last_showed_frame - 1)
             ))
 
         self.play_buffer = deque([], play_buffer_size)
@@ -232,7 +242,7 @@ class PlaybackToolbar(AbstractToolbar):
                 if nextFrame >= self.main.current_output.total_frames:
                     break
                 self.play_buffer.appendleft(
-                    (nextFrame, self.main.current_output.prepared.clip.get_frame_async(nextFrame))
+                    (nextFrame, self.main.current_output.prepared.clip.get_frame_async(nextFrame))  # type: ignore
                 )
         else:
             self.allocate_buffer(True)
@@ -241,10 +251,10 @@ class PlaybackToolbar(AbstractToolbar):
                 if nextFrame >= self.main.current_output.total_frames:
                     break
                 self.play_buffer.appendleft(
-                    (nextFrame, self.main.current_output.prepared.clip.get_frame_async(nextFrame))
+                    (nextFrame, self.main.current_output.prepared.clip.get_frame_async(nextFrame))  # type: ignore
                 )
                 self.play_buffer.appendleft(
-                    (nextFrame, self.main.current_output.prepared.alpha.get_frame_async(nextFrame))
+                    (nextFrame, self.main.current_output.prepared.alpha.get_frame_async(nextFrame))  # type: ignore
                 )
 
         self.last_frame = Frame(stop_at_frame or (self.main.current_output.total_frames - 1))
@@ -253,7 +263,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.mute_button.setChecked(True)
             self.play_timer.start(0)
             if self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
-                self.play_start_time = debug.perf_counter_ns()
+                self.play_start_time = perf_counter_ns()
                 self.play_start_frame = Frame(self.main.current_output.last_showed_frame)
             else:
                 self.fps_timer.start(self.settings.FPS_REFRESH_INTERVAL)
@@ -276,6 +286,9 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.current_audio_output = self.audio_outputs_combobox.currentValue()
 
+        if not self.current_audio_output.vs_output:
+            return
+
         self.audio_outputs_combobox.setEnabled(False)
         self.current_audio_frame = self.current_audio_output.to_frame(
             Time(self.main.current_output.last_showed_frame)
@@ -287,12 +300,12 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.play_buffer_audio = deque([], int(min(
             self.settings.playback_buffer_size,
-            self.current_audio_output.total_frames - self.current_audio_frame - 1
+            int(self.current_audio_output.total_frames - self.current_audio_frame - 1)
         )))
 
         for i in range(2, cast(int, self.play_buffer_audio.maxlen)):
             self.play_buffer_audio.appendleft(
-                self.current_audio_output.vs_output.get_frame_async(
+                self.current_audio_output.vs_output.get_frame_async(  # type: ignore
                     int(self.current_audio_frame + i + 1)
                 )
             )
@@ -316,23 +329,30 @@ class PlaybackToolbar(AbstractToolbar):
         )
 
         try:
-            frames_futures = [(x[0], x[1].result()) for x in [self.play_buffer.pop() for _ in range(n_frames)]]
+            frames_futures = [
+                (x[0], x[1].result()) for x in [
+                    self.play_buffer.pop() for _ in range(n_frames)
+                ]
+            ]
         except IndexError:
             return self.play_pause_button.click()
 
         if next_buffered_frame < self.main.current_output.total_frames:
-            self.play_buffer.appendleft(
-                (next_buffered_frame, self.main.current_output.prepared.clip.get_frame_async(next_buffered_frame))
-            )
+            self.play_buffer.appendleft((
+                next_buffered_frame,
+                self.main.current_output.prepared.clip.get_frame_async(next_buffered_frame)  # type: ignore
+            ))
+
             if self.main.current_output.prepared.alpha is not None:
-                self.play_buffer.appendleft(
-                    (next_buffered_frame, self.main.current_output.prepared.alpha.get_frame_async(next_buffered_frame))
-                )
+                self.play_buffer.appendleft((
+                    next_buffered_frame,
+                    self.main.current_output.prepared.alpha.get_frame_async(next_buffered_frame)  # type: ignore
+                ))
 
         curr_frame = Frame(frames_futures[0][0])
 
         if self.fps_variable_checkbox.isChecked():
-            self.current_fps = self.get_true_fps(curr_frame.value, frames_futures[0][1].props)
+            self.current_fps = float(self.get_true_fps(curr_frame.value, frames_futures[0][1].props))
             self.play_timer.start(floor(1000 / self.current_fps))
             self.fps_spinbox.setValue(self.current_fps)
         elif not self.main.toolbars.debug.settings.DEBUG_PLAY_FPS:
@@ -341,7 +361,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.main.switch_frame(curr_frame, render_frame=(x[1] for x in frames_futures))
 
     def _play_next_audio_frame(self) -> None:
-        if not self.main.current_output.prepared:
+        if not self.main.current_output.prepared or not self.current_audio_output:
             return
 
         next_buffered_frame = self.current_audio_frame + self.settings.playback_buffer_size
@@ -353,8 +373,10 @@ class PlaybackToolbar(AbstractToolbar):
             return
 
         if next_buffered_frame < self.current_audio_output.total_frames:
+            assert self.current_audio_output.vs_output
+
             self.play_buffer_audio.appendleft(
-                self.current_audio_output.vs_output.get_frame_async(int(next_buffered_frame))
+                self.current_audio_output.vs_output.get_frame_async(int(next_buffered_frame))  # type: ignore
             )
 
         self.current_audio_output.render_raw_audio_frame(frame_future.result())
@@ -370,7 +392,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_timer.stop()
 
         if self.main.toolbars.debug.settings.DEBUG_PLAY_FPS and self.play_start_time is not None:
-            self.play_end_time = debug.perf_counter_ns()
+            self.play_end_time = perf_counter_ns()
             self.play_end_frame = Frame(self.main.current_output.last_showed_frame)
         if self.main.statusbar.label.text() == 'Playing':
             self.main.statusbar.label.setText('Ready')
@@ -408,7 +430,7 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_timer_audio.stop()
 
         for future in self.play_buffer_audio:
-            future.add_done_callback(_del_future)
+            future.add_done_callback(_del_future)  # type: ignore
 
         self.play_buffer_audio.clear()
 
@@ -468,8 +490,8 @@ class PlaybackToolbar(AbstractToolbar):
         self.play_buffer_audio.clear()
 
         for i in range(0, cast(int, self.play_buffer_audio.maxlen)):
-            future = self.current_audio_output.vs_output.get_frame_async(
-                int(self.current_audio_frame + Frame(i) + Frame(1))
+            future = self.current_audio_output.vs_output.get_frame_async(  # type: ignore
+                int(self.current_audio_frame + Frame(i + 1))
             )
             self.play_buffer_audio.appendleft(future)
 
@@ -479,7 +501,7 @@ class PlaybackToolbar(AbstractToolbar):
         else:
             self.stop()
 
-    def on_fps_changed(self, new_fps: float) -> None:
+    def on_fps_changed(self, new_fps: Fraction) -> None:
         if not self.fps_spinbox.isEnabled() or not hasattr(self.main, 'current_output'):
             return
 
@@ -501,7 +523,7 @@ class PlaybackToolbar(AbstractToolbar):
         elif state == Qt.CheckState.Unchecked:
             self.fps_spinbox.setEnabled(True)
             self.fps_reset_button.setEnabled(True)
-            self.fps_spinbox.setValue(self.main.current_output.play_fps)
+            self.fps_spinbox.setValue(float(self.main.current_output.play_fps))
             self.fps_variable_checkbox.setEnabled(True)
 
         if self.play_timer.isActive():
@@ -518,7 +540,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.fps_spinbox.setEnabled(True)
             self.fps_reset_button.setEnabled(True)
             self.fps_unlimited_checkbox.setEnabled(True)
-            self.fps_spinbox.setValue(self.main.current_output.play_fps)
+            self.fps_spinbox.setValue(float(self.main.current_output.play_fps))
 
         if self.play_timer.isActive():
             self.stop()

@@ -13,6 +13,12 @@ if TYPE_CHECKING:
     from .window import MainWindow
 
 
+__all__ = [
+    'ScriptErrorDialog',
+    'SettingsDialog'
+]
+
+
 class ScriptErrorDialog(ExtendedDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 

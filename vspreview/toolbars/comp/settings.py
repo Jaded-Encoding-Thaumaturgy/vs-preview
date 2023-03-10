@@ -4,6 +4,10 @@ from typing import Any, Mapping
 
 from ...core import AbstractToolbarSettings, CheckBox, try_load
 
+__all__ = [
+    'CompSettings'
+]
+
 
 class CompSettings(AbstractToolbarSettings):
     __slots__ = ('delete_cache_checkbox', )

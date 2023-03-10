@@ -5,13 +5,19 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
 from PyQt6.QtWidgets import QTableView
 
-from ...core import ExtendedDialog, ExtendedTableView, Frame, HBoxLayout, LineEdit, PushButton, Time, VBoxLayout
-from ...core.custom import FrameEdit, TimeEdit
+from ...core import (
+    ExtendedDialog, ExtendedTableView, Frame, FrameEdit, HBoxLayout, LineEdit, PushButton, Time, TimeEdit, VBoxLayout
+)
 from ...models import SceningList
 from ...utils import qt_silent_call
 
 if TYPE_CHECKING:
     from ...main import MainWindow
+
+
+__all__ = [
+    'SceningListDialog'
+]
 
 
 class SceningListDialog(ExtendedDialog):
@@ -45,7 +51,7 @@ class SceningListDialog(ExtendedDialog):
         self.set_qobject_names()
 
     def setup_ui(self) -> None:
-        self.name_lineedit = LineEdit()
+        self.name_lineedit = LineEdit('Scening list name')
 
         self.tableview = ExtendedTableView()
         self.tableview.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -92,11 +98,8 @@ class SceningListDialog(ExtendedDialog):
             | QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
 
-    def on_current_list_changed(self, scening_list: SceningList | None = None) -> None:
-        if scening_list is not None:
-            self.scening_list = scening_list
-        else:
-            self.scening_list = self.main.toolbars.scening.current_list
+    def on_current_list_changed(self, scening_list: SceningList) -> None:
+        self.scening_list = scening_list
 
         self.scening_list.rowsMoved.connect(self.on_tableview_rows_moved)
 

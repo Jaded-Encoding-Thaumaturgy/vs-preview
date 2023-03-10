@@ -11,6 +11,10 @@ from PyQt6.QtMultimedia import QAudioFormat, QAudioOutput, QAudioSink
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .units import Frame, Time
 
+__all__ = [
+    'AudioOutput'
+]
+
 
 class AudioOutput(AbstractYAMLObject):
     SAMPLES_PER_FRAME = 3072  # https://github.com/vapoursynth/vapoursynth/blob/master/include/VapourSynth4.h#L32

@@ -4,8 +4,11 @@ from typing import Any, Mapping
 
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, Time, try_load
-from ...core.custom import TimeEdit
+from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, Time, TimeEdit, try_load
+
+__all__ = [
+    'BenchmarkSettings'
+]
 
 
 class BenchmarkSettings(AbstractToolbarSettings):

@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from dataclasses import dataclass
-from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, TypeAlias, cast, overload
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QMainWindow,
-    QProgressBar, QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QProgressBar,
+    QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
-from vstools import CustomValueError
 
 from .bases import QABC, QYAMLObjectSingleton
 
@@ -20,21 +17,27 @@ if TYPE_CHECKING:
     from vstools import T
 
     from ..main import MainWindow
-    from ..main.timeline import Notches
-    from .types import Frame
+    from .custom import Notches
+    from .types import Frame, Stretch
+
+    LayoutChildT: TypeAlias = QWidget | QBoxLayout | Stretch | QSpacerItem
+else:
+    LayoutChildT: TypeAlias = Any
 
 
-class ViewMode(str, Enum):
-    NORMAL = 'Normal'
-    FFTSPECTRUM = 'FFTSpectrum'
+__all__ = [
+    'HBoxLayout', 'VBoxLayout',
 
+    'SpinBox', 'PushButton', 'LineEdit', 'CheckBox', 'Timer', 'ProgressBar', 'DoubleSpinBox',
 
-@dataclass
-class Stretch:
-    amount: int = 0
+    'AbstractQItem', 'AbstractYAMLObject',
 
+    'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
-LayoutChildT = QWidget | QBoxLayout | Stretch
+    'AbstractToolbar', 'AbstractToolbarSettings',
+
+    'main_window', 'storage_err_msg', 'try_load',
+]
 
 
 class ExtendedLayout(QBoxLayout):
@@ -62,6 +65,8 @@ class ExtendedLayout(QBoxLayout):
         arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
         spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
     ) -> ExtendedLayout:
+        from .types import Stretch
+
         try:
             if isinstance(arg0, QBoxLayout):
                 super().__init__(**kwargs)
@@ -119,6 +124,8 @@ class ExtendedLayout(QBoxLayout):
 
     @staticmethod
     def stretch(amount: int | None) -> Stretch:  # type: ignore
+        from .types import Stretch
+
         return Stretch(amount)  # type: ignore
 
 
@@ -213,7 +220,7 @@ class ExtendedItemInit(ExtItemBase):
 class ExtendedItemWithPlaceholder(ExtendedItemInit):
     if TYPE_CHECKING:
         def __init__(
-            self, name: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+            self, placeholder: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
         ) -> None:
             ...
 
@@ -298,23 +305,12 @@ class ExtendedWidget(AbstractQItem, QWidget):
         return separator
 
 
-class ExtendedMainWindow(AbstractQItem, QMainWindow):
-    def setup_ui(self) -> None:
-        ...
-
-
 class ExtendedDialog(AbstractQItem, QDialog):
     ...
 
 
 class ExtendedTableView(AbstractQItem, QTableView):
     ...
-
-
-class AbstractAppSettings(ExtendedDialog):
-    @abstractmethod
-    def addTab(self, widget: QWidget, label: str) -> int:
-        raise NotImplementedError
 
 
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
@@ -360,6 +356,8 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         super().__init__(main.central_widget)
 
         if settings is None:
+            from vstools.exceptions import CustomValueError
+
             raise CustomValueError('Missing settings widget!')
 
         self.main = main
@@ -402,8 +400,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         pass
 
     def get_notches(self) -> Notches:
-        from ..main.timeline import Notches
-
+        from .custom import Notches
         return Notches()
 
     def is_notches_visible(self) -> bool:
@@ -437,7 +434,7 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 def main_window() -> MainWindow:
     import logging
 
-    from ..main import MainWindow
+    from ..main.window import MainWindow
 
     app = QApplication.instance()
 

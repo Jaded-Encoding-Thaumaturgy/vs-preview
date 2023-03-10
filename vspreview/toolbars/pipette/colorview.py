@@ -3,6 +3,10 @@ from __future__ import annotations
 from PyQt6.QtGui import QColor, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QWidget
 
+__all__ = [
+    'ColorView'
+]
+
 
 class ColorView(QWidget):
     __slots__ = ('_color', )

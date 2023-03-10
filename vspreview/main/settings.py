@@ -6,15 +6,20 @@ from functools import partial
 from multiprocessing import cpu_count
 from typing import Any, Mapping
 
-from PyQt6.QtCore import Qt, QKeyCombination
+from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QShortcut
 from PyQt6.QtWidgets import QComboBox, QLabel
 
-from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
-from ..core.bases import QYAMLObjectSingleton
-from ..core.custom import ComboBox, TimeEdit
+from ..core import (
+    AbstractToolbarSettings, CheckBox, ComboBox, HBoxLayout, PushButton, QYAMLObjectSingleton, SpinBox, Time, TimeEdit,
+    VBoxLayout, main_window, try_load
+)
 from ..models import GeneralModel
-from ..utils import main_window
+
+__all__ = [
+    'MainSettings',
+    'WindowSettings'
+]
 
 
 class MainSettings(AbstractToolbarSettings):
@@ -229,7 +234,7 @@ class MainSettings(AbstractToolbarSettings):
             return len(cpus)
         except Exception:
             try:
-                from os import sched_getaffinity
+                from os import sched_getaffinity  # type: ignore
                 return len(sched_getaffinity(getpid()))
             except Exception:
                 return cpu_count()

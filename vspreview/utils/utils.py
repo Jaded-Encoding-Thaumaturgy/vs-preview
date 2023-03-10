@@ -12,6 +12,14 @@ if TYPE_CHECKING:
 
 from ..core import Frame, Time, main_window
 
+__all__ = [
+    'qt_silent_call',
+    'strfdelta',
+    'fire_and_forget',
+    'set_status_label',
+    'vs_clear_cache',
+]
+
 
 # it is a BuiltinMethodType at the same time
 def qt_silent_call(qt_method: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:

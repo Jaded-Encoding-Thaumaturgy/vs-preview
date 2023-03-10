@@ -7,6 +7,11 @@ from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 T = TypeVar('T')
 
 
+__all__ = [
+    'GeneralModel'
+]
+
+
 class GeneralModel(QAbstractListModel, Generic[T]):
     __slots__ = ('items',)
 

@@ -6,6 +6,10 @@ from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from ..core import PictureType
 
+__all__ = [
+    'PictureTypes'
+]
+
 
 class PictureTypes(QAbstractListModel):
     __slots__ = ('items',)

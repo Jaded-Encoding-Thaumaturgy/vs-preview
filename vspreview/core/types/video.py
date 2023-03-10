@@ -9,8 +9,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
-from .dataclasses import CroppingInfo, VideoOutputNode
+from .misc import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
+
+__all__ = [
+    'VideoOutput'
+]
 
 
 class PackingTypeInfo:
@@ -133,7 +137,7 @@ class VideoOutput(AbstractYAMLObject):
             else:
                 play_fps = Fraction(self.fps_num, self.fps_den)
 
-            self.play_fps = float(play_fps)
+            self.play_fps = play_fps
 
             if timecodes:
                 from pathlib import Path
@@ -148,7 +152,7 @@ class VideoOutput(AbstractYAMLObject):
 
                 if isinstance(timecodes, dict):
                     norm_timecodes = Timecodes.normalize_range_timecodes(
-                        timecodes, self.source.clip.num_frames, play_fps
+                        timecodes, self.source.clip.num_frames, play_fps  # type: ignore
                     )
                 else:
                     norm_timecodes = timecodes.copy()
@@ -160,18 +164,18 @@ class VideoOutput(AbstractYAMLObject):
                         reason=dict(timecodes=len(norm_timecodes), clip=self.source.clip.num_frames)
                     )
 
-                self.main.norm_timecodes[index] = norm_timecodes
-                self.play_fps = float(norm_timecodes[self.last_showed_frame])
+                self.main.norm_timecodes[index] = norm_timecodes  # type: ignore
+                self.play_fps = Fraction(norm_timecodes[self.last_showed_frame])
         elif not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
                 self.play_fps = self.main.toolbars.playback.get_true_fps(
                     self.last_showed_frame.value, self.props
                 )
             else:
-                self.play_fps = self.fps_num / self.fps_den
+                self.play_fps = Fraction(self.fps_num, self.fps_den)
 
         if index in self.main.norm_timecodes:
-            norm_timecodes = self.main.norm_timecodes[index]
+            norm_timecodes = self.main.norm_timecodes[index]  # type: ignore
 
             if (vfr := len(set(norm_timecodes)) > 1) or self.fps_num == 0:
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():

@@ -78,7 +78,8 @@ class MiscToolbar(AbstractToolbar):
             '''.replace(' ' * 16, ' ').strip()
         )
 
-        self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
+        if hasattr(self.main.toolbars, 'debug'):
+            self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
 
         VBoxLayout(self.hlayout, [
             HBoxLayout([self.autosave_checkbox, self.get_separator(), self.show_debug_checkbox, Stretch()]),
@@ -227,6 +228,8 @@ class MiscToolbar(AbstractToolbar):
             pass
 
     def on_show_debug_changed(self, state: Qt.CheckState) -> None:
+        assert hasattr(self.main.toolbars, 'debug')
+
         if state == Qt.CheckState.Checked:
             self.main.toolbars.debug.toggle_button.setVisible(True)
         elif state == Qt.CheckState.Unchecked:

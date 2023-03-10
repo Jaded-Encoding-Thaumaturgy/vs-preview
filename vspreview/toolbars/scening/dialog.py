@@ -166,6 +166,8 @@ class SceningListDialog(ExtendedDialog):
         self.scening_list.setData(index, text, Qt.ItemDataRole.UserRole)
 
     def on_name_changed(self, text: str) -> None:
+        assert hasattr(self.main.toolbars, 'scening')
+
         i = self.main.toolbars.scening.lists.index_of(self.scening_list)
         index = self.main.toolbars.scening.lists.index(i)
         self.main.toolbars.scening.lists.setData(index, text, Qt.ItemDataRole.UserRole)

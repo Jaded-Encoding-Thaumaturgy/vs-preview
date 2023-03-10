@@ -75,9 +75,12 @@ class EventFilter(QObject):
 
     def print_toolbars_state(self) -> None:
         logging.debug(f'main toolbar:     {self.main.isVisible()}')
-        logging.debug(f'playback toolbar: {self.main.toolbars.playback.isVisible()}')
-        logging.debug(f'scening toolbar:  {self.main.toolbars.scening.isVisible()}')
-        logging.debug(f'misc toolbar:     {self.main.toolbars.misc.isVisible()}')
+        if hasattr(self.main.toolbars, 'playback'):
+            logging.debug(f'playback toolbar: {self.main.toolbars.playback.isVisible()}')
+        if hasattr(self.main.toolbars, 'scening'):
+            logging.debug(f'scening toolbar:  {self.main.toolbars.scening.isVisible()}')
+        if hasattr(self.main.toolbars, 'misc'):
+            logging.debug(f'misc toolbar:     {self.main.toolbars.misc.isVisible()}')
 
     def run_get_frame_test(self) -> None:
         N = 10

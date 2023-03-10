@@ -14,27 +14,34 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore'], path: s
     vscode_settings_path = Path(path or Path.cwd()) / '.vscode'
     vscode_settings_path.mkdir(0o777, True, True)
 
+    common_args = {
+        "type": "python",
+        "request": "launch",
+        "console": "internalConsole",
+        "gevent": False,
+        "justMyCode": True,
+        "logToFile": False,
+        "subProcess": False,
+        "redirectOutput": True,
+        "showReturnValue": False,
+        "suppressMultipleSessionWarning": False
+    }
+
     settings = {
         "version": "0.2.0",
         "configurations": [
             {
                 "name": "VS Preview Current File",
-                "type": "python",
-                "request": "launch",
-                "console": "integratedTerminal",
                 "module": "vspreview",
-                "args": ["${file}"],
-                "showReturnValue": True,
-                "subProcess": True
+                "args": [
+                    "${file}"
+                ],
+                **common_args  # type: ignore
             },
             {
                 "name": "Run Current File",
-                "type": "python",
-                "request": "launch",
-                "console": "integratedTerminal",
                 "program": "${file}",
-                "showReturnValue": True,
-                "subProcess": True
+                **common_args  # type: ignore
             }
         ]
     }
@@ -70,7 +77,10 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore'], path: s
     cast(list[Any], current_settings['configurations']).extend(settings['configurations'])
 
     current_settings['configurations'] = list({
-        ':'.join(str(row[column]) for column in row.keys()): row
+        (
+            '____' if row['name'] == 'VS Preview Current File' else
+            ':'.join(str(row[column]) for column in row.keys())
+        ): row
         for row in cast(list[dict[str, str]], current_settings['configurations'])
     }.values())
 

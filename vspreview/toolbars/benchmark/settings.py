@@ -61,8 +61,8 @@ class BenchmarkSettings(AbstractToolbarSettings):
             'frame_data_sharing_fix_enabled': self.frame_data_sharing_fix_enabled,
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'clear_cache_enabled', bool, self.clear_cache_checkbox.setChecked)
         try_load(state, 'refresh_interval', Time, self.refresh_interval_control.setValue)
         try_load(state, 'frame_data_sharing_fix_enabled', bool, self.frame_data_sharing_fix_checkbox.setChecked)
-        super().__setstate__(state)
+

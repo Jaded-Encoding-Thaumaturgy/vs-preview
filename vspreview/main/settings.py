@@ -299,7 +299,7 @@ class MainSettings(AbstractToolbarSettings):
             'color_management': self.color_management
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'autosave_interval', Time, self.autosave_control.setValue)
         try_load(state, 'base_ppi', int, self.base_ppi_spinbox.setValue)
         try_load(state, 'dark_theme', bool, self.dark_theme_checkbox.setChecked)

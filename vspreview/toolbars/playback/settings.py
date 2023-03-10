@@ -58,6 +58,6 @@ class PlaybackSettings(AbstractToolbarSettings):
             'playback_buffer_size': self.playback_buffer_size, 'dither_type': self.dither_type
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'playback_buffer_size', int, self.buffer_size_spinbox.setValue)
         try_load(state, 'dither_type', str, self.dither_type_combobox.setCurrentValue)

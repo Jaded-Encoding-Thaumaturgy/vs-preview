@@ -332,8 +332,17 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
 
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
+        ...
+
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        pass
+        if main_window().toolbars.should_set_state(self.__class__):
+            self._setstate_(state)
+
+            try:
+                super().__setstate__(state)  # type: ignore
+            except AttributeError:
+                ...
 
 
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):

@@ -3,12 +3,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Iterator, Mapping, cast, overload
 
-from ..core import storage_err_msg
-from ..core.abstracts import AbstractToolbar
-from ..core.bases import AbstractYAMLObjectSingleton
 from .benchmark import BenchmarkToolbar
 from .comp import CompToolbar
 from .debug import DebugToolbar
+from ..core import AbstractToolbar, AbstractToolbarSettings, AbstractYAMLObjectSingleton, storage_err_msg
 from .main import MainToolbar
 from .misc import MiscToolbar
 from .pipette import PipetteToolbar
@@ -86,6 +84,14 @@ class Toolbars(AbstractYAMLObjectSingleton):
         # https://github.com/python/mypy/issues/2220
         def __iter__(self) -> Iterator[AbstractToolbar]:
             ...
+
+    def should_set_state(self, cls: type[AbstractToolbar] | type[AbstractToolbarSettings]) -> bool:
+        if issubclass(cls, AbstractToolbarSettings):
+            name = cls.__name__[:-8]
+        else:
+            name = cls.__name__[:-7]
+
+        return name.lower() in self.all_toolbars_names
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {

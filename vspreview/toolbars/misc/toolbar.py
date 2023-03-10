@@ -29,8 +29,7 @@ class MiscToolbar(AbstractToolbar):
     __slots__ = (
         'reload_script_button',
         'save_storage_button', 'autosave_checkbox',
-        'save_template_lineedit',
-        'show_debug_checkbox', 'save_frame_as_button',
+        'save_template_lineedit', 'save_frame_as_button',
         'toggle_button', 'save_file_types', 'copy_frame_button',
         'crop_top_spinbox', 'crop_left_spinbox', 'crop_width_spinbox',
         'crop_bottom_spinbox', 'crop_right_spinbox', 'crop_height_spinbox',
@@ -78,11 +77,15 @@ class MiscToolbar(AbstractToolbar):
             '''.replace(' ' * 16, ' ').strip()
         )
 
-        if hasattr(self.main.toolbars, 'debug'):
+        first_layer = [self.autosave_checkbox, self.get_separator()]
+
+        if 'debug' in self.main.toolbars.toolbar_names:
             self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
+            first_layer.append(self.show_debug_checkbox)
+            self.__slots__ = tuple([*self.__slots__, 'show_debug_checkbox'])  # type: ignore
 
         VBoxLayout(self.hlayout, [
-            HBoxLayout([self.autosave_checkbox, self.get_separator(), self.show_debug_checkbox, Stretch()]),
+            HBoxLayout([*first_layer, Stretch()]),
             HBoxLayout([
                 self.reload_script_button, self.get_separator(),
                 self.save_storage_button, self.get_separator(),
@@ -427,10 +430,13 @@ class MiscToolbar(AbstractToolbar):
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
             'save_file_name_template': self.save_template_lineedit.text(),
-            'show_debug': self.show_debug_checkbox.isChecked()
+            'show_debug': hasattr(self, 'show_debug_checkbox') and self.show_debug_checkbox.isChecked()
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'save_file_name_template', str, self.save_template_lineedit.setText)
-        try_load(state, 'show_debug', bool, self.show_debug_checkbox.setChecked)
+
+        if hasattr(self, 'show_debug_checkbox'):
+            try_load(state, 'show_debug', bool, self.show_debug_checkbox.setChecked)
+
         super().__setstate__(state)

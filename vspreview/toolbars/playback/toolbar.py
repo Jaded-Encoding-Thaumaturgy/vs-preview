@@ -506,7 +506,7 @@ class PlaybackToolbar(AbstractToolbar):
             self.stop()
 
     def on_fps_changed(self, new_fps: Fraction) -> None:
-        if not self.fps_spinbox.isEnabled() or not hasattr(self.main, 'current_output'):
+        if not self.fps_spinbox.isEnabled() or not self.main.current_output:
             return
 
         self.main.current_output.play_fps = new_fps

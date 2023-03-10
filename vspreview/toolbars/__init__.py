@@ -49,13 +49,13 @@ class Toolbars(AbstractYAMLObjectSingleton):
         self.main = MainToolbar(main_window)
         self.playback = PlaybackToolbar(main_window)
 
-        toolbars = [
+        self.toolbar_names = [
             'debug', 'scening', 'pipette', 'benchmark', 'misc', 'comp'
         ]
 
         self.toolbars = dict(main=self.main, playback=self.playback) | {
             name: self.name_to_tooltype(name)(main_window)
-            for name in toolbars
+            for name in self.toolbar_names
         }
 
         for name, toolbar in self.toolbars.items():

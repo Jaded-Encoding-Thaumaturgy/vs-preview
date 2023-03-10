@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fractions import Fraction
 from itertools import count as iter_count
 from typing import Any, Mapping, cast
 
@@ -122,8 +123,6 @@ class VideoOutput(AbstractYAMLObject):
         self.graphics_scene_item: GraphicsImageItem
 
         if index in self.main.timecodes:
-            from fractions import Fraction
-
             timecodes, tden = self.main.timecodes[index]
 
             if self.fps_num == 0:

@@ -450,7 +450,7 @@ class VideoOutput(AbstractYAMLObject):
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'title', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
-        try_load(state, 'play_fps', float, self.__setattr__)
+        try_load(state, 'play_fps', Fraction, self.__setattr__)
         try_load(state, 'crop_values', CroppingInfo, self.__setattr__)
 
         self._stateset = True

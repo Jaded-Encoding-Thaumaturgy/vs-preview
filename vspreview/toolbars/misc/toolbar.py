@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 class MiscToolbar(AbstractToolbar):
     __slots__ = (
-        'autosave_timer', 'reload_script_button',
+        'reload_script_button',
         'save_storage_button', 'autosave_checkbox',
         'save_template_lineedit',
         'show_debug_checkbox', 'save_frame_as_button',
@@ -40,11 +40,8 @@ class MiscToolbar(AbstractToolbar):
 
         self.setup_ui()
 
-        self.autosave_timer = Timer(timeout=self.main.dump_storage_async)
-
         self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
-        self.main.reload_signal.connect(self.autosave_timer.stop)
         self.main.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
         self.add_shortcuts()
@@ -178,9 +175,9 @@ class MiscToolbar(AbstractToolbar):
         if new_value is None:
             return
         if new_value == Time(seconds=0):
-            self.autosave_timer.stop()
+            self.main.autosave_timer.stop()
         else:
-            self.autosave_timer.start(round(float(new_value) * 1000))
+            self.main.autosave_timer.start(round(float(new_value) * 1000))
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
         from vstools import video_heuristics
@@ -191,7 +188,7 @@ class MiscToolbar(AbstractToolbar):
 
         filter_str = ''.join([file_type + ';;' for file_type in self.save_file_types.keys()])[0:-2]
 
-        template = self.main.toolbars.misc.save_template_lineedit.text()
+        template = self.save_template_lineedit.text()
 
         props = self.main.current_output.props
 

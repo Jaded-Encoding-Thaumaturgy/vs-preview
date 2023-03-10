@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import Any, Mapping, cast
 
 import vapoursynth as vs
-from PyQt6.QtCore import QEvent, QRectF, pyqtSignal, QByteArray
+from PyQt6.QtCore import QByteArray, QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QSizePolicy
 from vsengine import vpy  # type: ignore
 
 from ..core import ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
-from ..core.abstracts import ExtendedMainWindow
+from ..core.abstracts import ExtendedMainWindow, Timer
 from ..core.bases import QAbstractYAMLObjectSingleton
 from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
 from ..core.vsenv import _monkey_runpy_dicts, get_current_environment, make_environment
@@ -65,7 +65,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
 
     __slots__ = (
         *storable_attrs, 'app', 'display_scale', 'clipboard',
-        'script_path', 'timeline', 'main_layout',
+        'script_path', 'timeline', 'main_layout', 'autosave_timer',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
         'current_storage_path', 'opengl_widget', 'drag_navigator'
@@ -206,6 +206,9 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         # dialogs
         self.script_error_dialog = ScriptErrorDialog(self)
 
+        self.autosave_timer = Timer(timeout=self.dump_storage_async)
+        self.reload_signal.connect(self.autosave_timer.stop)
+
     def patch_dark_stylesheet(self, stylesheet: str) -> str:
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
@@ -295,7 +298,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         if load_error is None:
             self.change_video_viewmode(self.current_viewmode)
 
-            self.toolbars.misc.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
+            self.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
 
             if not reloading:
                 self.switch_output(self.settings.output_index)

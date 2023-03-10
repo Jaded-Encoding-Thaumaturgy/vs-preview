@@ -164,7 +164,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         # init toolbars and outputs
         self.app_settings = SettingsDialog(self)
-        self.toolbars = Toolbars(self)
+
+        Toolbars(self)
 
         for toolbar in self.toolbars:
             self.main_layout.addWidget(toolbar)

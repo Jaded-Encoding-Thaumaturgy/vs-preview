@@ -5,28 +5,23 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QWidget
 
-from ...core import AudioOutput, PictureType, VideoOutput
-from ...models import SceningList
-
-ComboBoxT = TypeVar(
-    'ComboBoxT', type[VideoOutput], type[AudioOutput], type[SceningList], type[PictureType], type[float], type[str]
-)
+T = TypeVar('T')
 
 
-class ComboBox(QComboBox, Generic[ComboBoxT]):
-    def __class_getitem__(cls, _content_type: ComboBoxT) -> ComboBox[ComboBoxT]:
+class ComboBox(QComboBox, Generic[T]):
+    def __class_getitem__(cls, _content_type: type[T]) -> type[ComboBox[T]]:
         class _ComboBox_inner(ComboBox):  # type: ignore
             content_type = _content_type
 
             valueChanged = pyqtSignal(content_type, object)
 
-        return _ComboBox_inner  # type: ignore
+        return _ComboBox_inner
 
     indexChanged = pyqtSignal(int, int)
-    content_type: type[ComboBoxT]
+    content_type: type[T]
 
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, ComboBoxT | None)  # type: ignore
+        valueChanged = pyqtSignal(content_type, T | None)  # type: ignore
 
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)
@@ -49,8 +44,8 @@ class ComboBox(QComboBox, Generic[ComboBoxT]):
         self.oldValue = newValue
         self.oldIndex = newIndex
 
-    def currentValue(self) -> ComboBoxT:
-        return cast(ComboBoxT, self.currentData())
+    def currentValue(self) -> T:
+        return cast(T, self.currentData())
 
-    def setCurrentValue(self, newValue: ComboBoxT) -> None:
+    def setCurrentValue(self, newValue: T) -> None:
         self.setCurrentIndex(self.model().index_of(newValue))  # type: ignore

@@ -130,7 +130,7 @@ class SceningToolbar(AbstractToolbar):
 
         self.toggle_second_frame_button = PushButton('🅱️', tooltip='Toggle End of New Scene', checkable=True)
 
-        self.label_lineedit = LineEdit(placeholder='New Scene Label')
+        self.label_lineedit = LineEdit('New Scene Label')
 
         self.add_to_list_button = PushButton('Add to List', enabled=False)
 
@@ -139,8 +139,8 @@ class SceningToolbar(AbstractToolbar):
         self.remove_at_current_frame_button = PushButton('Remove at Current Frame', enabled=False)
 
         self.export_template_lineedit = LineEdit(
+            'Export Template',
             text=self.settings.default_export_template,
-            placeholderText='Export Template',
             tooltip=(
                 r'Use {start} and {end} as placeholders.'
                 r'Both are valid for single frame scenes. '
@@ -182,7 +182,7 @@ class SceningToolbar(AbstractToolbar):
 
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys[:-2]):
-            self.add_shortcut(QKeyCombination(Qt.SHIFT, key), partial(self.switch_list, i))
+            self.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, key), partial(self.switch_list, i))  # type: ignore
 
         self.add_shortcut(
             QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.on_toggle_single_frame
@@ -333,7 +333,7 @@ class SceningToolbar(AbstractToolbar):
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: bool | None = None) -> None:
-        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())
+        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())  # type: ignore
 
         if self.toggle_first_frame_button.isChecked():
             self.toggle_first_frame_button.click()

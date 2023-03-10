@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QMainWindow,
     QProgressBar, QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
+from vstools import KwargsT, CustomValueError
 
 from .bases import QABC, QYAMLObjectSingleton
 
@@ -33,6 +34,9 @@ class Stretch:
     amount: int = 0
 
 
+LayoutChildT = QWidget | QBoxLayout | Stretch
+
+
 class ExtendedLayout(QBoxLayout):
     @overload
     def __init__(self) -> None:
@@ -43,19 +47,19 @@ class ExtendedLayout(QBoxLayout):
         ...
 
     @overload
-    def __init__(self, init_value: Sequence[QWidget | QBoxLayout | Stretch] | None, **kwargs: Any) -> None:
+    def __init__(self, init_value: LayoutChildT | Sequence[LayoutChildT] | None, **kwargs: Any) -> None:
         ...
 
     @overload
     def __init__(
         self, parent: QWidget | QBoxLayout | None = None,
-        children: Sequence[QWidget | QBoxLayout | Stretch] | None = None, **kwargs: Any
+        children: LayoutChildT | Sequence[LayoutChildT] | None = None, **kwargs: Any
     ) -> None:
         ...
 
     def __init__(  # type: ignore
         self, arg0: QWidget | QBoxLayout | None = None,
-        arg1: Sequence[QWidget | QBoxLayout | Stretch] | None = None,
+        arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
         spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
     ) -> ExtendedLayout:
         try:
@@ -129,19 +133,19 @@ class HBoxLayout(QHBoxLayout, ExtendedLayout):
             ...
 
         @overload
-        def __init__(self, init_value: Sequence[QWidget | QBoxLayout | Stretch] | None, **kwargs: Any) -> None:
+        def __init__(self, init_value: LayoutChildT | Sequence[LayoutChildT] | None, **kwargs: Any) -> None:
             ...
 
         @overload
         def __init__(
             self, parent: QWidget | QBoxLayout | None = None,
-            children: Sequence[QWidget | QBoxLayout | Stretch] | None = None, **kwargs: Any
+            children: LayoutChildT | Sequence[LayoutChildT] | None = None, **kwargs: Any
         ) -> None:
             ...
 
         def __init__(  # type: ignore
             self, arg0: QWidget | QBoxLayout | None = None,
-            arg1: Sequence[QWidget | QBoxLayout | Stretch] | None = None,
+            arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
             spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
         ) -> ExtendedLayout:
             ...
@@ -158,19 +162,19 @@ class VBoxLayout(QVBoxLayout, ExtendedLayout):
             ...
 
         @overload
-        def __init__(self, init_value: Sequence[QWidget | QBoxLayout | Stretch] | None, **kwargs: Any) -> None:
+        def __init__(self, init_value: LayoutChildT | Sequence[LayoutChildT] | None, **kwargs: Any) -> None:
             ...
 
         @overload
         def __init__(
             self, parent: QWidget | QBoxLayout | None = None,
-            children: Sequence[QWidget | QBoxLayout | Stretch] | None = None, **kwargs: Any
+            children: LayoutChildT | Sequence[LayoutChildT] | None = None, **kwargs: Any
         ) -> None:
             ...
 
         def __init__(  # type: ignore
             self, arg0: QWidget | QBoxLayout | None = None,
-            arg1: Sequence[QWidget | QBoxLayout | Stretch] | None = None,
+            arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
             spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
         ) -> ExtendedLayout:
             ...
@@ -206,7 +210,7 @@ class ExtendedItemInit(ExtItemBase):
             super().setToolTip(tooltip)
 
 
-class PushButton(ExtendedItemInit, QPushButton):
+class ExtendedItemWithPlaceholder(ExtendedItemInit):
     if TYPE_CHECKING:
         def __init__(
             self, name: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
@@ -214,11 +218,15 @@ class PushButton(ExtendedItemInit, QPushButton):
             ...
 
 
-class LineEdit(ExtendedItemInit, QLineEdit):
+class PushButton(ExtendedItemWithPlaceholder, QPushButton):
     ...
 
 
-class CheckBox(ExtendedItemInit, QCheckBox):
+class LineEdit(ExtendedItemWithPlaceholder, QLineEdit):
+    ...
+
+
+class CheckBox(ExtendedItemWithPlaceholder, QCheckBox):
     ...
 
 
@@ -234,7 +242,7 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
     ...
 
 
-class AbstractQItem():
+class AbstractQItem:
     __slots__: tuple[str, ...]
     storable_attrs: ClassVar[tuple[str, ...]] = ()
 
@@ -346,8 +354,12 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     main: MainWindow
     name: str
 
-    def __init__(self, main: MainWindow, settings: QWidget) -> None:
+    def __init__(self, main: MainWindow, settings: QWidget | None = None) -> None:
         super().__init__(main.central_widget)
+
+        if settings is None:
+            raise CustomValueError('Missing settings widget!')
+
         self.main = main
         self.settings = settings
         self.name = self.__class__.__name__[:-7]

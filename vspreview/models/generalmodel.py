@@ -10,7 +10,7 @@ T = TypeVar('T')
 class GeneralModel(QAbstractListModel, Generic[T]):
     __slots__ = ('items',)
 
-    def __class_getitem__(cls, _content_type: type[T]) -> type:
+    def __class_getitem__(cls, _content_type: type[T]) -> type[GeneralModel[T]]:
 
         if _content_type is float:
             return _GeneralModel_float

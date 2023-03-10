@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import deque
-from concurrent.futures import Future
 from copy import deepcopy
 from time import perf_counter
 from typing import TYPE_CHECKING
@@ -18,6 +17,9 @@ from .settings import BenchmarkSettings
 
 if TYPE_CHECKING:
     from ...main import MainWindow
+    from vapoursynth import _Future as Future
+else:
+    from concurrent.futures import Future
 
 
 class BenchmarkToolbar(AbstractToolbar):
@@ -157,7 +159,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.frames_left -= Frame(1)
 
-    def _request_next_frame_unsequenced(self, future: Future | None = None) -> None:
+    def _request_next_frame_unsequenced(self, future: Future[vs.VideoFrame] | None = None) -> None:
         if self.frames_left <= Frame(0):
             self.abort()
             return
@@ -178,7 +180,7 @@ class BenchmarkToolbar(AbstractToolbar):
         else:
             self.abort()
 
-    def on_prefetch_changed(self, new_state: int) -> None:
+    def on_prefetch_changed(self, new_state: Qt.CheckState) -> None:
         if new_state == Qt.CheckState.Checked:
             self.unsequenced_checkbox.setEnabled(True)
         elif new_state == Qt.CheckState.Unchecked:

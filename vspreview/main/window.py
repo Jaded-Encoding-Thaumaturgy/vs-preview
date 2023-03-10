@@ -268,7 +268,9 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
         self.script_exec_failed = False
         self.current_storage_path = (self.current_config_dir / self.script_path.stem).with_suffix('.yml')
 
-        self.storage_not_found = not self.current_storage_path.exists()
+        self.storage_not_found = not (
+            self.current_storage_path.exists() and self.current_storage_path.read_text().strip()
+        )
 
         load_error = None
 
@@ -338,7 +340,7 @@ class MainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
                     if i == 0:
                         global_length = storage_contents.count('\n')
             except FileNotFoundError:
-                if self.settings.force_old_storages_removal:
+                if self.settings.force_old_storages_removal or i == 0:
                     storage_path.unlink()
                     broken_storage = True
                 else:

@@ -41,8 +41,8 @@ class PackingTypeInfo:
 class PackingType(PackingTypeInfo):
     libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_RGB32, False)
     libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
-    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
-    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
+    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False)
+    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, False)
 
 
 PACKING_TYPE: PackingTypeInfo = None  # type: ignore
@@ -296,10 +296,11 @@ class VideoOutput(AbstractYAMLObject):
             # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
             # R stays like it is + shift if it's 8 bits (gets applied to all clips), then G gets shifted
             # by 10 bits, (we multiply by 2 ** 10) and same for B but by 20 bits and it all gets summed
+            shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
+
             return vs.core.akarin.Expr(
                 clip.std.SplitPlanes(),
-                f'{2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)} s! x s@ 0x100000 * * '
-                'y s@ 0x400 * * + z s@ * + 0xc0000000 +', vs.GRAY32, True
+                f'z {1048576 * shift} * y {1024 * shift} * + x {shift} * +', vs.GRAY32, True
             )
 
         return clip

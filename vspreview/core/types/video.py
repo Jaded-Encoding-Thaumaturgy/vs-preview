@@ -274,6 +274,8 @@ class VideoOutput(AbstractYAMLObject):
             if clip.format.id == self._ALPHA_FMT.id:
                 return clip
             resizer_kwargs['format'] = self._ALPHA_FMT.id
+        elif clip.format.id == vs.GRAY32:
+            return clip
 
         clip = clip.resize.Bicubic(**resizer_kwargs)
 

@@ -60,7 +60,8 @@ class PipetteToolbar(AbstractToolbar):
         self.data_types = {
             vs.INTEGER: {
                 1: ctypes.c_uint8,
-                2: ctypes.c_uint16
+                2: ctypes.c_uint16,
+                4: ctypes.c_uint32,
             },
             vs.FLOAT: {
                 2: ctypes.c_char,
@@ -268,6 +269,9 @@ class PipetteToolbar(AbstractToolbar):
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
         assert (fmt := vs_output.format)
+
+        if fmt.subsampling_w == fmt.subsampling_h == 0:
+            return vs_output
 
         return vs.core.resize.Bicubic(
             vs_output, format=vs.core.query_video_format(

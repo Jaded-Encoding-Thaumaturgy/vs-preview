@@ -16,6 +16,7 @@ from ...core import (
     AbstractToolbar, AudioOutput, CheckBox, ComboBox, DoubleSpinBox, Frame, FrameEdit, PushButton, Time, TimeEdit,
     Timer, try_load
 )
+from ...core.types import video
 from ...models import AudioOutputs
 from ...utils import qt_silent_call
 from .settings import PlaybackSettings
@@ -233,7 +234,10 @@ class PlaybackToolbar(AbstractToolbar):
         return hasattr(self.main.toolbars, 'debug') and self.main.toolbars.debug.settings.DEBUG_PLAY_FPS
 
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
-        if self.main.current_output.last_showed_frame > self.main.current_output.total_frames:
+        if (
+            (self.main.current_output.last_showed_frame > self.main.current_output.total_frames)
+            or not video.PACKING_TYPE.can_playback
+        ):
             return
 
         if self.main.statusbar.label.text() == 'Ready':

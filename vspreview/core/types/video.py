@@ -22,12 +22,14 @@ class PackingTypeInfo:
     _getid = iter_count()
 
     def __init__(
-        self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool
+        self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool,
+        can_playback: bool = True
     ):
         self.id = next(self._getid)
         self.vs_format = vs.core.get_video_format(vs_format)
         self.qt_format = qt_format
         self.shuffle = shuffle
+        self.can_playback = can_playback
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PackingTypeInfo):
@@ -39,6 +41,10 @@ class PackingTypeInfo:
 
 
 class PackingType(PackingTypeInfo):
+    none_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False, False)
+    none_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, False, False)
+    numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
+    numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
     libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_RGB32, False)
     libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
     akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False)
@@ -204,7 +210,22 @@ class VideoOutput(AbstractYAMLObject):
 
         global PACKING_TYPE
 
-        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
+        if PACKING_TYPE is not None:
+            if hasattr(self, '_FRAME_CONV_INFO'):
+                return
+
+            self._NORML_FMT = PACKING_TYPE.vs_format
+            self._ALPHA_FMT = vs.core.get_video_format(vs.GRAY8)
+
+            nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
+            self._FRAME_CONV_INFO = {
+                False: (nbps, c_char * nbps, PACKING_TYPE.qt_format),
+                True: (abps, c_char * abps, QImage.Format.Format_Alpha8)
+            }
+
+            return
+
+        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30  # type: ignore
 
         # From fastest to slowest
         if hasattr(vs.core, 'akarin'):
@@ -212,20 +233,24 @@ class VideoOutput(AbstractYAMLObject):
         elif hasattr(vs.core, 'libp2p'):
             PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
         else:
-            raise ImportError(
-                "\n\tLibP2P and Akarin plugin are missing, one is required to prepare output clips correctly!\n"
-                "\t  You can get them here: \n"
-                "\t  https://github.com/DJATOM/LibP2P-Vapoursynth\n\t  https://github.com/AkarinVS/vapoursynth-plugin"
-            )
+            try:
+                import numpy  # noqa: F401
+                PACKING_TYPE = PackingType.numpy_10bit if _default_10bits else PackingType.numpy_8bit
+            except ModuleNotFoundError:
+                PACKING_TYPE = PackingType.none_10bit if _default_10bits else PackingType.none_8bit
 
-        self._NORML_FMT = PACKING_TYPE.vs_format
-        self._ALPHA_FMT = vs.core.get_video_format(vs.GRAY8)
+                print(ImportWarning(
+                    "\n"
+                    "  One of LibP2P, Akarin, cupy, numpy is required to pack RGB data efficiently for previewing!\n"
+                    "  Now falling back to pure python. You won't be able to playback.\n"
+                    "  You can download one of them from here: \n"
+                    "      https://github.com/DJATOM/LibP2P-Vapoursynth\n"
+                    "      https://github.com/AkarinVS/vapoursynth-plugin\n"
+                    "      https://docs.cupy.dev/en/stable/install.html#installing-cupy\n"
+                    "      pip install numpy\n"
+                ))
 
-        nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
-        self._FRAME_CONV_INFO = {
-            False: (nbps, c_char * nbps, PACKING_TYPE.qt_format),
-            True: (abps, c_char * abps, QImage.Format.Format_Alpha8)
-        }
+        self.set_fmt_values()
 
     @property
     def name(self) -> str:
@@ -287,6 +312,72 @@ class VideoOutput(AbstractYAMLObject):
     def pack_rgb_clip(self, clip: vs.VideoNode) -> vs.VideoNode:
         if PACKING_TYPE.shuffle:
             clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
+
+        if PACKING_TYPE in {
+            PackingType.none_8bit, PackingType.none_10bit, PackingType.numpy_8bit, PackingType.numpy_10bit
+        }:
+            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, keep=True)
+
+            shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
+            r_shift, g_shift, b_shift = (x * shift for x in (1, 1024, 1048576))
+
+            if PACKING_TYPE in {PackingType.none_8bit, PackingType.none_10bit}:
+                from functools import partial
+                from multiprocessing.pool import ThreadPool
+
+                from vstools import ranges_product
+
+                indices = list(ranges_product(blank.height, blank.width))
+
+                pool = ThreadPool(self.main.settings.usable_cpus_count * 8)
+
+                def _packing_edarray(
+                    bfp: vs.video_view, src_r: vs.video_view,
+                    src_g: vs.video_view, src_b: vs.video_view,
+                    idx: tuple[int, int]
+                ) -> None:
+                    bfp[idx] = (src_r[idx] * r_shift) + (src_g[idx] * g_shift) + (src_b[idx] * b_shift)
+
+                def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
+                    bf = f[0].copy()
+
+                    pool.map_async(partial(_packing_edarray, bf[0], f[1][0], f[1][1], f[1][2]), indices).wait()
+
+                    return bf
+            else:
+                import numpy as np
+
+                ein_shift = np.array([b_shift, g_shift, r_shift], np.uint32)
+
+                try:
+                    import cupy as cp  # type: ignore
+
+                    ein_shift = cp.asarray(ein_shift)
+
+                    def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
+                        bf = f[0].copy()
+
+                        cp.asnumpy(cp.einsum(
+                            'kji,k->ji', cp.asarray(f[1], cp.uint32), ein_shift, optimize='greedy'
+                        ), out=np.asarray(bf[0]))
+
+                        return bf
+                except ModuleNotFoundError:
+                    from numpy.core._multiarray_umath import c_einsum  # type: ignore
+                    from numpy.core.numeric import tensordot
+
+                    def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
+                        bf = f[0].copy()
+
+                        c_einsum(
+                            'ji->ji',
+                            tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,))),
+                            out=np.asarray(bf[0])
+                        )
+
+                        return bf
+
+            return blank.std.ModifyFrame([blank, clip], _packrgb)
 
         if PACKING_TYPE in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
             return vs.core.libp2p.Pack(clip)

@@ -96,10 +96,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.settings = MainSettings(MainToolbar)
 
-        # logging
-        logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.settings.LOG_LEVEL)
-        logging.Formatter.default_msec_format = '%s.%03d'
-
         self.current_config_dir = config_dir / self.VSP_DIR_NAME
         self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
         self.global_storage_path = self.global_config_dir / '.global.yml'

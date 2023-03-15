@@ -13,7 +13,8 @@ from PyQt6.QtWidgets import QApplication
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import set_vsengine_loop
-from .main import MainSettings, MainWindow
+from .core.logger import set_log_level, setup_logger
+from .main import MainWindow
 
 __all__ = [
     'main'
@@ -21,22 +22,6 @@ __all__ = [
 
 
 def main(_args: Sequence[str] | None = None) -> None:
-    logging.basicConfig(format='{asctime}: {name}: {levelname}: {message}', style='{', level=MainSettings.LOG_LEVEL)
-    logging.Formatter.default_msec_format = '%s.%03d'
-    if sys.stdout.isatty():
-        logging.addLevelName(
-            logging.DEBUG, "\033[0;32m%s\033[0m" % logging.getLevelName(logging.DEBUG)
-        )
-        logging.addLevelName(
-            logging.INFO, "\033[1;33m%s\033[0m" % logging.getLevelName(logging.INFO)
-        )
-        logging.addLevelName(
-            logging.WARNING, "\033[1;35m%s\033[1;0m" % logging.getLevelName(logging.WARNING)
-        )
-        logging.addLevelName(
-            logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR)
-        )
-
     parser = ArgumentParser(prog='VSPreview')
     parser.add_argument(
         'script_path', help='Path to Vapoursynth script', type=Path, nargs='?'
@@ -61,12 +46,12 @@ def main(_args: Sequence[str] | None = None) -> None:
 
     args = parser.parse_args(_args)
 
+    setup_logger()
+
     if args.verbose:
-        logging.getLogger().level = logging.DEBUG
+        set_log_level(logging.DEBUG, logging.DEBUG)
     else:
-        from vsengine import _hospice  # type: ignore[import]
-        _hospice.logger.setLevel(logging.ERROR)
-        logging.getLogger().level = logging.WARNING
+        set_log_level(logging.WARNING)
 
     if args.vscode_setup is not None:
         from .api.other import install_vscode_launch

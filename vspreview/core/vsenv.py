@@ -10,6 +10,8 @@ from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 from vsengine.loops import EventLoop, set_loop  # type: ignore[import]
 from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ignore[import]
 
+from .logger import get_vs_logger
+
 __all__ = [
     '_monkey_runpy_dicts',
 
@@ -115,21 +117,25 @@ def set_vsengine_loop() -> None:
     set_loop(PyQTLoop())
 
 
-policy: Policy = Policy(GlobalStore())
-policy.register()
-environment = policy.new_environment()
-environment.switch()
-
-
-def get_current_environment() -> ManagedEnvironment:
-    return environment
-
-
 def make_environment() -> None:
     global environment
     assert policy is not None
     environment = policy.new_environment()
+    environment.core.add_log_handler(get_vs_logger())
     environment.switch()
+
+
+policy: Policy = Policy(GlobalStore())
+policy.register()
+
+environment: ManagedEnvironment | None = None
+
+make_environment()
+
+
+def get_current_environment() -> ManagedEnvironment:
+    assert environment
+    return environment
 
 
 def _dispose() -> None:

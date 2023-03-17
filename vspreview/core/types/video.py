@@ -219,8 +219,8 @@ class VideoOutput(AbstractYAMLObject):
 
             nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
             self._FRAME_CONV_INFO = {
-                False: (nbps, c_char * nbps, PACKING_TYPE.qt_format),
-                True: (abps, c_char * abps, QImage.Format.Format_Alpha8)
+                False: (c_char * nbps, PACKING_TYPE.qt_format),
+                True: (c_char * abps, QImage.Format.Format_Alpha8)
             }
 
             return
@@ -401,14 +401,11 @@ class VideoOutput(AbstractYAMLObject):
         from ctypes import cast as ccast
 
         width, height, stride = frame.width, frame.height, frame.get_stride(0)
-        mod, point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
+        point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
 
-        if width % mod or stride % mod or is_alpha:
-            pointer = cast(
-                sip.voidptr, ccast(frame.get_read_ptr(0), POINTER(point_size * stride)).contents
-            )
-        else:
-            pointer = cast(sip.voidptr, frame[0])
+        pointer = cast(
+            sip.voidptr, ccast(frame.get_read_ptr(0), POINTER(point_size * stride)).contents
+        )
 
         return QImage(pointer, width, height, stride, qt_format).copy()  # type: ignore
 

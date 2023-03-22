@@ -217,23 +217,26 @@ class ExtendedItemInit(ExtItemBase):
             super().setToolTip(tooltip)
 
 
-class ExtendedItemWithPlaceholder(ExtendedItemInit):
+class ExtendedItemWithName(ExtendedItemInit):
     if TYPE_CHECKING:
         def __init__(
-            self, placeholder: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+            self, name: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
         ) -> None:
             ...
 
 
-class PushButton(ExtendedItemWithPlaceholder, QPushButton):
+class PushButton(ExtendedItemWithName, QPushButton):
     ...
 
 
-class LineEdit(ExtendedItemWithPlaceholder, QLineEdit):
-    ...
+class LineEdit(ExtendedItemInit, QLineEdit):
+    def __init__(
+        self, placeholder: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+    ) -> None:
+        return super().__init__(*args, tooltip=tooltip, **kwargs, placeholderText=placeholder)
 
 
-class CheckBox(ExtendedItemWithPlaceholder, QCheckBox):
+class CheckBox(ExtendedItemWithName, QCheckBox):
     ...
 
 

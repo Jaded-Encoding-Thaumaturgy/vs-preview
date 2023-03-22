@@ -101,7 +101,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.seek_n_frames_b_button = PushButton(
             '⏪', self, tooltip='Seek N Frames Backwards',
-            clicked=lambda _: self.seek_offset(-self.seek_frame_control.value())  # type: ignore
+            clicked=lambda _: self.seek_offset(self.seek_frame_control.value() * -1)  # type: ignore
         )
 
         self.seek_to_prev_button = PushButton(

@@ -391,7 +391,7 @@ class VideoOutput(AbstractYAMLObject):
 
             return vs.core.akarin.Expr(
                 clip.std.SplitPlanes(),
-                f'z {1048576 * shift} * y {1024 * shift} * + x {shift} * +', vs.GRAY32, True
+                f'z {shift * 0x100000}  * y {shift * 0x400} * x {shift} * + + 0xc0000000 +', vs.GRAY32, True
             )
 
         return clip

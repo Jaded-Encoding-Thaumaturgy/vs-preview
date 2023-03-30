@@ -32,7 +32,7 @@ def set_output(
     else:
         title, node_type = 'Node', vs.RawNode
 
-    if not name or name is True:
+    if (not name and name is not False) or name is True:
         name = f"{title} {index}"
 
         current_frame = inspect.currentframe()

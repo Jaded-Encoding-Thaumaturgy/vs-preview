@@ -111,15 +111,8 @@ class Worker(QObject):
     def run(self, conf: WorkerConfiguration) -> None:
         import os
         import shutil
-
-        try:
-            from requests import Session
-            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                'You are missing `requests` and `requests` toolbelt!\n'
-                'Install them with "pip install requests requests_toolbelt"!'
-            )
+        from requests import Session
+        from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
 
         all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
@@ -495,6 +488,15 @@ class CompToolbar(AbstractToolbar):
 
     def upload_to_slowpics(self) -> bool:
         try:
+            try:
+                import requests  # noqa: F401
+                import requests_toolbelt  # noqa: F401
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError(
+                    'You are missing `requests` and `requests` toolbelt!\n'
+                    'Install them with "pip install requests requests_toolbelt"!'
+                )
+
             self.main.current_output.graphics_scene_item.setPixmap(
                 self.main.current_output.graphics_scene_item.pixmap().copy()
             )

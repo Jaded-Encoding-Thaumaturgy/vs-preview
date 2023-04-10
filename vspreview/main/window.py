@@ -352,8 +352,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                         global_length = storage_contents.count('\n')
             except FileNotFoundError:
                 if self.settings.force_old_storages_removal or i == 0:
-                    storage_path.unlink()
-                    broken_storage = True
+                    if storage_path.exists():
+                        storage_path.unlink()
+                        broken_storage = True
                 else:
                     logging.warning(
                         '\n\tThe storage was created on an old version of VSPreview.'

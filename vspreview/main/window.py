@@ -260,7 +260,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                         continue
 
                     if getmtime(module.__file__) > self.last_reload_time:
-                        print(name)
+                        logging.debug(f'Hot reloaded Python Package: "{name}"')
                         sys.modules[name] = reload_module(module)
 
             self.env = vpy.variables(

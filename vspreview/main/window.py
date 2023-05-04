@@ -4,7 +4,10 @@ import io
 import logging
 import sys
 from fractions import Fraction
+from importlib import reload as reload_module
+from os.path import exists, getmtime, isfile
 from pathlib import Path
+from time import time
 from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
@@ -102,6 +105,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.app = cast(QApplication, QApplication.instance())
         assert self.app
+
+        self.last_reload_time = time()
 
         if self.settings.dark_theme_enabled:
             try:
@@ -243,6 +248,21 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             pass
 
         try:
+            if reloading:
+                for name, module in list(sys.modules.items()):
+                    if not hasattr(module, '__file__') or module.__file__ is None:
+                        continue
+
+                    if 'vspreview' in module.__file__:
+                        continue
+
+                    if not exists(module.__file__) or not isfile(module.__file__):
+                        continue
+
+                    if getmtime(module.__file__) > self.last_reload_time:
+                        print(name)
+                        sys.modules[name] = reload_module(module)
+
             self.env = vpy.variables(
                 dict(self.external_args),
                 environment=vs.get_current_environment(),
@@ -268,6 +288,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             if argv_orig is not None:
                 sys.argv = argv_orig
             sys.path.pop()
+            self.last_reload_time = time()
 
         if len(vs.get_outputs()) == 0:
             logging.error('Script has no outputs set.')

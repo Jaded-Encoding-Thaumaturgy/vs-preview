@@ -484,7 +484,7 @@ class SceningToolbar(AbstractToolbar):
                 continue
             offset = offset_to_time(track.offset)
             if offset is None:
-                logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't suported.")
+                logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't supported.")
                 continue
             start = Frame(offset)
 
@@ -554,7 +554,7 @@ class SceningToolbar(AbstractToolbar):
         try:
             root = ElementTree.parse(str(path)).getroot()
         except ElementTree.ParseError as exc:
-            logging.warning(f"Scening import: error occured while parsing '{path.name}':")
+            logging.warning(f"Scening import: error occurred while parsing '{path.name}':")
             logging.warning(exc.msg)
             return
         for chapter in root.iter('ChapterAtom'):

@@ -177,7 +177,7 @@ class VideoOutputs(Outputs[VideoOutput]):
             from vsdfft.spectrum import FFTSpectrum
         except ModuleNotFoundError:
             raise RuntimeError(
-                'vspreview: You can\'t chage to this view mode. You\'re missing the `vsdfft` package!'
+                'vspreview: You can\'t change to this view mode. You\'re missing the `vsdfft` package!'
             )
 
         if not self._fft_spectr_items or force_cache:

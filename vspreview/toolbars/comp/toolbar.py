@@ -44,7 +44,7 @@ def clear_filename(filename: str) -> str:
 
     filename = ''.join(c for c in filename if c not in blacklist)
 
-    # Remove all charcters below code point 32
+    # Remove all characters below code point 32
     filename = ''.join(c for c in filename if 31 < ord(c))
     filename = unicodedata.normalize('NFKD', filename).rstrip('. ').strip()
 
@@ -216,8 +216,7 @@ class Worker(QObject):
         self.progress_status.emit(url, 0, 0)
 
         url_out = (
-            conf.path.parent / 'Old Comps'
-            / clear_filename(f'{conf.collection_name} - {response.text}')
+            conf.path.parent / 'Old Comps' / clear_filename(f'{conf.collection_name} - {response.text}')
         ).with_suffix('.url')
         url_out.parent.mkdir(parents=True, exist_ok=True)
         url_out.touch(exist_ok=True)

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from ..abstracts import AbstractYAMLObject
+
+__all__ = [
+    'YAMLObjectWrapper'
+]
 
 
 class YAMLObjectWrapper(AbstractYAMLObject):
@@ -54,4 +58,4 @@ class YAMLObjectWrapper(AbstractYAMLObject):
         return f'{self.__class__.__name__}({self.value})'
 
     def __get_storable_attr__(self) -> tuple[str, ...]:
-        return cast(tuple, self.__slots__)
+        return self.__slots__

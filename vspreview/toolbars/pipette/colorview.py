@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from PyQt5.QtGui import QColor, QPainter, QPaintEvent
-from PyQt5.QtWidgets import QWidget
+from PyQt6.QtGui import QColor, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QWidget
+
+__all__ = [
+    'ColorView'
+]
 
 
 class ColorView(QWidget):

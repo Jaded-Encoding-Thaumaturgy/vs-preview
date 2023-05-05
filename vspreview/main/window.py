@@ -1,24 +1,27 @@
 from __future__ import annotations
-from fractions import Fraction
 
-import gc
 import io
 import logging
 import sys
-from itertools import count
-from os.path import expanduser, expandvars
+from fractions import Fraction
+from importlib import reload as reload_module
 from pathlib import Path
-from traceback import FrameSummary, TracebackException
-from typing import Any, Mapping, cast
+from pkgutil import iter_modules
+from time import time
+from typing import Any, Iterable, Mapping, cast
 
-import yaml
-from PyQt5.QtCore import QEvent, QRectF, pyqtSignal
-from PyQt5.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
-from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QOpenGLWidget, QSizePolicy
-from vstools import ChromaLocation, ColorRange, Matrix, Primaries, Transfer, vs
+import vapoursynth as vs
+from PyQt6.QtCore import QByteArray, QEvent, QRectF, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
+from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QMainWindow, QSizePolicy
+from vsengine import vpy  # type: ignore
 
-from ..core import AbstractMainWindow, ExtendedWidget, Frame, Time, VBoxLayout, VideoOutput, ViewMode, try_load
-from ..core.custom import DragNavigator, GraphicsImageItem, GraphicsView, StatusBar
+from ..core import (
+    PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView,
+    QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts,
+    get_current_environment, make_environment, try_load
+)
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -28,47 +31,51 @@ from .timeline import Timeline
 
 if sys.platform == 'win32':
     try:
-        import win32gui
-        from PIL import _imagingcms
+        import win32gui  # type: ignore[import]
+        from PIL import _imagingcms  # type: ignore[attr-defined]
     except ImportError:
         _imagingcms = None
+
+    from os.path import expandvars
+else:
+    from os.path import expanduser
 
 try:
     from yaml import CDumper as yaml_Dumper
     from yaml import CLoader as yaml_Loader
 except ImportError:
-    from yaml import Dumper as yaml_Dumper
-    from yaml import Loader as yaml_Loader
+    from yaml import Dumper as yaml_Dumper  # type: ignore
+    from yaml import Loader as yaml_Loader  # type: ignore
+
+from yaml import MarkedYAMLError, YAMLError
+
+__all__ = [
+    'MainWindow'
+]
 
 
-class MainWindow(AbstractMainWindow):
+class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
+    current_viewmode: ViewMode
+
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
-        expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')
+        expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
     )
-    # used for formats with subsampling
-    VS_OUTPUT_MATRIX = Matrix.BT709
-    VS_OUTPUT_TRANSFER = Transfer.BT709
-    VS_OUTPUT_PRIMARIES = Primaries.BT709
-    VS_OUTPUT_RANGE = ColorRange.LIMITED
-    VS_OUTPUT_CHROMALOC = ChromaLocation.LEFT
-    VS_OUTPUT_RESIZER_KWARGS = {
-        'dither_type': 'error_diffusion',
-    }
-    VSP_VERSION = 2.1
-    BREAKING_CHANGES_VERSIONS = list[float]()
+
+    VSP_VERSION = 3.1
+    BREAKING_CHANGES_VERSIONS = list[str](['3.0'])
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
         return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
 
-    EVENT_POLICY = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     storable_attrs = ('settings', 'toolbars')
 
     __slots__ = (
         *storable_attrs, 'app', 'display_scale', 'clipboard',
-        'script_path', 'timeline', 'main_layout',
+        'script_path', 'timeline', 'main_layout', 'autosave_timer',
         'graphics_scene', 'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
         'current_storage_path', 'opengl_widget', 'drag_navigator'
@@ -78,31 +85,36 @@ class MainWindow(AbstractMainWindow):
     reload_signal = pyqtSignal()
     reload_before_signal = pyqtSignal()
     reload_after_signal = pyqtSignal()
+
     toolbars: Toolbars
+    app_settings: SettingsDialog
+    window_settings: WindowSettings
+
+    autosave_timer: Timer
 
     def __init__(self, config_dir: Path) -> None:
+        from ..toolbars import MainToolbar
+
         super().__init__()
 
-        self.settings = MainSettings()
-
-        # logging
-        logging.basicConfig(format='{asctime}: {levelname}: {message}', style='{', level=self.settings.LOG_LEVEL)
-        logging.Formatter.default_msec_format = '%s.%03d'
+        self.settings = MainSettings(MainToolbar)
 
         self.current_config_dir = config_dir / self.VSP_DIR_NAME
         self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
         self.global_storage_path = self.global_config_dir / '.global.yml'
 
-        self.app = QApplication.instance()
+        self.app = cast(QApplication, QApplication.instance())
         assert self.app
+
+        self.last_reload_time = time()
 
         if self.settings.dark_theme_enabled:
             try:
-                from qdarkstyle import load_stylesheet_pyqt5
+                from qdarkstyle import _load_stylesheet  # type: ignore[import]
             except ImportError:
-                self.self.settings.dark_theme_enabled = False
+                self.settings.dark_theme_enabled = False
             else:
-                self.app.setStyleSheet(self.patch_dark_stylesheet(load_stylesheet_pyqt5()))
+                self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
                 self.ensurePolished()
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
@@ -113,13 +125,16 @@ class MainWindow(AbstractMainWindow):
         self.move(int(desktop_size.width() * 0.15), int(desktop_size.height() * 0.075))
         self.setup_ui()
         self.storage_not_found = False
-        self.script_globals = dict[str, Any]()
-
-        self.timecodes = dict[int, dict[tuple[int | None, int | None],
-                                        float | tuple[int, int] | Fraction] | list[float]]()
+        self.timecodes = dict[
+            int, tuple[str | Path | dict[
+                tuple[int | None, int | None], float | tuple[int, int] | Fraction
+            ] | list[Fraction], int | None]
+        ]()
         self.norm_timecodes = dict[int, list[float]]()
 
-        self.user_output_names = {vs.VideoNode: {}, vs.AudioNode: {}, vs.RawNode: {}}
+        self.user_output_names = {
+            vs.VideoNode: dict[int, str](), vs.AudioNode: dict[int, str](), vs.RawNode: dict[int, str]()
+        }
 
         # global
         self.clipboard = self.app.clipboard()
@@ -146,11 +161,12 @@ class MainWindow(AbstractMainWindow):
 
         # display profile
         self.display_profile: QColorSpace | None = None
-        self.current_screen = 0
+        self.current_screen = self.app.primaryScreen()
 
         # init toolbars and outputs
         self.app_settings = SettingsDialog(self)
-        self.toolbars = Toolbars(self)
+
+        Toolbars(self)
 
         for toolbar in self.toolbars:
             self.main_layout.addWidget(toolbar)
@@ -166,15 +182,17 @@ class MainWindow(AbstractMainWindow):
         self.set_qobject_names()
         self.setObjectName('MainWindow')
 
+        self.env: vpy.Script | None = None
+
     def setup_ui(self) -> None:
         self.central_widget = ExtendedWidget(self)
         self.main_layout = VBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
         self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.Window))
-        self.graphics_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.ColorRole.Window))
+        self.graphics_view.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
         self.drag_navigator = DragNavigator(self, self.graphics_view)
 
@@ -199,6 +217,9 @@ class MainWindow(AbstractMainWindow):
         # dialogs
         self.script_error_dialog = ScriptErrorDialog(self)
 
+        self.autosave_timer = Timer(timeout=self.dump_storage_async)
+        self.reload_signal.connect(self.autosave_timer.stop)
+
     def patch_dark_stylesheet(self, stylesheet: str) -> str:
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 
@@ -206,6 +227,8 @@ class MainWindow(AbstractMainWindow):
         self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None
     ) -> None:
+        from random import random
+
         self.external_args = external_args or []
 
         self.toolbars.playback.stop()
@@ -217,48 +240,87 @@ class MainWindow(AbstractMainWindow):
         sys.path.append(str(self.script_path.parent))
 
         # Rewrite args so external args will be forwarded correctly
+        argv_orig = None
         try:
             argv_orig = sys.argv
             sys.argv = [script_path.name]
         except AttributeError:
             pass
 
-        self.script_globals.clear()
-        self.script_globals = dict([('__file__', sys.argv[0])] + self.external_args)
-
         try:
-            ast_compiled = compile(self.script_path.read_bytes(), sys.argv[0], 'exec', optimize=2)
+            if reloading:
+                std_path_lib = Path(logging.__file__).parent.parent
+                std_path_dlls = std_path_lib.parent / 'DLLs'
 
-            exec(ast_compiled, self.script_globals)
-        except BaseException as e:
-            logging.error(e)
+                for module in set(sys.modules.values()) - PRELOADED_MODULES:
+                    if not hasattr(module, '__file__') or module.__file__ is None:
+                        continue
 
-            te = TracebackException.from_exception(e)
-            # remove the first stack frame, which contains our exec() invocation
-            del te.stack[0]
+                    mod_file = Path(module.__file__)
 
-            # replace <string> with script path only for the first stack frames
-            # in order to keep intact exec() invocations down the stack
-            # that we're not concerned with
-            for i, frame in enumerate(te.stack):
-                if frame.filename == '<string>':
-                    te.stack[i] = FrameSummary(
-                        str(self.script_path), frame.lineno, frame.name
-                    )
-                else:
-                    break
+                    if 'vspreview' in mod_file.parts:
+                        continue
+
+                    if std_path_lib in mod_file.parents or std_path_dlls in mod_file.parents:
+                        continue
+
+                    if not mod_file.exists() or not mod_file.is_file():
+                        continue
+
+                    parent = Path(module.__file__)
+
+                    def _traverse(path: Path) -> Iterable[bool]:
+                        for module in iter_modules([path]):
+                            newpath = Path(module.module_finder) / module.name
+
+                            if module.ispkg:
+                                if _traverse([newpath]):
+                                    return True
+
+                                continue
+
+                            newpath = newpath.with_suffix('.py')
+
+                            try:
+                                stats = newpath.stat()
+                            except FileNotFoundError:
+                                return False
+
+                            return stats.st_mtime > self.last_reload_time
+
+                    if _traverse(parent):
+                        try:
+                            logging.debug(f'Hot reloaded Python Package: "{module.__name__}"')
+                            reload_module(module)
+                        except Exception as e:
+                            logging.error(e)
+
+            self.env = vpy.variables(
+                dict(self.external_args),
+                environment=vs.get_current_environment(),
+                module_name="__vspreview__"
+            ).result()
+            self.env.module.__dict__['_monkey_runpy'] = random()
+            self.env = vpy.script(script_path, environment=self.env).result()
+        except vpy.ExecutionFailed as e:
+            from traceback import TracebackException
+
+            logging.error(e.parent_error)
+
+            te = TracebackException.from_exception(e.parent_error)
             logging.error(''.join(te.format()))
 
             self.script_exec_failed = True
             return self.handle_script_error(
                 '\n'.join([
-                    'An error occured while evaluating script:',
                     str(e), 'See console output for details.'
                 ])
             )
         finally:
-            sys.argv = argv_orig
+            if argv_orig is not None:
+                sys.argv = argv_orig
             sys.path.pop()
+            self.last_reload_time = time()
 
         if len(vs.get_outputs()) == 0:
             logging.error('Script has no outputs set.')
@@ -266,29 +328,51 @@ class MainWindow(AbstractMainWindow):
             self.handle_script_error('Script has no outputs set.')
             return
 
+        reload_from_error = self.script_exec_failed and reloading
         self.script_exec_failed = False
         self.current_storage_path = (self.current_config_dir / self.script_path.stem).with_suffix('.yml')
 
-        self.storage_not_found = not self.current_storage_path.exists()
+        self.storage_not_found = not (
+            self.current_storage_path.exists() and self.current_storage_path.read_text().strip()
+        )
 
-        if self.storage_not_found:
-            self.load_storage()
+        load_error = None
 
-        if not reloading:
-            self.toolbars.main.rescan_outputs()
-            self.toolbars.playback.rescan_outputs()
+        try:
+            if self.storage_not_found or reload_from_error:
+                self.load_storage()
 
-        if not self.storage_not_found:
-            self.load_storage()
+            if not reloading:
+                self.toolbars.main.rescan_outputs()
+                self.toolbars.playback.rescan_outputs()
 
-        self.change_video_viewmode(self.current_viewmode)
+            if not self.storage_not_found:
+                self.load_storage()
+        except Exception as e:
+            load_error = e
 
-        self.toolbars.misc.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
+        with self.env:
+            vs.register_on_destroy(self.gc_collect)
 
-        if not reloading:
-            self.switch_output(self.settings.output_index)
-            if start_frame is not None:
-                self.switch_frame(Frame(start_frame))
+        if load_error is None:
+            self.change_video_viewmode(self.current_viewmode)
+
+            self.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
+
+            if not reloading:
+                self.switch_output(self.settings.output_index)
+                if start_frame is not None:
+                    self.switch_frame(Frame(start_frame))
+        else:
+            error_string = "There was an error while loading the script!\n"
+
+            logging.error(error_string + vpy.textwrap.indent(vpy.ExecutionFailed.extract_traceback(load_error), '| '))
+
+            self.script_exec_failed = True
+
+            return self.handle_script_error(
+                f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.'
+            )
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:
@@ -310,7 +394,7 @@ class MainWindow(AbstractMainWindow):
                 with io.open(storage_path, 'r', encoding='utf-8') as storage_file:
                     version = storage_file.readline()
                     if 'Version' not in version or any({
-                        version.endswith(f'@{v}') for v in self.BREAKING_CHANGES_VERSIONS
+                        version.strip().endswith(f'@{v}') for v in self.BREAKING_CHANGES_VERSIONS
                     }):
                         raise FileNotFoundError
 
@@ -320,9 +404,10 @@ class MainWindow(AbstractMainWindow):
                     if i == 0:
                         global_length = storage_contents.count('\n')
             except FileNotFoundError:
-                if self.settings.force_old_storages_removal:
-                    storage_path.unlink()
-                    broken_storage = True
+                if self.settings.force_old_storages_removal or i == 0:
+                    if storage_path.exists():
+                        storage_path.unlink()
+                        broken_storage = True
                 else:
                     logging.warning(
                         '\n\tThe storage was created on an old version of VSPreview.'
@@ -337,8 +422,8 @@ class MainWindow(AbstractMainWindow):
         loader = yaml_Loader(storage_contents)
         try:
             loader.get_single_data()
-        except yaml.YAMLError as exc:
-            if isinstance(exc, yaml.MarkedYAMLError):
+        except YAMLError as exc:
+            if isinstance(exc, MarkedYAMLError):
                 if exc.problem_mark:
                     line = exc.problem_mark.line + 1
                     isglobal = line <= global_length
@@ -360,7 +445,7 @@ class MainWindow(AbstractMainWindow):
 
         if self.settings.color_management:
             assert self.app
-            self.current_screen = self.app.desktop().screenNumber(self)
+            self.current_screen = self.app.primaryScreen()
             self.update_display_profile()
 
     @fire_and_forget
@@ -369,6 +454,8 @@ class MainWindow(AbstractMainWindow):
         self.dump_storage()
 
     def dump_storage(self, manually: bool = False) -> None:
+        from itertools import count
+
         if self.script_exec_failed:
             return
 
@@ -377,7 +464,7 @@ class MainWindow(AbstractMainWindow):
 
         backup_paths = [
             self.current_storage_path.with_suffix(f'.old{i}.yml')
-            for i in range(self.toolbars.misc.settings.STORAGE_BACKUPS_COUNT, 0, -1)
+            for i in range(self.settings.STORAGE_BACKUPS_COUNT, 0, -1)
         ] + [self.current_storage_path]
 
         for src_path, dest_path in zip(backup_paths[1:], backup_paths[:-1]):
@@ -412,7 +499,7 @@ class MainWindow(AbstractMainWindow):
         # but i'm referencing settings objects before in the dict
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
-        data = cast(dict, self.__getstate__())
+        data = cast(dict[str, Any], self.__getstate__())
         data['_globals'] = {
             'settings': data['settings'],
             'window_settings': data['window_settings']
@@ -451,6 +538,9 @@ class MainWindow(AbstractMainWindow):
         return storage_dump.getvalue()
 
     def init_outputs(self) -> None:
+        if not self.outputs:
+            return
+
         self.graphics_scene.clear()
 
         for output in self.outputs:
@@ -471,34 +561,63 @@ class MainWindow(AbstractMainWindow):
         self.norm_timecodes.clear()
         for v in self.user_output_names.values():
             v.clear()
-        self.outputs.clear()
-        gc.collect(generation=0)
-        gc.collect(generation=1)
-        gc.collect(generation=2)
+        if self.outputs:
+            self.outputs.clear()
+        self.gc_collect()
+        old_environment = get_current_environment()
 
-        self.load_script(self.script_path, self.external_args, True)
+        self.clear_monkey_runpy()
+        make_environment()
+        old_environment.dispose()
+        self.gc_collect()
+
+        try:
+            self.load_script(self.script_path, reloading=True)
+        finally:
+            self.clear_monkey_runpy()
 
         self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
 
+    def clear_monkey_runpy(self) -> None:
+        if self.env and '_monkey_runpy' in self.env.module.__dict__:
+            key = self.env.module.__dict__['_monkey_runpy']
+
+            if key in _monkey_runpy_dicts:
+                _monkey_runpy_dicts[key].clear()
+                _monkey_runpy_dicts.pop(key, None)
+            elif _monkey_runpy_dicts:
+                for env in _monkey_runpy_dicts.values():
+                    env.clear()
+                _monkey_runpy_dicts.clear()
+
+        self.gc_collect()
+
+    def gc_collect(self) -> None:
+        import gc
+
+        for i in range(3):
+            gc.collect(generation=i)
+
+        for _ in range(3):
+            gc.collect()
+
     def switch_frame(
-        self, pos: Frame | Time | int | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
+        self, pos: Frame | int, *, render_frame: bool | Iterable[vs.VideoFrame | None] = True
     ) -> None:
-        if pos is None:
-            logging.debug('switch_frame: position is None!')
-            return
+        frame = Frame(pos)
 
-        frame = Frame(min(max(0, int(Frame(pos))), int(self.current_output.total_frames)))
-
-        if self.current_output.last_showed_frame == frame > self.current_output.end_frame:
+        if (not 0 <= frame < self.current_output.total_frames):
             return
 
         if render_frame:
             if isinstance(render_frame, bool):
                 self.current_output.render_frame(frame, output_colorspace=self.display_profile)
             else:
-                self.current_output.render_frame(frame, *render_frame, output_colorspace=self.display_profile)
+                self.current_output.render_frame(
+                    frame, *render_frame, output_colorspace=self.display_profile  # type: ignore
+                )
 
         self.current_output.last_showed_frame = frame
 
@@ -510,7 +629,7 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
-        if len(self.outputs) == 0:
+        if not self.outputs or len(self.outputs) == 0:
             return
 
         if isinstance(value, VideoOutput):
@@ -530,12 +649,9 @@ class MainWindow(AbstractMainWindow):
 
         # current_output relies on outputs_combobox
         self.toolbars.main.on_current_output_changed(index, prev_index)
-        self.timeline.set_end_frame(self.current_output.end_frame)
+        self.timeline.set_end_frame(self.current_output)
 
-        if self.current_output.last_showed_frame:
-            self.switch_frame(self.current_output.last_showed_frame)
-        else:
-            self.switch_frame(0)
+        self.switch_frame(self.current_output.last_showed_frame)
 
         for output in self.outputs:
             output.graphics_scene_item.hide()
@@ -555,13 +671,17 @@ class MainWindow(AbstractMainWindow):
 
     @current_output.setter
     def current_output(self, value: VideoOutput) -> None:
+        if not self.outputs:
+            return
+
         self.switch_output(self.outputs.index_of(value))
 
     @property
-    def outputs(self) -> VideoOutputs:
+    def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs
 
     def handle_script_error(self, message: str) -> None:
+        self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.open()
 
@@ -592,7 +712,7 @@ class MainWindow(AbstractMainWindow):
 
             assert self.app
 
-            screen_name = self.app.screens()[self.current_screen].name()
+            screen_name = self.current_screen.name()
 
             dc = win32gui.CreateDC(screen_name, None, None)
 
@@ -602,7 +722,7 @@ class MainWindow(AbstractMainWindow):
 
             if icc_path is not None:
                 with open(icc_path, 'rb') as icc:
-                    self.display_profile = QColorSpace.fromIccProfile(icc.read())
+                    self.display_profile = QColorSpace.fromIccProfile(QByteArray(len(x := icc.read()), x))
 
         if hasattr(self, 'current_output') and self.current_output is not None and self.display_profile is not None:
             self.switch_frame(self.current_output.last_showed_frame)
@@ -626,7 +746,9 @@ class MainWindow(AbstractMainWindow):
             times = sorted(set(output.timecodes), reverse=True)
 
             if len(times) >= 2:
-                return self.statusbar.fps_label.setText(f'VFR {",".join(f"{fps:.3f}" for fps in times)} fps ')
+                return self.statusbar.fps_label.setText(
+                    f'VFR {",".join(f"{float(fps):.3f}" for fps in times)} fps '
+                )
 
         if output.fps_den != 0:
             return self.statusbar.fps_label.setText(
@@ -636,15 +758,17 @@ class MainWindow(AbstractMainWindow):
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
     def update_timecodes_info(
-        self, index: int, timecodes: dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[float]
+        self, index: int, timecodes: str | Path | dict[
+            tuple[int | None, int | None], float | tuple[int, int] | Fraction
+        ] | list[Fraction], den: int | None = None
     ) -> None:
-        self.timecodes[index] = timecodes
+        self.timecodes[index] = (timecodes, den)
 
     def set_node_name(self, node_type: type, index: int, name: str) -> None:
         self.user_output_names[node_type][index] = name
 
     def event(self, event: QEvent) -> bool:
-        if event.type() == QEvent.LayoutRequest:
+        if event.type() == QEvent.Type.LayoutRequest:
             self.timeline.full_repaint()
 
         return super().event(event)
@@ -663,10 +787,56 @@ class MainWindow(AbstractMainWindow):
     def moveEvent(self, _move_event: QMoveEvent) -> None:
         if self.settings.color_management:
             assert self.app
-            screen_number = self.app.desktop().screenNumber(self)
+            screen_number = self.app.primaryScreen()
             if self.current_screen != screen_number:
                 self.current_screen = screen_number
                 self.update_display_profile()
+
+    def refresh_video_outputs(self) -> None:
+        if not self.outputs:
+            return
+
+        playback_active = self.toolbars.playback.play_timer.isActive()
+
+        if playback_active:
+            self.toolbars.playback.stop()
+
+        self.outputs.items = [
+            self.outputs.get_new_output(old.source.clip, old)
+            for old in self.outputs.items
+        ]
+
+        self.init_outputs()
+
+        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
+
+        if playback_active:
+            self.toolbars.playback.play()
+
+    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
+        if not self.outputs:
+            return
+
+        playback_active = self.toolbars.playback.play_timer.isActive()
+
+        if playback_active:
+            self.toolbars.playback.stop()
+
+        if new_viewmode == ViewMode.NORMAL:
+            self.outputs.switchToNormalView()
+        elif new_viewmode == ViewMode.FFTSPECTRUM:
+            self.outputs.switchToFFTSpectrumView(force_cache)
+        else:
+            raise ValueError('Invalid ViewMode passed!')
+
+        self.current_viewmode = new_viewmode
+
+        self.init_outputs()
+
+        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
+
+        if playback_active:
+            self.toolbars.playback.play()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
@@ -679,7 +849,7 @@ class MainWindow(AbstractMainWindow):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         # toolbars is singleton, so it initialize itself right in its __setstate__()
-        self.window_settings = {}
+        self.window_settings = {}  # type: ignore
 
         try:
             try_load(state, 'window_settings', dict, self)
@@ -689,5 +859,5 @@ class MainWindow(AbstractMainWindow):
             try_load(state, 'window_state', bytes, self.window_settings)
 
         self.timeline.mode = self.window_settings.timeline_mode
-        self.restoreGeometry(self.window_settings.window_geometry)
-        self.restoreState(self.window_settings.window_state)
+        self.restoreGeometry(QByteArray(len(x := self.window_settings.window_geometry), x))
+        self.restoreState(QByteArray(len(x := self.window_settings.window_state), x))

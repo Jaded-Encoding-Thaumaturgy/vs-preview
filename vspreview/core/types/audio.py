@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from array import array
 from math import floor
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
-from PyQt5.QtMultimedia import QAudioDeviceInfo, QAudioFormat, QAudioOutput
-from vstools import vs
+import vapoursynth as vs
+from PyQt6.QtCore import QIODevice
+from PyQt6.QtMultimedia import QAudioFormat, QAudioOutput, QAudioSink
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .units import Frame, Time
+
+__all__ = [
+    'AudioOutput'
+]
 
 
 class AudioOutput(AbstractYAMLObject):
@@ -18,7 +23,7 @@ class AudioOutput(AbstractYAMLObject):
 
     __slots__ = (
         *storable_attrs, 'vs_output', 'index', 'fps_num', 'fps_den', 'format',
-        'total_frames', 'total_time', 'end_frame', 'end_time', 'fps', 'is_mono',
+        'total_frames', 'total_time', 'end_frame', 'fps', 'is_mono',
         'source_vs_output', 'main', 'qformat', 'qoutput', 'iodevice', 'flags'
     )
 
@@ -33,9 +38,9 @@ class AudioOutput(AbstractYAMLObject):
         self.is_mono = self.vs_output.num_channels == 1
 
         (self.arrayType, sampleTypeQ) = (
-            'f', QAudioFormat.Float
+            'f', QAudioFormat.SampleFormat.Float
         ) if self.vs_output.sample_type == vs.FLOAT else (
-            'I' if self.vs_output.bits_per_sample <= 16 else 'L', QAudioFormat.SignedInt
+            'I' if self.vs_output.bits_per_sample <= 16 else 'L', QAudioFormat.SampleFormat.Int16
         )
 
         sample_size = 8 * self.vs_output.bytes_per_sample
@@ -43,33 +48,53 @@ class AudioOutput(AbstractYAMLObject):
         self.qformat = QAudioFormat()
         self.qformat.setChannelCount(self.vs_output.num_channels)
         self.qformat.setSampleRate(self.vs_output.sample_rate)
-        self.qformat.setSampleType(sampleTypeQ)
-        self.qformat.setSampleSize(sample_size)
-        self.qformat.setByteOrder(QAudioFormat.LittleEndian)
-        self.qformat.setCodec('audio/pcm')
+        self.qformat.setSampleFormat(sampleTypeQ)
+        # self.qformat.setSampleSize(sample_size)
+        # self.qformat.setByteOrder(Qt.LittleEndian)
+        # self.qformat.setCodec('audio/pcm')
 
-        if not QAudioDeviceInfo(QAudioDeviceInfo.defaultOutputDevice()).isFormatSupported(self.qformat):
+        self.qoutput = QAudioOutput(self.main)
+
+        if not self.qoutput.device().isFormatSupported(self.qformat):
             raise RuntimeError('Audio format not supported')
 
-        self.qoutput = QAudioOutput(self.qformat, self.main)
-        self.qoutput.setBufferSize(sample_size * self.SAMPLES_PER_FRAME)
-        self.iodevice = self.qoutput.start()
+        self.qaudiosink = QAudioSink(self.qoutput.device(), self.qformat, self.main)
+        self.qaudiosink.setBufferSize(sample_size * self.SAMPLES_PER_FRAME)
+
+        iodevice = cast(QIODevice | None, self.qaudiosink.start())
+
+        if iodevice is None:
+            from vstools import CustomRuntimeError
+
+            raise CustomRuntimeError(
+                'The current QT version has a bug for dll loading, you need to go into '
+                'C:\\System32 and copy "mfplat.dll" into "mfplat.dll.dll".'
+            )
+
+        self.iodevice = iodevice
 
         self.fps_num = self.vs_output.sample_rate
         self.fps_den = self.SAMPLES_PER_FRAME
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.vs_output.num_frames)
         self.total_time = self.to_time(self.total_frames - Frame(1))
-        self.end_frame = Frame(int(self.total_frames) - 1)
-        self.end_time = self.to_time(self.end_frame)
 
         self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * (self.vs_output.bytes_per_sample // 2))
 
         if not hasattr(self, 'name'):
-            self.name = self.main.user_output_names[vs.AudioNode].get(self.index, 'Track ' + str(self.index))
+            from ...models.outputs import AudioOutputs
+
+            if vs_output in (vs_outputs := list(vs.get_outputs().values())):
+                self.name = self.main.user_output_names[vs.AudioNode].get(
+                    vs_outputs.index(vs_output), 'Track ' + str(self.index)
+                )
+                if isinstance(self.main.toolbars.playback.audio_outputs, AudioOutputs):
+                    self.main.toolbars.playback.audio_outputs.setData(
+                        self.main.toolbars.playback.audio_outputs.index(index), self.name
+                    )
 
     def clear(self) -> None:
-        self.source_vs_output = self.vs_output = None
+        self.source_vs_output = self.vs_output = None  # type: ignore
 
     def render_audio_frame(self, frame: Frame) -> None:
         self.render_raw_audio_frame(self.vs_output.get_frame(int(frame)))

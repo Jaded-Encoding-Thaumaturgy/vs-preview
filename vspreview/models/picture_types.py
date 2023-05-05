@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, cast
+from typing import Any, Iterator
 
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from ..core import PictureType
+
+__all__ = [
+    'PictureTypes'
+]
 
 
 class PictureTypes(QAbstractListModel):
@@ -12,6 +16,7 @@ class PictureTypes(QAbstractListModel):
 
     def __init__(self) -> None:
         super().__init__()
+
         self.items = PictureType.list()
 
     def __getitem__(self, i: int) -> PictureType:
@@ -26,21 +31,22 @@ class PictureTypes(QAbstractListModel):
     def index_of(self, item: PictureType) -> int:
         return self.items.index(item)
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if (not index.isValid() or index.row() >= len(self.items)):
             return None
 
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return str(self.items[index.row()])
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
+
         return None
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.items)
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
+            return Qt.ItemFlag.ItemIsEnabled
 
-        return super().flags(index) | Qt.ItemIsEditable
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable

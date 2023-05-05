@@ -1,12 +1,13 @@
 
 from __future__ import annotations
 
-from fractions import Fraction
 import inspect
+from fractions import Fraction
 from pathlib import Path
 
-from vstools import vs
+import vapoursynth as vs
 
+from .info import is_preview
 from .timecodes import set_timecodes
 
 __all__ = [
@@ -15,13 +16,11 @@ __all__ = [
 
 
 def set_output(
-    node: vs.RawNode, name: str | None = None,
+    node: vs.RawNode, name: str | bool | None = None,
     *, timecodes: str | Path | dict[
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
-    ] | list[float] | None = None, denominator: int = 1001
+    ] | list[Fraction] | None = None, denominator: int = 1001
 ) -> None:
-    from ..core import main_window
-
     index = len(vs.get_outputs())
 
     ref_id = str(id(node))
@@ -33,7 +32,7 @@ def set_output(
     else:
         title, node_type = 'Node', vs.RawNode
 
-    if not name:
+    if (not name and name is not False) or name is True:
         name = f"{title} {index}"
 
         current_frame = inspect.currentframe()
@@ -47,9 +46,14 @@ def set_output(
                 break
 
     node.set_output(index)
-    main_window().set_node_name(node_type, index, name.title())  # type: ignore
 
-    if timecodes:
-        set_timecodes(index, timecodes, (
-            node.fps_den if (node.fps_den and node.fps_num) else 1001
-        ) if denominator is None else denominator)
+    if is_preview():
+        from ..core import main_window
+
+        if isinstance(name, str):
+            main_window().set_node_name(node_type, index, name.title())
+
+        if timecodes:
+            set_timecodes(index, timecodes, (
+                node.fps_den if (node.fps_den and node.fps_num) else 1001  # type: ignore[attr-defined]
+            ) if isinstance(node, vs.VideoNode) else denominator)

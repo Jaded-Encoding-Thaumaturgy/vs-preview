@@ -5,21 +5,27 @@ import re
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Mapping, cast
+from typing import TYPE_CHECKING, Any, Callable, Mapping, cast
 
-from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QFileDialog, QLabel
+from PyQt6.QtCore import QKeyCombination, QModelIndex, Qt
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QFileDialog, QLabel
 
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, CheckBox, Frame, HBoxLayout, LineEdit, PushButton, Time, try_load
+    AbstractToolbar, CheckBox, ComboBox, Frame, HBoxLayout, LineEdit, Notches, PushButton, Time, try_load
 )
-from ...core.custom import ComboBox
-from ...main.timeline import Notches
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
 from .dialog import SceningListDialog
 from .settings import SceningSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
+
+
+__all__ = [
+    'SceningToolbar'
+]
 
 
 class SceningToolbar(AbstractToolbar):
@@ -40,8 +46,10 @@ class SceningToolbar(AbstractToolbar):
         'seek_to_next_button', 'seek_to_prev_button'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, SceningSettings())
+    settings: SceningSettings
+
+    def __init__(self, main: MainWindow) -> None:
+        super().__init__(main, SceningSettings(self))
         self.setup_ui()
 
         self.lists = SceningLists()
@@ -124,7 +132,7 @@ class SceningToolbar(AbstractToolbar):
 
         self.toggle_second_frame_button = PushButton('🅱️', tooltip='Toggle End of New Scene', checkable=True)
 
-        self.label_lineedit = LineEdit(placeholder='New Scene Label')
+        self.label_lineedit = LineEdit('New Scene Label')
 
         self.add_to_list_button = PushButton('Add to List', enabled=False)
 
@@ -133,8 +141,8 @@ class SceningToolbar(AbstractToolbar):
         self.remove_at_current_frame_button = PushButton('Remove at Current Frame', enabled=False)
 
         self.export_template_lineedit = LineEdit(
+            'Export Template',
             text=self.settings.default_export_template,
-            placeholderText='Export Template',
             tooltip=(
                 r'Use {start} and {end} as placeholders.'
                 r'Both are valid for single frame scenes. '
@@ -176,22 +184,30 @@ class SceningToolbar(AbstractToolbar):
 
     def add_shortcuts(self) -> None:
         for i, key in enumerate(self.num_keys[:-2]):
-            self.add_shortcut(Qt.SHIFT + key, partial(self.switch_list, i))
+            self.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, key), partial(self.switch_list, i))  # type: ignore
 
-        self.add_shortcut(Qt.CTRL + Qt.Key_Space, self.on_toggle_single_frame)
-        self.add_shortcut(Qt.CTRL + Qt.Key_Left, self.seek_to_prev_button.click)
-        self.add_shortcut(Qt.CTRL + Qt.Key_Right, self.seek_to_next_button.click)
-        if self.main.settings.azerty_keybinds:
-            self.add_shortcut(Qt.Key_A, self.toggle_first_frame_button.click)
-            self.add_shortcut(Qt.Key_Z, self.toggle_second_frame_button.click)
-        else:
-            self.add_shortcut(Qt.Key_Q, self.toggle_first_frame_button.click)
-            self.add_shortcut(Qt.Key_W, self.toggle_second_frame_button.click)
-        self.add_shortcut(Qt.Key_E, self.add_to_list_button.click)
-        self.add_shortcut(Qt.Key_R, self.remove_last_from_list_button.click)
-        self.add_shortcut(Qt.SHIFT + Qt.Key_R, self.remove_at_current_frame_button.click)
         self.add_shortcut(
-            Qt.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.on_toggle_single_frame
+        )
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Left).toCombined(), self.seek_to_prev_button.click
+        )
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Right).toCombined(), self.seek_to_next_button.click
+        )
+        if self.main.settings.azerty_keybinds:
+            self.add_shortcut(Qt.Key.Key_A, self.toggle_first_frame_button.click)
+            self.add_shortcut(Qt.Key.Key_Z, self.toggle_second_frame_button.click)
+        else:
+            self.add_shortcut(Qt.Key.Key_Q, self.toggle_first_frame_button.click)
+            self.add_shortcut(Qt.Key.Key_W, self.toggle_second_frame_button.click)
+        self.add_shortcut(Qt.Key.Key_E, self.add_to_list_button.click)
+        self.add_shortcut(Qt.Key.Key_R, self.remove_last_from_list_button.click)
+        self.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_R).toCombined(), self.remove_at_current_frame_button.click
+        )
+        self.add_shortcut(
+            Qt.Key.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
                 str(self.main.current_output.last_showed_frame)
             )
         )
@@ -216,7 +232,8 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             return marks
         for scene in self.current_list:
-            marks.add(scene, cast(QColor, Qt.green))
+            marks.add(scene, cast(QColor, Qt.GlobalColor.green))
+
         return marks
 
     @property
@@ -310,11 +327,15 @@ class SceningToolbar(AbstractToolbar):
     def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()
-        cast(SceningList, self.current_list).add(self.main.current_output.last_showed_frame)
+
+        assert self.current_list
+
+        self.current_list.add(self.main.current_output.last_showed_frame, label=self.label_lineedit.text())
+
         self.check_remove_export_possibility()
 
     def on_add_to_list_clicked(self, checked: bool | None = None) -> None:
-        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())
+        self.current_list.add(self.first_frame, self.second_frame, self.label_lineedit.text())  # type: ignore
 
         if self.toggle_first_frame_button.isChecked():
             self.toggle_first_frame_button.click()
@@ -408,7 +429,7 @@ class SceningToolbar(AbstractToolbar):
         Text is ignored.
         '''
         try:
-            from pysubs2 import load as pysubs2_load
+            from pysubs2 import load as pysubs2_load  # type: ignore[import]
         except ModuleNotFoundError:
             raise RuntimeError(
                 'vspreview: Can\'t import scenes from ass file, you\'re missing the `pysubs2` package!'
@@ -440,7 +461,7 @@ class SceningToolbar(AbstractToolbar):
         Uses TITLE for scene label.
         '''
         try:
-            from cueparser import CueSheet
+            from cueparser import CueSheet  # type: ignore[import]
         except ModuleNotFoundError:
             raise RuntimeError(
                 'vspreview: Can\'t import scenes from cue file, you\'re missing the `cueparser` package!'
@@ -463,7 +484,7 @@ class SceningToolbar(AbstractToolbar):
                 continue
             offset = offset_to_time(track.offset)
             if offset is None:
-                logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't suported.")
+                logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't supported.")
                 continue
             start = Frame(offset)
 
@@ -533,7 +554,7 @@ class SceningToolbar(AbstractToolbar):
         try:
             root = ElementTree.parse(str(path)).getroot()
         except ElementTree.ParseError as exc:
-            logging.warning(f"Scening import: error occured while parsing '{path.name}':")
+            logging.warning(f"Scening import: error occurred while parsing '{path.name}':")
             logging.warning(exc.msg)
             return
         for chapter in root.iter('ChapterAtom'):
@@ -683,8 +704,8 @@ class SceningToolbar(AbstractToolbar):
         )
 
         assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
-        if len(match := assume_pattern.findall(path.read_text())) > 0:
-            default_fps = float(match[0])
+        if len(mmatch := assume_pattern.findall(path.read_text())) > 0:
+            default_fps = float(mmatch[0])
         else:
             logging.warning('Scening import: "assume" entry not found.')
             return
@@ -696,7 +717,7 @@ class SceningToolbar(AbstractToolbar):
                 continue
 
             interval = Time(seconds=float(match[1]))
-            fps = float(match[2]) if match.lastindex >= 2 else default_fps
+            fps = float(match[2]) if (match.lastindex or 0) >= 2 else default_fps
 
             try:
                 scening_list.add(Frame(pos), Frame(pos + interval), '{:.3f} fps'.format(fps))

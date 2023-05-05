@@ -4,6 +4,10 @@ from typing import Any, Mapping
 
 from ...core import AbstractToolbarSettings, CheckBox, try_load
 
+__all__ = [
+    'CompSettings'
+]
+
 
 class CompSettings(AbstractToolbarSettings):
     __slots__ = ('delete_cache_checkbox', )
@@ -29,6 +33,5 @@ class CompSettings(AbstractToolbarSettings):
             'delete_cache_enabled': self.delete_cache_enabled
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'delete_cache_enabled', bool, self.delete_cache_checkbox.setChecked)
-        super().__setstate__(state)

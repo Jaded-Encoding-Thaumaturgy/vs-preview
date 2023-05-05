@@ -6,6 +6,11 @@ from typing import Any, Mapping, SupportsFloat, SupportsInt, Union, cast
 from ..abstracts import main_window, try_load
 from .yaml import YAMLObjectWrapper
 
+__all__ = [
+    'Frame', 'Time'
+]
+
+
 Number = Union[int, float, SupportsInt, SupportsFloat]
 
 
@@ -38,7 +43,7 @@ class Frame(YAMLObjectWrapper):
     def __sub__(self, other: Number | Frame) -> Frame:
         if isinstance(other, Frame):
             return Frame(self.value - other.value)
-        raise TypeError
+        return self - Frame(other)
 
     def __isub__(self, other: Number | Frame) -> Frame:
         if not isinstance(other, Frame):
@@ -75,7 +80,7 @@ class Frame(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', int, self.__init__,
+            state, 'value', int, self.__init__,  # type: ignore
             'Failed to load Frame instance'
         )
 
@@ -83,7 +88,10 @@ class Frame(YAMLObjectWrapper):
 class Time(YAMLObjectWrapper):
     __slots__ = ('value', )
 
-    def __init__(self, init_value: Time | timedelta | Frame | None = None, **kwargs: Any):
+    def __init__(self, init_value: int | Time | timedelta | Frame | None = None, **kwargs: Any):
+        if isinstance(init_value, int):
+            init_value = Frame(init_value)
+
         if isinstance(init_value, timedelta):
             self.value = init_value
         elif isinstance(init_value, Time):
@@ -104,12 +112,14 @@ class Time(YAMLObjectWrapper):
         self.value += other.value
         return self
 
-    def __sub__(self, other: Time) -> Time:
+    def __sub__(self, other: int | Time | timedelta | Frame | None) -> Time:
         if isinstance(other, Time):
             return Time(self.value - other.value)
-        raise TypeError
+        return self - Time(other)
 
-    def __isub__(self, other: Time) -> Time:
+    def __isub__(self, other: int | Time | timedelta | Frame | None) -> Time:
+        if not isinstance(other, Time):
+            other = Time(other)
         self.value -= other.value
         return self
 
@@ -140,6 +150,6 @@ class Time(YAMLObjectWrapper):
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(
-            state, 'value', timedelta, self.__init__,
+            state, 'value', timedelta, self.__init__,  # type: ignore
             'Failed to load Time instance'
         )

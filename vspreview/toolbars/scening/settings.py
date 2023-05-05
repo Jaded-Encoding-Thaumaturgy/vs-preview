@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel
 
 from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit
+
+__all__ = [
+    'SceningSettings'
+]
 
 
 class SceningSettings(AbstractToolbarSettings):
@@ -11,7 +15,7 @@ class SceningSettings(AbstractToolbarSettings):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.export_template_lineedit = LineEdit(placeholderText='Export Template')
+        self.export_template_lineedit = LineEdit('Export Template')
 
         self.always_show_scene_marks_checkbox = CheckBox('Always show scene marks')
 

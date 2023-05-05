@@ -1,28 +1,62 @@
 from __future__ import annotations
 
-import logging
-import os
-import random
-import re
-import shutil
-import string
-import unicodedata
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Final, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
-from PyQt5.QtWidgets import QComboBox, QLabel
-from vstools import vs
+import vapoursynth as vs
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, CheckBox, LineEdit, PictureType, ProgressBar, PushButton, main_window
+    AbstractToolbar, CheckBox, ComboBox, FrameEdit, LineEdit, PictureType, ProgressBar, PushButton, VideoOutput,
+    main_window
 )
-from ...core.custom import ComboBox, FrameEdit
-from ...models import PictureTypes, VideoOutputs
+from ...models import PictureTypes
 from .settings import CompSettings
 
+if TYPE_CHECKING:
+    from requests import Session
+
+    from ...main import MainWindow
+
+
+__all__ = [
+    'CompToolbar'
+]
+
+
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
+
+
+def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+    return {
+        "Content-Length": str(content_length),
+        "Content-Type": content_type,
+        "Access-Control-Allow-Origin": "*",
+        "Origin": "https://slow.pics/",
+        "Referer": "https://slow.pics/comparison",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0",
+        "X-XSRF-TOKEN": sess.cookies.get_dict()["XSRF-TOKEN"]
+    }
+
+
+def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
+    from uuid import uuid4
+
+    from requests_toolbelt import MultipartEncoder  # type: ignore
+
+    upload_info = MultipartEncoder({
+        "collectionUuid": collection,
+        "imageUuid": imageUuid,
+        "file": (image.name, image.read_bytes(), 'image/png'),
+        'browserId': browser_id,
+    }, str(uuid4()))
+
+    sess.post(
+        'https://slow.pics/upload/image', data=upload_info.to_string(),
+        headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
+    )
 
 
 def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
@@ -30,6 +64,9 @@ def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
 
 
 def clear_filename(filename: str) -> str:
+    import re
+    import unicodedata
+
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']
     reserved = [
         'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
@@ -39,7 +76,7 @@ def clear_filename(filename: str) -> str:
 
     filename = ''.join(c for c in filename if c not in blacklist)
 
-    # Remove all charcters below code point 32
+    # Remove all characters below code point 32
     filename = ''.join(c for c in filename if 31 < ord(c))
     filename = unicodedata.normalize('NFKD', filename).rstrip('. ').strip()
 
@@ -74,7 +111,7 @@ def clear_filename(filename: str) -> str:
 
 
 class WorkerConfiguration(NamedTuple):
-    outputs: VideoOutputs
+    outputs: list[VideoOutput]
     collection_name: str
     public: bool
     nsfw: bool
@@ -83,7 +120,7 @@ class WorkerConfiguration(NamedTuple):
     frames: list[int]
     compression: int
     path: Path
-    main: AbstractMainWindow
+    main: MainWindow
     delete_cache: bool
 
 
@@ -104,9 +141,14 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
+        import os
+        import shutil
+        from concurrent.futures import ThreadPoolExecutor
+        from uuid import uuid4
+
         try:
             from requests import Session
-            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
         except ModuleNotFoundError:
             raise ModuleNotFoundError(
                 'You are missing `requests` and `requests` toolbelt!\n'
@@ -153,8 +195,8 @@ class Worker(QObject):
         except StopIteration:
             return self.finished.emit()
 
+        total_images = 0
         fields = dict[str, Any]()
-
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
                 return self.finished.emit()
@@ -162,61 +204,71 @@ class Worker(QObject):
                 if self.isFinished():
                     return self.finished.emit()
                 fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].images[{i}].name'] = output.name
-                fields[f'comparisons[{j}].images[{i}].file'] = (image.name, image.read_bytes(), 'image/png')
+                fields[f'comparisons[{j}].imageNames[{i}]'] = output.name
+                total_images += 1
 
         self.progress_status.emit('upload', 0, 0)
 
         with Session() as sess:
-            sess.get('https://slow.pics/api/comparison')
+            sess.get('https://slow.pics/comparison')
             if self.isFinished():
                 return self.finished.emit()
+
+            browser_id = str(uuid4())
+
             head_conf = {
                 'collectionName': conf.collection_name,
-                'public': str(conf.public).lower(),
-                'optimizeImages': str(conf.optimise).lower(),
                 'hentai': str(conf.nsfw).lower(),
+                'optimizeImages': str(conf.optimise).lower(),
+                'browserId': browser_id,
+                'public': str(conf.public).lower(),
             }
             if conf.remove_after is not None:
                 head_conf |= {'removeAfter': str(conf.remove_after)}
 
             def _monitor_cb(monitor: MultipartEncoderMonitor) -> None:
                 self._progress_update_func(monitor.bytes_read, monitor.len)
-
-            files = MultipartEncoder(head_conf | fields)
+            files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
+            comp_response = sess.post(
+                'https://slow.pics/upload/comparison', data=monitor.to_string(),
+                headers=_get_slowpic_headers(monitor.len, monitor.content_type, sess)
+            ).json()
+            collection = comp_response["collectionUuid"]
+            key = comp_response["key"]
+            image_ids = comp_response["images"]
+            images_done = 0
+            self._progress_update_func(0, total_images)
+            with ThreadPoolExecutor() as executor:
+                futures = []
+                for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
+                    for j, (image, frame) in enumerate(zip(images, conf.frames)):
+                        if self.isFinished():
+                            return self.finished.emit()
+                        while len(futures) >= 5:
+                            for future in futures:
+                                if future.done():
+                                    futures.remove(future)
+                                    images_done += 1
+                                    self._progress_update_func(images_done, total_images)
 
-            response = sess.post(
-                'https://slow.pics/api/comparison',
-                cast(bytes, monitor.to_string()),
-                headers={
-                    "Accept": "*/*",
-                    "Accept-Encoding": "gzip, deflate, br",
-                    "Accept-Language": "en-US,en;q=0.5",
-                    "Content-Length": str(files.len),
-                    "Content-Type": files.content_type,
-                    "Origin": "https://slow.pics/",
-                    "Referer": "https://slow.pics/comparison",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Site": "same-origin",
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                    ),
-                    "X-XSRF-TOKEN": sess.cookies.get_dict()["XSRF-TOKEN"]  # noqa
-                }
-            )
-
+                        futures.append(
+                            executor.submit(
+                                _do_single_slowpic_upload,
+                                sess=sess, collection=collection, imageUuid=image_ids[j][i],
+                                image=image, browser_id=browser_id
+                            )
+                        )
+            self._progress_update_func(total_images, total_images)
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)
 
-        url = f'https://slow.pics/c/{response.text}'
+        url = f'https://slow.pics/c/{key}'
 
         self.progress_status.emit(url, 0, 0)
 
         url_out = (
-            conf.path.parent / 'Old Comps'
-            / clear_filename(f'{conf.collection_name} - {response.text}')
+            conf.path.parent / 'Old Comps' / clear_filename(f'{conf.collection_name} - {key}')
         ).with_suffix('.url')
         url_out.parent.mkdir(parents=True, exist_ok=True)
         url_out.touch(exist_ok=True)
@@ -235,8 +287,13 @@ class CompToolbar(AbstractToolbar):
         'upload_progressbar', 'upload_status_label', 'upload_status_elements'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, CompSettings())
+    settings: CompSettings
+
+    upload_thread: QThread
+    upload_worker: Worker
+
+    def __init__(self, main: MainWindow) -> None:
+        super().__init__(main, CompSettings(self))
         self.setup_ui()
 
         self.set_qobject_names()
@@ -244,17 +301,17 @@ class CompToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.collection_name_lineedit = LineEdit(self, placeholderText='Collection name')
+        self.collection_name_lineedit = LineEdit('Collection name', self)
 
         self.random_frames_control = FrameEdit(self)
 
-        self.manual_frames_lineedit = LineEdit(self, placeholderText='frame,frame,frame')
+        self.manual_frames_lineedit = LineEdit('frame,frame,frame', self, )
 
         self.current_frame_checkbox = CheckBox('Current', self, checked=True)
 
         self.pic_type_combox = ComboBox[PictureType](
-            self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertAtCurrent,
-            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.AdjustToContents, currentIndex=0
+            self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
+            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents, currentIndex=0
         )
 
         self.pic_type_combox.view().setMinimumWidth(self.pic_type_combox.minimumSizeHint().width())
@@ -359,9 +416,15 @@ class CompToolbar(AbstractToolbar):
         return rnum
 
     def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
+        import logging
+        import random
+
         samples = set[int]()
         _max_attempts = 0
         _rnum_checked = set[int]()
+
+        assert self.main.outputs
+
         while len(samples) < k:
             _attempts = 0
             while True:
@@ -399,9 +462,14 @@ class CompToolbar(AbstractToolbar):
         return list(samples)
 
     def get_slowpics_conf(self) -> WorkerConfiguration:
+        import logging
+        import random
+        import string
+
+        assert self.main.outputs
+
         self.update_upload_status_visibility(True)
 
-        clips: dict[str, vs.VideoNode]
         num = int(self.random_frames_control.value())
         frames = list[int](
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
@@ -434,13 +502,15 @@ class CompToolbar(AbstractToolbar):
         if self.current_frame_checkbox.isChecked():
             samples.append(int(self.main.current_output.last_showed_frame))
 
-        collection_name = self.collection_name_lineedit.text()
+        collection_name = self.collection_name_lineedit.text().strip()
 
         if not collection_name:
             collection_name = self.settings.DEFAULT_COLLECTION_NAME
 
         if not collection_name:
             raise ValueError('You have to put a collection name!')
+        elif 5 > len(collection_name):
+            raise ValueError('Your collection name is too short!')
 
         collection_name = collection_name.format(
             script_name=self.main.script_path.stem
@@ -458,7 +528,7 @@ class CompToolbar(AbstractToolbar):
             if not props:
                 props = output.source.clip.get_frame(check_frame).props
 
-            if '_VSPDisableComp' in props and props._DisableComp == 1:
+            if '_VSPDisableComp' in props and props._VSPDisableComp == 1:
                 continue
 
             filtered_outputs.append(output)
@@ -471,6 +541,10 @@ class CompToolbar(AbstractToolbar):
 
     def upload_to_slowpics(self) -> bool:
         try:
+            self.main.current_output.graphics_scene_item.setPixmap(
+                self.main.current_output.graphics_scene_item.pixmap().copy()
+            )
+
             config = self.get_slowpics_conf()
 
             self.upload_thread = QThread()

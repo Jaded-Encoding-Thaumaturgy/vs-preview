@@ -1,26 +1,36 @@
 from __future__ import annotations
 
-from typing import Any, cast, no_type_check
+from abc import ABCMeta
+from typing import TYPE_CHECKING, Any, cast, no_type_check
 
-from PyQt5 import sip
-from vstools import T
+from PyQt6 import sip
 from yaml import YAMLObject, YAMLObjectMetaclass
 
-from .better_abc import ABCMeta
+if TYPE_CHECKING:
+    from vstools import T
+
+
+__all__ = [
+    'AbstractYAMLObjectSingleton',
+    'QABC',
+    'QYAMLObject',
+    'QYAMLObjectSingleton',
+    'QAbstractYAMLObjectSingleton'
+]
 
 
 class SingletonMeta(type):
     def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
-        super().__init__(name, bases, dct)
-        cls.instance: T | None = None
+        super().__init__(name, bases, dct)  # type: ignore
+        cls.instance: T | None = None  # type: ignore
 
-    def __call__(cls, *args: Any, **kwargs: Any) -> T:
+    def __call__(cls, *args: Any, **kwargs: Any) -> T:  # type: ignore
         if cls.instance is None:
             cls.instance = super().__call__(*args, **kwargs)
         return cls.instance
 
     def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> type:
-        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)
+        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
         singleton_new = None
         for entry in subcls.__mro__:
             if entry.__class__ is SingletonMeta:
@@ -70,31 +80,11 @@ class QSingletonMeta(SingletonMeta, sip.wrappertype):
     pass
 
 
-class QSingleton(Singleton, metaclass=QSingletonMeta):
-    pass
-
-
-class QAbstractSingletonMeta(QSingletonMeta):
-    pass
-
-
-class QAbstractSingleton(Singleton, metaclass=QAbstractSingletonMeta):
-    pass
-
-
 class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):
     pass
 
 
 class QYAMLObject(YAMLObject, metaclass=QYAMLObjectMeta):
-    pass
-
-
-class QAbstractYAMLObjectMeta(QYAMLObjectMeta, QABC):
-    pass
-
-
-class QAbstractYAMLObject(YAMLObject, metaclass=QAbstractYAMLObjectMeta):
     pass
 
 

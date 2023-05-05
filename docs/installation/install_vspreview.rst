@@ -7,8 +7,8 @@ Requirements
 Before you begin using ``vs-preview``,
 make sure you have the following programs installed:
 
-* `Python 3.9 <https://www.python.org/downloads/>`_ or higher
-* `VapourSynth 57 <https://github.com/vapoursynth/vapoursynth/releases/>`_ or higher
+* `Python 3.10 <https://www.python.org/downloads/>`_ or higher
+* `VapourSynth 59 <https://github.com/vapoursynth/vapoursynth/releases/>`_ or higher
 * `Git <https://git-scm.com/downloads/>`_ (Optional)
 
 Downloading

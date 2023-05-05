@@ -509,8 +509,6 @@ class CompToolbar(AbstractToolbar):
 
         if not collection_name:
             raise ValueError('You have to put a collection name!')
-        elif len(collection_name) <= 1:
-            raise ValueError('Your collection name is too short!')
 
         collection_name = collection_name.format(
             script_name=self.main.script_path.stem

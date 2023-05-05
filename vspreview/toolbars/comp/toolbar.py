@@ -502,13 +502,15 @@ class CompToolbar(AbstractToolbar):
         if self.current_frame_checkbox.isChecked():
             samples.append(int(self.main.current_output.last_showed_frame))
 
-        collection_name = self.collection_name_lineedit.text()
+        collection_name = self.collection_name_lineedit.text().strip()
 
         if not collection_name:
             collection_name = self.settings.DEFAULT_COLLECTION_NAME
 
         if not collection_name:
             raise ValueError('You have to put a collection name!')
+        elif 5 > len(collection_name):
+            raise ValueError('Your collection name is too short!')
 
         collection_name = collection_name.format(
             script_name=self.main.script_path.stem

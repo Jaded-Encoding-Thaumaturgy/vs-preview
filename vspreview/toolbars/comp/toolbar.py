@@ -301,7 +301,7 @@ class CompToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.collection_name_lineedit = LineEdit('Collection name', self)
+        self.collection_name_lineedit = LineEdit('Collection name', self, text='Unknown')
 
         self.random_frames_control = FrameEdit(self)
 
@@ -318,7 +318,7 @@ class CompToolbar(AbstractToolbar):
         temp_width = self.pic_type_combox.minimumSizeHint().width()
         self.pic_type_combox.setMinimumWidth(temp_width + temp_width // 10)
 
-        self.is_public_checkbox = CheckBox('Public', self, checked=True)
+        self.is_public_checkbox = CheckBox('Public', self, checked=False)
 
         self.is_nsfw_checkbox = CheckBox('NSFW', self, checked=False)
 
@@ -509,7 +509,7 @@ class CompToolbar(AbstractToolbar):
 
         if not collection_name:
             raise ValueError('You have to put a collection name!')
-        elif 5 > len(collection_name):
+        elif len(collection_name) <= 1:
             raise ValueError('Your collection name is too short!')
 
         collection_name = collection_name.format(

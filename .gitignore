@@ -103,5 +103,7 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# vscode
+.vscode/
 # vs-preview
 .vspreview/

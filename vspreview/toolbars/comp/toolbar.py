@@ -4,6 +4,9 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
+import concurrent.futures
+import uuid
+from requests_toolbelt import MultipartEncoder
 import vapoursynth as vs
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
@@ -14,7 +17,7 @@ from ...core import (
 )
 from ...models import PictureTypes
 from .settings import CompSettings
-
+from requests import Session
 if TYPE_CHECKING:
     from ...main import MainWindow
 
@@ -25,6 +28,31 @@ __all__ = [
 
 
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
+
+
+def get_slowpic_headers(content_length: str, content_type: str, sess: Session):
+    return {
+        "Content-Length": content_length,
+        "Content-Type": content_type,
+        "Access-Control-Allow-Origin": "*",
+        "Origin": "https://slow.pics/",
+        "Referer": "https://slow.pics/comparison",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0",
+        "X-XSRF-TOKEN": sess.cookies.get_dict()["XSRF-TOKEN"]
+    }
+
+def do_upload_request(sess: Session, collection, imageUuid, image, browser_id):
+    upload_info = {
+        "collectionUuid": collection,
+        "imageUuid": imageUuid,
+        "file": (image.name, image.read_bytes(), 'image/png'),
+        'browserId': browser_id,
+    }
+    upload_info = MultipartEncoder(upload_info, str(uuid.uuid4()))
+    resp = sess.post(
+        'https://slow.pics/upload/image', data=upload_info.to_string(),
+        headers=get_slowpic_headers(str(upload_info.len), upload_info.content_type, sess)
+    )
 
 
 def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
@@ -111,8 +139,15 @@ class Worker(QObject):
     def run(self, conf: WorkerConfiguration) -> None:
         import os
         import shutil
-        from requests import Session
-        from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
+
+        try:
+            from requests import Session
+            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                'You are missing `requests` and `requests` toolbelt!\n'
+                'Install them with "pip install requests requests_toolbelt"!'
+            )
 
         all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
@@ -154,8 +189,8 @@ class Worker(QObject):
         except StopIteration:
             return self.finished.emit()
 
+        total_images = 0
         fields = dict[str, Any]()
-
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
                 return self.finished.emit()
@@ -163,60 +198,72 @@ class Worker(QObject):
                 if self.isFinished():
                     return self.finished.emit()
                 fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].images[{i}].name'] = output.name
-                fields[f'comparisons[{j}].images[{i}].file'] = (image.name, image.read_bytes(), 'image/png')
+                fields[f'comparisons[{j}].imageNames[{i}]'] = output.name
+                total_images += 1
 
         self.progress_status.emit('upload', 0, 0)
 
         with Session() as sess:
-            sess.get('https://slow.pics/api/comparison')
+            sess.get('https://slow.pics/comparison')
             if self.isFinished():
                 return self.finished.emit()
+            
+            browser_id = str(uuid.uuid4())
+
             head_conf = {
                 'collectionName': conf.collection_name,
-                'public': str(conf.public).lower(),
-                'optimizeImages': str(conf.optimise).lower(),
                 'hentai': str(conf.nsfw).lower(),
+                'optimizeImages': str(conf.optimise).lower(),
+                'browserId': browser_id,
+                'public': str(conf.public).lower(),
             }
             if conf.remove_after is not None:
                 head_conf |= {'removeAfter': str(conf.remove_after)}
 
             def _monitor_cb(monitor: MultipartEncoderMonitor) -> None:
                 self._progress_update_func(monitor.bytes_read, monitor.len)
-
-            files = MultipartEncoder(head_conf | fields)
+            files = MultipartEncoder(head_conf | fields, str(uuid.uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
-
-            response = sess.post(
-                'https://slow.pics/api/comparison',
-                cast(bytes, monitor.to_string()),
-                headers={
-                    "Accept": "*/*",
-                    "Accept-Encoding": "gzip, deflate, br",
-                    "Accept-Language": "en-US,en;q=0.5",
-                    "Content-Length": str(files.len),
-                    "Content-Type": files.content_type,
-                    "Origin": "https://slow.pics/",
-                    "Referer": "https://slow.pics/comparison",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Site": "same-origin",
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                    ),
-                    "X-XSRF-TOKEN": sess.cookies.get_dict()["XSRF-TOKEN"]  # noqa
-                }
-            )
-
+            comp_response = sess.post(
+                'https://slow.pics/upload/comparison', data=monitor.to_string(),
+                headers=get_slowpic_headers(str(monitor.len), monitor.content_type, sess)
+            ).json()
+            collection = comp_response["collectionUuid"]
+            key = comp_response["key"]
+            image_ids = comp_response["images"]
+            images_done = 0
+            self._progress_update_func(0, total_images)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = []
+                for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
+                    for j, (image, frame) in enumerate(zip(images, conf.frames)):
+                        if self.isFinished():
+                            return self.finished.emit()
+                        while len(futures)>=5:
+                            for future in futures:
+                                if future.done(): 
+                                    futures.remove(future)
+                                    images_done +=1
+                                    self._progress_update_func(images_done, total_images)    
+                                
+                        futures.append(
+                            executor.submit(
+                                do_upload_request, 
+                                sess=sess,collection=collection,imageUuid=image_ids[j][i],
+                                image=image, browser_id=browser_id
+                            )
+                        )
+            self._progress_update_func(total_images, total_images)
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)
 
-        url = f'https://slow.pics/c/{response.text}'
+        url = f'https://slow.pics/c/{key}'
 
         self.progress_status.emit(url, 0, 0)
 
         url_out = (
-            conf.path.parent / 'Old Comps' / clear_filename(f'{conf.collection_name} - {response.text}')
+            conf.path.parent / 'Old Comps'
+            / clear_filename(f'{conf.collection_name} - {key}')
         ).with_suffix('.url')
         url_out.parent.mkdir(parents=True, exist_ok=True)
         url_out.touch(exist_ok=True)
@@ -487,15 +534,6 @@ class CompToolbar(AbstractToolbar):
 
     def upload_to_slowpics(self) -> bool:
         try:
-            try:
-                import requests  # noqa: F401
-                import requests_toolbelt  # noqa: F401
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError(
-                    'You are missing `requests` and `requests` toolbelt!\n'
-                    'Install them with "pip install requests requests_toolbelt"!'
-                )
-
             self.main.current_output.graphics_scene_item.setPixmap(
                 self.main.current_output.graphics_scene_item.pixmap().copy()
             )

@@ -4,9 +4,6 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
-import concurrent.futures
-import uuid
-from requests_toolbelt import MultipartEncoder
 import vapoursynth as vs
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
@@ -17,8 +14,10 @@ from ...core import (
 )
 from ...models import PictureTypes
 from .settings import CompSettings
-from requests import Session
+
 if TYPE_CHECKING:
+    from requests import Session
+
     from ...main import MainWindow
 
 
@@ -30,9 +29,9 @@ __all__ = [
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def get_slowpic_headers(content_length: str, content_type: str, sess: Session):
+def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
     return {
-        "Content-Length": content_length,
+        "Content-Length": str(content_length),
         "Content-Type": content_type,
         "Access-Control-Allow-Origin": "*",
         "Origin": "https://slow.pics/",
@@ -41,17 +40,22 @@ def get_slowpic_headers(content_length: str, content_type: str, sess: Session):
         "X-XSRF-TOKEN": sess.cookies.get_dict()["XSRF-TOKEN"]
     }
 
-def do_upload_request(sess: Session, collection, imageUuid, image, browser_id):
-    upload_info = {
+
+def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
+    from uuid import uuid4
+
+    from requests_toolbelt import MultipartEncoder  # type: ignore
+
+    upload_info = MultipartEncoder({
         "collectionUuid": collection,
         "imageUuid": imageUuid,
         "file": (image.name, image.read_bytes(), 'image/png'),
         'browserId': browser_id,
-    }
-    upload_info = MultipartEncoder(upload_info, str(uuid.uuid4()))
-    resp = sess.post(
+    }, str(uuid4()))
+
+    sess.post(
         'https://slow.pics/upload/image', data=upload_info.to_string(),
-        headers=get_slowpic_headers(str(upload_info.len), upload_info.content_type, sess)
+        headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
     )
 
 
@@ -139,6 +143,8 @@ class Worker(QObject):
     def run(self, conf: WorkerConfiguration) -> None:
         import os
         import shutil
+        from concurrent.futures import ThreadPoolExecutor
+        from uuid import uuid4
 
         try:
             from requests import Session
@@ -207,8 +213,8 @@ class Worker(QObject):
             sess.get('https://slow.pics/comparison')
             if self.isFinished():
                 return self.finished.emit()
-            
-            browser_id = str(uuid.uuid4())
+
+            browser_id = str(uuid4())
 
             head_conf = {
                 'collectionName': conf.collection_name,
@@ -222,34 +228,34 @@ class Worker(QObject):
 
             def _monitor_cb(monitor: MultipartEncoderMonitor) -> None:
                 self._progress_update_func(monitor.bytes_read, monitor.len)
-            files = MultipartEncoder(head_conf | fields, str(uuid.uuid4()))
+            files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
             comp_response = sess.post(
                 'https://slow.pics/upload/comparison', data=monitor.to_string(),
-                headers=get_slowpic_headers(str(monitor.len), monitor.content_type, sess)
+                headers=_get_slowpic_headers(monitor.len, monitor.content_type, sess)
             ).json()
             collection = comp_response["collectionUuid"]
             key = comp_response["key"]
             image_ids = comp_response["images"]
             images_done = 0
             self._progress_update_func(0, total_images)
-            with concurrent.futures.ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor() as executor:
                 futures = []
                 for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
                     for j, (image, frame) in enumerate(zip(images, conf.frames)):
                         if self.isFinished():
                             return self.finished.emit()
-                        while len(futures)>=5:
+                        while len(futures) >= 5:
                             for future in futures:
-                                if future.done(): 
+                                if future.done():
                                     futures.remove(future)
-                                    images_done +=1
-                                    self._progress_update_func(images_done, total_images)    
-                                
+                                    images_done += 1
+                                    self._progress_update_func(images_done, total_images)
+
                         futures.append(
                             executor.submit(
-                                do_upload_request, 
-                                sess=sess,collection=collection,imageUuid=image_ids[j][i],
+                                _do_single_slowpic_upload,
+                                sess=sess, collection=collection, imageUuid=image_ids[j][i],
                                 image=image, browser_id=browser_id
                             )
                         )
@@ -262,8 +268,7 @@ class Worker(QObject):
         self.progress_status.emit(url, 0, 0)
 
         url_out = (
-            conf.path.parent / 'Old Comps'
-            / clear_filename(f'{conf.collection_name} - {key}')
+            conf.path.parent / 'Old Comps' / clear_filename(f'{conf.collection_name} - {key}')
         ).with_suffix('.url')
         url_out.parent.mkdir(parents=True, exist_ok=True)
         url_out.touch(exist_ok=True)

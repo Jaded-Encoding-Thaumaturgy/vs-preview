@@ -51,13 +51,13 @@ Sets the zoom level.
 Default is 100%.
 
 \7. Switch Timeline Mode
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Switches timeline between frame numbers and timestamps
 Default is timestamp mode.
 
 \8. Frame Props
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 Displays the frame properties of the clip on screen.
 This only includes base frameprops, and automatically includes PlaneStats info.

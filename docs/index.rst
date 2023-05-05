@@ -43,6 +43,8 @@ and much, much more!
     installation/install_vspreview
     installation/install_vscode
     installation/install_vim
+    installation/install_notepad++
+
 
 .. toctree::
     :maxdepth: 4
@@ -50,6 +52,7 @@ and much, much more!
 
     accessibility/keybinds.rst
     accessibility/placeholders.rst
+
 
 .. toctree::
     :maxdepth: 4

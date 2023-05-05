@@ -68,7 +68,8 @@ class MiscToolbar(AbstractToolbar):
         self.save_frame_as_button = PushButton('Save Frame as', self, clicked=self.on_save_frame_as_clicked)
 
         self.save_template_lineedit = LineEdit(
-            self.settings.SAVE_TEMPLATE, self, tooltip='''
+            self.settings.SAVE_TEMPLATE, self, text=self.settings.SAVE_TEMPLATE,
+            tooltip='''
                 Available placeholders:
                     {format}, {fps_den}, {fps_num}, {frame},
                     {height}, {index}, {matrix}, {primaries}, {range},

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import atexit
 import runpy
 from concurrent.futures import Future
@@ -13,12 +14,17 @@ from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ign
 from .logger import get_vs_logger
 
 __all__ = [
+    'PRELOADED_MODULES',
+
     '_monkey_runpy_dicts',
 
     'set_vsengine_loop',
     'get_current_environment',
     'make_environment'
 ]
+
+
+PRELOADED_MODULES = set(sys.modules.values())
 
 _monkey_runpy_dicts = {}
 

@@ -5,8 +5,8 @@ import logging
 import sys
 from fractions import Fraction
 from importlib import reload as reload_module
-from os.path import exists, getmtime, isfile
 from pathlib import Path
+from pkgutil import iter_modules
 from time import time
 from typing import Any, Iterable, Mapping, cast
 
@@ -18,9 +18,9 @@ from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel,
 from vsengine import vpy  # type: ignore
 
 from ..core import (
-    AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView, QAbstractYAMLObjectSingleton,
-    StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts, get_current_environment,
-    make_environment, try_load
+    PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView,
+    QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts,
+    get_current_environment, make_environment, try_load
 )
 from ..models import VideoOutputs
 from ..toolbars import Toolbars
@@ -249,19 +249,51 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         try:
             if reloading:
-                for name, module in list(sys.modules.items()):
+                std_path_lib = Path(logging.__file__).parent.parent
+                std_path_dlls = std_path_lib.parent / 'DLLs'
+
+                for module in set(sys.modules.values()) - PRELOADED_MODULES:
                     if not hasattr(module, '__file__') or module.__file__ is None:
                         continue
 
-                    if 'vspreview' in module.__file__:
+                    mod_file = Path(module.__file__)
+
+                    if 'vspreview' in mod_file.parts:
                         continue
 
-                    if not exists(module.__file__) or not isfile(module.__file__):
+                    if std_path_lib in mod_file.parents or std_path_dlls in mod_file.parents:
                         continue
 
-                    if getmtime(module.__file__) > self.last_reload_time:
-                        logging.debug(f'Hot reloaded Python Package: "{name}"')
-                        sys.modules[name] = reload_module(module)
+                    if not mod_file.exists() or not mod_file.is_file():
+                        continue
+
+                    parent = Path(module.__file__)
+
+                    def _traverse(path: Path) -> Iterable[bool]:
+                        for module in iter_modules([path]):
+                            newpath = Path(module.module_finder) / module.name
+
+                            if module.ispkg:
+                                if _traverse([newpath]):
+                                    return True
+
+                                continue
+
+                            newpath = newpath.with_suffix('.py')
+
+                            try:
+                                stats = newpath.stat()
+                            except FileNotFoundError:
+                                return False
+
+                            return stats.st_mtime > self.last_reload_time
+
+                    if _traverse(parent):
+                        try:
+                            logging.debug(f'Hot reloaded Python Package: "{module.__name__}"')
+                            reload_module(module)
+                        except Exception as e:
+                            logging.error(e)
 
             self.env = vpy.variables(
                 dict(self.external_args),

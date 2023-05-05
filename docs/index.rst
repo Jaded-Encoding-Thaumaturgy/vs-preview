@@ -17,7 +17,6 @@ Features
 * Seamless integration with any IDE (code editor) that has an integrated terminal
 * Video previewer to easily check your VapourSynth filtering
 * Video playback (with audio support!)
-* AviSynth support
 * Supports multiple output nodes, quickly check different filtered outputs
 * Scening tools to help faciliate easier scene-filtering
 * Built-in cropping tool

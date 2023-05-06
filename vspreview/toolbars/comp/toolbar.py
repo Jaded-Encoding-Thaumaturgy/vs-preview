@@ -461,7 +461,9 @@ class CompToolbar(AbstractToolbar):
         elif kind == 'search':
             message = 'Searching'
         else:
-            return self.output_url_lineedit.setText(kind)
+            self.output_url_lineedit.setText(kind)
+            self.on_end_upload(self.curr_uuid, False)
+            return
 
         self.upload_status_label.setText(f'{message}{moreinfo}...')
 

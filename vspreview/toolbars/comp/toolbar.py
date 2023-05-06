@@ -590,15 +590,12 @@ class CompToolbar(AbstractToolbar):
 
         sample_frames = list(sorted(set(samples)))
 
-        check_frame = sample_frames and sample_frames[0] or 0
+        check_frame = sample_frames[0] if sample_frames else 0
 
         filtered_outputs = []
 
         for output in self.main.outputs:
-            props = output.props
-
-            if not props:
-                props = output.source.clip.get_frame(check_frame).props
+            props = output.source.clip.get_frame(check_frame).props
 
             if '_VSPDisableComp' in props and props._VSPDisableComp == 1:
                 continue

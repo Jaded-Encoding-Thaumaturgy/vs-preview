@@ -329,7 +329,7 @@ class CompToolbar(AbstractToolbar):
                 if self_s == 'I':
                     el = self.pic_type_button_I
                     oth = (self.pic_type_button_P, self.pic_type_button_B)
-                elif self_s == 'I':
+                elif self_s == 'P':
                     el = self.pic_type_button_P
                     oth = (self.pic_type_button_I, self.pic_type_button_B)
                 else:

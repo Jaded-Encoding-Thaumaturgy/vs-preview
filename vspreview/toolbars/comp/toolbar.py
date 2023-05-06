@@ -316,7 +316,7 @@ class CompToolbar(AbstractToolbar):
 
         self.collection_name_lineedit = LineEdit('Collection name', self)
 
-        self.random_frames_control = FrameEdit(self, value=10)
+        self.random_frames_control = FrameEdit(self)
         # self.bright_frames_control = FrameEdit(self)
         # self.dark_frames_control = FrameEdit(self)
 

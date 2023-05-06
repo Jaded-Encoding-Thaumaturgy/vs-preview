@@ -12,7 +12,7 @@ __all__ = [
 class CompSettings(AbstractToolbarSettings):
     __slots__ = ('delete_cache_checkbox', )
 
-    DEFAULT_COLLECTION_NAME = ''
+    DEFAULT_COLLECTION_NAME = 'Unknown'
 
     def setup_ui(self) -> None:
         super().setup_ui()

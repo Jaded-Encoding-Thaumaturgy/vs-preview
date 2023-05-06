@@ -6,13 +6,12 @@ from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
 import vapoursynth as vs
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QLabel
+from PyQt6.QtWidgets import QLabel
 
 from ...core import (
-    AbstractToolbar, CheckBox, ComboBox, FrameEdit, LineEdit, PictureType, ProgressBar, PushButton, VideoOutput,
+    AbstractToolbar, CheckBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout, VideoOutput,
     main_window
 )
-from ...models import PictureTypes
 from .settings import CompSettings
 
 if TYPE_CHECKING:
@@ -111,6 +110,7 @@ def clear_filename(filename: str) -> str:
 
 
 class WorkerConfiguration(NamedTuple):
+    uuid: str
     outputs: list[VideoOutput]
     collection_name: str
     public: bool
@@ -125,19 +125,21 @@ class WorkerConfiguration(NamedTuple):
 
 
 class Worker(QObject):
-    finished = pyqtSignal()
-    progress_bar = pyqtSignal(int)
-    progress_status = pyqtSignal(str, int, int)
+    finished = pyqtSignal(str)
+    progress_bar = pyqtSignal(str, int)
+    progress_status = pyqtSignal(str, str, int, int)
 
     is_finished = False
 
-    def _progress_update_func(self, value: int, endvalue: int) -> None:
+    def _progress_update_func(self, value: int, endvalue: int, *, uuid: str) -> None:
         if value == 0:
-            self.progress_bar.emit(0)
+            self.progress_bar.emit(uuid, 0)
         else:
-            self.progress_bar.emit(int(100 * value / endvalue))
+            self.progress_bar.emit(uuid, int(100 * value / endvalue))
 
     def isFinished(self) -> bool:
+        if self.is_finished:
+            self.deleteLater()
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
@@ -162,7 +164,7 @@ class Worker(QObject):
             for i, output in enumerate(conf.outputs):
                 if self.isFinished():
                     raise StopIteration
-                self.progress_status.emit('extract', i + 1, len(conf.outputs))
+                self.progress_status.emit(conf.uuid, 'extract', i + 1, len(conf.outputs))
 
                 path_name = conf.path / output.name
                 path_name.mkdir(parents=True)
@@ -186,33 +188,39 @@ class Worker(QObject):
                 clip = decimated.std.ModifyFrame(decimated, _save)
 
                 with open(os.devnull, 'wb') as devnull:
-                    clip.output(devnull, y4m=False, progress_update=self._progress_update_func)
+                    clip.output(
+                        devnull, y4m=False, progress_update=partial(self._progress_update_func, uuid=conf.uuid)
+                    )
 
                 if self.isFinished():
                     raise StopIteration
 
                 all_images.append(sorted(path_images))
         except StopIteration:
-            return self.finished.emit()
+            return self.finished.emit(conf.uuid)
+        except vs.Error as e:
+            if 'raise StopIteration' in str(e):
+                return self.finished.emit(conf.uuid)
+            raise e
 
         total_images = 0
         fields = dict[str, Any]()
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
-                return self.finished.emit()
+                return self.finished.emit(conf.uuid)
             for j, (image, frame) in enumerate(zip(images, conf.frames)):
                 if self.isFinished():
-                    return self.finished.emit()
+                    return self.finished.emit(conf.uuid)
                 fields[f'comparisons[{j}].name'] = str(frame)
                 fields[f'comparisons[{j}].imageNames[{i}]'] = output.name
                 total_images += 1
 
-        self.progress_status.emit('upload', 0, 0)
+        self.progress_status.emit(conf.uuid, 'upload', 0, 0)
 
         with Session() as sess:
             sess.get('https://slow.pics/comparison')
             if self.isFinished():
-                return self.finished.emit()
+                return self.finished.emit(conf.uuid)
 
             browser_id = str(uuid4())
 
@@ -227,7 +235,7 @@ class Worker(QObject):
                 head_conf |= {'removeAfter': str(conf.remove_after)}
 
             def _monitor_cb(monitor: MultipartEncoderMonitor) -> None:
-                self._progress_update_func(monitor.bytes_read, monitor.len)
+                self._progress_update_func(monitor.bytes_read, monitor.len, uuid=conf.uuid)
             files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
             comp_response = sess.post(
@@ -238,19 +246,25 @@ class Worker(QObject):
             key = comp_response["key"]
             image_ids = comp_response["images"]
             images_done = 0
-            self._progress_update_func(0, total_images)
+            self._progress_update_func(0, total_images, uuid=conf.uuid)
             with ThreadPoolExecutor() as executor:
                 futures = []
                 for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
+                    if self.isFinished():
+                        return self.finished.emit(conf.uuid)
                     for j, (image, frame) in enumerate(zip(images, conf.frames)):
                         if self.isFinished():
-                            return self.finished.emit()
+                            return self.finished.emit(conf.uuid)
                         while len(futures) >= 5:
+                            if self.isFinished():
+                                return self.finished.emit(conf.uuid)
                             for future in futures:
+                                if self.isFinished():
+                                    return self.finished.emit(conf.uuid)
                                 if future.done():
                                     futures.remove(future)
                                     images_done += 1
-                                    self._progress_update_func(images_done, total_images)
+                                    self._progress_update_func(images_done, total_images, uuid=conf.uuid)
 
                         futures.append(
                             executor.submit(
@@ -259,13 +273,13 @@ class Worker(QObject):
                                 image=image, browser_id=browser_id
                             )
                         )
-            self._progress_update_func(total_images, total_images)
+            self._progress_update_func(total_images, total_images, uuid=conf.uuid)
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)
 
         url = f'https://slow.pics/c/{key}'
 
-        self.progress_status.emit(url, 0, 0)
+        self.progress_status.emit(conf.uuid, url, 0, 0)
 
         url_out = (
             conf.path.parent / 'Old Comps' / clear_filename(f'{conf.collection_name} - {key}')
@@ -274,7 +288,7 @@ class Worker(QObject):
         url_out.touch(exist_ok=True)
         url_out.write_text(f'[InternetShortcut]\nURL={url}')
 
-        self.finished.emit()
+        self.finished.emit(conf.uuid)
 
 
 class CompToolbar(AbstractToolbar):
@@ -292,6 +306,8 @@ class CompToolbar(AbstractToolbar):
     upload_thread: QThread
     upload_worker: Worker
 
+    curr_uuid = ''
+
     def __init__(self, main: MainWindow) -> None:
         super().__init__(main, CompSettings(self))
         self.setup_ui()
@@ -301,22 +317,36 @@ class CompToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.collection_name_lineedit = LineEdit('Collection name', self, text='Unknown')
+        self.collection_name_lineedit = LineEdit('Collection name', self)
 
-        self.random_frames_control = FrameEdit(self)
+        self.random_frames_control = FrameEdit(self, value=10)
+        # self.bright_frames_control = FrameEdit(self)
+        # self.dark_frames_control = FrameEdit(self)
 
-        self.manual_frames_lineedit = LineEdit('frame,frame,frame', self, )
+        self.manual_frames_lineedit = LineEdit('Manual frames: frame,frame,frame', self, )
 
-        self.current_frame_checkbox = CheckBox('Current', self, checked=True)
+        self.current_frame_checkbox = CheckBox('Current frame', self, checked=True)
 
-        self.pic_type_combox = ComboBox[PictureType](
-            self, model=PictureTypes(), editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
-            duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents, currentIndex=0
-        )
+        def _force_clicked(self_s: str):
+            def _on_clicked(is_checked: bool) -> None:
+                if self_s == 'I':
+                    el = self.pic_type_button_I
+                    oth = (self.pic_type_button_P, self.pic_type_button_B)
+                elif self_s == 'I':
+                    el = self.pic_type_button_P
+                    oth = (self.pic_type_button_I, self.pic_type_button_B)
+                else:
+                    el = self.pic_type_button_B
+                    oth = (self.pic_type_button_I, self.pic_type_button_P)
 
-        self.pic_type_combox.view().setMinimumWidth(self.pic_type_combox.minimumSizeHint().width())
-        temp_width = self.pic_type_combox.minimumSizeHint().width()
-        self.pic_type_combox.setMinimumWidth(temp_width + temp_width // 10)
+                if not is_checked and not any(o.isChecked() for o in oth):
+                    el.click()
+
+            return _on_clicked
+
+        self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=_force_clicked('I'))
+        self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=_force_clicked('P'))
+        self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=_force_clicked('B'))
 
         self.is_public_checkbox = CheckBox('Public', self, checked=False)
 
@@ -333,41 +363,64 @@ class CompToolbar(AbstractToolbar):
         self.upload_progressbar = ProgressBar(self, value=0)
         self.upload_progressbar.setGeometry(200, 80, 250, 20)
 
-        self.upload_status_label = QLabel(self)
+        self.upload_status_label = QLabel(self, text='Select Frames')
 
-        self.upload_status_elements = (
-            self.get_separator(), self.upload_progressbar, self.upload_status_label
-        )
+        self.upload_status_elements = (self.upload_progressbar, self.upload_status_label)
 
-        self.hlayout.addWidgets([
+        VBoxLayout(self.hlayout, [
             self.collection_name_lineedit,
-            QLabel('Random:'), self.random_frames_control,
-            QLabel('Manual:'), self.manual_frames_lineedit,
-            self.current_frame_checkbox,
-            self.get_separator(),
-            QLabel('Picture Type:'), self.pic_type_combox,
-            self.get_separator(),
-            self.is_public_checkbox,
-            self.is_nsfw_checkbox,
-            self.get_separator(),
-            self.output_url_lineedit,
-            self.output_url_copy_button,
-            self.start_upload_button,
-            self.stop_upload_button,
-            *self.upload_status_elements
+            self.manual_frames_lineedit,
         ])
 
-        self.update_status_label('extract')
+        self.collection_name_lineedit.setMinimumWidth(400)
 
-        self.update_upload_status_visibility(False)
+        self.hlayout.addWidget(self.get_separator())
+
+        VBoxLayout(self.hlayout, [
+            HBoxLayout([
+                self.current_frame_checkbox  # , self.get_separator(),
+                # QLabel('Bright:'), self.bright_frames_control
+            ]),
+            HBoxLayout([
+                QLabel('Random:'), self.random_frames_control,
+                # QLabel('Dark:'), self.dark_frames_control,
+            ])
+        ])
+
+        self.hlayout.addWidget(self.get_separator())
+
+        VBoxLayout(self.hlayout, [
+            QLabel('Picture types:'),
+            HBoxLayout([
+                self.pic_type_button_I,
+                self.pic_type_button_P,
+                self.pic_type_button_B
+            ])
+        ])
+
+        self.hlayout.addStretch(1)
+
+        self.hlayout.addSpacing(20)
+        VBoxLayout(self.hlayout, [
+            self.is_public_checkbox,
+            self.is_nsfw_checkbox,
+        ])
+
+        self.hlayout.addWidget(self.get_separator())
+
+        self.output_url_lineedit.setMinimumWidth(250)
+
+        VBoxLayout(self.hlayout, [
+            HBoxLayout([
+                self.output_url_lineedit, self.output_url_copy_button,
+                self.start_upload_button, self.stop_upload_button
+            ]),
+            HBoxLayout([*self.upload_status_elements])
+        ])
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())
         self.main.show_message('Slow.pics URL copied to clipboard!')
-
-    def update_upload_status_visibility(self, visible: bool) -> None:
-        for element in self.upload_status_elements:
-            element.setVisible(visible)
 
     def on_start_upload(self) -> None:
         if self._thread_running:
@@ -377,13 +430,16 @@ class CompToolbar(AbstractToolbar):
         self.start_upload_button.setVisible(False)
         self.stop_upload_button.setVisible(True)
 
-    def on_end_upload(self, forced: bool = False) -> None:
+    def on_end_upload(self, uuid: str, forced: bool = False) -> None:
+        if not forced and uuid != self.curr_uuid:
+            return
+
         self.start_upload_button.setVisible(True)
         self.stop_upload_button.setVisible(False)
         self._thread_running = False
-        self.upload_thread.deleteLater()
 
         if forced:
+            self.upload_progressbar.setValue(int())
             self.upload_status_label.setText("Stopped!")
         else:
             self.upload_status_label.setText("Finished!")
@@ -391,9 +447,12 @@ class CompToolbar(AbstractToolbar):
     def on_stop_upload(self) -> None:
         self.upload_worker.is_finished = True
 
-        self.on_end_upload(forced=True)
+        self.on_end_upload(self.curr_uuid, forced=True)
 
-    def update_status_label(self, kind: str, curr: int | None = None, total: int | None = None) -> None:
+    def update_status_label(self, uuid: str, kind: str, curr: int | None = None, total: int | None = None) -> None:
+        if uuid != self.curr_uuid:
+            return
+
         message = ''
 
         moreinfo = f" {curr or '?'}/{total or '?'} " if curr or total else ''
@@ -415,7 +474,7 @@ class CompToolbar(AbstractToolbar):
             rnum = rand_func()
         return rnum
 
-    def _select_samples_ptypes(self, num_frames: int, k: int, picture_type: PictureType) -> list[int]:
+    def _select_samples_ptypes(self, num_frames: int, k: int, picture_types: set[str]) -> list[int]:
         import logging
         import random
 
@@ -425,17 +484,22 @@ class CompToolbar(AbstractToolbar):
 
         assert self.main.outputs
 
+        picture_types_b = {p.encode() for p in picture_types}
+
         while len(samples) < k:
             _attempts = 0
             while True:
-                self.update_status_label('search', _attempts, _MAX_ATTEMPTS_PER_PICTURE_TYPE)
+                if self.upload_worker.is_finished:
+                    raise RuntimeError
+
+                self.update_status_label(self.curr_uuid, 'search', _attempts, _MAX_ATTEMPTS_PER_PICTURE_TYPE)
                 if len(_rnum_checked) >= num_frames:
-                    raise ValueError(f'There aren\'t enough of {picture_type} in these clips')
+                    raise ValueError(f'There aren\'t enough of {picture_types} in these clips')
                 rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=0, stop=num_frames))
                 _rnum_checked.add(rnum)
 
                 if all(
-                    cast(bytes, f.props['_PictType']).decode('utf-8') == str(picture_type)[0]
+                    cast(bytes, f.props['_PictType']) in picture_types_b
                     for f in vs.core.std.Splice(
                         [select_frames(out.prepared.clip, [rnum]) for out in self.main.outputs], True
                     ).frames()
@@ -448,7 +512,7 @@ class CompToolbar(AbstractToolbar):
                 if _attempts > _MAX_ATTEMPTS_PER_PICTURE_TYPE:
                     logging.warning(
                         f'{_MAX_ATTEMPTS_PER_PICTURE_TYPE} attempts were made for sample {len(samples)} '
-                        f'and no match found for {picture_type}; stopping iteration...')
+                        f'and no match found for {picture_types}; stopping iteration...')
                     break
 
             if _max_attempts > (curr_max_att := _MAX_ATTEMPTS_PER_PICTURE_TYPE * k):
@@ -465,16 +529,24 @@ class CompToolbar(AbstractToolbar):
         import logging
         import random
         import string
+        from uuid import uuid4
 
         assert self.main.outputs
-
-        self.update_upload_status_visibility(True)
 
         num = int(self.random_frames_control.value())
         frames = list[int](
             map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
-        picture_type = self.pic_type_combox.currentData()
+        picture_types = set[str]()
+
+        if self.pic_type_button_I.isChecked():
+            picture_types.add('I')
+
+        if self.pic_type_button_B.isChecked():
+            picture_types.add('B')
+
+        if self.pic_type_button_P.isChecked():
+            picture_types.add('P')
 
         lens = set(out.prepared.clip.num_frames for out in self.main.outputs)
 
@@ -488,11 +560,11 @@ class CompToolbar(AbstractToolbar):
         )
 
         if num:
-            if picture_type is PictureType.ALL:
+            if picture_types == {'I', 'P', 'B'}:
                 samples = random.sample(range(lens_n), num)
             else:
                 logging.info('Making samples according to specified picture types...')
-                samples = self._select_samples_ptypes(lens_n, num, picture_type)
+                samples = self._select_samples_ptypes(lens_n, num, picture_types)
         else:
             samples = []
 
@@ -534,10 +606,12 @@ class CompToolbar(AbstractToolbar):
             filtered_outputs.append(output)
 
         return WorkerConfiguration(
-            filtered_outputs, collection_name,
+            str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
             True, None, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled
         )
+
+    _old_threads_workers = list[Any]()
 
     def upload_to_slowpics(self) -> bool:
         try:
@@ -545,21 +619,31 @@ class CompToolbar(AbstractToolbar):
                 self.main.current_output.graphics_scene_item.pixmap().copy()
             )
 
-            config = self.get_slowpics_conf()
+            if hasattr(self, 'upload_thread'):
+                self._old_threads_workers.append(self.upload_thread)
+
+            if hasattr(self, 'upload_worker'):
+                self._old_threads_workers.append(self.upload_worker)
 
             self.upload_thread = QThread()
-
             self.upload_worker = Worker()
 
             self.upload_worker.moveToThread(self.upload_thread)
 
+            try:
+                config = self.get_slowpics_conf()
+            except RuntimeError as e:
+                print(e)
+                return self.on_end_upload('', True)
+
+            self.curr_uuid = config.uuid
+
             self.upload_thread.started.connect(partial(self.upload_worker.run, config))
             self.upload_thread.finished.connect(self.on_end_upload)
 
-            self.upload_worker.finished.connect(self.upload_thread.quit)
-            self.upload_worker.finished.connect(self.upload_worker.deleteLater)
-
-            self.upload_worker.progress_bar.connect(self.upload_progressbar.setValue)
+            self.upload_worker.progress_bar.connect(
+                lambda uuid, val: self.upload_progressbar.setValue(val) if uuid == self.curr_uuid else None
+            )
             self.upload_worker.progress_status.connect(self.update_status_label)
 
             self.upload_thread.start()

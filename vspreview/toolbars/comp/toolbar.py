@@ -58,10 +58,6 @@ def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, im
     )
 
 
-def select_frames(clip: vs.VideoNode, indices: list[int]) -> vs.VideoNode:
-    return clip.std.BlankClip(length=len(indices)).std.FrameEval(lambda n: clip[indices[n]])
-
-
 def clear_filename(filename: str) -> str:
     import re
     import unicodedata
@@ -143,7 +139,6 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        import os
         import shutil
         from concurrent.futures import ThreadPoolExecutor
         from uuid import uuid4
@@ -176,21 +171,23 @@ class Worker(QObject):
                     for f in conf.frames
                 ]
 
-                def _save(n: int, f: vs.VideoFrame) -> vs.VideoFrame:
+                base_clip = output.prepared.clip
+
+                if len(conf.frames) < 20:
+                    decimated = vs.core.std.Splice([base_clip[i] for i in conf.frames])
+                else:
+                    decimated = output.prepared.clip.std.BlankClip(length=len(conf.frames))
+                    decimated = decimated.std.FrameEval(lambda n: base_clip[conf.frames[n]])
+
+                for i, f in enumerate(decimated.frames(close=True)):
                     if self.isFinished():
                         raise StopIteration
+
                     conf.main.current_output.frame_to_qimage(f).save(
-                        str(path_images[n]), 'PNG', conf.compression
+                        str(path_images[i]), 'PNG', conf.compression
                     )
-                    return f
 
-                decimated = select_frames(output.prepared.clip, conf.frames)
-                clip = decimated.std.ModifyFrame(decimated, _save)
-
-                with open(os.devnull, 'wb') as devnull:
-                    clip.output(
-                        devnull, y4m=False, progress_update=partial(self._progress_update_func, uuid=conf.uuid)
-                    )
+                    self._progress_update_func(i + 1, decimated.num_frames, uuid=conf.uuid)
 
                 if self.isFinished():
                     raise StopIteration
@@ -501,8 +498,8 @@ class CompToolbar(AbstractToolbar):
                 if all(
                     cast(bytes, f.props['_PictType']) in picture_types_b
                     for f in vs.core.std.Splice(
-                        [select_frames(out.prepared.clip, [rnum]) for out in self.main.outputs], True
-                    ).frames()
+                        [out.prepared.clip[rnum] for out in self.main.outputs], True
+                    ).frames(close=True)
                 ):
                     break
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 from itertools import count as iter_count
-from typing import Any, Mapping, cast
+from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import sip
@@ -13,6 +13,9 @@ from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .misc import CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 
+if TYPE_CHECKING:
+    from vstools import VideoFormatT
+
 __all__ = [
     'VideoOutput'
 ]
@@ -22,7 +25,7 @@ class PackingTypeInfo:
     _getid = iter_count()
 
     def __init__(
-        self, vs_format: vs.PresetFormat | vs.VideoFormat, qt_format: QImage.Format, shuffle: bool,
+        self, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool,
         can_playback: bool = True
     ):
         self.id = next(self._getid)

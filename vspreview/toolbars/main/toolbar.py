@@ -91,7 +91,11 @@ class MainToolbar(AbstractToolbar):
         )
 
         self.frame_props_tab_button = PushButton(
-            'Frame Props', self, clicked=lambda: self.frame_props_dialog.showDialog(self.main.current_output.props)
+            'Frame Props', self, clicked=lambda: (
+                self.frame_props_dialog.hide() if not self.frame_props_dialog.isHidden() else (
+                    self.frame_props_dialog.showDialog(self.main.current_output.props)
+                )
+            )
         )
 
         self.settings_button = PushButton('Settings', self, clicked=self.main.app_settings.show)

@@ -27,7 +27,7 @@ pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.gi
 
 It can be used by running `vspreview script.vpy` or your preferred way in [your IDE](#ide-integration).
 
-[Keyboard Shortcuts](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/shortcuts.md)
+[Keyboard Shortcuts](https://github.com/Irrational-Encoding-Wizardry/vs-preview/blob/master/docs/accessibility/keybinds.rst)
 
 [Saved Frame Filename Variables](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/save_frame_placeholders.md)
 

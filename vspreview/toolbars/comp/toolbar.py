@@ -428,7 +428,7 @@ class CompToolbar(AbstractToolbar):
         self.tag_list_combox.setMaximumWidth(250)
         self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
 
-        self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=_select_filter_text())
+        self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=_select_filter_text)
 
         self.current_tags = []
 

@@ -5,13 +5,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
 import vapoursynth as vs
+from PyQt6 import QtCore
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
-    AbstractToolbar, CheckBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout, VideoOutput,
-    main_window
+    AbstractToolbar, CheckBox, ComboBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
+    VideoOutput, main_window
 )
+from ...models import GeneralModel
 from .settings import CompSettings
 
 if TYPE_CHECKING:
@@ -118,6 +120,10 @@ class WorkerConfiguration(NamedTuple):
     path: Path
     main: MainWindow
     delete_cache: bool
+    browser_id: str
+    session_id: str
+    tmdb: str
+    tags: list[str]
 
 
 class Worker(QObject):
@@ -215,11 +221,22 @@ class Worker(QObject):
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
 
         with Session() as sess:
-            sess.get('https://slow.pics/comparison')
+            if conf.browser_id and conf.session_id:
+                sess.cookies.set("SLPSESSION", conf.session_id, domain="slow.pics")
+                browser_id = conf.browser_id
+                check_session = True
+            else:
+                browser_id = str(uuid4())
+                check_session = False
+
+            base_page = sess.get('https://slow.pics/comparison')
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
 
-            browser_id = str(uuid4())
+            if check_session:
+                if base_page.text.find('id="logoutBtn"') == -1:
+                    self.progress_status.emit('Session Expired')
+                    return
 
             head_conf = {
                 'collectionName': conf.collection_name,
@@ -230,6 +247,12 @@ class Worker(QObject):
             }
             if conf.remove_after is not None:
                 head_conf |= {'removeAfter': str(conf.remove_after)}
+
+            if conf.tmdb:
+                head_conf |= {'tmdbId': conf.tmdb}
+
+            if conf.public and conf.tags:
+                head_conf |= {f'tags[{index}]': tag for index, tag in enumerate(conf.tags)}
 
             def _monitor_cb(monitor: MultipartEncoderMonitor) -> None:
                 self._progress_update_func(monitor.bytes_read, monitor.len, uuid=conf.uuid)
@@ -255,13 +278,15 @@ class Worker(QObject):
                         while len(futures) >= 5:
                             if self.isFinished():
                                 return self.finished.emit(conf.uuid)
-                            for future in futures:
+                            for future in futures.copy():
                                 if self.isFinished():
                                     return self.finished.emit(conf.uuid)
                                 if future.done():
                                     futures.remove(future)
                                     images_done += 1
-                                    self._progress_update_func(images_done, total_images, uuid=conf.uuid)
+                                    self._progress_update_func(
+                                        images_done, total_images, uuid=conf.uuid
+                                    )
 
                         futures.append(
                             executor.submit(
@@ -341,11 +366,70 @@ class CompToolbar(AbstractToolbar):
 
             return _on_clicked
 
+        def _select_filter_text(text: str):
+            if text:
+                index = self.tag_list_combox.findText(text, QtCore.Qt.MatchFlag.MatchContains)
+                if index < 0:
+                    return
+                self.tag_list_combox.setCurrentIndex(
+                    index
+                )
+
+        def _handle_current_tag():
+            value = self.tag_list_combox.currentValue()
+            if value in self.current_tags:
+                self.current_tags.remove(value)
+                self.tag_add_button.setText("Add Tag")
+            else:
+                self.current_tags.append(value)
+                self.tag_add_button.setText("Remove Tag")
+
+        def _handle_tag_index(index):
+            value = self.tag_list_combox.currentValue()
+            if value in self.current_tags:
+                self.tag_add_button.setText("Remove Tag")
+            else:
+                self.tag_add_button.setText("Add Tag")
+
+        def _public_click(is_checked: bool):
+            self.tag_add_button.setHidden(not is_checked)
+            self.tag_filter_lineedit.setHidden(not is_checked)
+            self.tag_list_combox.setHidden(not is_checked)
+            self.tag_separator.setHidden(not is_checked)
+
         self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=_force_clicked('I'))
         self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=_force_clicked('P'))
         self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=_force_clicked('B'))
 
-        self.is_public_checkbox = CheckBox('Public', self, checked=False)
+        self.tmdb_id_lineedit = LineEdit('TMDB ID', self)
+        self.tmdb_id_lineedit.setMaximumWidth(75)
+
+        self.tmdb_type_combox = ComboBox[str](
+            self, model=GeneralModel[str](['TV', 'MOVIE'], to_title=False),
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+
+        self.tag_data = {"Error": "Error"}
+        self.current_tags = []
+
+        self.tag_list_combox = ComboBox[str](
+            self, currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        self.tag_list_combox.setMaximumWidth(250)
+
+        self.update_tags()
+
+        self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=_select_filter_text)
+
+        self.tag_add_button = PushButton('Add Tag', self, clicked=_handle_current_tag)
+
+        self.tag_separator = self.get_separator()
+
+        self.delete_after_lineedit = LineEdit('Days', self)
+        self.delete_after_lineedit.setMaximumWidth(75)
+
+        self.is_public_checkbox = CheckBox('Public', self, checked=False, clicked=_public_click)
+        _public_click(self.is_public_checkbox.isChecked())
 
         self.is_nsfw_checkbox = CheckBox('NSFW', self, checked=False)
 
@@ -395,6 +479,25 @@ class CompToolbar(AbstractToolbar):
             ])
         ])
 
+        self.hlayout.addWidget(self.get_separator())
+
+        VBoxLayout(self.hlayout, [
+            self.tmdb_id_lineedit,
+            self.tmdb_type_combox,
+        ])
+
+        self.hlayout.addWidget(self.tag_separator)
+
+        VBoxLayout(self.hlayout, [
+            HBoxLayout([
+                self.tag_filter_lineedit,
+            ]),
+            HBoxLayout([
+                self.tag_list_combox,
+                self.tag_add_button,
+            ])
+        ])
+
         self.hlayout.addStretch(1)
 
         self.hlayout.addSpacing(20)
@@ -410,10 +513,35 @@ class CompToolbar(AbstractToolbar):
         VBoxLayout(self.hlayout, [
             HBoxLayout([
                 self.output_url_lineedit, self.output_url_copy_button,
+                QLabel('Delete After:'), self.delete_after_lineedit,
                 self.start_upload_button, self.stop_upload_button
             ]),
             HBoxLayout([*self.upload_status_elements])
         ])
+
+        self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
+
+    def update_tags(self) -> None:
+        self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
+
+    def on_toggle(self, new_state: bool) -> None:
+        try:
+            from requests import Session
+
+            with Session() as sess:
+                sess.get('https://slow.pics/comparison')
+
+                api_resp = sess.get("https://slow.pics/api/tags").json()
+
+                self.tag_data = {data["label"]: data["value"] for data in api_resp}
+        except ImportError:
+            self.tag_data = {"Missing requests": "Missing requests"}
+        except Exception:
+            self.tag_data = {"No Internet": "No Internet"}
+
+        self.update_tags()
+
+        super().on_toggle(new_state)
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())
@@ -527,6 +655,7 @@ class CompToolbar(AbstractToolbar):
     def get_slowpics_conf(self) -> WorkerConfiguration:
         import logging
         import random
+        import re
         import string
         from uuid import uuid4
 
@@ -591,8 +720,28 @@ class CompToolbar(AbstractToolbar):
 
         check_frame = sample_frames[0] if sample_frames else 0
 
-        filtered_outputs = []
+        delete_after = self.delete_after_lineedit.text()
+        if delete_after and re.match(r'^\d+$', delete_after) is None:
+            raise ValueError('Delete after has to be a number!')
+        elif not delete_after:
+            delete_after = None
 
+        tmdb_id = self.tmdb_id_lineedit.text()
+        if tmdb_id:
+            tmdb_type = self.tmdb_type_combox.currentData()
+            if tmdb_type == "TV":
+                suffix = "TV_"
+            elif tmdb_type == "MOVIE":
+                suffix = "MOVIE_"
+            else:
+                raise ValueError('Unknown TMDB type!')
+
+            if not tmdb_id.startswith(suffix):
+                tmdb_id = f"{suffix}{tmdb_id}"
+
+        tags = [self.tag_data[tag] for tag in self.current_tags]
+
+        filtered_outputs = []
         for output in self.main.outputs:
             props = output.source.clip.get_frame(check_frame).props
 
@@ -604,7 +753,8 @@ class CompToolbar(AbstractToolbar):
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, None, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled
+            True, delete_after, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled,
+            self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
 
     _old_threads_workers = list[Any]()

@@ -253,7 +253,7 @@ class Worker(QObject):
                 head_conf |= {'tmdbId': conf.tmdb}
 
             if conf.public and conf.tags:
-                head_conf |= {f'tags[{index}]': tag for index, tag in enumerate(conf.tags)}          
+                head_conf |= {f'tags[{index}]': tag for index, tag in enumerate(conf.tags)}
 
             def _monitor_cb(monitor: MultipartEncoderMonitor) -> None:
                 self._progress_update_func(monitor.bytes_read, monitor.len, uuid=conf.uuid)
@@ -338,7 +338,6 @@ class CompToolbar(AbstractToolbar):
         self.set_qobject_names()
 
     def setup_ui(self) -> None:
-        from requests import Session
         super().setup_ui()
 
         self.collection_name_lineedit = LineEdit('Collection name', self)
@@ -411,26 +410,17 @@ class CompToolbar(AbstractToolbar):
             currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
-        try:
-            with Session() as sess:
-                sess.get('https://slow.pics/comparison')
-
-                api_resp = sess.get("https://slow.pics/api/tags").json()
-
-                self.tag_data = {data["label"]: data["value"] for data in api_resp}
-        except Exception:
-            self.tag_data = {"No Internet": "No Internet"}
+        self.tag_data = {"Error": "Error"}
+        self.current_tags = []
 
         self.tag_list_combox = ComboBox[str](
-            self, model=GeneralModel[str](sorted(self.tag_data.keys()), to_title=False),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
+            self, currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.tag_list_combox.setMaximumWidth(250)
-        self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
+
+        self.update_tags()
 
         self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=_select_filter_text)
-
-        self.current_tags = []
 
         self.tag_add_button = PushButton('Add Tag', self, clicked=_handle_current_tag)
 
@@ -529,6 +519,30 @@ class CompToolbar(AbstractToolbar):
             ]),
             HBoxLayout([*self.upload_status_elements])
         ])
+
+        self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
+
+    def update_tags(self) -> None:
+        self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
+
+    def on_toggle(self, new_state: bool) -> None:
+        try:
+            from requests import Session
+
+            with Session() as sess:
+                sess.get('https://slow.pics/comparison')
+
+                api_resp = sess.get("https://slow.pics/api/tags").json()
+
+                self.tag_data = {data["label"]: data["value"] for data in api_resp}
+        except ImportError:
+            self.tag_data = {"Missing requests": "Missing requests"}
+        except Exception:
+            self.tag_data = {"No Internet": "No Internet"}
+
+        self.update_tags()
+
+        super().on_toggle(new_state)
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())

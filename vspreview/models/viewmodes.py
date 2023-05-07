@@ -1,19 +1,17 @@
+from functools import partial
 from itertools import count
 from math import log1p
-from functools import partial
-from typing import List, Dict, Any
+from typing import Any
 
 import numpy as np
-import vapoursynth as vs
-from vskernels import (Bicubic, Bilinear, Kernel, Lanczos, Robidoux, RobidouxSharp,
-                       RobidouxSoft, Spline16, Spline36, Spline64)
-from vsutil import get_w
-from ..utils import get_prop
+from vskernels import (
+    Bicubic, Bilinear, Kernel, Lanczos, Robidoux, RobidouxSharp, RobidouxSoft, Spline16, Spline36, Spline64
+)
+from vstools import core, get_prop, get_w, video_heuristics, vs
+
 from ..core.types import VideoOutput
 
-core = vs.core
-
-common_scaler: Dict[str, List[Kernel]] = {
+common_scaler: dict[str, list[Kernel]] = {
     "Bilinear": [
         Bilinear()
     ],
@@ -44,10 +42,10 @@ common_scaler: Dict[str, List[Kernel]] = {
 
 
 def getnative_modifyframe(
-    f: List[vs.VideoFrame], n: int, min_h: int, max_h: int, plot_width: int, plot_height: int, callback: Any
+    f: list[vs.VideoFrame], n: int, min_h: int, max_h: int, plot_width: int, plot_height: int, callback: Any
 ) -> vs.VideoFrame:
-    resolutions: List[int] = []
-    vals: List[float] = [
+    resolutions: list[int] = []
+    vals: list[float] = [
         get_prop(x.props, 'PlaneStatsAverage', float) for x in f[1:]
     ]
 
@@ -117,11 +115,9 @@ def getnative_modifyframe(
 
 def getnative_graph(
     output: VideoOutput,
-    min_h: int = 900, max_h: int = 2000, steps: int = 1,
+    min_h: int = 900, max_h: int = 1000, steps: int = 1,
     plot_width: int = 1920, plot_height: int = 1080
 ) -> vs.VideoNode:
-    from ..utils.utils import video_heuristics
-
     kernel = common_scaler['Bicubic'][0]
 
     is_rgb = output.source.clip.format.color_family == vs.RGB

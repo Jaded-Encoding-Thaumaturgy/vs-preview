@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Generic, Iterator, Mapping, OrderedDict, 
 import vapoursynth as vs
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
-from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
+from ..core import AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
 from .viewmodes import getnative_graph
 
 if TYPE_CHECKING:

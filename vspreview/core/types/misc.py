@@ -32,6 +32,7 @@ class VideoOutputNode:
 class ViewMode(str, Enum):
     NORMAL = 'Normal'
     FFTSPECTRUM = 'FFTSpectrum'
+    DESCALING_HELP = 'Descaling Helper'
 
 
 @dataclass

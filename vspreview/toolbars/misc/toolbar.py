@@ -172,7 +172,8 @@ class MiscToolbar(AbstractToolbar):
             )
         )
         self.main.add_shortcut(
-            Qt.SHIFT + Qt.Key_D, lambda: self.view_mode_combox.setCurrentText(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_D).toCombined(),
+            lambda: self.view_mode_combox.setCurrentText(
                 ViewMode.DESCALING_HELP if self.main.current_viewmode != ViewMode.DESCALING_HELP else ViewMode.NORMAL
             )
         )

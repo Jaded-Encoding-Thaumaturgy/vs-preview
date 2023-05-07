@@ -1,21 +1,29 @@
 from __future__ import annotations
 
-import sys
-from asyncio import get_event_loop_policy, get_running_loop
 from functools import partial, wraps
 from string import Template
-from typing import Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable
 
-from PyQt5.QtCore import QSignalBlocker
-from PyQt5.QtWidgets import QApplication
-from vstools import F, P, R, T, vs
+import vapoursynth as vs
+from PyQt6.QtCore import QSignalBlocker
+
+if TYPE_CHECKING:
+    from vstools import F, P, R, T
 
 from ..core import Frame, Time, main_window
+
+__all__ = [
+    'qt_silent_call',
+    'strfdelta',
+    'fire_and_forget',
+    'set_status_label',
+    'vs_clear_cache',
+]
 
 
 # it is a BuiltinMethodType at the same time
 def qt_silent_call(qt_method: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
-    block = QSignalBlocker(qt_method.__self__)
+    block = QSignalBlocker(qt_method.__self__)  # type: ignore
     ret = qt_method(*args, **kwargs)
     del block
     return ret
@@ -48,6 +56,8 @@ def strfdelta(time: Time, output_format: str) -> str:
 
 
 def fire_and_forget(f: F) -> F:
+    from asyncio import get_event_loop_policy, get_running_loop
+
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
@@ -55,7 +65,8 @@ def fire_and_forget(f: F) -> F:
         except RuntimeError:
             loop = get_event_loop_policy().get_event_loop()
         return loop.run_in_executor(None, partial(f, *args, **kwargs))
-    return cast(F, wrapped)
+
+    return wrapped  # type: ignore
 
 
 def set_status_label(label: str) -> Callable[[F], F]:
@@ -73,7 +84,7 @@ def set_status_label(label: str) -> Callable[[F], F]:
             return ret
         return _wrapped
 
-    return cast(Callable[[F], F], _decorator)
+    return _decorator
 
 
 def vs_clear_cache() -> None:
@@ -84,10 +95,3 @@ def vs_clear_cache() -> None:
             output.clip.get_frame(int(main_window().current_output.last_showed_frame or Frame(0)))
             break
     vs.core.max_cache_size = cache_size
-
-
-def get_temp_screen_resolution() -> tuple[int, int]:
-    app = QApplication(sys.argv)
-
-    geometry = app.desktop().screenGeometry()
-    return (geometry.width(), geometry.height())

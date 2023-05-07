@@ -5,6 +5,10 @@ from typing import Any, Mapping
 from .units import Frame
 from .yaml import YAMLObjectWrapper
 
+__all__ = [
+    'Scene'
+]
+
 
 class Scene(YAMLObjectWrapper):
     __slots__ = ('start', 'end', 'label')

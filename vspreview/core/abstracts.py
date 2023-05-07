@@ -1,41 +1,43 @@
 from __future__ import annotations
 
-import inspect
-import logging
 from abc import abstractmethod
-from dataclasses import dataclass
-from enum import Enum
 from functools import lru_cache
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, TypeAlias, cast, overload
 
-from PyQt5.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QClipboard, QKeySequence
-from PyQt5.QtWidgets import (
-    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout,
-    QLineEdit, QMainWindow, QProgressBar, QPushButton, QShortcut, QSpacerItem, QSpinBox, QStatusBar, QTableView,
-    QVBoxLayout, QWidget
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWidgets import (
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QProgressBar,
+    QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
-from vstools import T, vs
 
-from .bases import QABC, QAbstractYAMLObjectSingleton, QYAMLObjectSingleton
-from .better_abc import abstract_attribute
+from .bases import QABC, QYAMLObjectSingleton
 
 if TYPE_CHECKING:
-    from ..main.timeline import Notches, Timeline
-    from ..models import VideoOutputs
-    from .types import Frame, Time, VideoOutput
+    from vstools import T
+
+    from ..main import MainWindow
+    from .custom import Notches
+    from .types import Frame, Stretch
+
+    LayoutChildT: TypeAlias = QWidget | QBoxLayout | Stretch | QSpacerItem
+else:
+    LayoutChildT: TypeAlias = Any
 
 
-class ViewMode(str, Enum):
-    NORMAL = 'Normal'
-    FFTSPECTRUM = 'FFTSpectrum'
-    DESCALING_HELP = 'Descaling Helper'
+__all__ = [
+    'HBoxLayout', 'VBoxLayout',
 
+    'SpinBox', 'PushButton', 'LineEdit', 'CheckBox', 'Timer', 'ProgressBar', 'DoubleSpinBox',
 
-@dataclass
-class Stretch:
-    amount: int = 0
+    'AbstractQItem', 'AbstractYAMLObject',
+
+    'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
+
+    'AbstractToolbar', 'AbstractToolbarSettings',
+
+    'main_window', 'storage_err_msg', 'try_load',
+]
 
 
 class ExtendedLayout(QBoxLayout):
@@ -44,37 +46,42 @@ class ExtendedLayout(QBoxLayout):
         ...
 
     @overload
-    def __init__(self, init_value: QWidget | QBoxLayout | None) -> None:
+    def __init__(self, init_value: QWidget | QBoxLayout | None, **kwargs: Any) -> None:
         ...
 
     @overload
-    def __init__(self, init_value: Sequence[QWidget | QBoxLayout] | None) -> None:
+    def __init__(self, init_value: LayoutChildT | Sequence[LayoutChildT] | None, **kwargs: Any) -> None:
         ...
 
     @overload
     def __init__(
-        self, parent: QWidget | QBoxLayout | None = None, children: Sequence[QWidget | QBoxLayout] | None = None
+        self, parent: QWidget | QBoxLayout | None = None,
+        children: LayoutChildT | Sequence[LayoutChildT] | None = None, **kwargs: Any
     ) -> None:
         ...
 
-    def __init__(
-        self, arg0: QWidget | QBoxLayout | None = None, arg1: Sequence[QWidget | QBoxLayout] | None = None,
-        spacing: int | None = None, alignment: Qt.Alignment | Qt.AlignmentFlag | None = None, **kwargs
+    def __init__(  # type: ignore
+        self, arg0: QWidget | QBoxLayout | None = None,
+        arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
+        spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
     ) -> ExtendedLayout:
+        from .types import Stretch
+
         try:
             if isinstance(arg0, QBoxLayout):
                 super().__init__(**kwargs)
                 arg0.addLayout(self)
-                arg0 = []
+                arg0 = None
             elif isinstance(arg0, QWidget):
-                super().__init__(arg0, **kwargs)
-                arg0 = []
+                super().__init__(arg0, **kwargs)  # type: ignore
+                arg0 = None
             else:
                 raise BaseException()
         except BaseException:
             super().__init__(**kwargs)
+
             if not any((arg0, arg1)):
-                return
+                return  # type: ignore
 
         items = [u for s in (t if isinstance(t, Sequence) else [t] if t else [] for t in [arg0, arg1]) for u in s]
 
@@ -101,35 +108,89 @@ class ExtendedLayout(QBoxLayout):
             self.addLayout(layout)
 
     def clear(self) -> None:
-        while(item := self.takeAt(0)):
-            if (widget := item.widget()):
+        for i in reversed(range(self.count())):
+            item = self.itemAt(i)
+            widget = item.widget()
+            self.removeItem(item)
+            if widget:
+                # removeItem only takes it out of the layout. The widget
+                # still exists inside its parent widget.
                 widget.deleteLater()
-
-            if (layout := item.layout()):
-                try:
-                    layout.clear()
-                except BaseException:
-                    del layout
-
-            del item
+            else:
+                # Clear and delete sub-layouts
+                if isinstance(item, ExtendedLayout):
+                    item.clear()
+                item.deleteLater()  # type: ignore
 
     @staticmethod
-    def stretch(amount: int | None) -> Stretch:
-        return Stretch(amount)
+    def stretch(amount: int | None) -> Stretch:  # type: ignore
+        from .types import Stretch
+
+        return Stretch(amount)  # type: ignore
 
 
 class HBoxLayout(QHBoxLayout, ExtendedLayout):
-    ...
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: QWidget | QBoxLayout | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: LayoutChildT | Sequence[LayoutChildT] | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(
+            self, parent: QWidget | QBoxLayout | None = None,
+            children: LayoutChildT | Sequence[LayoutChildT] | None = None, **kwargs: Any
+        ) -> None:
+            ...
+
+        def __init__(  # type: ignore
+            self, arg0: QWidget | QBoxLayout | None = None,
+            arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
+            spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
+        ) -> ExtendedLayout:
+            ...
 
 
 class VBoxLayout(QVBoxLayout, ExtendedLayout):
-    ...
+    if TYPE_CHECKING:
+        @overload
+        def __init__(self) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: QWidget | QBoxLayout | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(self, init_value: LayoutChildT | Sequence[LayoutChildT] | None, **kwargs: Any) -> None:
+            ...
+
+        @overload
+        def __init__(
+            self, parent: QWidget | QBoxLayout | None = None,
+            children: LayoutChildT | Sequence[LayoutChildT] | None = None, **kwargs: Any
+        ) -> None:
+            ...
+
+        def __init__(  # type: ignore
+            self, arg0: QWidget | QBoxLayout | None = None,
+            arg1: LayoutChildT | Sequence[LayoutChildT] | None = None,
+            spacing: int | None = None, alignment: Qt.AlignmentFlag | None = None, **kwargs: Any
+        ) -> ExtendedLayout:
+            ...
 
 
 class SpinBox(QSpinBox):
     def __init__(
         self, parent: QWidget | None = None, minimum: int | None = None,
-        maximum: int | None = None, suffix: str | None = None, tooltip: str | None = None, **kwargs
+        maximum: int | None = None, suffix: str | None = None, tooltip: str | None = None, **kwargs: Any
     ) -> None:
         super().__init__(parent, **kwargs)
         for arg, action in (
@@ -139,25 +200,43 @@ class SpinBox(QSpinBox):
                 getattr(self, action)(arg)
 
 
-class ExtendedItemInit():
-    def __init__(self, *args, tooltip: str | None = None, **kwargs) -> None:
+if TYPE_CHECKING:
+    ExtItemBase = QWidget
+else:
+    ExtItemBase = object
+
+
+class ExtendedItemInit(ExtItemBase):
+    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
         try:
-            super().__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)  # type: ignore
         except TypeError:
-            super().__init__(*args)
+            super().__init__(*args)  # type: ignore
+
         if tooltip:
             super().setToolTip(tooltip)
 
 
-class PushButton(ExtendedItemInit, QPushButton):
+class ExtendedItemWithName(ExtendedItemInit):
+    if TYPE_CHECKING:
+        def __init__(
+            self, name: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+        ) -> None:
+            ...
+
+
+class PushButton(ExtendedItemWithName, QPushButton):
     ...
 
 
 class LineEdit(ExtendedItemInit, QLineEdit):
-    ...
+    def __init__(
+        self, placeholder: str, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+    ) -> None:
+        return super().__init__(*args, tooltip=tooltip, **kwargs, placeholderText=placeholder)
 
 
-class CheckBox(ExtendedItemInit, QCheckBox):
+class CheckBox(ExtendedItemWithName, QCheckBox):
     ...
 
 
@@ -173,12 +252,12 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
     ...
 
 
-class AbstractQItem():
-    __slots__: tuple[str]
-    storable_attrs = ()
+class AbstractQItem:
+    __slots__: tuple[str, ...]
+    storable_attrs: ClassVar[tuple[str, ...]] = ()
 
     def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
-        QShortcut(QKeySequence(key), self, activated=handler)
+        QShortcut(QKeySequence(key), self, activated=handler)  # type: ignore
 
     def set_qobject_names(self) -> None:
         if not hasattr(self, '__slots__'):
@@ -224,14 +303,9 @@ class ExtendedWidget(AbstractQItem, QWidget):
 
     def get_separator(self) -> QFrame:
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.VLine)
-        separator.setFrameShadow(QFrame.Sunken)
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
-
-
-class ExtendedMainWindow(AbstractQItem, QMainWindow):
-    def setup_ui(self) -> None:
-        ...
 
 
 class ExtendedDialog(AbstractQItem, QDialog):
@@ -242,17 +316,13 @@ class ExtendedTableView(AbstractQItem, QTableView):
     ...
 
 
-class AbstractAppSettings(ExtendedDialog):
-    @abstractmethod
-    def addTab(self, widget: QWidget, label: str) -> int:
-        raise NotImplementedError
-
-
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
-    def __init__(self) -> None:
+    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
         super().__init__()
+
+        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
         self.set_defaults()
@@ -265,165 +335,17 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
 
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
+        ...
+
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        pass
+        if main_window().toolbars.should_set_state(self.__class__):
+            self._setstate_(state)
 
-
-class AbstractMainWindow(ExtendedMainWindow, QAbstractYAMLObjectSingleton):
-    __slots__ = ()
-
-    current_viewmode: ViewMode
-
-    @abstractmethod
-    def load_script(
-        self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int | None = None
-    ) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def reload_script(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def init_outputs(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def switch_output(self, value: int | VideoOutput) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def switch_frame(
-        self, pos: Frame | Time | None, *, render_frame: bool | tuple[vs.VideoFrame, vs.VideoFrame | None] = True
-    ) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def show_message(self, message: str) -> None:
-        raise NotImplementedError
-
-    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
-        playback_active = self.toolbars.playback.play_timer.isActive()
-
-        if playback_active:
-            self.toolbars.playback.stop()
-
-        if new_viewmode == ViewMode.NORMAL:
-            self.outputs.switchToNormalView()
-        elif new_viewmode == ViewMode.FFTSPECTRUM:
-            self.outputs.switchToFFTSpectrumView(force_cache)
-        elif new_viewmode == ViewMode.DESCALING_HELP:
-            self.outputs.switchToDescalingHelper(force_cache)
-        else:
-            raise ValueError('Invalid ViewMode passed!')
-
-        self.current_viewmode = new_viewmode
-
-        self.init_outputs()
-
-        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
-
-        if playback_active:
-            self.toolbars.playback.play()
-
-    if TYPE_CHECKING:
-        @property
-        def app_settings(self) -> AbstractAppSettings:
-            ...
-
-        @app_settings.setter
-        def app_settings(self) -> None:
-            ...
-
-        @property
-        def central_widget(self) -> QWidget:
-            ...
-
-        @central_widget.setter
-        def central_widget(self) -> None:
-            ...
-
-        @property
-        def clipboard(self) -> QClipboard:
-            ...
-
-        @clipboard.setter
-        def clipboard(self) -> None:
-            ...
-
-        @property
-        def current_output(self) -> VideoOutput:
-            ...
-
-        @current_output.setter
-        def current_output(self) -> None:
-            ...
-
-        @property
-        def display_scale(self) -> float:
-            ...
-
-        @display_scale.setter
-        def display_scale(self) -> None:
-            ...
-
-        @property
-        def graphics_scene(self) -> QGraphicsScene:
-            ...
-
-        @graphics_scene.setter
-        def graphics_scene(self) -> None:
-            ...
-
-        @property
-        def graphics_view(self) -> QGraphicsView:
-            ...
-
-        @graphics_view.setter
-        def graphics_view(self) -> None:
-            ...
-
-        @property
-        def outputs(self) -> VideoOutputs:
-            ...
-
-        @property
-        def timeline(self) -> Timeline:
-            ...
-
-        @timeline.setter
-        def timeline(self) -> None:
-            ...
-
-        @property
-        def script_path(self) -> Path:
-            ...
-
-        @script_path.setter
-        def script_path(self) -> None:
-            ...
-
-        @property
-        def statusbar(self) -> QStatusBar:
-            ...
-
-        @statusbar.setter
-        def statusbar(self) -> None:
-            ...
-
-    else:
-        app_settings: AbstractAppSettings = abstract_attribute()
-        central_widget: QWidget = abstract_attribute()
-        clipboard: QClipboard = abstract_attribute()
-        current_output: VideoOutput = abstract_attribute()
-        display_scale: float = abstract_attribute()
-        graphics_scene: QGraphicsScene = abstract_attribute()
-        graphics_view: QGraphicsView = abstract_attribute()
-        outputs: VideoOutputs = abstract_attribute()
-        timeline: Timeline = abstract_attribute()
-        script_path: Path = abstract_attribute()
-        statusbar: QStatusBar = abstract_attribute()
+            try:
+                super().__setstate__(state)  # type: ignore
+            except AttributeError:
+                ...
 
 
 class AbstractToolbar(ExtendedWidget, QWidget, QABC):
@@ -431,21 +353,31 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
     storable_attrs = tuple[str, ...]()
     class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
     num_keys = [
-        Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0
+        Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4, Qt.Key.Key_5, Qt.Key.Key_6,
+        Qt.Key.Key_7, Qt.Key.Key_8, Qt.Key.Key_9, Qt.Key.Key_0
     ]
 
     __slots__ = ('main', 'toggle_button', *class_storable_attrs)
 
     notches_changed = pyqtSignal(ExtendedWidget)
 
-    def __init__(self, main: AbstractMainWindow, settings: QWidget) -> None:
+    main: MainWindow
+    name: str
+
+    def __init__(self, main: MainWindow, settings: QWidget | None = None) -> None:
         super().__init__(main.central_widget)
+
+        if settings is None:
+            from vstools.exceptions import CustomValueError
+
+            raise CustomValueError('Missing settings widget!')
+
         self.main = main
         self.settings = settings
         self.name = self.__class__.__name__[:-7]
 
-        self.main.app_settings.addTab(self.settings, self.name)
-        self.setFocusPolicy(Qt.ClickFocus)
+        self.main.app_settings.addTab(settings, self.name)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
         self.notches_changed.connect(self.main.timeline.update_notches)
 
@@ -480,15 +412,14 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
         pass
 
     def get_notches(self) -> Notches:
-        from ..main.timeline import Notches
-
+        from .custom import Notches
         return Notches()
 
     def is_notches_visible(self) -> bool:
         return self.isVisible()
 
     def resize_main_window(self, expanding: bool) -> None:
-        if self.main.windowState() in map(Qt.WindowStates, {Qt.WindowMaximized, Qt.WindowFullScreen}):
+        if self.main.windowState() in {Qt.WindowState.WindowMaximized, Qt.WindowState.WindowFullScreen}:
             return
 
         if expanding:
@@ -512,13 +443,17 @@ class AbstractToolbar(ExtendedWidget, QWidget, QABC):
 
 
 @lru_cache()
-def main_window() -> AbstractMainWindow:
+def main_window() -> MainWindow:
+    import logging
+
+    from ..main.window import MainWindow
+
     app = QApplication.instance()
 
     if app is not None:
-        for widget in app.topLevelWidgets():
-            if isinstance(widget, AbstractMainWindow):
-                return cast(AbstractMainWindow, widget)
+        for widget in app.topLevelWidgets():  # type: ignore
+            if isinstance(widget, MainWindow):
+                return cast(MainWindow, widget)
         app.exit()
 
     logging.critical('main_window() failed')
@@ -537,6 +472,8 @@ class _SetterFunction():
 
 
 def storage_err_msg(name: str, level: int = 0) -> str:
+    import inspect
+
     pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
     caller_name = inspect.stack()[level + 1][0].f_locals['self'].__class__.__name__
 
@@ -548,6 +485,8 @@ def try_load(
     receiver: T | _OneArgumentFunction | _SetterFunction,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:
+    import logging
+
     if error_msg is None:
         error_msg = storage_err_msg(name, 1)
 
@@ -563,16 +502,28 @@ def try_load(
         if nullable:
             value = None
 
+    func_error = None
+
     if isinstance(receiver, expected_type):
         receiver = value
     elif callable(receiver):
         try:
             cast(_SetterFunction, receiver)(name, value)
-        except BaseException:
-            cast(_OneArgumentFunction, receiver)(value)
+        except Exception as e:
+            if 'positional arguments but' not in str(e):
+                func_error = e
+
+            try:
+                cast(_OneArgumentFunction, receiver)(value)
+                func_error = None
+            except Exception as ee:
+                func_error = ee
     elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
         try:
             receiver.__setattr__(name, value)
         except AttributeError as e:
             logging.error(e)
             logging.warning(error_msg)
+
+    if func_error:
+        raise func_error from None

@@ -1,17 +1,29 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import QLabel, QTabWidget, QWidget
+import sys
+from typing import TYPE_CHECKING
 
-from ..core import AbstractMainWindow, ExtendedDialog, HBoxLayout, PushButton, VBoxLayout
+from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtWidgets import QLabel, QTabWidget, QWidget
+
+from ..core import ExtendedDialog, HBoxLayout, PushButton, VBoxLayout
+
+if TYPE_CHECKING:
+    from .window import MainWindow
+
+
+__all__ = [
+    'ScriptErrorDialog',
+    'SettingsDialog'
+]
 
 
 class ScriptErrorDialog(ExtendedDialog):
     __slots__ = ('main', 'label', 'reload_button', 'exit_button')
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
-        super().__init__(main_window, Qt.Dialog)
+    def __init__(self, main_window: MainWindow) -> None:
+        super().__init__(main_window, Qt.WindowType.Dialog)
         self.main = main_window
 
         self.setWindowTitle('Script Loading Error')
@@ -36,7 +48,7 @@ class ScriptErrorDialog(ExtendedDialog):
         ]))
 
     def setup_shortcuts(self) -> None:
-        self.add_shortcut(Qt.CTRL + Qt.Key_R, self.reload_button.click)
+        self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.reload_button.click)
 
     def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
@@ -45,7 +57,8 @@ class ScriptErrorDialog(ExtendedDialog):
     def on_exit_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
         self.script_exec_failed = True
-        self.main.app.exit()
+
+        sys.exit(1)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.on_exit_clicked()
@@ -54,7 +67,7 @@ class ScriptErrorDialog(ExtendedDialog):
 class SettingsDialog(ExtendedDialog):
     __slots__ = ('main', 'tab_widget',)
 
-    def __init__(self, main_window: AbstractMainWindow) -> None:
+    def __init__(self, main_window: MainWindow) -> None:
         super().__init__(main_window)
 
         self.main = main_window

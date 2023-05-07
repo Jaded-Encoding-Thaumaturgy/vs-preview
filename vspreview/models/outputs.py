@@ -1,28 +1,44 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterator, Mapping, OrderedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Iterator, Mapping, OrderedDict, TypeVar
 
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
-from vstools import vs
+import vapoursynth as vs
+from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
-from .viewmodes import getnative_graph
 from ..core import AbstractMainWindow, AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
+from .viewmodes import getnative_graph
+
+if TYPE_CHECKING:
+    from ..main import MainWindow
 
 T = TypeVar('T', VideoOutput, AudioOutput)
 
 
+__all__ = [
+    'Outputs',
+    'VideoOutputs',
+    'AudioOutputs'
+]
+
+
 class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
+    __slots__ = ('items', )
+
     out_type: type[T]
+    vs_type: type[vs.VideoOutputTuple] | type[vs.AudioNode]
+
+    items: list[T]
     _items: list[T]
 
-    __slots__ = ('items')
+    main: MainWindow
 
-    def __init__(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
+    def __init__(self, main: MainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         self.setValue(main, local_storage)
 
-    def setValue(self, main: AbstractMainWindow, local_storage: Mapping[str, T] | None = None) -> None:
+    def setValue(self, main: MainWindow, local_storage: Mapping[str, T] | None = None) -> None:
         super().__init__()
-        self.items = list[T]()
+
+        self.items = []
         self.main = main
 
         local_storage, newstorage = (local_storage, False) if local_storage is not None else ({}, True)
@@ -37,11 +53,12 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         for i, vs_output in outputs.items():
             if not isinstance(vs_output, self.vs_type):
                 continue
+
             try:
                 output = local_storage[str(i)]
-                output.setValue(vs_output, i, newstorage)
+                output.setValue(vs_output, i, newstorage)  # type: ignore
             except KeyError:
-                output = self.out_type(vs_output, i, newstorage)
+                output = self.out_type(vs_output, i, newstorage)  # type: ignore
 
             self.items.append(output)
 
@@ -74,35 +91,36 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
     def clear(self) -> None:
         self.beginRemoveRows(QModelIndex(), 0, len(self.items))
         self.items.clear()
+        self._items.clear()
         self.endRemoveRows()
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if not index.isValid():
             return None
         if index.row() >= len(self.items):
             return None
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self.items[index.row()].name
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
             return self.items[index.row()].name
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.items)
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return cast(Qt.ItemFlags, Qt.ItemIsEnabled)
+            return Qt.ItemFlag.ItemIsEnabled
 
-        return super().flags(index) | Qt.ItemIsEditable
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
-        if not role == Qt.EditRole:
+        if not role == Qt.ItemDataRole.EditRole:
             return False
         if not isinstance(value, str):
             return False
@@ -144,7 +162,7 @@ class VideoOutputs(Outputs[VideoOutput]):
     def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
         new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
 
-        new_output = VideoOutput(new_videonode, old_output.index, False, old_output.timecodes)
+        new_output = VideoOutput(new_videonode, old_output.index, False)
 
         self.copy_output_props(new_output, old_output)
 
@@ -158,10 +176,10 @@ class VideoOutputs(Outputs[VideoOutput]):
 
     def switchToFFTSpectrumView(self, force_cache: bool = False) -> None:
         try:
-            from vsdfft import FFTSpectrum
+            from vsdfft.spectrum import FFTSpectrum
         except ModuleNotFoundError:
             raise RuntimeError(
-                'vspreview: You can\'t chage to this view mode. You\'re missing the `vsdfft` package!'
+                'vspreview: You can\'t change to this view mode. You\'re missing the `vsdfft` package!'
             )
 
         if not self._fft_spectr_items or force_cache:
@@ -194,4 +212,4 @@ class VideoOutputs(Outputs[VideoOutput]):
 
 class AudioOutputs(Outputs[AudioOutput]):
     out_type = AudioOutput
-    vs_type = vs.AudioNode
+    vs_type = vs.AudioNode  # type: ignore

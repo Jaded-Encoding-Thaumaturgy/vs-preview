@@ -1,20 +1,24 @@
 from __future__ import annotations
 
-import logging
 import sys
 from functools import partial
 from multiprocessing import cpu_count
 from typing import Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QComboBox, QLabel, QShortcut
+from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtGui import QShortcut
+from PyQt6.QtWidgets import QComboBox, QLabel
 
-from ..core import AbstractToolbarSettings, CheckBox, HBoxLayout, PushButton, SpinBox, Time, VBoxLayout, try_load
-from ..core.bases import QYAMLObjectSingleton
-from ..core.custom import ComboBox, TimeEdit
+from ..core import (
+    AbstractToolbarSettings, CheckBox, ComboBox, HBoxLayout, PushButton, QYAMLObjectSingleton, SpinBox, Time, TimeEdit,
+    VBoxLayout, main_window, try_load
+)
 from ..models import GeneralModel
-from ..utils import main_window
+
+__all__ = [
+    'MainSettings',
+    'WindowSettings'
+]
 
 
 class MainSettings(AbstractToolbarSettings):
@@ -29,7 +33,7 @@ class MainSettings(AbstractToolbarSettings):
 
     INSTANT_FRAME_UPDATE = False
     SYNC_OUTPUTS = True
-    LOG_LEVEL = logging.INFO
+    STORAGE_BACKUPS_COUNT = 2
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -56,12 +60,12 @@ class MainSettings(AbstractToolbarSettings):
 
         self.azerty_keyboard_checkbox = CheckBox('AZERTY Keyboard', self)
 
-        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.NoInsert)
+        self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.InsertPolicy.NoInsert)
         self.zoom_levels_lineedit = self.zoom_levels_combobox.lineEdit()
 
         self.zoom_levels_lineedit.returnPressed.connect(self.zoom_levels_combobox_on_add)
-        QShortcut(
-            QKeySequence(Qt.CTRL + Qt.Key_Delete), self.zoom_levels_combobox,
+        QShortcut(  # type: ignore
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Delete).toCombined(), self.zoom_levels_combobox,
             activated=partial(self.zoom_levels_combobox_on_remove, True)
         )
 
@@ -220,15 +224,15 @@ class MainSettings(AbstractToolbarSettings):
     def get_usable_cpus_count() -> int:
         from os import getpid
         try:
-            from win32.win32api import OpenProcess
-            from win32.win32process import GetProcessAffinityMask
-            from win32con import PROCESS_QUERY_LIMITED_INFORMATION
+            from win32.win32api import OpenProcess  # type: ignore
+            from win32.win32process import GetProcessAffinityMask  # type: ignore
+            from win32con import PROCESS_QUERY_LIMITED_INFORMATION  # type: ignore
             proc_mask, _ = GetProcessAffinityMask(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, getpid()))
             cpus = [i for i in range(64) if (1 << i) & proc_mask]
             return len(cpus)
         except Exception:
             try:
-                from os import sched_getaffinity
+                from os import sched_getaffinity  # type: ignore
                 return len(sched_getaffinity(getpid()))
             except Exception:
                 return cpu_count()
@@ -293,7 +297,7 @@ class MainSettings(AbstractToolbarSettings):
             'color_management': self.color_management
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'autosave_interval', Time, self.autosave_control.setValue)
         try_load(state, 'base_ppi', int, self.base_ppi_spinbox.setValue)
         try_load(state, 'dark_theme', bool, self.dark_theme_checkbox.setChecked)

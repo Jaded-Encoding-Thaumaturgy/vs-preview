@@ -1,18 +1,30 @@
 from __future__ import annotations
 
 from collections import deque
-from concurrent.futures import Future
 from copy import deepcopy
 from time import perf_counter
+from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import QMetaObject, Qt
-from PyQt5.QtWidgets import QLabel
-from vstools import vs
+import vapoursynth as vs
+from PyQt6.QtCore import QMetaObject, Qt
+from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractMainWindow, AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
+from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
 from ...core.custom import FrameEdit
 from ...utils import qt_silent_call, strfdelta, vs_clear_cache
 from .settings import BenchmarkSettings
+
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
+    from vapoursynth import _Future as Future
+else:
+    from concurrent.futures import Future
+
+
+__all__ = [
+    'BenchmarkToolbar'
+]
 
 
 class BenchmarkToolbar(AbstractToolbar):
@@ -26,8 +38,10 @@ class BenchmarkToolbar(AbstractToolbar):
         'update_info_timer', 'sequenced_timer'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, BenchmarkSettings())
+    settings: BenchmarkSettings
+
+    def __init__(self, main: MainWindow) -> None:
+        super().__init__(main, BenchmarkSettings(self))
 
         self.setup_ui()
 
@@ -41,10 +55,10 @@ class BenchmarkToolbar(AbstractToolbar):
         self.frames_left = Frame(0)
 
         self.sequenced_timer = Timer(
-            timeout=self._request_next_frame_sequenced, timerType=Qt.PreciseTimer, interval=0
+            timeout=self._request_next_frame_sequenced, timerType=Qt.TimerType.PreciseTimer, interval=0
         )
 
-        self.update_info_timer = Timer(timeout=self.update_info, timerType=Qt.PreciseTimer)
+        self.update_info_timer = Timer(timeout=self.update_info, timerType=Qt.TimerType.PreciseTimer)
 
         self.set_qobject_names()
 
@@ -85,9 +99,9 @@ class BenchmarkToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        self.start_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.end_frame_control.setMaximum(self.main.current_output.end_frame)
-        self.total_frames_control.setMaximum(self.main.current_output.total_frames)
+        self.start_frame_control.setMaximum(self.main.current_output.total_frames - 1)
+        self.end_frame_control.setMaximum(self.main.current_output.total_frames - 1)
+        self.total_frames_control.setMaximum(self.main.current_output.total_frames - Frame(1))
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
@@ -131,7 +145,7 @@ class BenchmarkToolbar(AbstractToolbar):
             self.update_info()
 
         self.running = False
-        QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.QueuedConnection)
+        QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.ConnectionType.QueuedConnection)
 
         if self.run_abort_button.isChecked():
             self.run_abort_button.click()
@@ -150,7 +164,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.frames_left -= Frame(1)
 
-    def _request_next_frame_unsequenced(self, future: Future | None = None) -> None:
+    def _request_next_frame_unsequenced(self, future: Future[vs.VideoFrame] | None = None) -> None:
         if self.frames_left <= Frame(0):
             self.abort()
             return
@@ -158,7 +172,7 @@ class BenchmarkToolbar(AbstractToolbar):
         if self.running:
             next_frame = self.end_frame + Frame(1) - self.frames_left
             new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
-            new_future.add_done_callback(self._request_next_frame_unsequenced)
+            new_future.add_done_callback(self._request_next_frame_unsequenced)  # type: ignore
 
         if future is not None:
             future.result()
@@ -171,10 +185,10 @@ class BenchmarkToolbar(AbstractToolbar):
         else:
             self.abort()
 
-    def on_prefetch_changed(self, new_state: int) -> None:
-        if new_state == Qt.Checked:
+    def on_prefetch_changed(self, new_state: Qt.CheckState) -> None:
+        if new_state == Qt.CheckState.Checked:
             self.unsequenced_checkbox.setEnabled(True)
-        elif new_state == Qt.Unchecked:
+        elif new_state == Qt.CheckState.Unchecked:
             self.unsequenced_checkbox.setChecked(False)
             self.unsequenced_checkbox.setEnabled(False)
 
@@ -212,9 +226,9 @@ class BenchmarkToolbar(AbstractToolbar):
             delta = total - old_total
 
             end += delta
-            if end > self.main.current_output.end_frame:
-                start -= end - self.main.current_output.end_frame
-                end = self.main.current_output.end_frame
+            if end > (e := self.main.current_output.total_frames - 1):
+                start -= end - e
+                end = e
         else:
             return
 

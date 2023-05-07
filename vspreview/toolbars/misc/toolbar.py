@@ -2,28 +2,34 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
-from vstools import video_heuristics
+from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 
 from ...core import (
-    AbstractMainWindow, AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch,
-    Time, Timer, VBoxLayout, ViewMode, try_load
+    AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time, VBoxLayout,
+    ViewMode, try_load
 )
 from ...core.custom import ComboBox, Switch
 from ...models import GeneralModel
 from ...utils import qt_silent_call
 from .settings import MiscSettings
 
+if TYPE_CHECKING:
+    from ...main import MainWindow
+
+
+__all__ = [
+    'MiscToolbar'
+]
+
 
 class MiscToolbar(AbstractToolbar):
     __slots__ = (
-        'autosave_timer', 'reload_script_button',
+        'reload_script_button',
         'save_storage_button', 'autosave_checkbox',
-        'save_template_lineedit',
-        'show_debug_checkbox', 'save_frame_as_button',
+        'save_template_lineedit', 'save_frame_as_button',
         'toggle_button', 'save_file_types', 'copy_frame_button',
         'crop_top_spinbox', 'crop_left_spinbox', 'crop_width_spinbox',
         'crop_bottom_spinbox', 'crop_right_spinbox', 'crop_height_spinbox',
@@ -31,16 +37,15 @@ class MiscToolbar(AbstractToolbar):
         'view_mode_layout', 'view_mode_combox'
     )
 
-    def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, MiscSettings())
+    settings: MiscSettings
+
+    def __init__(self, main: MainWindow) -> None:
+        super().__init__(main, MiscSettings(self))
 
         self.setup_ui()
 
-        self.autosave_timer = Timer(timeout=self.main.dump_storage_async)
-
         self.save_file_types = {'Single Image (*.png)': self.save_as_png}
 
-        self.main.reload_signal.connect(self.autosave_timer.stop)
         self.main.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
         self.add_shortcuts()
@@ -63,7 +68,8 @@ class MiscToolbar(AbstractToolbar):
         self.save_frame_as_button = PushButton('Save Frame as', self, clicked=self.on_save_frame_as_clicked)
 
         self.save_template_lineedit = LineEdit(
-            self.settings.SAVE_TEMPLATE, self, tooltip='''
+            self.settings.SAVE_TEMPLATE, self, text=self.settings.SAVE_TEMPLATE,
+            tooltip='''
                 Available placeholders:
                     {format}, {fps_den}, {fps_num}, {frame},
                     {height}, {index}, {matrix}, {primaries}, {range},
@@ -72,10 +78,15 @@ class MiscToolbar(AbstractToolbar):
             '''.replace(' ' * 16, ' ').strip()
         )
 
-        self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
+        first_layer = [self.autosave_checkbox, self.get_separator()]
+
+        if 'debug' in self.main.toolbars.toolbar_names:
+            self.show_debug_checkbox = CheckBox('Show Debug Toolbar', self, stateChanged=self.on_show_debug_changed)
+            first_layer.append(self.show_debug_checkbox)
+            self.__slots__ = tuple([*self.__slots__, 'show_debug_checkbox'])  # type: ignore
 
         VBoxLayout(self.hlayout, [
-            HBoxLayout([self.autosave_checkbox, self.get_separator(), self.show_debug_checkbox, Stretch()]),
+            HBoxLayout([*first_layer, Stretch()]),
             HBoxLayout([
                 self.reload_script_button, self.get_separator(),
                 self.save_storage_button, self.get_separator(),
@@ -86,7 +97,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.view_mode_combox = ComboBox[str](
             self, model=GeneralModel[str]([str(x.value) for x in ViewMode], False),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.view_mode_combox.currentTextChanged.connect(
             lambda mode: self.main.change_video_viewmode(ViewMode(mode))
@@ -96,7 +107,7 @@ class MiscToolbar(AbstractToolbar):
             HBoxLayout([QLabel('View mode:'), self.view_mode_combox]),
         ])
 
-        self.view_mode_layout.setAlignment(Qt.AlignTop)
+        self.view_mode_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.hlayout.addStretch()
         self.hlayout.addStretch()
@@ -114,7 +125,7 @@ class MiscToolbar(AbstractToolbar):
 
         self.crop_mode_combox = ComboBox[str](
             self, model=GeneralModel[str](['relative', 'absolute']),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.AdjustToContents
+            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.crop_mode_combox.currentIndexChanged.connect(self.crop_mode_onchange)
 
@@ -124,15 +135,15 @@ class MiscToolbar(AbstractToolbar):
             VBoxLayout([
                 HBoxLayout([
                     QLabel('Top'), self.crop_top_spinbox, QSpacerItem(35, 10)
-                ], alignment=Qt.AlignCenter, spacing=0),
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=0),
                 HBoxLayout([
                     QLabel('Left'), self.crop_left_spinbox,
                     self.crop_active_switch,
                     self.crop_right_spinbox, QLabel('Right')
-                ], alignment=Qt.AlignCenter, spacing=5),
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=5),
                 HBoxLayout([
                     QLabel('Bottom'), self.crop_bottom_spinbox, QSpacerItem(51, 10)
-                ], alignment=Qt.AlignCenter, spacing=0)
+                ], alignment=Qt.AlignmentFlag.AlignCenter, spacing=0)
             ]),
             VBoxLayout([
                 HBoxLayout([QLabel('Cropping Type:'), self.crop_mode_combox]),
@@ -145,12 +156,18 @@ class MiscToolbar(AbstractToolbar):
         ])
 
     def add_shortcuts(self) -> None:
-        self.main.add_shortcut(Qt.CTRL + Qt.Key_R, self.main.reload_script)
-        self.main.add_shortcut(Qt.ALT + Qt.Key_S, self.save_storage_button.click)
-        self.main.add_shortcut(Qt.CTRL + Qt.Key_S, self.copy_frame_button.click)
-        self.main.add_shortcut(Qt.SHIFT + Qt.Key_S, self.save_frame_as_button.click)
         self.main.add_shortcut(
-            Qt.SHIFT + Qt.Key_F, lambda: self.view_mode_combox.setCurrentText(
+            QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined(), self.save_storage_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined(), self.copy_frame_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click
+        )
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_F).toCombined(),
+            lambda: self.view_mode_combox.setCurrentText(
                 ViewMode.FFTSPECTRUM if self.main.current_viewmode != ViewMode.FFTSPECTRUM else ViewMode.NORMAL
             )
         )
@@ -170,22 +187,24 @@ class MiscToolbar(AbstractToolbar):
         if new_value is None:
             return
         if new_value == Time(seconds=0):
-            self.autosave_timer.stop()
+            self.main.autosave_timer.stop()
         else:
-            self.autosave_timer.start(round(float(new_value) * 1000))
+            self.main.autosave_timer.start(round(float(new_value) * 1000))
 
     def on_save_frame_as_clicked(self, checked: bool | None = None) -> None:
+        from vstools import video_heuristics
+
         curr_out = self.main.current_output.source.clip
         fmt = curr_out.format
         assert fmt
 
         filter_str = ''.join([file_type + ';;' for file_type in self.save_file_types.keys()])[0:-2]
 
-        template = self.main.toolbars.misc.save_template_lineedit.text()
+        template = self.save_template_lineedit.text()
 
         props = self.main.current_output.props
 
-        heuristics = video_heuristics(self.main.current_output.source.clip, props, string_only=True)
+        heuristics = video_heuristics(self.main.current_output.source.clip, props)
 
         substitutions = {
             **props, **heuristics,
@@ -215,9 +234,11 @@ class MiscToolbar(AbstractToolbar):
             pass
 
     def on_show_debug_changed(self, state: Qt.CheckState) -> None:
-        if state == Qt.Checked:
+        assert hasattr(self.main.toolbars, 'debug')
+
+        if state == Qt.CheckState.Checked:
             self.main.toolbars.debug.toggle_button.setVisible(True)
-        elif state == Qt.Unchecked:
+        elif state == Qt.CheckState.Unchecked:
             if self.main.toolbars.debug.toggle_button.isChecked():
                 self.main.toolbars.debug.toggle_button.click()
             self.main.toolbars.debug.toggle_button.setVisible(False)
@@ -254,7 +275,7 @@ class MiscToolbar(AbstractToolbar):
         self.crop_mode_combox.setCurrentIndex(int(crop.is_absolute))
 
     def update_crop(self, index: int | None = None) -> None:
-        if not hasattr(self.main, 'current_output'):
+        if not hasattr(self.main, 'current_output') or not self.main.outputs:
             return
 
         output = self.main.current_output if index is None else self.main.outputs[index]
@@ -412,10 +433,13 @@ class MiscToolbar(AbstractToolbar):
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
             'save_file_name_template': self.save_template_lineedit.text(),
-            'show_debug': self.show_debug_checkbox.isChecked()
+            'show_debug': hasattr(self, 'show_debug_checkbox') and self.show_debug_checkbox.isChecked()
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'save_file_name_template', str, self.save_template_lineedit.setText)
-        try_load(state, 'show_debug', bool, self.show_debug_checkbox.setChecked)
+
+        if hasattr(self, 'show_debug_checkbox'):
+            try_load(state, 'show_debug', bool, self.show_debug_checkbox.setChecked)
+
         super().__setstate__(state)

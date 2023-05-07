@@ -1,20 +1,39 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
 
+import vapoursynth as vs
 
-class PictureType(bytes, Enum):
-    ALL = b'All'
-    Intra = b'I'
-    Predicted = b'P'
-    Bipredictive = b'B'
+__all__ = [
+    'CroppingInfo',
+    'VideoOutputNode',
+    'ViewMode',
+    'Stretch'
+]
 
-    def __str__(self) -> str:
-        if self == PictureType.ALL:
-            return 'All'
 
-        return self.decode('utf-8') + ' Frames'
+@dataclass
+class CroppingInfo:
+    top: int
+    left: int
+    width: int
+    height: int
+    active: bool = True
+    is_absolute: bool = False
 
-    @classmethod
-    def list(cls) -> list[PictureType]:
-        return [PictureType(e.value) for e in cls]
+
+@dataclass
+class VideoOutputNode:
+    clip: vs.VideoNode
+    alpha: vs.VideoNode | None
+
+
+class ViewMode(str, Enum):
+    NORMAL = 'Normal'
+    FFTSPECTRUM = 'FFTSpectrum'
+
+
+@dataclass
+class Stretch:
+    amount: int = 0

@@ -47,5 +47,13 @@ setuptools.setup(
         'console_scripts': [
             'vspreview = vspreview.init:main'
         ]
+    },
+    command_options={
+        "build_sphinx": {
+            "project": ("setup.py", package_name),
+            "version": ("setup.py", meta['__version__']),
+            "release": ("setup.py", meta['__version__']),
+            "source_dir": ("setup.py", "docs")
+        }
     }
 )

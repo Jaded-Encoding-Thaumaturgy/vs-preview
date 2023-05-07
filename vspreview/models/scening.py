@@ -4,9 +4,14 @@ from bisect import bisect_right
 from copy import deepcopy
 from typing import Any, Iterator, Mapping
 
-from PyQt5.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
 
 from ..core import Frame, QYAMLObject, Scene, Time, main_window
+
+__all__ = [
+    'SceningList',
+    'SceningLists'
+]
 
 
 class SceningList(QAbstractTableModel, QYAMLObject):
@@ -36,11 +41,11 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return self.COLUMN_COUNT
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Any:
-        if role != Qt.DisplayRole:
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
 
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             if section == self.START_FRAME_COLUMN:
                 return 'Start'
             if section == self.END_FRAME_COLUMN:
@@ -51,11 +56,11 @@ class SceningList(QAbstractTableModel, QYAMLObject):
                 return 'End'
             if section == self.LABEL_COLUMN:
                 return 'Label'
-        if orientation == Qt.Vertical:
+        if orientation == Qt.Orientation.Vertical:
             return section + 1
         return None
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if not index.isValid():
             return None
         row = index.row()
@@ -65,7 +70,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
         if column >= self.COLUMN_COUNT:
             return None
 
-        if role in {Qt.DisplayRole, Qt.EditRole}:
+        if role in {Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole}:
             if column == self.START_FRAME_COLUMN:
                 return str(self.items[row].start)
             if column == self.END_FRAME_COLUMN:
@@ -83,7 +88,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
             if column == self.LABEL_COLUMN:
                 return str(self.items[row].label)
 
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             if column == self.START_FRAME_COLUMN:
                 return self.items[row].start
             if column == self.END_FRAME_COLUMN:
@@ -97,10 +102,10 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         return None
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
-        if role not in {Qt.EditRole, Qt.UserRole}:
+        if role not in {Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole}:
             return False
 
         row = index.row()
@@ -208,7 +213,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         if i >= 0 and i < len(self.items):
             self.beginRemoveRows(QModelIndex(), i, i)
-            del(self.items[i])
+            del self.items[i]
             self.endRemoveRows()
         else:
             raise IndexError
@@ -295,28 +300,28 @@ class SceningLists(QAbstractListModel, QYAMLObject):
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.items)
 
-    def data(self, index: QModelIndex, role: int = Qt.UserRole) -> Any:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.UserRole) -> Any:
         if not index.isValid():
             return None
         if index.row() >= len(self.items):
             return None
 
-        if role in {Qt.DisplayRole, Qt.EditRole}:
+        if role in {Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole}:
             return self.items[index.row()].name
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return Qt.ItemFlags(Qt.ItemIsEnabled)
+            return Qt.ItemFlag.ItemIsEnabled
 
-        return super().flags(index) | Qt.ItemIsEditable
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
-        if role not in {Qt.EditRole, Qt.UserRole}:
+        if role not in {Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole}:
             return False
         if not isinstance(value, str):
             return False
@@ -341,7 +346,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
         self, name: str | None = None, max_value: Frame | None = None, i: int | None = None
     ) -> tuple[SceningList, int]:
         if max_value is None:
-            max_value = self.main.current_output.end_frame
+            max_value = self.main.current_output.total_frames - 1
         if i is None:
             i = len(self.items)
 
@@ -367,7 +372,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
 
         if i >= 0 and i < len(self.items):
             self.beginRemoveRows(QModelIndex(), i, i)
-            del(self.items[i])
+            del self.items[i]
             self.endRemoveRows()
         else:
             raise IndexError

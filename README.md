@@ -8,7 +8,7 @@ This program is meant to be paired with a code editor with integrated terminal l
 
 1. [Python](https://www.Python.org/downloads) (3.10+ required)
     * Make sure to install Python to your `PATH`.
-1. [Vapoursynth](https://github.com/vapoursynth/vapoursynth/releases) (R59+ required)
+1. [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases) (R60+ required)
 
 # Installation
 
@@ -27,11 +27,12 @@ pip install -U git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.gi
 
 It can be used by running `vspreview script.vpy` or your preferred way in [your IDE](#ide-integration).
 
-[Keyboard Shortcuts](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/shortcuts.md)
+[Keyboard Shortcuts](https://github.com/Irrational-Encoding-Wizardry/vs-preview/blob/master/docs/accessibility/keybinds.rst)
 
 [Saved Frame Filename Variables](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/save_frame_placeholders.md)
 
 # IDE Integration
 
-* [VSCode](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/vscode_install.md)
-* [Vim](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/vim_install.md)
+* [Visual Studio Code](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_vscode.rst)
+* [Vim](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_vim.rst)
+* [Notepad++](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_notepad++.rst)

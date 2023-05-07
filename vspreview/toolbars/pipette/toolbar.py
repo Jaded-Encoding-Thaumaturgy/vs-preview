@@ -1,19 +1,25 @@
 from __future__ import annotations
 
-import ctypes
 from math import ceil, floor, log
-from struct import unpack
-from typing import Generator, cast
+from typing import TYPE_CHECKING, Generator, cast
 from weakref import WeakKeyDictionary
 
-from PyQt5.QtCore import QPoint, Qt
-from PyQt5.QtGui import QFont, QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView, QLabel
-from vstools import vs
+import vapoursynth as vs
+from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtGui import QFont, QMouseEvent
+from PyQt6.QtWidgets import QGraphicsView, QLabel
 
-from ...core import AbstractMainWindow, AbstractToolbar, PushButton, VideoOutput
+from ...core import AbstractToolbar, Frame, PushButton, VideoOutput
 from .colorview import ColorView
 from .settings import PipetteSettings
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
+
+
+__all__ = [
+    'PipetteToolbar'
+]
 
 
 class PipetteToolbar(AbstractToolbar):
@@ -29,33 +35,39 @@ class PipetteToolbar(AbstractToolbar):
         'copy_position_button'
     )
 
-    data_types = {
-        vs.INTEGER: {
-            1: ctypes.c_uint8,
-            2: ctypes.c_uint16,
-            # 4: ctypes.c_char * 4,
-        },
-        vs.FLOAT: {
-            2: ctypes.c_char,
-            4: ctypes.c_float,
-        }
-    }
+    settings: PipetteSettings
 
-    def __init__(self, main: AbstractMainWindow) -> None:
-        super().__init__(main, PipetteSettings())
+    def __init__(self, main: MainWindow) -> None:
+        import ctypes
+
+        super().__init__(main, PipetteSettings(self))
 
         self.setup_ui()
         self.src_max_val: float = 2**8 - 1
         self.pos_fmt = self.src_hex_fmt = self.src_dec_fmt = self.src_norm_fmt = ''
         self.outputs = WeakKeyDictionary[VideoOutput, vs.VideoNode]()
         self.tracking = False
-        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
-        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoNode]]()
+        self._curr_frame_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoFrame]]()
+        self._curr_alphaframe_cache = WeakKeyDictionary[VideoOutput, tuple[int, vs.VideoFrame]]()
         self._mouse_is_subscribed = False
+
+        self.last_pos: tuple[VideoOutput, QPoint] | None = None
 
         main.reload_signal.connect(self.clear_outputs)
 
         self.set_qobject_names()
+
+        self.data_types = {
+            vs.INTEGER: {
+                1: ctypes.c_uint8,
+                2: ctypes.c_uint16,
+                4: ctypes.c_uint32,
+            },
+            vs.FLOAT: {
+                2: ctypes.c_char,
+                4: ctypes.c_float,
+            }
+        }
 
     def clear_outputs(self) -> None:
         self.outputs.clear()
@@ -67,7 +79,7 @@ class PipetteToolbar(AbstractToolbar):
         self.color_view.setFixedSize(self.height() // 2, self.height() // 2)
 
         font = QFont('Consolas', 9)
-        font.setStyleHint(QFont.Monospace)
+        font.setStyleHint(QFont.StyleHint.Monospace)
 
         self.position = QLabel(self)
 
@@ -89,7 +101,7 @@ class PipetteToolbar(AbstractToolbar):
             self.src_hex, self.src_dec, self.src_norm
         ]:
             label.setFont(font)
-            label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         self.copy_position_button = PushButton('⎘', self, clicked=self.on_copy_position_clicked)
 
@@ -100,6 +112,10 @@ class PipetteToolbar(AbstractToolbar):
         ])
 
         self.hlayout.addStretch()
+
+    def on_current_frame_changed(self, frame: Frame) -> None:
+        if self.last_pos and self.last_pos[0] is self.main.current_output:
+            self.update_labels(self.last_pos[1])
 
     def subscribe_on_mouse_events(self) -> None:
         if not self._mouse_is_subscribed:
@@ -120,7 +136,7 @@ class PipetteToolbar(AbstractToolbar):
             self.update_labels(event.pos())
 
     def mouse_pressed(self, event: QMouseEvent) -> None:
-        if event.buttons() == Qt.MouseButtons(Qt.RightButton):
+        if event.buttons() == Qt.MouseButton.RightButton:
             self.tracking = not self.tracking
 
         if self.tracking:
@@ -131,41 +147,45 @@ class PipetteToolbar(AbstractToolbar):
 
     @property
     def current_source_frame(self) -> vs.VideoFrame:
-        if self.main.current_output not in self._curr_frame_cache:
-            cache = self._curr_frame_cache[self.main.current_output] = [None, None]
-        else:
+        if self.main.current_output in self._curr_frame_cache:
             cache = self._curr_frame_cache[self.main.current_output]
+        else:
+            cache = None
 
         last_showed_frame = min(
-            int(self.main.current_output.last_showed_frame), int(self.main.current_output.end_frame)
+            int(self.main.current_output.last_showed_frame), int(self.main.current_output.total_frames) - 1
         )
 
-        if cache[1] is None or cache[0] != last_showed_frame:
-            cache = (
+        if cache is None or cache[0] != last_showed_frame:
+            cache = self._curr_frame_cache[self.main.current_output] = (
                 last_showed_frame, self.outputs[self.main.current_output].get_frame(last_showed_frame)
             )
 
-        return cast(vs.VideoFrame, cache[1])
+        return cache[1]
 
     @property
     def current_source_alpha_frame(self) -> vs.VideoFrame:
-        if self.main.current_output not in self._curr_alphaframe_cache:
-            cache = self._curr_alphaframe_cache[self.main.current_output] = [None, None]
-        else:
+        assert self.main.current_output.source.alpha
+
+        if self.main.current_output in self._curr_alphaframe_cache:
             cache = self._curr_alphaframe_cache[self.main.current_output]
+        else:
+            cache = None
 
         last_showed_frame = min(
-            int(self.main.current_output.last_showed_frame), int(self.main.current_output.end_frame)
+            int(self.main.current_output.last_showed_frame), int(self.main.current_output.total_frames) - 1
         )
 
-        if cache[1] is None or cache[0] != last_showed_frame:
-            cache = (
+        if cache is None or cache[0] != last_showed_frame:
+            cache = self._curr_frame_cache[self.main.current_output] = (
                 last_showed_frame, self.main.current_output.source.alpha.get_frame(last_showed_frame)
             )
 
-        return cast(vs.VideoFrame, cache[1])
+        return cache[1]
 
     def update_labels(self, local_pos: QPoint) -> None:
+        self.last_pos = (self.main.current_output, local_pos)
+
         pos_f = self.main.graphics_view.mapToScene(local_pos)
 
         if not self.main.current_output.graphics_scene_item.contains(pos_f):
@@ -241,14 +261,17 @@ class PipetteToolbar(AbstractToolbar):
 
         if new_state:
             self.subscribe_on_mouse_events()
-            self.main.graphics_view.setDragMode(QGraphicsView.NoDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.DragMode.NoDrag)
         else:
             self.unsubscribe_from_mouse_events()
-            self.main.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.main.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
     @staticmethod
     def prepare_vs_output(vs_output: vs.VideoNode) -> vs.VideoNode:
         assert (fmt := vs_output.format)
+
+        if fmt.subsampling_w == fmt.subsampling_h == 0:
+            return vs_output
 
         return vs.core.resize.Bicubic(
             vs_output, format=vs.core.query_video_format(
@@ -257,12 +280,16 @@ class PipetteToolbar(AbstractToolbar):
         )
 
     def extract_value(self, vs_frame: vs.VideoFrame, pos: QPoint) -> Generator[float, None, None]:
+        from ctypes import POINTER
+        from ctypes import cast as ccast
+        from struct import unpack
+
         fmt = vs_frame.format
 
         for plane in range(fmt.num_planes):
             stride = vs_frame.get_stride(plane)
-            pointer = ctypes.cast(vs_frame.get_read_ptr(plane), ctypes.POINTER(
-                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)
+            pointer = ccast(vs_frame.get_read_ptr(plane), POINTER(
+                self.data_types[fmt.sample_type][fmt.bytes_per_sample] * (stride * vs_frame.height)  # type: ignore
             ))
 
             if fmt.sample_type == vs.FLOAT and fmt.bytes_per_sample == 2:

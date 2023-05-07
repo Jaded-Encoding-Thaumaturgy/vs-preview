@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt5.QtCore import QTime, pyqtSignal
-from PyQt5.QtWidgets import QTimeEdit, QWidget
+from PyQt6.QtCore import QTime, pyqtSignal
+from PyQt6.QtWidgets import QTimeEdit, QWidget
 
-from ...core import Frame, SpinBox, Time
+from ..abstracts import SpinBox
+from ..types import Frame, Time
+
+__all__ = [
+    'FrameEdit', 'TimeEdit'
+]
 
 
 def to_qtime(time: Time) -> QTime:
@@ -36,22 +41,22 @@ class FrameEdit(SpinBox):
     def _valueChanged(self, newValue: int) -> None:
         self.valueChanged.emit(self.value(), self.oldValue)
 
-    def value(self) -> Frame:
+    def value(self) -> Frame:  # type: ignore[override]
         return Frame(super().value())
 
-    def setValue(self, newValue: Frame) -> None:
+    def setValue(self, newValue: Frame) -> None:  # type: ignore[override]
         super().setValue(int(newValue))
 
-    def minimum(self) -> Frame:
+    def minimum(self) -> Frame:  # type: ignore[override]
         return Frame(super().minimum())
 
-    def setMinimum(self, newValue: Frame) -> None:
+    def setMinimum(self, newValue: Frame) -> None:  # type: ignore[override]
         super().setMinimum(int(newValue))
 
-    def maximum(self) -> Frame:
+    def maximum(self) -> Frame:  # type: ignore[override]
         return Frame(super().maximum())
 
-    def setMaximum(self, newValue: Frame) -> None:
+    def setMaximum(self, newValue: Frame) -> None:  # type: ignore[override]
         super().setMaximum(int(newValue))
 
 
@@ -59,10 +64,10 @@ class TimeEdit(QTimeEdit):
     valueChanged = pyqtSignal(Time, Time)
 
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
-        super().__init__(parent, **kwargs, timeChanged=self._timeChanged)
+        super().__init__(parent, **kwargs, timeChanged=self._timeChanged)  # type: ignore
 
         self.setDisplayFormat('H:mm:ss.zzz')
-        self.setButtonSymbols(QTimeEdit.NoButtons)
+        self.setButtonSymbols(QTimeEdit.ButtonSymbols.NoButtons)
         self.setMinimum(Time())
 
         self.oldValue: Time = self.value()

@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from ...core import AbstractToolbarSettings
 
+__all__ = [
+    'DebugSettings'
+]
+
 
 class DebugSettings(AbstractToolbarSettings):
     __slots__ = ()

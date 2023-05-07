@@ -7,12 +7,11 @@ from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 import vapoursynth as vs
 from PyQt6 import QtCore
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QLabel, QComboBox
-
+from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
-    AbstractToolbar, CheckBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout, VideoOutput,
-    ComboBox, main_window
+    AbstractToolbar, CheckBox, ComboBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
+    VideoOutput, main_window
 )
 from ...models import GeneralModel
 from .settings import CompSettings

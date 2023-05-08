@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, CheckBox, LineEdit, VBoxLayout, HBoxLayout, try_load
+from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit, VBoxLayout, try_load
 
 __all__ = [
     'CompSettings'
@@ -21,37 +21,26 @@ class CompSettings(AbstractToolbarSettings):
 
         self.delete_cache_checkbox = CheckBox('Delete images cache after upload')
 
-
-        self.login_browser_id = LineEdit("Browser ID")
-        self.login_session = LineEdit("Session ID")
+        self.login_browser_id = LineEdit('Browser ID')
+        self.login_session = LineEdit('Session ID')
 
         label = QLabel(
-            (
-                "To get this info: Open Dev console in browser, go to network tab, upload a comparison,"
-                "click request called 'comparison' Copy browserId from payload, copy session token from SLPSESSION cookie from cookies"
-            )
+            'To get this info: Open Dev console in browser, go to network tab, upload a comparison,'
+            'click request called "comparison" Copy browserId from payload, copy session token from '
+            'SLPSESSION cookie from cookies'
         )
         label.setMaximumHeight(50)
         label.setMinimumWidth(400)
         label.setWordWrap(True)
 
+        self.vlayout.addWidget(self.delete_cache_checkbox)
 
-        self.vlayout.addWidgets(
-            [
-                self.delete_cache_checkbox,
-            ]
-        )
-        HBoxLayout(self.vlayout, 
+        HBoxLayout(
+            self.vlayout,
             VBoxLayout([
                 label,
-                HBoxLayout([
-                    QLabel("Browser ID"),
-                    self.login_browser_id,
-                ]),
-                HBoxLayout([
-                    QLabel("Session ID"),
-                    self.login_session,
-                ])
+                HBoxLayout([QLabel("Browser ID"), self.login_browser_id]),
+                HBoxLayout([QLabel("Session ID"), self.login_session])
             ])
         )
 
@@ -69,7 +58,7 @@ class CompSettings(AbstractToolbarSettings):
     @property
     def session_id(self) -> str:
         return self.login_session.text()
-    
+
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'delete_cache_enabled': self.delete_cache_enabled,

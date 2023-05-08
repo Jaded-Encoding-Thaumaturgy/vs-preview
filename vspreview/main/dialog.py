@@ -26,7 +26,7 @@ class ScriptErrorDialog(ExtendedDialog):
         super().__init__(main_window, Qt.WindowType.Dialog)
         self.main = main_window
 
-        self.setWindowTitle('Script Loading Error')
+        self.setWindowTitle('There was an error')
         self.setModal(True)
 
         self.setup_ui()

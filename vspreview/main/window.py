@@ -314,7 +314,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             return self.handle_script_error(
                 '\n'.join([
                     str(e), 'See console output for details.'
-                ])
+                ]), True
             )
         finally:
             if argv_orig is not None:
@@ -325,7 +325,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if len(vs.get_outputs()) == 0:
             logging.error('Script has no outputs set.')
             self.script_exec_failed = True
-            self.handle_script_error('Script has no outputs set.')
+            self.handle_script_error('Script has no outputs set.', True)
             return
 
         reload_from_error = self.script_exec_failed and reloading
@@ -371,7 +371,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.script_exec_failed = True
 
             return self.handle_script_error(
-                f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.'
+                f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.', False
             )
 
     @set_status_label('Loading...')
@@ -680,9 +680,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs
 
-    def handle_script_error(self, message: str) -> None:
+    def handle_script_error(self, message: str, script: bool = False) -> None:
         self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
+        self.script_error_dialog.setWindowTitle('Script Loading Error' if script else 'Program Error')
         self.script_error_dialog.open()
 
     def on_wheel_scrolled(self, steps: int) -> None:

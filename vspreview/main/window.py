@@ -715,7 +715,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
             screen_name = self.current_screen.name()
 
-            dc = win32gui.CreateDC(screen_name, None, None)
+            dc = win32gui.CreateDC('DISPLAY', screen_name, None)
 
             logging.info(f'Changed screen: {screen_name}')
 
@@ -723,7 +723,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
             if icc_path is not None:
                 with open(icc_path, 'rb') as icc:
-                    self.display_profile = QColorSpace.fromIccProfile(QByteArray(len(x := icc.read()), x))
+                    self.display_profile = QColorSpace.fromIccProfile(icc.read())
 
         if hasattr(self, 'current_output') and self.current_output is not None and self.display_profile is not None:
             self.switch_frame(self.current_output.last_showed_frame)

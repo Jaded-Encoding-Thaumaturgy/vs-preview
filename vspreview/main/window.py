@@ -6,7 +6,6 @@ import sys
 from fractions import Fraction
 from importlib import reload as reload_module
 from pathlib import Path
-from pkgutil import iter_modules
 from time import time
 from typing import Any, Iterable, Mapping, cast
 
@@ -252,8 +251,15 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 std_path_lib = Path(logging.__file__).parent.parent
                 std_path_dlls = std_path_lib.parent / 'DLLs'
 
+                check_reloaded = set[str]()
+
                 for module in set(sys.modules.values()) - PRELOADED_MODULES:
                     if not hasattr(module, '__file__') or module.__file__ is None:
+                        continue
+
+                    main_mod = module.__name__.split('.')[0]
+
+                    if main_mod in check_reloaded:
                         continue
 
                     mod_file = Path(module.__file__)
@@ -267,33 +273,27 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     if not mod_file.exists() or not mod_file.is_file():
                         continue
 
-                    parent = Path(module.__file__)
+                    check_reloaded.add(main_mod)
 
-                    def _traverse(path: Path) -> Iterable[bool]:
-                        for module in iter_modules([path]):
-                            newpath = Path(module.module_finder) / module.name
+                for module in check_reloaded:
+                    all_submodules = sorted([
+                        k for k in sys.modules.keys()
+                        if k == module or k.startswith(f'{module}.')
+                    ])
 
-                            if module.ispkg:
-                                if _traverse([newpath]):
-                                    return True
+                    for mod_name in all_submodules:
+                        if Path(sys.modules[mod_name].__file__).stat().st_mtime > self.last_reload_time:
+                            print(sys.modules[mod_name].__file__)
+                            break
+                    else:
+                        continue
 
-                                continue
-
-                            newpath = newpath.with_suffix('.py')
-
-                            try:
-                                stats = newpath.stat()
-                            except FileNotFoundError:
-                                return False
-
-                            return stats.st_mtime > self.last_reload_time
-
-                    if _traverse(parent):
-                        try:
-                            logging.debug(f'Hot reloaded Python Package: "{module.__name__}"')
-                            reload_module(module)
-                        except Exception as e:
-                            logging.error(e)
+                    try:
+                        logging.info(f'Hot reloaded Python Package: "{module}"')
+                        for mod_name in reversed(all_submodules):
+                            sys.modules[mod_name] = reload_module(sys.modules[mod_name])
+                    except Exception as e:
+                        logging.error(e)
 
             self.env = vpy.variables(
                 dict(self.external_args),

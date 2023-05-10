@@ -32,13 +32,19 @@ _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
     return {
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Access-Control-Allow-Origin": "*",
         "Content-Length": str(content_length),
         "Content-Type": content_type,
-        "Access-Control-Allow-Origin": "*",
         "Origin": "https://slow.pics/",
         "Referer": "https://slow.pics/comparison",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0",
-        "X-XSRF-TOKEN": sess.cookies.get_dict()["XSRF-TOKEN"]
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+        ),
+        "X-XSRF-TOKEN": sess.cookies.get("XSRF-TOKEN")
     }
 
 

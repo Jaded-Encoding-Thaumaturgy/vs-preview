@@ -333,7 +333,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.current_storage_path = (self.current_config_dir / self.script_path.stem).with_suffix('.yml')
 
         self.storage_not_found = not (
-            self.current_storage_path.exists() and self.current_storage_path.read_text().strip()
+            self.current_storage_path.exists() and self.current_storage_path.read_text('utf8').strip()
         )
 
         load_error = None

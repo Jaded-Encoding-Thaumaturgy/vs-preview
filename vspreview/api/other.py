@@ -64,7 +64,7 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore'], path: s
     if mode != 'append':
         return _write()
 
-    with open(launch, 'r+') as f:
+    with open(launch, 'r+', encoding='utf-8') as f:
         try:
             current_settings = json.loads(f.read())
         except json.JSONDecodeError:

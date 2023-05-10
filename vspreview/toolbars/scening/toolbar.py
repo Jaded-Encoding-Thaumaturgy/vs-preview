@@ -449,7 +449,7 @@ class SceningToolbar(AbstractToolbar):
         Imports cell times as single-frame scenes
         '''
 
-        for line in path.read_text().splitlines():
+        for line in path.read_text('utf8').splitlines():
             try:
                 scening_list.add(Frame(int(line)))
             except ValueError:
@@ -476,7 +476,7 @@ class SceningToolbar(AbstractToolbar):
 
         cue_sheet = CueSheet()
         cue_sheet.setOutputFormat('')
-        cue_sheet.setData(path.read_text())
+        cue_sheet.setData(path.read_text('utf8'))
         cue_sheet.parse()
 
         for track in cue_sheet.tracks:
@@ -506,7 +506,7 @@ class SceningToolbar(AbstractToolbar):
         Imports IDR frames as single-frame scenes.
         '''
         pattern = re.compile(r'IDR\s\d+\n(\d+):FRM', re.RegexFlag.MULTILINE)
-        for match in pattern.findall(path.read_text()):
+        for match in pattern.findall(path.read_text('utf8')):
             try:
                 scening_list.add(Frame(match))
             except ValueError:
@@ -526,7 +526,7 @@ class SceningToolbar(AbstractToolbar):
         ))
 
         frame = Frame(0)
-        for match in pattern.finditer(path.read_text(), re.RegexFlag.MULTILINE):
+        for match in pattern.finditer(path.read_text('utf8'), re.RegexFlag.MULTILINE):
             if int(match[1]) >= AV_CODEC_ID_FIRST_AUDIO:
                 frame += Frame(1)
                 continue
@@ -592,7 +592,7 @@ class SceningToolbar(AbstractToolbar):
             r'(CHAPTER\d+)=(\d{2}):(\d{2}):(\d{2}(?:\.\d{3})?)\n\1NAME=(.*)',
             re.RegexFlag.MULTILINE
         )
-        for match in pattern.finditer(path.read_text()):
+        for match in pattern.finditer(path.read_text('utf8')):
             time = Time(hours=int(match[2]), minutes=int(match[3]), seconds=float(match[4]))
             try:
                 scening_list.add(Frame(time), label=match[5])
@@ -604,7 +604,7 @@ class SceningToolbar(AbstractToolbar):
         Imports I- and K-frames as single-frame scenes.
         '''
         pattern = re.compile(r'(\d+)\sI|K')
-        for match in pattern.findall(path.read_text()):
+        for match in pattern.findall(path.read_text('utf8')):
             try:
                 scening_list.add(Frame(int(match)))
             except ValueError:
@@ -638,7 +638,7 @@ class SceningToolbar(AbstractToolbar):
         '''
         pattern = re.compile(r'(\d+),(\d+),(\d+(?:\.\d+)?)')
 
-        for match in pattern.finditer(path.read_text()):
+        for match in pattern.finditer(path.read_text('utf8')):
             try:
                 scening_list.add(
                     Frame(int(match[1])), Frame(int(match[2])), '{:.3f} fps'.format(float(match[3]))
@@ -652,7 +652,7 @@ class SceningToolbar(AbstractToolbar):
         Uses FPS for scene label.
         '''
         timestamps = list[Time]()
-        for line in path.read_text().splitlines():
+        for line in path.read_text('utf8').splitlines():
             try:
                 timestamps.append(Time(milliseconds=float(line)))
             except ValueError:
@@ -704,14 +704,14 @@ class SceningToolbar(AbstractToolbar):
         )
 
         assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
-        if len(mmatch := assume_pattern.findall(path.read_text())) > 0:
+        if len(mmatch := assume_pattern.findall(path.read_text('utf8'))) > 0:
             default_fps = float(mmatch[0])
         else:
             logging.warning('Scening import: "assume" entry not found.')
             return
 
         pos = Time()
-        for match in pattern.finditer(path.read_text()):
+        for match in pattern.finditer(path.read_text('utf8')):
             if match[1] == 'gap':
                 pos += Time(seconds=float(match[2]))
                 continue
@@ -739,7 +739,7 @@ class SceningToolbar(AbstractToolbar):
         tfm_frame_pattern = re.compile(r'(\d+)\s\((\d+)\)')
         tfm_group_pattern = re.compile(r'(\d+),(\d+)\s\((\d+(?:\.\d+)%)\)')
 
-        log = path.read_text()
+        log = path.read_text('utf8')
 
         start_pos = log.find('OVR HELP INFORMATION')
         if start_pos == -1:
@@ -775,7 +775,7 @@ class SceningToolbar(AbstractToolbar):
 
         frames = []
 
-        for bookmark in path.read_text().split(', '):
+        for bookmark in path.read_text('utf8').split(', '):
             try:
                 frames.append(int(bookmark))
             except ValueError:
@@ -803,7 +803,7 @@ class SceningToolbar(AbstractToolbar):
         Imports I- and K-frames as single-frame scenes.
         '''
         pattern = re.compile(r'in:(\d+).*type:I|K')
-        for match in pattern.findall(path.read_text()):
+        for match in pattern.findall(path.read_text('utf8')):
             try:
                 scening_list.add(Frame(int(match)))
             except ValueError:
@@ -813,7 +813,7 @@ class SceningToolbar(AbstractToolbar):
         '''
         Imports I-frames as single-frame scenes.
         '''
-        for i, line in enumerate(path.read_text().splitlines()):
+        for i, line in enumerate(path.read_text('utf8').splitlines()):
             if not line.startswith('i'):
                 continue
             try:
@@ -826,7 +826,7 @@ class SceningToolbar(AbstractToolbar):
         Import generic (rfs style) frame mappings: {start end}
 
         '''
-        for line in path.read_text().splitlines():
+        for line in path.read_text('utf8').splitlines():
             try:
                 fnumbers = [int(n) for n in line.split()]
                 scening_list.add(Frame(fnumbers[0]), Frame(fnumbers[1]))

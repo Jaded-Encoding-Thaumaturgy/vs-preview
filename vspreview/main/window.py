@@ -282,10 +282,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     ])
 
                     for mod_name in all_submodules:
-                        mod_file = sys.modules[mod_name].__file__
-
-                        if mod_file and Path(mod_file).stat().st_mtime > self.last_reload_time:
-                            break
+                        try:
+                            if Path(sys.modules[mod_name].__file__).stat().st_mtime > self.last_reload_time:
+                                break
+                        except Exception:
+                            ...
                     else:
                         continue
 

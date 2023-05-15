@@ -4,20 +4,18 @@ from functools import partial, wraps
 from string import Template
 from typing import TYPE_CHECKING, Any, Callable
 
-import vapoursynth as vs
 from PyQt6.QtCore import QSignalBlocker
 
 if TYPE_CHECKING:
     from vstools import F, P, R, T
 
-from ..core import Frame, Time, main_window
+from ..core import Time, main_window
 
 __all__ = [
     'qt_silent_call',
     'strfdelta',
     'fire_and_forget',
-    'set_status_label',
-    'vs_clear_cache',
+    'set_status_label'
 ]
 
 
@@ -85,13 +83,3 @@ def set_status_label(label: str) -> Callable[[F], F]:
         return _wrapped
 
     return _decorator
-
-
-def vs_clear_cache() -> None:
-    cache_size = vs.core.max_cache_size
-    vs.core.max_cache_size = 1
-    for output in list(vs.get_outputs().values()):
-        if isinstance(output, vs.VideoOutputTuple):
-            output.clip.get_frame(int(main_window().current_output.last_showed_frame or Frame(0)))
-            break
-    vs.core.max_cache_size = cache_size

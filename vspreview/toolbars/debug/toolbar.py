@@ -55,8 +55,8 @@ class DebugToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def test_button_clicked(self, checked: bool | None = None) -> None:
-        from ...utils import vs_clear_cache
-        vs_clear_cache()
+        from vstools.utils.vs_proxy import clear_cache
+        clear_cache()
 
     def exec_button_clicked(self, checked: bool | None = None) -> None:
         try:

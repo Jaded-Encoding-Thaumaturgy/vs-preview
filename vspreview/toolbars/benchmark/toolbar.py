@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QLabel
 
 from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
 from ...core.custom import FrameEdit
-from ...utils import qt_silent_call, strfdelta, vs_clear_cache
+from ...utils import qt_silent_call, strfdelta
 from .settings import BenchmarkSettings
 
 
@@ -105,7 +105,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
-            vs_clear_cache()
+            from vstools.utils.vs_proxy import clear_cache
+            clear_cache()
 
         if self.settings.frame_data_sharing_fix_enabled:
             self.main.current_output.update_graphic_item(

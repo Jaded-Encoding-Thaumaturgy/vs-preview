@@ -552,9 +552,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
 
     def reload_script(self) -> None:
+        from vstools.utils.vs_proxy import clear_cache
+
         self.reload_before_signal.emit()
 
         self.dump_storage()
+
+        try:
+            with self.env:
+                clear_cache()
+        except Exception:
+            ...
 
         vs.clear_outputs()
         self.graphics_scene.clear()

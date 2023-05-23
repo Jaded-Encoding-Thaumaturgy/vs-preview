@@ -171,25 +171,6 @@ class MiscToolbar(AbstractToolbar):
                 ViewMode.FFTSPECTRUM if self.main.current_viewmode != ViewMode.FFTSPECTRUM else ViewMode.NORMAL
             )
         )
-        self.main.add_shortcut(
-            Qt.Key.Key_Return, self.add_current_frame_to_comp
-        )
-
-    def add_current_frame_to_comp(self) -> None:
-        comp = self.main.toolbars.comp
-        if not comp.manual_frames_lineedit.isVisible():
-            return
-
-        frame = str(self.main.current_output.last_showed_frame)
-        current_frames = comp.manual_frames_lineedit.text()
-
-        if not current_frames:
-            comp.manual_frames_lineedit.setText(frame)
-        else:
-            current_frames = current_frames.split(",")
-            if frame not in current_frames:
-                current_frames.append(frame)
-                comp.manual_frames_lineedit.setText(",".join(current_frames))
 
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(

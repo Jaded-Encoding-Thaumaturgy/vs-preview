@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QKeyCombination, Qt, QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
@@ -342,6 +342,8 @@ class CompToolbar(AbstractToolbar):
 
         self.set_qobject_names()
 
+        self.add_shortcuts()
+
     def setup_ui(self) -> None:
         super().setup_ui()
 
@@ -527,6 +529,11 @@ class CompToolbar(AbstractToolbar):
 
         self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
 
+    def add_shortcuts(self) -> None:
+        self.main.add_shortcut(
+            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.add_current_frame_to_comp
+        )
+
     def update_tags(self) -> None:
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
 
@@ -548,6 +555,20 @@ class CompToolbar(AbstractToolbar):
         self.update_tags()
 
         super().on_toggle(new_state)
+
+    def add_current_frame_to_comp(self) -> None:
+        frame = str(self.main.current_output.last_showed_frame).strip()
+        current_frames = self.manual_frames_lineedit.text()
+
+        if not current_frames:
+            self.manual_frames_lineedit.setText(frame)
+        else:
+            current_frames = current_frames.split(",")
+            if frame not in current_frames:
+                current_frames.append(frame)
+            else:
+                current_frames.remove(frame)
+            self.manual_frames_lineedit.setText(",".join(current_frames))
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())

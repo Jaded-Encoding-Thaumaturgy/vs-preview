@@ -336,7 +336,7 @@ class CompToolbar(AbstractToolbar):
 
         self.set_qobject_names()
 
-        self.setup_keys()
+        self.add_shortcuts()
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -523,7 +523,7 @@ class CompToolbar(AbstractToolbar):
 
         self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
 
-    def setup_keys(self):
+    def add_shortcuts(self) -> None:
         self.main.add_shortcut(
             QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.add_current_frame_to_comp
         )

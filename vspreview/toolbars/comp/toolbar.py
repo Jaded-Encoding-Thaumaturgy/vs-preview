@@ -730,7 +730,7 @@ class CompToolbar(AbstractToolbar):
         if delete_after and re.match(r'^\d+$', delete_after) is None:
             raise ValueError('Delete after has to be a number!')
         elif not delete_after:
-            delete_after = "999999"
+            delete_after = None
 
         tmdb_id = self.tmdb_id_lineedit.text()
         if tmdb_id:

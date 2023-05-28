@@ -376,6 +376,11 @@ class CompToolbar(AbstractToolbar):
 
         def _select_filter_text(text: str):
             if text:
+                if text in self.current_tags:
+                    self.tag_add_custom_button.setText("Remove Tag")
+                else:
+                    self.tag_add_custom_button.setText("Add Tag")
+
                 index = self.tag_list_combox.findText(text, QtCore.Qt.MatchFlag.MatchContains)
                 if index < 0:
                     return
@@ -383,7 +388,7 @@ class CompToolbar(AbstractToolbar):
                     index
                 )
 
-        def _handle_current_tag():
+        def _handle_current_combox_tag():
             value = self.tag_list_combox.currentValue()
             if value in self.current_tags:
                 self.current_tags.remove(value)
@@ -391,6 +396,15 @@ class CompToolbar(AbstractToolbar):
             else:
                 self.current_tags.append(value)
                 self.tag_add_button.setText("Remove Tag")
+
+        def _handle_current_new_tag():
+            value = self.tag_filter_lineedit.text()
+            if value in self.current_tags:
+                self.current_tags.remove(value)
+                self.tag_add_custom_button.setText("Add Tag")
+            else:
+                self.current_tags.append(value)
+                self.tag_add_custom_button.setText("Remove Tag")
 
         def _handle_tag_index(index):
             value = self.tag_list_combox.currentValue()
@@ -401,6 +415,7 @@ class CompToolbar(AbstractToolbar):
 
         def _public_click(is_checked: bool):
             self.tag_add_button.setHidden(not is_checked)
+            self.tag_add_custom_button.setHidden(not is_checked)
             self.tag_filter_lineedit.setHidden(not is_checked)
             self.tag_list_combox.setHidden(not is_checked)
             self.tag_separator.setHidden(not is_checked)
@@ -429,7 +444,9 @@ class CompToolbar(AbstractToolbar):
 
         self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=_select_filter_text)
 
-        self.tag_add_button = PushButton('Add Tag', self, clicked=_handle_current_tag)
+        self.tag_add_custom_button = PushButton('Add Tag', self, clicked=_handle_current_new_tag)
+
+        self.tag_add_button = PushButton('Add Tag', self, clicked=_handle_current_combox_tag)
 
         self.tag_separator = self.get_separator()
 
@@ -499,6 +516,7 @@ class CompToolbar(AbstractToolbar):
         VBoxLayout(self.hlayout, [
             HBoxLayout([
                 self.tag_filter_lineedit,
+                self.tag_add_custom_button
             ]),
             HBoxLayout([
                 self.tag_list_combox,
@@ -544,7 +562,7 @@ class CompToolbar(AbstractToolbar):
             with Session() as sess:
                 sess.get('https://slow.pics/comparison')
 
-                api_resp = sess.get("https://slow.pics/api/tags").json()
+                api_resp = sess.get("https://slow.pics/api/tags", headers=_get_slowpic_headers(0, "application/json", sess)).json()
 
                 self.tag_data = {data["label"]: data["value"] for data in api_resp}
         except ImportError:
@@ -766,7 +784,7 @@ class CompToolbar(AbstractToolbar):
             if not tmdb_id.startswith(suffix):
                 tmdb_id = f"{suffix}{tmdb_id}"
 
-        tags = [self.tag_data[tag] for tag in self.current_tags]
+        tags = [self.tag_data[tag] if tag in self.tag_data else tag for tag in self.current_tags]
 
         filtered_outputs = []
         for output in self.main.outputs:

@@ -784,7 +784,7 @@ class CompToolbar(AbstractToolbar):
             if not tmdb_id.startswith(suffix):
                 tmdb_id = f"{suffix}{tmdb_id}"
 
-        tags = [self.tag_data[tag] if tag in self.tag_data else tag for tag in self.current_tags]
+        tags = [self.tag_data.get(tag, tag) for tag in self.current_tags]
 
         filtered_outputs = []
         for output in self.main.outputs:

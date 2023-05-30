@@ -242,7 +242,7 @@ class Worker(QObject):
 
             if check_session:
                 if base_page.text.find('id="logoutBtn"') == -1:
-                    self.progress_status.emit('Session Expired')
+                    self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
                     return
 
             head_conf = {

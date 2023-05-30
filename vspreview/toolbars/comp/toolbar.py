@@ -173,13 +173,14 @@ class Worker(QObject):
                     raise StopIteration
                 self.progress_status.emit(conf.uuid, 'extract', i + 1, len(conf.outputs))
 
-                path_name = conf.path / output.name
+                folder_name = str(uuid4())
+                path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
 
                 max_num = max(conf.frames)
 
                 path_images = [
-                    path_name / (f'{output.name}_' + f'{f}'.zfill(len("%i" % max_num)) + '.png')
+                    path_name / (f'{folder_name}_' + f'{f}'.zfill(len("%i" % max_num)) + '.png')
                     for f in conf.frames
                 ]
 

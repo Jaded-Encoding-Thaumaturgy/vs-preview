@@ -32,7 +32,7 @@ __all__ = [
 
     'AbstractQItem', 'AbstractYAMLObject',
 
-    'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
+    'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
     'AbstractToolbar', 'AbstractToolbarSettings',
 
@@ -290,7 +290,7 @@ class AbstractYAMLObject(AbstractQItem):
         raise NotImplementedError
 
 
-class ExtendedWidget(AbstractQItem, QWidget):
+class ExtendedWidgetBase(AbstractQItem):
     vlayout: VBoxLayout
     hlayout: HBoxLayout
 
@@ -306,6 +306,10 @@ class ExtendedWidget(AbstractQItem, QWidget):
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
+
+
+class ExtendedWidget(ExtendedWidgetBase, QWidget):
+    ...
 
 
 class ExtendedDialog(AbstractQItem, QDialog):
@@ -348,7 +352,7 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
                 ...
 
 
-class AbstractToolbar(ExtendedWidget, QWidget, QABC):
+class AbstractToolbar(ExtendedWidget, QABC):
     _no_visibility_choice = False
     storable_attrs = tuple[str, ...]()
     class_storable_attrs = tuple[str, ...](('settings', 'visibility'))

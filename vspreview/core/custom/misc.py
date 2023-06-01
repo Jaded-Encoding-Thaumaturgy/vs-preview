@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Sequence, cast
 
-from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt
 from PyQt6.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QLabel, QStatusBar, QWidget
 
@@ -10,7 +10,8 @@ from ..abstracts import PushButton
 
 __all__ = [
     'StatusBar',
-    'Switch'
+    'Switch',
+    'TableModel'
 ]
 
 
@@ -102,3 +103,35 @@ class Switch(PushButton):
 
         painter.setPen(textpen)
         painter.drawText(switch_rect, Qt.AlignmentFlag.AlignCenter, cast(str, self.state_texts[int(self.isChecked())]))
+
+
+class TableModel(QAbstractTableModel):
+    def __init__(self, data: list[list[Any]] = [], columns: list[Any] | bool = True, rows: bool = True) -> None:
+        super().__init__()
+
+        self._data = data
+        self._columns = columns
+        self._rows = rows
+
+    def data(self, index: QModelIndex, role: int) -> Any:
+        if role == Qt.ItemDataRole.DisplayRole:
+            return self._data[index.row()][index.column()]
+
+    def rowCount(self, index: QModelIndex) -> int:
+        return len(self._data)
+
+    def columnCount(self, index: QModelIndex) -> int:
+        return len(self._data) and len(self._data[0])
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                if isinstance(self._columns, bool):
+                    if self._columns:
+                        return super().headerData(section, orientation, role)
+                else:
+                    return str(self._columns[section])
+
+            if orientation == Qt.Vertical:
+                if self._rows:
+                    return super().headerData(section, orientation, role)

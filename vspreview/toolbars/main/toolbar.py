@@ -11,7 +11,6 @@ from ...core import (
 )
 from ...models import GeneralModel, VideoOutputs
 from ...utils import qt_silent_call
-from .dialog import FramePropsDialog
 
 if TYPE_CHECKING:
     from ...main import MainSettings, MainWindow
@@ -27,7 +26,7 @@ class MainToolbar(AbstractToolbar):
     storable_attrs = ('outputs', )
 
     __slots__ = (
-        *storable_attrs, 'frame_props_dialog',
+        *storable_attrs,
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button', 'zoom_combobox',
         'switch_timeline_mode_button', 'settings_button'
@@ -55,8 +54,6 @@ class MainToolbar(AbstractToolbar):
         super().setup_ui()
 
         self.setVisible(True)
-
-        self.frame_props_dialog = FramePropsDialog(self.main)
 
         self.outputs_combobox = ComboBox[VideoOutput](
             self, editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
@@ -90,14 +87,6 @@ class MainToolbar(AbstractToolbar):
             'Switch Timeline Mode', self, clicked=self.on_switch_timeline_mode_clicked
         )
 
-        self.frame_props_tab_button = PushButton(
-            'Frame Props', self, clicked=lambda: (
-                self.frame_props_dialog.hide() if not self.frame_props_dialog.isHidden() else (
-                    self.frame_props_dialog.showDialog(self.main.current_output.props)
-                )
-            )
-        )
-
         self.settings_button = PushButton('Settings', self, clicked=self.main.app_settings.show)
 
         self.hlayout.addWidgets([
@@ -108,7 +97,6 @@ class MainToolbar(AbstractToolbar):
             self.get_separator(),
             self.auto_fit_button, self.zoom_combobox,
             self.switch_timeline_mode_button,
-            self.frame_props_tab_button,
             self.settings_button
         ])
 
@@ -164,8 +152,6 @@ class MainToolbar(AbstractToolbar):
         if self.outputs and len(self.outputs) > 1 and self.sync_outputs_checkbox.isChecked():
             self.on_sync_outputs_clicked(True, force_frame=frame)
 
-        if not self.frame_props_dialog.isHidden():
-            self.frame_props_dialog.update_frame_props(self.main.current_output.props)
         self.main.plugins.on_current_frame_changed(frame)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:

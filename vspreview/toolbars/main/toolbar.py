@@ -152,8 +152,6 @@ class MainToolbar(AbstractToolbar):
         if self.outputs and len(self.outputs) > 1 and self.sync_outputs_checkbox.isChecked():
             self.on_sync_outputs_clicked(True, force_frame=frame)
 
-        self.main.plugins.on_current_frame_changed(frame)
-
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
         qt_silent_call(self.frame_control.setMaximum, self.main.current_output.total_frames - 1)

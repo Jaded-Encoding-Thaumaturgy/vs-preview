@@ -53,6 +53,10 @@ class Plugins(AbstractYAMLObjectSingleton):
         if self.main.main_split.current_position:
             self[self.plugins_tab.currentIndex()].on_current_frame_changed(frame)
 
+    def on_current_output_changed(self, index: int, prev_index: int) -> None:
+        if self.main.main_split.current_position:
+            self[self.plugins_tab.currentIndex()].on_current_output_changed(index, prev_index)
+
     @overload
     def __getitem__(self, _sub: str | int) -> AbstractPlugin:
         ...

@@ -73,6 +73,9 @@ class CentralSplitter(QSplitter):
             self.main_window.plugins.on_current_frame_changed(
                 self.main_window.current_output.last_showed_frame
             )
+            self.main_window.plugins.on_current_output_changed(
+                self.main_window.current_output.index, self.main_window.current_output.index
+            )
         return super().moveSplitter(pos, index)
 
 
@@ -672,6 +675,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         for toolbar in self.toolbars:
             toolbar.on_current_frame_changed(frame)
 
+        self.plugins.on_current_frame_changed(frame)
+
         self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
 
     def switch_output(self, value: int | VideoOutput) -> None:
@@ -708,6 +713,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         for toolbar in self.toolbars[1:]:
             toolbar.on_current_output_changed(index, prev_index)
+
+        self.plugins.on_current_output_changed(index, prev_index)
 
         self.update_statusbar_output_info()
 

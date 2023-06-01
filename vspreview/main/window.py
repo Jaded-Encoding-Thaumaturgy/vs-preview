@@ -10,18 +10,22 @@ from time import time
 from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
+from PyQt6 import QtCore
 from PyQt6.QtCore import QByteArray, QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtWidgets import QApplication, QGraphicsScene, QGraphicsView, QLabel, QMainWindow, QSizePolicy
+from PyQt6.QtWidgets import (
+    QApplication, QGraphicsScene, QGraphicsView, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
+)
 from vsengine import vpy  # type: ignore
 
 from ..core import (
-    PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView,
+    PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView, HBoxLayout,
     QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts,
     get_current_environment, make_environment, try_load
 )
 from ..models import VideoOutputs
+from ..plugins import Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -51,6 +55,25 @@ from yaml import MarkedYAMLError, YAMLError
 __all__ = [
     'MainWindow'
 ]
+
+
+class CentralSplitter(QSplitter):
+    def __init__(self, main_window: MainWindow, orientation: QtCore.Qt.Orientation) -> None:
+        super().__init__(orientation)
+
+        self.main_window = main_window
+
+        self.previous_position = 0
+
+    def current_position(self) -> int:
+        return self.sizes()[-1]
+
+    def moveSplitter(self, pos: int, index: int) -> None:
+        if self.previous_position == 0 and self.current_position:
+            self.main_window.plugins.on_current_frame_changed(
+                self.main_window.current_output.last_showed_frame
+            )
+        return super().moveSplitter(pos, index)
 
 
 class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
@@ -86,6 +109,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     reload_after_signal = pyqtSignal()
 
     toolbars: Toolbars
+    plugins: Plugins
     app_settings: SettingsDialog
     window_settings: WindowSettings
 
@@ -171,6 +195,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.main_layout.addWidget(toolbar)
             self.toolbars.main.layout().addWidget(toolbar.toggle_button)
 
+        Plugins(self)
+
         self.app_settings.tab_widget.setUsesScrollButtons(False)
         self.app_settings.setMinimumWidth(
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
@@ -197,7 +223,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.timeline = Timeline(self.central_widget)
 
-        self.main_layout.addWidgets([self.graphics_view, self.timeline])
+        self.plugins_tab_widget = QTabWidget(self.central_widget)
+
+        self.main_split = CentralSplitter(self, QtCore.Qt.Orientation.Horizontal)
+        self.main_split.addWidget(self.graphics_view)
+        self.main_split.addWidget(self.plugins_tab_widget)
+        self.main_split.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+        )
+
+        HBoxLayout(self.main_layout, [self.main_split])
+        self.main_layout.addWidget(self.timeline)
 
         # status bar
         self.statusbar = StatusBar(self.central_widget)

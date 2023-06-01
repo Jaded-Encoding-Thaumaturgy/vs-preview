@@ -166,6 +166,7 @@ class MainToolbar(AbstractToolbar):
 
         if not self.frame_props_dialog.isHidden():
             self.frame_props_dialog.update_frame_props(self.main.current_output.props)
+        self.main.plugins.on_current_frame_changed(frame)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)

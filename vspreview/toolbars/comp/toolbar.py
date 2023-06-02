@@ -346,6 +346,14 @@ class CompToolbar(AbstractToolbar):
         self.add_shortcuts()
 
     def setup_ui(self) -> None:
+        try:
+            import requests
+            from datetime import datetime
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                'You are missing `requests`!\n'
+                'Install them with "pip install requests"!'
+            )
         super().setup_ui()
 
         self.collection_name_lineedit = LineEdit('Collection name', self)
@@ -421,6 +429,35 @@ class CompToolbar(AbstractToolbar):
             self.tag_list_combox.setHidden(not is_checked)
             self.tag_separator.setHidden(not is_checked)
 
+        def _collection_click(is_checked: bool):
+            elements = []
+            try:
+                if self.settings.tmdb_apikey and self.tmdb_id_lineedit.text():
+
+                    tmdb_type = self.tmdb_type_combox.currentText().lower()
+
+                    url = f"https://api.themoviedb.org/3/{tmdb_type}/{self.tmdb_id_lineedit.text()}?language=en-US"
+                    headers = {
+                        "accept": "application/json",
+                        "Authorization": f"Bearer {self.settings.tmdb_apikey}"
+                    }
+                    resp = requests.get(url, headers=headers)
+                    assert resp.status_code == 200, "Response isn't 200"
+                    data: dict = resp.json()
+                    assert data.get("success", True), "Success is false"
+                        
+                    year = datetime.strptime(data["first_air_date"], '%Y-%m-%d').year
+
+                    elements.append(f"{data['name']} ({year})")
+            except AssertionError:
+                pass
+
+                elements.append(" vs ".join([video.title for video in self.main.outputs]))
+
+                self.collection_name_lineedit.setText(" - ".join(elements))
+
+        self.collection_name_button = PushButton('Generate Name', self, clicked=_collection_click)
+
         self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=_force_clicked('I'))
         self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=_force_clicked('P'))
         self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=_force_clicked('B'))
@@ -475,7 +512,10 @@ class CompToolbar(AbstractToolbar):
         self.upload_status_elements = (self.upload_progressbar, self.upload_status_label)
 
         VBoxLayout(self.hlayout, [
-            self.collection_name_lineedit,
+            HBoxLayout([ 
+                self.collection_name_lineedit,
+                self.collection_name_button,
+            ]),
             self.manual_frames_lineedit,
         ])
 

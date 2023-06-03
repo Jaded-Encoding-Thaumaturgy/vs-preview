@@ -34,7 +34,7 @@ __all__ = [
 
     'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
-    'AbstractToolbar', 'AbstractToolbarSettings',
+    'NotchProvider', 'AbstractToolbar', 'AbstractToolbarSettings',
 
     'main_window', 'storage_err_msg', 'try_load',
 ]
@@ -352,7 +352,21 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
                 ...
 
 
-class AbstractToolbar(ExtendedWidget, QABC):
+class NotchProvider:
+    notches_changed = pyqtSignal(ExtendedWidget)
+
+    def init_notches(self, main: MainWindow = ...) -> None:
+        self.notches_changed.connect(main.timeline.update_notches)
+
+    def get_notches(self) -> Notches:
+        from .custom import Notches
+        return Notches()
+
+    def is_notches_visible(self) -> bool:
+        return False
+
+
+class AbstractToolbar(ExtendedWidget, NotchProvider, QABC):
     _no_visibility_choice = False
     storable_attrs = tuple[str, ...]()
     class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
@@ -363,13 +377,12 @@ class AbstractToolbar(ExtendedWidget, QABC):
 
     __slots__ = ('main', 'toggle_button', *class_storable_attrs)
 
-    notches_changed = pyqtSignal(ExtendedWidget)
-
     main: MainWindow
     name: str
 
     def __init__(self, main: MainWindow, settings: QWidget | None = None) -> None:
         super().__init__(main.central_widget)
+        self.init_notches(main)
 
         if settings is None:
             from vstools.exceptions import CustomValueError
@@ -383,7 +396,6 @@ class AbstractToolbar(ExtendedWidget, QABC):
         self.main.app_settings.addTab(settings, self.name)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
-        self.notches_changed.connect(self.main.timeline.update_notches)
 
         self.toggle_button = PushButton(
             self.name, self, checkable=True, clicked=self.on_toggle
@@ -414,10 +426,6 @@ class AbstractToolbar(ExtendedWidget, QABC):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
-
-    def get_notches(self) -> Notches:
-        from .custom import Notches
-        return Notches()
 
     def is_notches_visible(self) -> bool:
         return self.isVisible()

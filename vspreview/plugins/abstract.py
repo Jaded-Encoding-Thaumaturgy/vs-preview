@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from PyQt6.QtWidgets import QSizePolicy
 
-from ..core import ExtendedWidgetBase, Frame
+from ..core import ExtendedWidgetBase, Frame, NotchProvider
 
 if TYPE_CHECKING:
     from ..main import MainWindow
@@ -15,12 +15,13 @@ __all__ = [
 ]
 
 
-class AbstractPlugin(ExtendedWidgetBase):
+class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     _plugin_name: ClassVar[str]
 
     def __init__(self, main: MainWindow) -> None:
         try:
             super().__init__(main)
+            self.init_notches(main)
         except TypeError as e:
             print('\tMake sure you\'re inheriting a QWidget!\n')
 

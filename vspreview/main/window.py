@@ -22,7 +22,7 @@ from vsengine import vpy  # type: ignore
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView, HBoxLayout,
     QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts,
-    get_current_environment, make_environment, try_load
+    get_current_environment, make_environment, try_load, CroppingInfo
 )
 from ..models import VideoOutputs
 from ..plugins import Plugins
@@ -110,6 +110,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     reload_signal = pyqtSignal()
     reload_before_signal = pyqtSignal()
     reload_after_signal = pyqtSignal()
+    cropValuesChanged = pyqtSignal(CroppingInfo)
 
     toolbars: Toolbars
     plugins: Plugins

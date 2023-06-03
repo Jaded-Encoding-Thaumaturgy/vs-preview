@@ -415,13 +415,23 @@ class VideoOutput(AbstractYAMLObject):
     def update_graphic_item(
         self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
     ) -> QPixmap | None:
+        from vstools import complex_hash
+
+        old_crop = complex_hash.hash(self.crop_values)
+
         if isinstance(crop_values, bool):
             self.crop_values.active = crop_values
         elif crop_values is not None:
             self.crop_values = crop_values
 
+        new_crop = complex_hash.hash(self.crop_values)
+
         if hasattr(self, 'graphics_scene_item'):
             self.graphics_scene_item.setPixmap(pixmap, self.crop_values)
+
+        if old_crop != new_crop:
+            self.main.cropValuesChanged.emit(self.crop_values)
+
         return pixmap
 
     def render_frame(

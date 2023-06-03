@@ -8,7 +8,7 @@ from ..core import Frame, TableModel
 from .abstract import AbstractPlugin
 
 __all__ = [
-    'FramePropsPlugin'
+    'Plugin'
 ]
 
 
@@ -71,7 +71,7 @@ _frame_props_lut = {
 ])
 
 
-class FramePropsPlugin(AbstractPlugin, QTableView):
+class Plugin(AbstractPlugin, QTableView):
     _plugin_name = 'Frame Props'
 
     def setup_ui(self) -> None:

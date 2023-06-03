@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from PyQt6.QtWidgets import QSizePolicy
+
 from ..core import ExtendedWidgetBase, Frame
 
 if TYPE_CHECKING:
@@ -25,6 +27,8 @@ class AbstractPlugin(ExtendedWidgetBase):
             raise e
 
         self.main = main
+
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 
         self.setup_ui()
 

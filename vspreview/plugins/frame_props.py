@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QSizePolicy, QTableView
+from PyQt6.QtWidgets import QTableView
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
@@ -75,7 +75,6 @@ class FramePropsPlugin(AbstractPlugin, QTableView):
     _plugin_name = 'Frame Props'
 
     def setup_ui(self) -> None:
-        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         self.verticalHeader().hide()
 
     def on_current_frame_changed(self, frame: Frame) -> None:

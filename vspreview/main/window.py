@@ -135,11 +135,14 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.last_reload_time = time()
 
         if self.settings.dark_theme_enabled:
+            from ..core import apply_plotting_style
+
             try:
                 from qdarkstyle import _load_stylesheet  # type: ignore[import]
             except ImportError:
                 self.settings.dark_theme_enabled = False
             else:
+                apply_plotting_style()
                 self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
 
         self.ensurePolished()

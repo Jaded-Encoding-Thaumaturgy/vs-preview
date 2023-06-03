@@ -27,12 +27,15 @@ class Plugins(AbstractYAMLObjectSingleton):
         module = cls._closure[f'_inner_tb_{name}']
         return object.__getattribute__(module, module.__all__[0])  # type: ignore # noqa
 
-    def __init__(self, main_window: MainWindow) -> None:
-        main_window.plugins = self
+    def __init__(self, main: MainWindow) -> None:
+        main.plugins = self
 
-        self.main = main_window
-        self.plugins_tab = main_window.plugins_tab_widget
+        self.main = main
+        self.plugins_tab = main.plugins_tab
         self.main.main_split.setSizes([0, 0])
+
+        # tab idx, clip idx, frame
+        self.last_render = (-1, -1, -1)
 
         self.plugin_names = [
             file.stem for file in Path(__file__).parent.glob('*.py')
@@ -40,7 +43,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         ]
 
         self.plugins = dict[str, AbstractPlugin]({
-            name: self.file_to_plugin(name)(main_window)
+            name: self.file_to_plugin(name)(main)
             for name in self.plugin_names
         })
 
@@ -50,12 +53,38 @@ class Plugins(AbstractYAMLObjectSingleton):
             self.plugins_tab.addTab(plugin, plugin._plugin_name)
 
     def on_current_frame_changed(self, frame: Frame) -> None:
-        if self.main.main_split.current_position:
-            self[self.plugins_tab.currentIndex()].on_current_frame_changed(frame)
+        tab_idx = self.plugins_tab.currentIndex()
+
+        curr_render = (tab_idx, self.main.current_output.index, int(frame))
+
+        if self.main.main_split.current_position and self.last_render != curr_render:
+            self[tab_idx].on_current_frame_changed(frame)
+
+            self.last_render = curr_render
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        if self.main.main_split.current_position:
-            self[self.plugins_tab.currentIndex()].on_current_output_changed(index, prev_index)
+        tab_idx = self.plugins_tab.currentIndex()
+
+        curr_render = (tab_idx, index, self.main.current_output.last_showed_frame)
+
+        if self.main.main_split.current_position and self.last_render != curr_render:
+            self[tab_idx].on_current_output_changed(index, prev_index)
+
+            self.last_render = curr_render
+
+    def update(self, frame: Frame | None = None, index: int | None = None, prev_index: int | None = None) -> None:
+        from vstools import fallback
+
+        if not self.main.current_output:
+            return
+
+        self.on_current_frame_changed(
+            fallback(frame, self.main.current_output.last_showed_frame)
+        )
+        self.on_current_output_changed(
+            fallback(index, self.main.current_output.index),
+            fallback(prev_index, self.main.current_output.index),
+        )
 
     @overload
     def __getitem__(self, _sub: str | int) -> AbstractPlugin:

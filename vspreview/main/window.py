@@ -63,21 +63,19 @@ class CentralSplitter(QSplitter):
 
         self.main_window = main_window
 
+        self.splitterMoved.connect(self.on_splitter_moved)
+
         self.previous_position = 0
 
     @property
     def current_position(self) -> int:
         return self.sizes()[-1]
 
-    def moveSplitter(self, pos: int, index: int) -> None:
+    def on_splitter_moved(self) -> None:
         if self.previous_position == 0 and self.current_position:
-            self.main_window.plugins.on_current_frame_changed(
-                self.main_window.current_output.last_showed_frame
-            )
-            self.main_window.plugins.on_current_output_changed(
-                self.main_window.current_output.index, self.main_window.current_output.index
-            )
-        return super().moveSplitter(pos, index)
+            self.main_window.plugins.update()
+
+        self.previous_position = self.current_position
 
 
 class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
@@ -228,11 +226,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.timeline = Timeline(self.central_widget)
 
-        self.plugins_tab_widget = QTabWidget(self.central_widget)
+        self.plugins_tab = QTabWidget(self.central_widget)
+        self.plugins_tab.currentChanged.connect(lambda x: self.plugins.update())
 
         self.main_split = CentralSplitter(self, QtCore.Qt.Orientation.Horizontal)
         self.main_split.addWidget(self.graphics_view)
-        self.main_split.addWidget(self.plugins_tab_widget)
+        self.main_split.addWidget(self.plugins_tab)
         self.main_split.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
         )

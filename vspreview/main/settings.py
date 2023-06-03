@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from functools import partial
 from multiprocessing import cpu_count
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QShortcut
@@ -315,24 +315,37 @@ class MainSettings(AbstractToolbarSettings):
 
 class WindowSettings(QYAMLObjectSingleton):
     __slots__ = (
-        'timeline_mode', 'window_geometry', 'window_state'
+        'timeline_mode', 'window_geometry', 'window_state', 'zoom_index', 'x_pos', 'y_pos'
     )
 
-    def __init__(self, timeline_mode: str, window_geometry: bytes, window_state: bytes) -> None:
-        self.timeline_mode = timeline_mode
-        self.window_geometry = window_geometry
-        self.window_state = window_state
-
-        super().__init__()
-
     def __getstate__(self) -> Mapping[str, Any]:
+        main = main_window()
+
         return {
-            'timeline_mode': self.timeline_mode,
-            'window_geometry': self.window_geometry,
-            'window_state': self.window_state
+            'timeline_mode': main.timeline.mode,
+            'window_geometry': bytes(cast(bytearray, main.saveGeometry())),
+            'window_state': bytes(cast(bytearray, main.saveState())),
+            'zoom_index': main.toolbars.main.zoom_combobox.currentIndex(),
+            'x_pos': main.graphics_view.horizontalScrollBar().value(),
+            'y_pos': main.graphics_view.verticalScrollBar().value(),
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'timeline_mode', str, self.__setattr__)
         try_load(state, 'window_geometry', bytes, self.__setattr__)
         try_load(state, 'window_state', bytes, self.__setattr__)
+        try_load(state, 'zoom_index', int, self.__setattr__)
+        try_load(state, 'x_pos', int, self.__setattr__)
+        try_load(state, 'y_pos', int, self.__setattr__)
+
+        main = main_window()
+
+        main.timeline.mode = self.timeline_mode
+
+        main.toolbars.main.zoom_combobox.setCurrentIndex(self.zoom_index)
+
+        main.graphics_view.horizontalScrollBar().setValue(self.x_pos)
+        main.graphics_view.verticalScrollBar().setValue(self.y_pos)
+
+        main.restoreState(self.window_state)
+        main.restoreGeometry(self.window_geometry)

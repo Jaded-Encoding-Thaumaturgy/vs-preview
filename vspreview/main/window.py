@@ -11,7 +11,7 @@ from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QByteArray, QEvent, QRectF, pyqtSignal
+from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import (
@@ -20,9 +20,9 @@ from PyQt6.QtWidgets import (
 from vsengine import vpy  # type: ignore
 
 from ..core import (
-    PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView, HBoxLayout,
-    QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts,
-    get_current_environment, make_environment, try_load, CroppingInfo
+    PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
+    GraphicsView, HBoxLayout, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode,
+    _monkey_runpy_dicts, get_current_environment, make_environment
 )
 from ..models import VideoOutputs
 from ..plugins import Plugins
@@ -86,8 +86,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
     )
 
-    VSP_VERSION = 3.1
-    BREAKING_CHANGES_VERSIONS = list[str](['3.0'])
+    VSP_VERSION = 3.2
+    BREAKING_CHANGES_VERSIONS = list[str](['3.0', '3.1'])
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -114,7 +114,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     toolbars: Toolbars
     plugins: Plugins
     app_settings: SettingsDialog
-    window_settings: WindowSettings
+    window_settings = WindowSettings()
 
     autosave_timer: Timer
 
@@ -892,24 +892,5 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
-            'window_settings': WindowSettings(
-                self.timeline.mode,
-                bytes(cast(bytearray, self.saveGeometry())),
-                bytes(cast(bytearray, self.saveState()))
-            )
+            'window_settings': self.window_settings
         }
-
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        # toolbars is singleton, so it initialize itself right in its __setstate__()
-        self.window_settings = {}  # type: ignore
-
-        try:
-            try_load(state, 'window_settings', dict, self)
-        except BaseException:
-            try_load(state, 'timeline_mode', str, self.window_settings)
-            try_load(state, 'window_geometry', bytes, self.window_settings)
-            try_load(state, 'window_state', bytes, self.window_settings)
-
-        self.timeline.mode = self.window_settings.timeline_mode
-        self.restoreGeometry(QByteArray(len(x := self.window_settings.window_geometry), x))
-        self.restoreState(QByteArray(len(x := self.window_settings.window_state), x))

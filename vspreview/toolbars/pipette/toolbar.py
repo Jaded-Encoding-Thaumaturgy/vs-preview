@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from colorsys import rgb_to_hls, rgb_to_hsv
 from math import ceil, floor, log
 from typing import TYPE_CHECKING, Generator, cast
 from weakref import WeakKeyDictionary
@@ -7,7 +8,7 @@ from weakref import WeakKeyDictionary
 import vapoursynth as vs
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QFont, QMouseEvent
-from PyQt6.QtWidgets import QGraphicsView, QLabel
+from PyQt6.QtWidgets import QFrame, QGraphicsView, QLabel
 
 from ...core import AbstractToolbar, Frame, PushButton, VideoOutput
 from .colorview import ColorView
@@ -95,6 +96,9 @@ class PipetteToolbar(AbstractToolbar):
         self.src_dec = QLabel(self)
         self.src_norm = QLabel(self)
 
+        self.rgb_hls = QLabel(self)
+        self.rgb_hsv = QLabel(self)
+
         for label in [
             self.position,
             self.rgb_hex, self.rgb_dec, self.rgb_norm,
@@ -106,9 +110,14 @@ class PipetteToolbar(AbstractToolbar):
         self.copy_position_button = PushButton('⎘', self, clicked=self.on_copy_position_clicked)
 
         self.hlayout.addWidgets([
+            QFrame(),
             self.color_view, self.position, self.copy_position_button,
+            self.get_separator(),
             self.rgb_label, self.rgb_hex, self.rgb_dec, self.rgb_norm,
-            self.src_label, self.src_hex, self.src_dec, self.src_norm
+            self.get_separator(),
+            self.src_label, self.src_hex, self.src_dec, self.src_norm,
+            self.get_separator(),
+            QLabel('HLS:'), self.rgb_hls, QLabel('HSV:'), self.rgb_hsv,
         ])
 
         self.hlayout.addStretch()
@@ -193,13 +202,17 @@ class PipetteToolbar(AbstractToolbar):
 
         pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
         color = self.main.current_output.graphics_scene_item.pixmap().toImage().pixelColor(pos)
-        red, green, blue = color.red(), color.green(), color.blue()
+        components = color.red(), color.green(), color.blue()
+        components_float = tuple[float, ...](x / 255 for x in components)
 
         self.color_view.color = color
         self.position.setText('{:4d},{:4d}'.format(pos.x(), pos.y()))
-        self.rgb_hex.setText('{:2X},{:2X},{:2X}'.format(red, green, blue))
-        self.rgb_dec.setText('{:3d},{:3d},{:3d}'.format(red, green, blue))
-        self.rgb_norm.setText('{:0.5f},{:0.5f},{:0.5f}'.format(red / 255, green / 255, blue / 255))
+
+        self.rgb_hex.setText('{:2X},{:2X},{:2X}'.format(*components))
+        self.rgb_dec.setText('{:3d},{:3d},{:3d}'.format(*components))
+        self.rgb_norm.setText('{:0.5f},{:0.5f},{:0.5f}'.format(*components_float))
+        self.rgb_hls.setText('{}%,{}%,{}%'.format(*(int(x * 255) for x in rgb_to_hls(*components_float))))
+        self.rgb_hsv.setText('{}%,{}%,{}%'.format(*(int(x * 255) for x in rgb_to_hsv(*components_float))))
 
         if not self.src_label.isVisible():
             return
@@ -232,7 +245,7 @@ class PipetteToolbar(AbstractToolbar):
 
         has_alpha = bool(self.main.current_output.source.alpha)
 
-        self.src_label.setText(f"Raw ({str(src_fmt.color_family)[12:]}{' + Alpha' if has_alpha else ''}):")
+        self.src_label.setText(f"Raw ({src_fmt.color_family.name}{' + Alpha' if has_alpha else ''}):")
         self.src_hex.setVisible(src_fmt.sample_type == vs.INTEGER)
 
         if src_fmt.sample_type == vs.INTEGER:

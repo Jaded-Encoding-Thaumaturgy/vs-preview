@@ -32,7 +32,12 @@ class AbstractPlugin(ExtendedWidgetBase):
 
         self.setup_ui()
 
+        self.add_shortcuts()
+
         self.set_qobject_names()
+
+    def add_shortcuts(self) -> None:
+        ...
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         ...

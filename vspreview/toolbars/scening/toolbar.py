@@ -328,7 +328,7 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             self.on_add_list_clicked()
 
-        assert self.current_list
+        assert self.current_list is not None
 
         self.current_list.add(self.main.current_output.last_showed_frame, label=self.label_lineedit.text())
 

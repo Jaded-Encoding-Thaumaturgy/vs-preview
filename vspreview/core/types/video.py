@@ -242,17 +242,6 @@ class VideoOutput(AbstractYAMLObject):
             except ModuleNotFoundError:
                 PACKING_TYPE = PackingType.none_10bit if _default_10bits else PackingType.none_8bit
 
-                print(ImportWarning(
-                    "\n"
-                    "  One of LibP2P, Akarin, cupy, numpy is required to pack RGB data efficiently for previewing!\n"
-                    "  Now falling back to pure python. You won't be able to playback.\n"
-                    "  You can download one of them from here: \n"
-                    "      https://github.com/DJATOM/LibP2P-Vapoursynth\n"
-                    "      https://github.com/AkarinVS/vapoursynth-plugin\n"
-                    "      https://docs.cupy.dev/en/stable/install.html#installing-cupy\n"
-                    "      pip install numpy\n"
-                ))
-
         self.set_fmt_values()
 
     @property

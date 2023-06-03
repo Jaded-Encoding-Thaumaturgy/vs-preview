@@ -762,14 +762,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def update_display_profile(self) -> None:
         if sys.platform == 'win32':
-            if _imagingcms is None:
-                print(ImportWarning(
-                    'You\'re missing packages for the image csm!\n'
-                    'You can install it with "pip install pywin32 Pillow"!'
-                ))
-                return
-
-            assert self.app
+            assert self.app and _imagingcms
 
             screen_name = self.current_screen.name()
 

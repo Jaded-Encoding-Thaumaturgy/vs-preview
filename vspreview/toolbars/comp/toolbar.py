@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QKeyCombination, Qt, QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QKeyCombination, QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
@@ -155,14 +155,8 @@ class Worker(QObject):
         from concurrent.futures import ThreadPoolExecutor
         from uuid import uuid4
 
-        try:
-            from requests import Session
-            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                'You are missing `requests` and `requests` toolbelt!\n'
-                'Install them with "pip install requests requests_toolbelt"!'
-            )
+        from requests import Session
+        from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
 
         all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)

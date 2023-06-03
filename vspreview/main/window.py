@@ -65,6 +65,7 @@ class CentralSplitter(QSplitter):
 
         self.previous_position = 0
 
+    @property
     def current_position(self) -> int:
         return self.sizes()[-1]
 

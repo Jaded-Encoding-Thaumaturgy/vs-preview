@@ -563,7 +563,9 @@ class CompToolbar(AbstractToolbar):
             with Session() as sess:
                 sess.get('https://slow.pics/comparison')
 
-                api_resp = sess.get("https://slow.pics/api/tags", headers=_get_slowpic_headers(0, "application/json", sess)).json()
+                api_resp = sess.get(
+                    "https://slow.pics/api/tags", headers=_get_slowpic_headers(0, "application/json", sess)
+                ).json()
 
                 self.tag_data = {data["label"]: data["value"] for data in api_resp}
         except ImportError:

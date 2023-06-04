@@ -84,6 +84,11 @@ class Plugins(AbstractYAMLObjectSingleton):
             plugin.setObjectName(f'Plugins.{name}')
 
             if not plugin._config.visible_in_tab:
+                try:
+                    plugin.hide()
+                except Exception:
+                    ...
+
                 continue
 
             plugin.index = i

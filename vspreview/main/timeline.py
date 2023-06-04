@@ -122,7 +122,7 @@ class Timeline(QWidget):
             )
 
             for provider, notches in self.notches.items():
-                if not provider.is_notches_visible():
+                if not provider.is_notches_visible:
                     continue
 
                 for notch in notches:
@@ -183,7 +183,7 @@ class Timeline(QWidget):
         painter.fillRect(self.scroll_rect, Qt.GlobalColor.gray)
 
         for provider, notches in self.notches.items():
-            if not provider.is_notches_visible():
+            if not provider.is_notches_visible:
                 continue
 
             for notch in notches:
@@ -213,7 +213,7 @@ class Timeline(QWidget):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
         for provider, notches in self.notches.items():
-            if not provider.is_notches_visible():
+            if not provider.is_notches_visible:
                 continue
             for notch in notches:
                 line = notch.line

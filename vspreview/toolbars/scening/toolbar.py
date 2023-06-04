@@ -217,7 +217,8 @@ class SceningToolbar(AbstractToolbar):
             self.check_add_to_list_possibility()
             self.check_remove_export_possibility()
 
-        self.status_label.setVisible(self.is_notches_visible())
+        self.status_label.setVisible(self.is_notches_visible)
+
         super().on_toggle(new_state)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
@@ -254,6 +255,7 @@ class SceningToolbar(AbstractToolbar):
             return self.items_combobox.setCurrentIndex(index)
         raise IndexError
 
+    @property
     def is_notches_visible(self) -> bool:
         return self.always_show_scene_marks_checkbox.isChecked() or self.toggle_button.isChecked()
 

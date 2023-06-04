@@ -384,7 +384,6 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
 
     def __init__(self, main: MainWindow, settings: QWidget | None = None) -> None:
         super().__init__(main.central_widget)
-        self.init_notches(main)
 
         if settings is None:
             from vstools.exceptions import CustomValueError
@@ -398,7 +397,6 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
         self.main.app_settings.addTab(settings, self.name)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
-
         self.toggle_button = PushButton(
             self.name, self, checkable=True, clicked=self.on_toggle
         )
@@ -406,6 +404,8 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
 
         self.setVisible(False)
         self.visibility = False
+
+        self.init_notches(self.main)
 
     def setup_ui(self) -> None:
         self.hlayout = HBoxLayout(self)

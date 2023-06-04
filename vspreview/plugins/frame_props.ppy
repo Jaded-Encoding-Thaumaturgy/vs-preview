@@ -4,11 +4,11 @@ from PyQt6.QtWidgets import QTableView
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
-from ..core import Frame, TableModel
-from .abstract import AbstractPlugin
+from vspreview.core import Frame, TableModel
+from vspreview.plugins import AbstractPlugin, PluginConfig
 
 __all__ = [
-    'Plugin'
+    'FramePropsPlugin'
 ]
 
 
@@ -71,8 +71,8 @@ _frame_props_lut = {
 ])
 
 
-class Plugin(AbstractPlugin, QTableView):
-    _plugin_name = 'Frame Props'
+class FramePropsPlugin(AbstractPlugin, QTableView):
+    _config = PluginConfig('dev.setsugen.frame_props', 'Frame Props')
 
     def setup_ui(self) -> None:
         self.verticalHeader().hide()

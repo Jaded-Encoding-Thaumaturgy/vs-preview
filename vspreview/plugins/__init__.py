@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, cast, overload
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast, overload
 
 from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg
-from .abstract import AbstractPlugin
+from .abstract import AbstractPlugin, PluginConfig
 
 if TYPE_CHECKING:
     from ..main import MainWindow
 
 
 __all__ = [
-    'Plugins'
+    'AbstractPlugin', 'PluginConfig'
 ]
 
 
@@ -22,10 +22,40 @@ class Plugins(AbstractYAMLObjectSingleton):
     _closure = {**globals()}
 
     @classmethod
-    def file_to_plugin(cls, name: str) -> type[AbstractPlugin]:
-        exec(f'from . import {name} as _inner_tb_{name}', cls._closure)
-        module = cls._closure[f'_inner_tb_{name}']
-        return object.__getattribute__(module, module.__all__[0])  # type: ignore # noqa
+    def file_to_plugins(cls, path: Path) -> Iterable[type[AbstractPlugin]]:
+        from importlib.util import module_from_spec, spec_from_file_location
+        if True:
+            # has to be imported after the main
+            from importlib._bootstrap_external import SOURCE_SUFFIXES  # type: ignore
+            SOURCE_SUFFIXES.append('.ppy')
+
+        spec = spec_from_file_location(path.stem, path)
+        module = module_from_spec(spec)
+
+        spec.loader.exec_module(module)
+
+        try:
+            module_all = object.__getattribute__(module, '__all__')
+        except AttributeError:
+            print(ImportWarning(f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'))
+            return
+
+        for export in cast(tuple[str, ...], module_all):
+            exp_obj = object.__getattribute__(module, export)
+
+            if not isinstance(exp_obj, type):
+                continue
+
+            if not issubclass(exp_obj, AbstractPlugin):
+                continue
+
+            if not hasattr(exp_obj, '_config'):
+                print(ImportWarning(
+                    f'The plugin "{exp_obj.__name__}" has no config set up and thus can\'t be imported!'
+                ))
+                continue
+
+            yield exp_obj
 
     def __init__(self, main: MainWindow) -> None:
         main.plugins = self
@@ -37,26 +67,28 @@ class Plugins(AbstractYAMLObjectSingleton):
         # tab idx, clip idx, frame
         self.last_render = (-1, -1, -1)
 
-        self.plugin_names = [
-            file.stem for file in Path(__file__).parent.glob('*.py')
-            if file.stem not in {'__init__', 'abstract'}
-        ]
+        self.plugins = dict[str, AbstractPlugin]()
 
-        self.plugins = dict[str, AbstractPlugin]({
-            name: self.file_to_plugin(name)(main)
-            for name in self.plugin_names
-        })
+        for name in [*Path(__file__).parent.glob('*.ppy'), *self.main.global_plugins_dir.glob('*.ppy')]:
+            for plugin in self.file_to_plugins(name):
+                if plugin._config.namespace in self.plugins:
+                    print(UserWarning(
+                        f'Tried to register plugin "{plugin._config.display_name} '
+                        f'({plugin._config.namespace})" twice!'
+                    ))
+
+                self.plugins[plugin._config.namespace] = plugin(self.main)
 
         i = 0
         for name, plugin in self.plugins.items():
             plugin.setObjectName(f'Plugins.{name}')
 
-            if not plugin._visible_in_tab:
+            if not plugin._config.visible_in_tab:
                 continue
 
             plugin.index = i
 
-            self.plugins_tab.addTab(plugin, plugin._plugin_name)
+            self.plugins_tab.addTab(plugin, plugin._config.display_name)
             i += 1
 
     def on_current_frame_changed(self, frame: Frame) -> None:

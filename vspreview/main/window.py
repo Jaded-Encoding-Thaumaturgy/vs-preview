@@ -128,6 +128,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.current_config_dir = config_dir / self.VSP_DIR_NAME
         self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
         self.global_storage_path = self.global_config_dir / '.global.yml'
+        self.global_plugins_dir = self.global_config_dir / 'plugins'
+        self.global_plugins_dir.mkdir(parents=True, exist_ok=True)
 
         self.app = cast(QApplication, QApplication.instance())
         assert self.app
@@ -532,8 +534,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             current_file.writelines(
                 '\n'.join([
                     version,
-                    f'# VSPreview script storage for: {self.script_path}',
-                    f'# Global setting saved at path: {self.global_storage_path}'
+                    f'# VSPreview local storage for script: {self.script_path}',
+                    f'# Global setting (storage/plugins) saved at path: {self.global_config_dir}'
                 ] + storage_dump[idx:])
             )
 

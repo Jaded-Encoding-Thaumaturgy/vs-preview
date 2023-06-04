@@ -19,7 +19,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     _plugin_name: ClassVar[str]
     _visible_in_tab: ClassVar[bool] = True
 
-    def __init__(self, main: MainWindow) -> None:
+    def __init__(self, main: MainWindow, index: int) -> None:
         try:
             super().__init__(main)
             self.init_notches(main)
@@ -29,6 +29,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
             raise e
 
         self.main = main
+        self.index = index
 
         self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 

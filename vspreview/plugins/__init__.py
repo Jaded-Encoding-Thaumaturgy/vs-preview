@@ -50,6 +50,9 @@ class Plugins(AbstractYAMLObjectSingleton):
         for name, plugin in self.plugins.items():
             plugin.setObjectName(f'Plugins.{name}')
 
+            if not plugin._visible_in_tab:
+                continue
+
             self.plugins_tab.addTab(plugin, plugin._plugin_name)
 
     def on_current_frame_changed(self, frame: Frame) -> None:

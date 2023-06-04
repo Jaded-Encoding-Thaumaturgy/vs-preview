@@ -17,6 +17,7 @@ __all__ = [
 
 class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     _plugin_name: ClassVar[str]
+    _visible_in_tab: ClassVar[bool] = True
 
     def __init__(self, main: MainWindow) -> None:
         try:

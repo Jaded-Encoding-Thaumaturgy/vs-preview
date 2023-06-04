@@ -206,3 +206,7 @@ class PlottingCanvas(FigureCanvasQTAgg):
 
         if self.xlog:
             self.axes.set_xscale("log")
+
+    def draw(self) -> None:
+        if 0 not in self.figure.get_size_inches():
+            super().draw()

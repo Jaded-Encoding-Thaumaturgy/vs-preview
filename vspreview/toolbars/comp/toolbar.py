@@ -339,6 +339,8 @@ class CompToolbar(AbstractToolbar):
 
         self.add_shortcuts()
 
+        self.tag_data_cache = None
+
     def setup_ui(self) -> None:
         super().setup_ui()
 
@@ -551,21 +553,26 @@ class CompToolbar(AbstractToolbar):
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
 
     def on_toggle(self, new_state: bool) -> None:
-        try:
-            from requests import Session
+        if self.tag_data_cache is None:
+            try:
+                from requests import Session
 
-            with Session() as sess:
-                sess.get('https://slow.pics/comparison')
+                with Session() as sess:
+                    sess.get('https://slow.pics/comparison')
 
-                api_resp = sess.get(
-                    "https://slow.pics/api/tags", headers=_get_slowpic_headers(0, "application/json", sess)
-                ).json()
+                    api_resp = sess.get("https://slow.pics/api/tags").json()
 
-                self.tag_data = {data["label"]: data["value"] for data in api_resp}
-        except ImportError:
-            self.tag_data = {"Missing requests": "Missing requests"}
-        except Exception:
-            self.tag_data = {"No Internet": "No Internet"}
+                    self.tag_data = {data["label"]: data["value"] for data in api_resp}
+                    # Cache the data
+                    self.tag_data_cache = self.tag_data
+            except ImportError:
+                self.tag_data = {"Missing requests": "Missing requests"}
+                self.tag_data_cache = self.tag_data
+            except Exception:
+                self.tag_data = {"No Internet": "No Internet"}
+                self.tag_data_cache = self.tag_data
+        else:
+            self.tag_data = self.tag_data_cache
 
         self.update_tags()
 

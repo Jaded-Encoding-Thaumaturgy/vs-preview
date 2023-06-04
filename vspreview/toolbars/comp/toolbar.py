@@ -341,6 +341,8 @@ class CompToolbar(AbstractToolbar):
 
         self.tag_data_cache = None
 
+        self.cache_state = None
+
     def setup_ui(self) -> None:
         super().setup_ui()
 
@@ -553,7 +555,7 @@ class CompToolbar(AbstractToolbar):
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
 
     def on_toggle(self, new_state: bool) -> None:
-        if self.tag_data_cache is None:
+        if self.tag_data_cache is None or self.cache_state in ["ImportError", "Exception"]:
             try:
                 from requests import Session
 
@@ -563,14 +565,16 @@ class CompToolbar(AbstractToolbar):
                     api_resp = sess.get("https://slow.pics/api/tags").json()
 
                     self.tag_data = {data["label"]: data["value"] for data in api_resp}
-                    # Cache the data
+
                     self.tag_data_cache = self.tag_data
+                    self.cache_state = "Success"
+
             except ImportError:
                 self.tag_data = {"Missing requests": "Missing requests"}
-                self.tag_data_cache = self.tag_data
+                self.cache_state = "ImportError"
             except Exception:
-                self.tag_data = {"No Internet": "No Internet"}
-                self.tag_data_cache = self.tag_data
+                self.tag_data = {"Network error": "Network error"}
+                self.cache_state = "Exception"
         else:
             self.tag_data = self.tag_data_cache
 

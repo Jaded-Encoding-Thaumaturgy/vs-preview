@@ -352,7 +352,7 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
                 ...
 
 
-class NotchProvider:
+class NotchProvider(QABC):
     notches_changed = pyqtSignal(ExtendedWidget)
 
     def init_notches(self, main: MainWindow = ...) -> None:
@@ -362,11 +362,13 @@ class NotchProvider:
         from .custom import Notches
         return Notches()
 
+    @property
+    @abstractmethod
     def is_notches_visible(self) -> bool:
-        return False
+        ...
 
 
-class AbstractToolbar(ExtendedWidget, NotchProvider, QABC):
+class AbstractToolbar(ExtendedWidget, NotchProvider):
     _no_visibility_choice = False
     storable_attrs = tuple[str, ...]()
     class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
@@ -427,8 +429,9 @@ class AbstractToolbar(ExtendedWidget, NotchProvider, QABC):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
 
+    @property
     def is_notches_visible(self) -> bool:
-        return self.isVisible()
+        return self.visibility
 
     def resize_main_window(self, expanding: bool) -> None:
         if self.main.windowState() in {Qt.WindowState.WindowMaximized, Qt.WindowState.WindowFullScreen}:

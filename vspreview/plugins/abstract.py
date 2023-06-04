@@ -47,3 +47,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         ...
+
+    @property
+    def is_notches_visible(self) -> bool:
+        return (not self._visible_in_tab) or self.index == self.main.plugins.plugins_tab.currentIndex()

@@ -43,7 +43,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         ]
 
         self.plugins = dict[str, AbstractPlugin]({
-            name: self.file_to_plugin(name)(main, -1)
+            name: self.file_to_plugin(name)(main)
             for name in self.plugin_names
         })
 

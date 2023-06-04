@@ -323,6 +323,8 @@ class ExtendedTableView(AbstractQItem, QTableView):
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
+    _add_to_tab = True
+
     def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
         super().__init__()
 
@@ -394,7 +396,8 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
         self.settings = settings
         self.name = self.__class__.__name__[:-7]
 
-        self.main.app_settings.addTab(settings, self.name)
+        if settings._add_to_tab:
+            self.main.app_settings.addTab(settings, self.name)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
         self.toggle_button = PushButton(

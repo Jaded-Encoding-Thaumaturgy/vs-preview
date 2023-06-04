@@ -10,6 +10,8 @@ __all__ = [
 class DebugSettings(AbstractToolbarSettings):
     __slots__ = ()
 
+    _add_to_tab = False
+
     DEBUG_PLAY_FPS = False
     DEBUG_TOOLBAR = False
     DEBUG_TOOLBAR_BUTTONS_PRINT_STATE = False

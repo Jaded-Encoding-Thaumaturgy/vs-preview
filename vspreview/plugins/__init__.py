@@ -43,17 +43,21 @@ class Plugins(AbstractYAMLObjectSingleton):
         ]
 
         self.plugins = dict[str, AbstractPlugin]({
-            name: self.file_to_plugin(name)(main)
+            name: self.file_to_plugin(name)(main, -1)
             for name in self.plugin_names
         })
 
+        i = 0
         for name, plugin in self.plugins.items():
             plugin.setObjectName(f'Plugins.{name}')
 
             if not plugin._visible_in_tab:
                 continue
 
+            plugin.index = i
+
             self.plugins_tab.addTab(plugin, plugin._plugin_name)
+            i += 1
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         tab_idx = self.plugins_tab.currentIndex()

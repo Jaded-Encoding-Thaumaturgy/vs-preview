@@ -331,6 +331,9 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
         self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
+
+        self.vlayout.addStretch(1)
+
         self.set_defaults()
 
         self.set_qobject_names()

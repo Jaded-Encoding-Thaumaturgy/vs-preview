@@ -21,7 +21,7 @@ from vsengine import vpy  # type: ignore
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
-    GraphicsView, HBoxLayout, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode,
+    GraphicsView, HBoxLayout, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
     _monkey_runpy_dicts, get_current_environment, make_environment
 )
 from ..models import VideoOutputs
@@ -79,8 +79,6 @@ class CentralSplitter(QSplitter):
 
 
 class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
-    current_viewmode: ViewMode
-
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
@@ -210,8 +208,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.app_settings.setMinimumWidth(
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
         )
-
-        self.current_viewmode = ViewMode.NORMAL
 
         self.set_qobject_names()
         self.setObjectName('MainWindow')
@@ -403,8 +399,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             vs.register_on_destroy(self.gc_collect)
 
         if load_error is None:
-            self.change_video_viewmode(self.current_viewmode)
-
             self.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
 
             if not reloading:
@@ -854,36 +848,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         if playback_active:
             self.toolbars.playback.stop()
-
-        self.outputs.items = [
-            self.outputs.get_new_output(old.source.clip, old)
-            for old in self.outputs.items
-        ]
-
-        self.init_outputs()
-
-        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
-
-        if playback_active:
-            self.toolbars.playback.play()
-
-    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
-        if not self.outputs:
-            return
-
-        playback_active = self.toolbars.playback.play_timer.isActive()
-
-        if playback_active:
-            self.toolbars.playback.stop()
-
-        if new_viewmode == ViewMode.NORMAL:
-            self.outputs.switchToNormalView()
-        elif new_viewmode == ViewMode.FFTSPECTRUM:
-            self.outputs.switchToFFTSpectrumView(force_cache)
-        else:
-            raise ValueError('Invalid ViewMode passed!')
-
-        self.current_viewmode = new_viewmode
 
         self.init_outputs()
 

@@ -65,7 +65,10 @@ class Plugins(AbstractYAMLObjectSingleton):
         self.main.main_split.setSizes([0, 0])
 
         # tab idx, clip idx, frame
-        self.last_render = (-1, -1, -1)
+        self.last_frame_change = (-1, -1, -1)
+
+        # tab idx, clip idx
+        self.last_output_change = (-1, -1)
 
         self.plugins = dict[str, AbstractPlugin]()
 
@@ -101,20 +104,20 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         curr_render = (tab_idx, self.main.current_output.index, int(frame))
 
-        if self.main.main_split.current_position and self.last_render != curr_render:
+        if self.main.main_split.current_position and self.last_frame_change != curr_render:
             self[tab_idx].on_current_frame_changed(frame)
 
-            self.last_render = curr_render
+            self.last_frame_change = curr_render
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         tab_idx = self.plugins_tab.currentIndex()
 
-        curr_render = (tab_idx, index, self.main.current_output.last_showed_frame)
+        curr_output = (tab_idx, index)
 
-        if self.main.main_split.current_position and self.last_render != curr_render:
+        if self.main.main_split.current_position and self.last_output_change != curr_output:
             self[tab_idx].on_current_output_changed(index, prev_index)
 
-            self.last_render = curr_render
+            self.last_output_change = curr_output
 
     def update(self, frame: Frame | None = None, index: int | None = None, prev_index: int | None = None) -> None:
         from vstools import fallback

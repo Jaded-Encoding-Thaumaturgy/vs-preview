@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from math import exp, log
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg  # type: ignore
@@ -10,7 +11,11 @@ from matplotlib.figure import Figure  # type: ignore
 from matplotlib.layout_engine import ConstrainedLayoutEngine  # type: ignore
 from matplotlib.rcsetup import cycler  # type: ignore
 from PyQt6.QtCore import QEvent, QPointF, Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent, QNativeGestureEvent, QWheelEvent
+from PyQt6.QtGui import QImage, QMouseEvent, QNativeGestureEvent, QWheelEvent
+from PyQt6.QtWidgets import QFileDialog, QFrame
+
+if TYPE_CHECKING:
+    from ...main import MainWindow
 
 STYLE_DIR = Path(__file__).parent / 'plotting.mplstyle'
 
@@ -48,7 +53,12 @@ class PlottingCanvas(FigureCanvasQTAgg):
     mouseMoved = pyqtSignal(QMouseEvent)
     wheelScrolled = pyqtSignal(int)
 
-    def __init__(self, ylog: bool = False, xlog: bool = False) -> None:
+    def __init__(self, main: MainWindow, ylog: bool = False, xlog: bool = False, controls: bool = True) -> None:
+        from ..abstracts import HBoxLayout, PushButton
+        from ..types import Stretch
+
+        self.main = main
+
         self.ylog, self.xlog = ylog, xlog
 
         self.figure = Figure((5, 4), 100)
@@ -64,6 +74,21 @@ class PlottingCanvas(FigureCanvasQTAgg):
 
         self.clicked = False
         self.old_pos = QPointF(0.0, 0.0)
+
+        self.controls = QFrame()
+
+        self.copy_frame_button = PushButton('Copy Graph', clicked=self.copy_graph_to_clipboard)
+
+        self.save_frame_as_button = PushButton('Save Graph as', clicked=self.on_save_graph_as_clicked)
+
+        _controls = [self.copy_frame_button, self.save_frame_as_button, Stretch()]
+
+        if controls:
+            self.controls = HBoxLayout(_controls)
+        else:
+            self.controls = QFrame()
+            HBoxLayout(self.controls, _controls)
+            self.controls.hide()
 
     @classmethod
     def limits_to_range(cls, lim: tuple[int, int]) -> int:
@@ -210,3 +235,21 @@ class PlottingCanvas(FigureCanvasQTAgg):
     def draw(self) -> None:
         if 0 not in self.figure.get_size_inches():
             super().draw()
+
+    def copy_graph_to_clipboard(self) -> None:
+        buffer = BytesIO()
+
+        self.figure.savefig(buffer, transparent=False)
+
+        self.main.clipboard.setImage(QImage.fromData(buffer.getvalue()))
+
+        buffer.close()
+
+        self.main.show_message('Graph successfully copied to clipboard')
+
+    def on_save_graph_as_clicked(self, checked: bool | None = None) -> None:
+        save_path_str, _ = QFileDialog.getSaveFileName(
+            self.main, 'Save as', f'graph_{self.main.current_output.last_showed_frame}', 'Graph (*.svg)'
+        )
+
+        self.figure.savefig(save_path_str, transparent=False)

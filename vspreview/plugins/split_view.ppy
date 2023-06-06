@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from vstools import check_variable, split, stack_clips, vs
+
+from vspreview.plugins import MappedNodesViewPlugin, PluginConfig
+
+__all__ = [
+    'SplitPlanesViewPlugin'
+]
+
+
+class SplitPlanesViewPlugin(MappedNodesViewPlugin):
+    _config = PluginConfig('dev.setsugen.split_planes', 'Split Planes')
+
+    def get_node(self, node: vs.VideoNode) -> vs.VideoNode:
+        assert check_variable(node, self.get_node)
+
+        if node.format.color_family is vs.GRAY:
+            return node
+
+        planes = [c.text.Text(text=k) for k, c in zip(node.format.name, split(node))]
+
+        subsampling = node.format.subsampling_w, node.format.subsampling_h
+
+        org: list[vs.VideoNode | list[vs.VideoNode | list[vs.VideoNode]]] = planes
+
+        if subsampling in ((2, 2), (2, 0)):
+            middle = [
+                planes[1].std.BlankClip(),
+                *planes[1:],
+                planes[1].std.BlankClip()
+            ]
+
+            org = [planes[0], middle]
+        elif subsampling != (0, 0):
+            org = [planes[0], planes[1:]]
+
+        if subsampling[1] == 0:
+            org = [org]
+
+        return stack_clips(org)

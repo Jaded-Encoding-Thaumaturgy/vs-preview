@@ -203,8 +203,7 @@ class PlaybackToolbar(AbstractToolbar):
 
     def get_true_fps(self, n: int | Frame, frameprops: vs.FrameProps, force: bool = False) -> Fraction:
         if (
-            hasattr(self.main.current_output, 'got_timecodes')
-            and self.main.current_output.got_timecodes and not force
+            hasattr(self.main.current_output, 'got_timecodes') and self.main.current_output.got_timecodes and not force
         ):
             return Fraction(self.main.current_output.timecodes[int(n)])
 
@@ -235,9 +234,8 @@ class PlaybackToolbar(AbstractToolbar):
 
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if (
-            (self.main.current_output.last_showed_frame > self.main.current_output.total_frames)
-            or not video.PACKING_TYPE.can_playback
-        ):
+            self.main.current_output.last_showed_frame > self.main.current_output.total_frames
+        ) or not video.PACKING_TYPE.can_playback:
             return
 
         if self.main.statusbar.label.text() == 'Ready':
@@ -482,11 +480,8 @@ class PlaybackToolbar(AbstractToolbar):
 
     def on_timeline_clicked(self, frame: Frame, time: Time) -> None:
         if (
-            not self.play_timer.isActive()
-            or not self.play_timer_audio.isActive()
-            or self.current_audio_output is None
-            or self.current_audio_output.vs_output is None
-        ):
+            not self.play_timer.isActive() or not self.play_timer_audio.isActive() or self.current_audio_output is None
+        ) or self.current_audio_output.vs_output is None:
             return
 
         self.current_audio_output.iodevice.reset()

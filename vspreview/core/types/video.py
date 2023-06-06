@@ -81,12 +81,12 @@ class VideoOutput(AbstractYAMLObject):
         self.source = self.prepared = None  # type: ignore
 
     def __init__(
-        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
+        self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False
     ) -> None:
         self.setValue(vs_output, index, new_storage)
 
     def setValue(
-        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
+        self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False
     ) -> None:
         self._stateset = not new_storage
 
@@ -546,6 +546,18 @@ class VideoOutput(AbstractYAMLObject):
 
     def to_time(self, frame: Frame) -> Time:
         return Time(seconds=self._calculate_seconds(int(frame)))
+
+    def with_node(self, new_node: vs.VideoNode | VideoOutputNode) -> VideoOutput:
+        if isinstance(new_node, vs.VideoNode):
+            new_node = VideoOutputNode(new_node, None)
+
+        new_output = VideoOutput(new_node, self.vs_index, False)
+        new_output.index = self.index
+
+        new_output.last_showed_frame = self.last_showed_frame
+        new_output.name = self.name
+
+        return new_output
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'title', str, self.__setattr__)

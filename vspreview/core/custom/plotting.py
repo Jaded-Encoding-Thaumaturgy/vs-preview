@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from io import BytesIO
 from math import exp, log
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, cast
 
 import matplotlib.pyplot as plt  # type: ignore
+from matplotlib.backend_bases import MouseEvent as PlotMouseEvent  # type: ignore
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg  # type: ignore
 from matplotlib.figure import Figure  # type: ignore
 from matplotlib.layout_engine import ConstrainedLayoutEngine  # type: ignore
+from matplotlib.lines import Line2D  # type: ignore
 from matplotlib.rcsetup import cycler  # type: ignore
 from PyQt6.QtCore import QEvent, QPointF, Qt, pyqtSignal
 from PyQt6.QtGui import QImage, QMouseEvent, QNativeGestureEvent, QWheelEvent
@@ -16,6 +19,7 @@ from PyQt6.QtWidgets import QFileDialog, QFrame
 
 if TYPE_CHECKING:
     from ...main import MainWindow
+    from ..types import Frame
 
 STYLE_DIR = Path(__file__).parent / 'plotting.mplstyle'
 
@@ -23,7 +27,9 @@ STYLE_DIR = Path(__file__).parent / 'plotting.mplstyle'
 __all__ = [
     'apply_plotting_style',
 
-    'PlottingCanvas'
+    'PlottingCanvas',
+
+    'PlotMouseEvent'
 ]
 
 
@@ -53,7 +59,10 @@ class PlottingCanvas(FigureCanvasQTAgg):
     mouseMoved = pyqtSignal(QMouseEvent)
     wheelScrolled = pyqtSignal(int)
 
-    def __init__(self, main: MainWindow, ylog: bool = False, xlog: bool = False, controls: bool = True) -> None:
+    def __init__(
+        self, main: MainWindow, ylog: bool = False, xlog: bool = False, controls: bool = True,
+        xpad: float | tuple[float, float] | None = None, ypad: float | tuple[float, float] | None = None
+    ) -> None:
         from ..abstracts import HBoxLayout, PushButton
         from ..types import Stretch
 
@@ -68,6 +77,8 @@ class PlottingCanvas(FigureCanvasQTAgg):
         self.figure.set_layout_engine(ConstrainedLayoutEngine())
 
         super().__init__(self.figure)
+
+        self.mpl_connect('motion_notify_event', self._on_mouse_moved)
 
         self.angleRemainder = 0
         self.zoomValue = 0.0
@@ -90,9 +101,31 @@ class PlottingCanvas(FigureCanvasQTAgg):
             HBoxLayout(self.controls, _controls)
             self.controls.hide()
 
+        self.xpad = (xpad, xpad) if (not isinstance(xpad, tuple) and xpad is not None) else xpad
+        self.ypad = (ypad, ypad) if (not isinstance(ypad, tuple) and ypad is not None) else ypad
+
+    def _on_mouse_moved(self, event: PlotMouseEvent) -> None:
+        if not event.inaxes:
+            return
+
+        if event.xdata is None or event.ydata is None:
+            return
+
+        if event.xdata < self.line._xorig[0] or event.xdata > self.line._xorig[-1]:
+            return
+
+        self.on_mouse_moved(event)
+
+    def on_mouse_moved(self, event: PlotMouseEvent) -> None:
+        ...
+
     @classmethod
     def limits_to_range(cls, lim: tuple[int, int]) -> int:
         return lim[1] - lim[0]
+
+    @property
+    def line(self) -> Line2D:
+        return cast(Line2D, self.axes.lines[0])
 
     @property
     def cur_lims(self) -> tuple[tuple[float, float], tuple[float, float]]:
@@ -253,3 +286,32 @@ class PlottingCanvas(FigureCanvasQTAgg):
         )
 
         self.figure.savefig(save_path_str, transparent=False)
+
+    @abstractmethod
+    def _render(self, frame: Frame) -> None:
+        raise NotImplementedError
+
+    def render(self, frame: Frame, set_lims: bool = True) -> None:
+        if not set_lims:
+            self.zoomValue = 0.0
+
+        lims = self.cur_lims if self.zoomValue else None
+
+        self.clear()
+
+        self._render(frame)
+
+        self.axes.legend()
+        self.figure.canvas.draw_idle()
+
+        if lims:
+            self.cur_lims = lims
+        elif self.xpad or self.ypad:
+            xlim, ylim = self.cur_lims
+
+            line = self.line
+
+            self.cur_lims = (
+                (line._xorig[0] - self.xpad[0], line._xorig[-1] + self.xpad[1]) if self.xpad else xlim,
+                (line._yorig[0] - self.ypad[0], line._yorig[-1] + self.ypad[1]) if self.ypad else ylim
+            )

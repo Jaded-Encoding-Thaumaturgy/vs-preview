@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 __all__ = [
     'DragEventType',
     'GraphicsView',
-    'GraphicsImageItem'
+    'GraphicsImageItem',
+    'MainVideoOutputGraphicsView'
 ]
 
 
@@ -199,14 +200,11 @@ class GraphicsView(QGraphicsView):
             return
 
         if value is None:
-            if self.autofit and self.main.current_output:
-                viewport = self.viewport()
-                value = min(
-                    viewport.width() / self.main.current_output.width,
-                    viewport.height() / self.main.current_output.height
-                )
-            else:
+            if not self.autofit:
                 return
+
+            viewport = self.viewport()
+            value = min(viewport.width() / self.content_width, viewport.height() / self.content_height)
 
         self.currentZoom = value / self.devicePixelRatio()
 
@@ -334,3 +332,21 @@ class GraphicsView(QGraphicsView):
 
                 if heightMax:
                     hBar.setValue(int(scrollbarH.value() * hBar.maximum() / heightMax))
+
+    @property
+    def content_width(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def content_height(self) -> int:
+        raise NotImplementedError
+
+
+class MainVideoOutputGraphicsView(GraphicsView):
+    @property
+    def content_width(self) -> int:
+        return self.main.current_output.width
+
+    @property
+    def content_height(self) -> int:
+        return self.main.current_output.height

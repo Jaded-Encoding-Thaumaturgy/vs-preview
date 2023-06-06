@@ -79,3 +79,11 @@ class MappedNodesPlugin(AbstractPlugin):
 class MappedNodesViewPlugin(MappedNodesPlugin, GraphicsView):
     def on_current_frame_changed(self, frame: Frame) -> None:
         self.outputs.current.render_frame(frame, None, None, self.current_scene)
+
+    @property
+    def content_width(self) -> int:
+        return self.outputs.current.width
+
+    @property
+    def content_height(self) -> int:
+        return self.outputs.current.height

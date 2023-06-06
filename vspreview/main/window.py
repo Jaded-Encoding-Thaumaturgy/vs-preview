@@ -12,15 +12,15 @@ from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QShowEvent
+from PyQt6.QtCore import QEvent, QKeyCombination, QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
     GraphicsView, HBoxLayout, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
-    _monkey_runpy_dicts, get_current_environment, make_environment
+    _monkey_runpy_dicts, get_current_environment, make_environment, MainVideoOutputGraphicsView
 )
 from ..models import GeneralModel, VideoOutputs
 from ..plugins import Plugins
@@ -206,7 +206,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.main_layout = VBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
-        self.graphics_view = GraphicsView(self, self.central_widget)
+        self.graphics_view = MainVideoOutputGraphicsView(self, self.central_widget)
 
         DragNavigator(self, self.graphics_view)
 

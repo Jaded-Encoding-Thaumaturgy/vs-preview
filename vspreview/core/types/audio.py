@@ -32,7 +32,11 @@ class AudioOutput(AbstractYAMLObject):
 
     def setValue(self, vs_output: vs.AudioNode, index: int, new_storage: bool = False) -> None:
         self.main = main_window()
-        self.index = index
+
+        with self.main.env:
+            vs_outputs = list(vs.get_outputs().values())
+
+        self.index = vs_outputs.index(vs_output)
         self.source_vs_output = vs_output
         self.vs_output = self.source_vs_output
         self.is_mono = self.vs_output.num_channels == 1
@@ -85,9 +89,7 @@ class AudioOutput(AbstractYAMLObject):
             from ...models.outputs import AudioOutputs
 
             if vs_output in (vs_outputs := list(vs.get_outputs().values())):
-                self.name = self.main.user_output_names[vs.AudioNode].get(
-                    vs_outputs.index(vs_output), 'Track ' + str(self.index)
-                )
+                self.name = self.main.user_output_names[vs.AudioNode].get(self.index, 'Track ' + str(self.index))
                 if isinstance(self.main.toolbars.playback.audio_outputs, AudioOutputs):
                     self.main.toolbars.playback.audio_outputs.setData(
                         self.main.toolbars.playback.audio_outputs.index(index), self.name

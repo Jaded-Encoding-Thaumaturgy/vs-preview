@@ -103,7 +103,10 @@ class VideoOutput(AbstractYAMLObject):
         if self.source.alpha is not None:
             self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
 
-        self.index = index
+        with self.main.env:
+            vs_outputs = list(vs.get_outputs().values())
+
+        self.index = vs_outputs.index(vs_output)
 
         self.prepared.clip = self.prepare_vs_output(self.source.clip).std.CopyFrameProps(self.source.clip)
         self.width = self.prepared.clip.width
@@ -112,13 +115,9 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.title = None
-
-        with self.main.env:
-            if vs_output in (vs_outputs := list(vs.get_outputs().values())):
-                self.title = self.main.user_output_names[vs.VideoNode].get(vs_outputs.index(vs_output))  # type: ignore
-                if self.main.outputs is not None:
-                    self.main.outputs.setData(self.main.outputs.index(index), self.title)
+        self.title = self.main.user_output_names[vs.VideoNode].get(index, None)  # type: ignore
+        if self.main.outputs is not None:
+            self.main.outputs.setData(self.main.outputs.index(index), self.title)
 
         self.props = cast(vs.FrameProps, {})
 

@@ -691,9 +691,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             for item in graphics_view.graphics_scene.graphics_items:
                 item.hide()
 
-            graphics_view.graphics_scene.current_scene.show()
+            graphics_view.current_scene.show()
             graphics_view.graphics_scene.setSceneRect(
-                QRectF(graphics_view.graphics_scene.current_scene.pixmap().rect())
+                QRectF(graphics_view.current_scene.pixmap().rect())
             )
 
         self.timeline.update_notches()
@@ -715,7 +715,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     @property
     def current_scene(self) -> GraphicsImageItem:
-        return self.graphics_view.graphics_scene.current_scene
+        return self.graphics_view.current_scene
 
     @property
     def graphics_views(self) -> list[GraphicsView]:

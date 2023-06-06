@@ -156,6 +156,10 @@ class GraphicsView(QGraphicsView):
         self.autofit = checked
 
     @property
+    def current_scene(self) -> GraphicsImageItem:
+        return self.graphics_scene.current_scene
+
+    @property
     def autofit(self) -> bool:
         return self._autofit
 

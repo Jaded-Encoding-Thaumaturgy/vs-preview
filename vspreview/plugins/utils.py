@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Callable, overload
 
 from vstools import vs, vs_object
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from ..main import MainWindow
 
 __all__ = [
-    'PluginVideoOutputs',
+    'PluginVideoOutputs', 'LazyMapPluginVideoOutputs',
 
     'MappedNodesPlugin', 'MappedNodesViewPlugin'
 ]
@@ -43,11 +43,23 @@ class PluginVideoOutputs(vs_object, dict[VideoOutput, VideoOutput]):
         self.clear()
 
 
+class LazyMapPluginVideoOutputs(PluginVideoOutputs):
+    def __init__(self, main: MainWindow | None, func: Callable[[vs.VideoNode], vs.VideoNode]) -> None:
+        super().__init__(main)
+        self.func = func
+
+    def __getitem__(self, key: VideoOutput) -> VideoOutput:
+        if key not in self:
+            self[key] = key.with_node(self.func(key.source.clip))
+
+        return super().__getitem__(key)
+
+
 class MappedNodesPlugin(AbstractPlugin):
     def __init__(self, main: MainWindow) -> None:
         super().__init__(main)
 
-        self.outputs = PluginVideoOutputs(main)
+        self.outputs = LazyMapPluginVideoOutputs(main, self.get_node)
 
     @overload
     def get_node(self, node: vs.VideoNode) -> vs.VideoNode:
@@ -68,9 +80,6 @@ class MappedNodesPlugin(AbstractPlugin):
         assert self.main.outputs
 
         self.outputs.clear()
-
-        for output in self.main.outputs:
-            self.outputs[output] = output.with_node(self.get_node(output.source.clip))
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         raise NotImplementedError

@@ -254,7 +254,7 @@ class MiscToolbar(AbstractToolbar):
             self.crop_top_spinbox.value(), self.crop_left_spinbox.value(),
             self.crop_width_spinbox.value(), self.crop_height_spinbox.value(),
             self.crop_active_switch.isChecked(), bool(self.crop_mode_combox.currentIndex())
-        ))
+        ), graphics_scene_item=self.main.current_output.graphics_scene_item)
 
     def crop_active_onchange(self, checked: bool) -> None:
         is_absolute = not not self.crop_mode_combox.currentIndex()

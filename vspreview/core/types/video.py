@@ -409,7 +409,8 @@ class VideoOutput(AbstractYAMLObject):
         return None
 
     def update_graphic_item(
-        self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
+        self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None,
+        graphics_scene_item: GraphicsImageItem | None = None
     ) -> QPixmap | None:
         from vstools import complex_hash
 
@@ -422,8 +423,8 @@ class VideoOutput(AbstractYAMLObject):
 
         new_crop = complex_hash.hash(self.crop_values)
 
-        if self.graphics_scene_item:
-            self.graphics_scene_item.setPixmap(pixmap, self.crop_values)
+        if graphics_scene_item:
+            graphics_scene_item.setPixmap(pixmap, self.crop_values)
 
         if old_crop != new_crop:
             self.main.cropValuesChanged.emit(self.crop_values)
@@ -432,8 +433,9 @@ class VideoOutput(AbstractYAMLObject):
 
     def render_frame(
         self, frame: Frame | None, vs_frame: vs.VideoFrame | None = None,
-        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = True,
-        output_colorspace: QColorSpace | None = None
+        vs_alpha_frame: vs.VideoFrame | None = None,
+        graphics_scene_item: GraphicsImageItem | None = None,
+        do_painting: bool = True, output_colorspace: QColorSpace | None = None
     ) -> QPixmap:
         if frame is None or not self._stateset:
             return QPixmap()
@@ -454,11 +456,14 @@ class VideoOutput(AbstractYAMLObject):
             vs_frame.close()
             del vs_frame
 
+        if graphics_scene_item is None:
+            graphics_scene_item = self.graphics_scene_item
+
         if self.prepared.alpha is None:
             qpixmap = QPixmap.fromImage(frame_image, Qt.ImageConversionFlag.NoFormatConversion)
 
             if do_painting:
-                self.update_graphic_item(qpixmap)
+                self.update_graphic_item(qpixmap, graphics_scene_item=graphics_scene_item)
 
             return qpixmap
 
@@ -482,7 +487,7 @@ class VideoOutput(AbstractYAMLObject):
         qpixmap = QPixmap.fromImage(result_image, Qt.ImageConversionFlag.NoFormatConversion)
 
         if do_painting:
-            self.update_graphic_item(qpixmap)
+            self.update_graphic_item(qpixmap, graphics_scene_item=graphics_scene_item)
 
         return qpixmap
 

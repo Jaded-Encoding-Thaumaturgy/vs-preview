@@ -245,6 +245,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.autosave_timer = Timer(timeout=self.dump_storage_async)
         self.reload_signal.connect(self.autosave_timer.stop)
 
+        QShortcut(
+            QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_A).toCombined()),
+            self, activated=self.auto_fit_keyswitch
+        )
+
+    def auto_fit_keyswitch(self) -> None:
+        for view in self.graphics_views:
+            if view.underMouse():
+                view.autofit = not view.autofit
+                break
+
     def patch_dark_stylesheet(self, stylesheet: str) -> str:
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
 

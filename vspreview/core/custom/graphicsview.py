@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
@@ -150,6 +150,8 @@ class GraphicsView(QGraphicsView):
 
         self.main.register_graphic_view(self)
 
+        self.dragEvent.connect(self.propagate_move_event)
+
     def auto_fit_button_clicked(self, checked: bool) -> None:
         self.autofit = checked
 
@@ -168,6 +170,12 @@ class GraphicsView(QGraphicsView):
         else:
             self.setZoom(self.zoom_combobox.currentData())
 
+    def bind_to(self, other_view: GraphicsView, *, mutual: bool = True) -> None:
+        self.main.bound_graphics_views[other_view].add(self)
+
+        if mutual:
+            self.main.bound_graphics_views[self].add(other_view)
+
     def on_wheel_scrolled(self, steps: int) -> None:
         new_index = self.zoom_combobox.currentIndex() + steps
 
@@ -179,6 +187,10 @@ class GraphicsView(QGraphicsView):
         self.zoom_combobox.setCurrentIndex(new_index)
 
     def setZoom(self, value: float | None) -> None:
+        for view in self.main.bound_graphics_views[self]:
+            view._setZoom(value)
+
+    def _setZoom(self, value: float | None) -> None:
         if self.underReload or value == 0:
             return
 
@@ -222,6 +234,8 @@ class GraphicsView(QGraphicsView):
         modifier = event.modifiers()
         mouse = event.buttons()
 
+        self.propagate_move_event()
+
         if modifier == Qt.KeyboardModifier.ControlModifier or mouse in {
             Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton
         }:
@@ -256,6 +270,7 @@ class GraphicsView(QGraphicsView):
 
         if self.hasMouseTracking():
             self.mouseMoved.emit(event)
+
         self.dragEvent.emit(DragEventType.move)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -297,3 +312,21 @@ class GraphicsView(QGraphicsView):
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.setZoom(None)
+
+    def propagate_move_event(self, _: Any = None) -> None:
+        scrollbarW, scrollbarH = self.horizontalScrollBar(), self.verticalScrollBar()
+
+        if not any({scrollbarW.isVisible(), scrollbarH.isVisible()}):
+            return
+
+        widthMax, heightMax = scrollbarW.maximum(), scrollbarH.maximum()
+
+        for view in self.main.bound_graphics_views[self] - {self}:
+            if view.isVisible():
+                wBar, hBar = view.horizontalScrollBar(), view.verticalScrollBar()
+
+                if widthMax:
+                    wBar.setValue(int(scrollbarW.value() * wBar.maximum() / widthMax))
+
+                if heightMax:
+                    hBar.setValue(int(scrollbarH.value() * hBar.maximum() / heightMax))

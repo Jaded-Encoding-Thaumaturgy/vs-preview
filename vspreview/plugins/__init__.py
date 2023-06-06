@@ -99,6 +99,10 @@ class Plugins(AbstractYAMLObjectSingleton):
             self.plugins_tab.addTab(plugin, plugin._config.display_name)
             i += 1
 
+    def init_outputs(self) -> None:
+        for plugin in self:
+            plugin.init_outputs()
+
     def on_current_frame_changed(self, frame: Frame) -> None:
         tab_idx = self.plugins_tab.currentIndex()
 

@@ -46,6 +46,9 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
         self.set_qobject_names()
 
+    def init_outputs(self) -> None:
+        ...
+
     def add_shortcuts(self) -> None:
         ...
 

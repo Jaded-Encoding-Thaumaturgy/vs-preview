@@ -567,6 +567,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if not self.outputs:
             return
 
+        self.plugins.init_outputs()
+
         for graphics_view in self.graphics_views:
             graphics_view.graphics_scene.init_scenes()
 

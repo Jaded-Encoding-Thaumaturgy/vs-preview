@@ -15,6 +15,7 @@ from .units import Frame, Time
 
 if TYPE_CHECKING:
     from vstools import VideoFormatT
+    from ..custom.graphicsview import GraphicsImageItem
 
 __all__ = [
     'VideoOutput'
@@ -64,7 +65,7 @@ class VideoOutput(AbstractYAMLObject):
 
     __slots__ = (
         *storable_attrs, 'index', 'width', 'height', 'fps_num', 'fps_den',
-        'total_frames', 'total_time', 'graphics_scene_item',
+        'total_frames', 'total_time',
         'end_frame', 'fps', 'source', 'prepared',
         'main', 'checkerboard', 'props', '_stateset'
     )
@@ -87,8 +88,6 @@ class VideoOutput(AbstractYAMLObject):
     def setValue(
         self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
     ) -> None:
-        from ..custom.graphicsview import GraphicsImageItem
-
         self._stateset = not new_storage
 
         self.main = main_window()
@@ -128,8 +127,6 @@ class VideoOutput(AbstractYAMLObject):
 
         if not hasattr(self, 'last_showed_frame') or not (0 <= self.last_showed_frame < self.total_frames):
             self.last_showed_frame = Frame(0)
-
-        self.graphics_scene_item: GraphicsImageItem
 
         if index in self.main.timecodes:
             timecodes, tden = self.main.timecodes[index]
@@ -401,6 +398,16 @@ class VideoOutput(AbstractYAMLObject):
 
         return QImage(pointer, width, height, stride, qt_format).copy()  # type: ignore
 
+    @property
+    def graphics_scene_item(self) -> GraphicsImageItem | None:
+        if self.main.graphics_view.graphics_scene.graphics_items:
+            try:
+                return self.main.graphics_view.graphics_scene.graphics_items[self.index]
+            except IndexError:
+                ...
+
+        return None
+
     def update_graphic_item(
         self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
     ) -> QPixmap | None:
@@ -415,7 +422,7 @@ class VideoOutput(AbstractYAMLObject):
 
         new_crop = complex_hash.hash(self.crop_values)
 
-        if hasattr(self, 'graphics_scene_item'):
+        if self.graphics_scene_item:
             self.graphics_scene_item.setPixmap(pixmap, self.crop_values)
 
         if old_crop != new_crop:

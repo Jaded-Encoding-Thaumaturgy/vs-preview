@@ -12,11 +12,8 @@ from typing import Any, Iterable, Mapping, cast
 import vapoursynth as vs
 from PyQt6 import QtCore
 from PyQt6.QtCore import QEvent, QRectF, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
-from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtWidgets import (
-    QApplication, QGraphicsScene, QGraphicsView, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
-)
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QShowEvent
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
 
 from ..core import (
@@ -98,9 +95,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     __slots__ = (
         *storable_attrs, 'app', 'display_scale', 'clipboard',
         'script_path', 'timeline', 'main_layout', 'autosave_timer',
-        'graphics_scene', 'graphics_view', 'script_error_dialog',
+        'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
-        'current_storage_path', 'opengl_widget', 'drag_navigator'
+        'current_storage_path'
     )
 
     # emit when about to reload a script: clear all existing references to existing clips.
@@ -173,19 +170,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.script_exec_failed = False
         self.current_storage_path = Path()
 
-        # graphics view
-        self.graphics_scene = QGraphicsScene(self)
-        self.graphics_view.setScene(self.graphics_scene)
-        self.opengl_widget = None
-
-        if self.settings.opengl_rendering_enabled:
-            self.opengl_widget = QOpenGLWidget()
-            self.graphics_view.setViewport(self.opengl_widget)
-
-        self.graphics_view.wheelScrolled.connect(self.on_wheel_scrolled)
-
-        self.graphics_view.registerReloadEvents(self)
-
         # timeline
         self.timeline.clicked.connect(self.on_timeline_clicked)
 
@@ -219,12 +203,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.main_layout = VBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
-        self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.ColorRole.Window))
-        self.graphics_view.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.graphics_view = GraphicsView(self, self.central_widget)
 
-        self.drag_navigator = DragNavigator(self, self.graphics_view)
+        DragNavigator(self, self.graphics_view)
 
         self.timeline = Timeline(self.central_widget)
 
@@ -583,13 +564,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if not self.outputs:
             return
 
-        self.graphics_scene.clear()
-
-        for output in self.outputs:
-            raw_frame_item = self.graphics_scene.addPixmap(QPixmap())
-            raw_frame_item.hide()
-
-            output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
+        self.graphics_view.graphics_scene.init_scenes()
 
     def reload_script(self) -> None:
         from vstools.utils.vs_proxy import clear_cache
@@ -605,7 +580,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             ...
 
         vs.clear_outputs()
-        self.graphics_scene.clear()
+        self.graphics_view.graphics_scene.clear()
 
         self.timecodes.clear()
         self.norm_timecodes.clear()
@@ -705,11 +680,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.switch_frame(self.current_output.last_showed_frame)
 
-        for output in self.outputs:
-            output.graphics_scene_item.hide()
+        for item in self.graphics_view.graphics_scene.graphics_items:
+            item.hide()
 
-        self.current_output.graphics_scene_item.show()
-        self.graphics_scene.setSceneRect(QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
+        self.current_scene.show()
+        self.graphics_view.graphics_scene.setSceneRect(QRectF(self.current_scene.pixmap().rect()))
         self.timeline.update_notches()
 
         for toolbar in self.toolbars[1:]:
@@ -733,6 +708,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     @property
     def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs
+
+    @property
+    def current_scene(self) -> GraphicsImageItem:
+        return self.graphics_view.graphics_scene.current_scene
 
     def handle_script_error(self, message: str, script: bool = False) -> None:
         self.clear_monkey_runpy()

@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
-    QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPixmap, QResizeEvent, QTransform, QWheelEvent
+    QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPalette, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
-from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
+from PyQt6.QtWidgets import QGraphicsScene, QApplication, QGraphicsPixmapItem, QGraphicsView, QSizePolicy, QWidget
 
 if TYPE_CHECKING:
     from ...main import MainWindow
@@ -28,6 +28,69 @@ class DragEventType(IntEnum):
     repaint = auto()
 
 
+class GraphicsImageItem:
+    __slots__ = ('_graphics_item', '_pixmap')
+
+    def __init__(self, graphics_item: QGraphicsPixmapItem) -> None:
+        self._graphics_item = graphics_item
+        self._pixmap = self._graphics_item.pixmap()
+
+    def contains(self, point: QPointF) -> bool:
+        return self._graphics_item.contains(point)
+
+    def hide(self) -> None:
+        self._graphics_item.hide()
+
+    def pixmap(self) -> QPixmap:
+        return self._graphics_item.pixmap()
+
+    def setPixmap(self, new_pixmap: QPixmap | None, crop_values: CroppingInfo | None = None) -> None:
+        if new_pixmap is None:
+            new_pixmap = self._pixmap
+        else:
+            self._pixmap = new_pixmap
+
+        if crop_values is not None and crop_values.active:
+            padded = QPixmap(new_pixmap.width(), new_pixmap.height())
+            padded.fill(QColor(0, 0, 0, 0))
+            painter = QPainter(padded)
+            painter.drawPixmap(
+                QPoint(crop_values.left, crop_values.top), new_pixmap,
+                QRect(crop_values.left, crop_values.top, crop_values.width, crop_values.height)
+            )
+            painter.end()
+            new_pixmap = padded
+
+        self._graphics_item.setPixmap(new_pixmap)
+
+    def show(self) -> None:
+        self._graphics_item.show()
+
+
+class GraphicsScene(QGraphicsScene):
+    def __init__(self, view: GraphicsView) -> None:
+        self.view = view
+        self.main = self.view.main
+
+        self.graphics_items = list[GraphicsImageItem]()
+
+        super().__init__(self.main)
+
+    def init_scenes(self) -> None:
+        self.clear()
+        self.graphics_items.clear()
+
+        for _ in range(len(self.main.outputs)):
+            raw_frame_item = self.addPixmap(QPixmap())
+            raw_frame_item.hide()
+
+            self.graphics_items.append(GraphicsImageItem(raw_frame_item))
+
+    @property
+    def current_scene(self) -> GraphicsImageItem:
+        return self.graphics_items[self.main.current_output.index]
+
+
 class GraphicsView(QGraphicsView):
     WHEEL_STEP = 15 * 8  # degrees
 
@@ -46,8 +109,10 @@ class GraphicsView(QGraphicsView):
     autofit = False
     main: MainWindow
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, main: MainWindow, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+
+        self.main = main
 
         self.app = QApplication.instance()
         self.angleRemainder = 0
@@ -55,6 +120,21 @@ class GraphicsView(QGraphicsView):
         self.currentZoom = 0.0
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.drag_mode = self.dragMode()
+
+        self.setBackgroundBrush(self.main.palette().brush(QPalette.ColorRole.Window))
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+
+        if self.main.settings.opengl_rendering_enabled:
+            from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+            self.setViewport(QOpenGLWidget())
+
+        self.wheelScrolled.connect(self.main.on_wheel_scrolled)
+        self.main.reload_before_signal.connect(self.beforeReload)
+        self.main.reload_after_signal.connect(self.afterReload)
+
+        self.graphics_scene = GraphicsScene(self)
+        self.setScene(self.graphics_scene)
 
     def setZoom(self, value: float | None) -> None:
         if self.underReload or value == 0:
@@ -172,50 +252,6 @@ class GraphicsView(QGraphicsView):
         self.horizontalScrollBar().setValue(self.last_positions[1])
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
-    def registerReloadEvents(self, main: MainWindow) -> None:
-        self.main = main
-        self.main.reload_before_signal.connect(self.beforeReload)
-        self.main.reload_after_signal.connect(self.afterReload)
-
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.setZoom(None)
-
-
-class GraphicsImageItem:
-    __slots__ = ('_graphics_item', '_pixmap')
-
-    def __init__(self, graphics_item: QGraphicsPixmapItem) -> None:
-        self._graphics_item = graphics_item
-        self._pixmap = self._graphics_item.pixmap()
-
-    def contains(self, point: QPointF) -> bool:
-        return self._graphics_item.contains(point)
-
-    def hide(self) -> None:
-        self._graphics_item.hide()
-
-    def pixmap(self) -> QPixmap:
-        return self._graphics_item.pixmap()
-
-    def setPixmap(self, new_pixmap: QPixmap | None, crop_values: CroppingInfo | None = None) -> None:
-        if new_pixmap is None:
-            new_pixmap = self._pixmap
-        else:
-            self._pixmap = new_pixmap
-
-        if crop_values is not None and crop_values.active:
-            padded = QPixmap(new_pixmap.width(), new_pixmap.height())
-            padded.fill(QColor(0, 0, 0, 0))
-            painter = QPainter(padded)
-            painter.drawPixmap(
-                QPoint(crop_values.left, crop_values.top), new_pixmap,
-                QRect(crop_values.left, crop_values.top, crop_values.width, crop_values.height)
-            )
-            painter.end()
-            new_pixmap = padded
-
-        self._graphics_item.setPixmap(new_pixmap)
-
-    def show(self) -> None:
-        self._graphics_item.show()

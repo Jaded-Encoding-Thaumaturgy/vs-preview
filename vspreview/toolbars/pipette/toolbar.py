@@ -197,11 +197,11 @@ class PipetteToolbar(AbstractToolbar):
 
         pos_f = self.main.graphics_view.mapToScene(local_pos)
 
-        if not self.main.current_output.graphics_scene_item.contains(pos_f):
+        if not self.main.current_scene.contains(pos_f):
             return
 
         pos = QPoint(floor(pos_f.x()), floor(pos_f.y()))
-        color = self.main.current_output.graphics_scene_item.pixmap().toImage().pixelColor(pos)
+        color = self.main.current_scene.pixmap().toImage().pixelColor(pos)
         components = color.red(), color.green(), color.blue()
         components_float = tuple[float, ...](x / 255 for x in components)
 

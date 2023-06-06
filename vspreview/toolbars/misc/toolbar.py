@@ -152,9 +152,7 @@ class MiscToolbar(AbstractToolbar):
         )
 
     def copy_frame_to_clipboard(self) -> None:
-        self.main.clipboard.setPixmap(
-            self.main.current_output.graphics_scene_item.pixmap()
-        )
+        self.main.clipboard.setPixmap(self.main.current_scene.pixmap())
         self.main.show_message('Current frame successfully copied to clipboard')
 
     def on_autosave_interval_changed(self, new_value: Time | None) -> None:
@@ -218,9 +216,7 @@ class MiscToolbar(AbstractToolbar):
             self.main.toolbars.debug.toggle_button.setVisible(False)
 
     def save_as_png(self, path: Path) -> None:
-        self.main.current_output.graphics_scene_item.pixmap().save(
-            str(path), 'PNG', self.main.settings.png_compression_level
-        )
+        self.main.current_scene.pixmap().save(str(path), 'PNG', self.main.settings.png_compression_level)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         if index != prev_index:

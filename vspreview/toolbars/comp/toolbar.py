@@ -814,9 +814,7 @@ class CompToolbar(AbstractToolbar):
 
     def upload_to_slowpics(self) -> bool:
         try:
-            self.main.current_output.graphics_scene_item.setPixmap(
-                self.main.current_output.graphics_scene_item.pixmap().copy()
-            )
+            self.main.current_scene.setPixmap(self.main.current_scene.pixmap().copy())
 
             if hasattr(self, 'upload_thread'):
                 self._old_threads_workers.append(self.upload_thread)

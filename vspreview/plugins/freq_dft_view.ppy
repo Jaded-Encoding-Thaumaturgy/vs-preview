@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+from vstools import depth, plane, vs
+
+from vspreview.plugins import MappedNodesViewPlugin, PluginConfig
+
+__all__ = [
+    'DFTViewPlugin'
+]
+
+
+class DFTViewPlugin(MappedNodesViewPlugin):
+    _config = PluginConfig('dev.setsugen.fft_view', 'DFT View')
+
+    _autofit = True
+
+    def get_node(self, node: vs.VideoNode) -> vs.VideoNode:
+        import numpy as np
+        from cv2 import DFT_COMPLEX_OUTPUT, dft  # type: ignore
+
+        y = depth(plane(node, 0), 32)
+
+        def _to_polar(f: vs.VideoFrame, n: int) -> vs.VideoFrame:
+            src = np.asarray(f[0])
+
+            dft_shift = np.fft.fftshift(dft(src, flags=DFT_COMPLEX_OUTPUT))
+            mag = np.sqrt(np.power(dft_shift[:, :, 1], 2), np.power(dft_shift[:, :, 0], 2))
+
+            dst = f.copy()
+
+            np.copyto(np.asarray(dst[0]), np.log(mag) / 10)
+
+            return dst
+
+        return y.std.ModifyFrame(y, _to_polar)

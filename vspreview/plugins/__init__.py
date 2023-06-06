@@ -24,6 +24,12 @@ class Plugins(AbstractYAMLObjectSingleton):
 
     _closure = {**globals()}
 
+    # tab idx, clip idx, frame
+    last_frame_change: tuple[int, int, int]
+
+    # tab idx, clip idx
+    last_output_change: tuple[int, int]
+
     @classmethod
     def file_to_plugins(cls, path: Path) -> Iterable[type[AbstractPlugin]]:
         from importlib.util import module_from_spec, spec_from_file_location
@@ -66,12 +72,9 @@ class Plugins(AbstractYAMLObjectSingleton):
         self.main = main
         self.plugins_tab = main.plugins_tab
         self.main.main_split.setSizes([0, 0])
+        self.main.reload_before_signal.connect(self.reset_last_reload)
 
-        # tab idx, clip idx, frame
-        self.last_frame_change = (-1, -1, -1)
-
-        # tab idx, clip idx
-        self.last_output_change = (-1, -1)
+        self.reset_last_reload()
 
         self.plugins = dict[str, AbstractPlugin]()
 
@@ -101,6 +104,11 @@ class Plugins(AbstractYAMLObjectSingleton):
 
             self.plugins_tab.addTab(plugin, plugin._config.display_name)
             i += 1
+
+    def reset_last_reload(self) -> None:
+        self.last_frame_change = (-1, -1, -1)
+
+        self.last_output_change = (-1, -1)
 
     def init_outputs(self) -> None:
         for plugin in self:

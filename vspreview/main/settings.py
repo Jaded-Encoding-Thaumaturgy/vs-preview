@@ -208,8 +208,8 @@ class MainSettings(AbstractToolbarSettings):
                 old_default_idx = min(max(old_default_idx - 1, 0), old_default_idx + 1, len(new_levels) - 1)
             self.zoom_level_default_combobox.setCurrentIndex(old_default_idx)
 
-        if hasattr((main := main_window()), 'toolbars'):
-            main_zoom_comb = main.toolbars.main.zoom_combobox
+        if hasattr((main := main_window()), 'graphics_view'):
+            main_zoom_comb = main.graphics_view.zoom_combobox
             old_index = main_zoom_comb.currentIndex()
             main_zoom_comb.setModel(GeneralModel[float](self.zoom_levels))
             main_zoom_comb.setCurrentIndex(min(max(old_index, 0), len(new_levels) - 1))
@@ -325,7 +325,7 @@ class WindowSettings(QYAMLObjectSingleton):
             'timeline_mode': main.timeline.mode,
             'window_geometry': bytes(cast(bytearray, main.saveGeometry())),
             'window_state': bytes(cast(bytearray, main.saveState())),
-            'zoom_index': main.toolbars.main.zoom_combobox.currentIndex(),
+            'zoom_index': main.graphics_view.zoom_combobox.currentIndex(),
             'x_pos': main.graphics_view.horizontalScrollBar().value(),
             'y_pos': main.graphics_view.verticalScrollBar().value(),
         }
@@ -342,7 +342,7 @@ class WindowSettings(QYAMLObjectSingleton):
 
         main.timeline.mode = self.timeline_mode
 
-        main.toolbars.main.zoom_combobox.setCurrentIndex(self.zoom_index)
+        main.graphics_view.zoom_combobox.setCurrentIndex(self.zoom_index)
 
         main.graphics_view.horizontalScrollBar().setValue(self.x_pos)
         main.graphics_view.verticalScrollBar().setValue(self.y_pos)

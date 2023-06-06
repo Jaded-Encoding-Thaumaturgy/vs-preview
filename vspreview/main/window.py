@@ -4,6 +4,7 @@ import io
 import logging
 import sys
 from fractions import Fraction
+from functools import partial
 from importlib import reload as reload_module
 from pathlib import Path
 from time import time
@@ -21,7 +22,7 @@ from ..core import (
     GraphicsView, HBoxLayout, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
     _monkey_runpy_dicts, get_current_environment, make_environment
 )
-from ..models import VideoOutputs
+from ..models import GeneralModel, VideoOutputs
 from ..plugins import Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -130,6 +131,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         assert self.app
 
         self.last_reload_time = time()
+
+        self.bound_graphics_views = dict[GraphicsView, set[GraphicsView]]()
 
         if self.settings.dark_theme_enabled:
             from ..core import apply_plotting_style
@@ -564,7 +567,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if not self.outputs:
             return
 
-        self.graphics_view.graphics_scene.init_scenes()
+        for graphics_view in self.graphics_views:
+            graphics_view.graphics_scene.init_scenes()
 
     def reload_script(self) -> None:
         from vstools.utils.vs_proxy import clear_cache
@@ -580,7 +584,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             ...
 
         vs.clear_outputs()
-        self.graphics_view.graphics_scene.clear()
+        for graphics_view in self.graphics_views:
+            graphics_view.graphics_scene.clear()
 
         self.timecodes.clear()
         self.norm_timecodes.clear()
@@ -680,11 +685,15 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.switch_frame(self.current_output.last_showed_frame)
 
-        for item in self.graphics_view.graphics_scene.graphics_items:
-            item.hide()
+        for graphics_view in self.graphics_views:
+            for item in graphics_view.graphics_scene.graphics_items:
+                item.hide()
 
-        self.current_scene.show()
-        self.graphics_view.graphics_scene.setSceneRect(QRectF(self.current_scene.pixmap().rect()))
+            graphics_view.graphics_scene.current_scene.show()
+            graphics_view.graphics_scene.setSceneRect(
+                QRectF(graphics_view.graphics_scene.current_scene.pixmap().rect())
+            )
+
         self.timeline.update_notches()
 
         for toolbar in self.toolbars[1:]:
@@ -706,19 +715,30 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     def current_scene(self) -> GraphicsImageItem:
         return self.graphics_view.graphics_scene.current_scene
 
+    @property
+    def graphics_views(self) -> list[GraphicsView]:
+        return list(self.bound_graphics_views.keys())
+
+    def register_graphic_view(self, view: GraphicsView) -> None:
+        self.bound_graphics_views[view] = {view}
+
+        view.zoom_combobox.currentTextChanged.connect(partial(self.on_zoom_changed, bound_view=view))
+
+        view.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
+        view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
+
+    def on_zoom_changed(self, text: str | None = None, bound_view: GraphicsView | None = None) -> None:
+        if not bound_view:
+            return
+
+        for view in self.bound_graphics_views[bound_view]:
+            view.setZoom(bound_view.zoom_combobox.currentData())
+
     def handle_script_error(self, message: str, script: bool = False) -> None:
         self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.setWindowTitle('Script Loading Error' if script else 'Program Error')
         self.script_error_dialog.open()
-
-    def on_wheel_scrolled(self, steps: int) -> None:
-        new_index = self.toolbars.main.zoom_combobox.currentIndex() + steps
-        if new_index < 0:
-            new_index = 0
-        elif new_index >= len(self.settings.zoom_levels):
-            new_index = len(self.settings.zoom_levels) - 1
-        self.toolbars.main.zoom_combobox.setCurrentIndex(new_index)
 
     def on_timeline_clicked(self, start: int) -> None:
         if self.toolbars.playback.play_timer.isActive():
@@ -796,7 +816,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     # misc methods
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
-        self.graphics_view.setSizePolicy(self.EVENT_POLICY)
+        for graphics_view in self.graphics_views:
+            graphics_view.setSizePolicy(self.EVENT_POLICY)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.settings.autosave_control.value() != Time(seconds=0):

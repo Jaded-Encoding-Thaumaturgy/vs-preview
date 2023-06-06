@@ -7,7 +7,9 @@ from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPalette, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
-from PyQt6.QtWidgets import QGraphicsScene, QApplication, QGraphicsPixmapItem, QGraphicsView, QSizePolicy, QWidget
+from PyQt6.QtWidgets import (
+    QApplication, QFrame, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QSizePolicy, QWidget
+)
 
 if TYPE_CHECKING:
     from ...main import MainWindow
@@ -106,10 +108,13 @@ class GraphicsView(QGraphicsView):
     underReload = False
     last_positions = (0, 0)
 
-    autofit = False
+    _autofit = False
     main: MainWindow
 
     def __init__(self, main: MainWindow, parent: QWidget | None = None) -> None:
+        from ...core import CheckBox, HBoxLayout
+        from .combobox import ComboBox
+
         super().__init__(parent)
 
         self.main = main
@@ -129,19 +134,56 @@ class GraphicsView(QGraphicsView):
             from PyQt6.QtOpenGLWidgets import QOpenGLWidget
             self.setViewport(QOpenGLWidget())
 
-        self.wheelScrolled.connect(self.main.on_wheel_scrolled)
+        self.wheelScrolled.connect(self.on_wheel_scrolled)
         self.main.reload_before_signal.connect(self.beforeReload)
         self.main.reload_after_signal.connect(self.afterReload)
 
         self.graphics_scene = GraphicsScene(self)
         self.setScene(self.graphics_scene)
 
+        self.zoom_combobox = ComboBox[float](self, minimumContentsLength=4)
+
+        self.auto_fit_button = CheckBox('Auto-fit', self, clicked=self.auto_fit_button_clicked)
+
+        self.controls = QFrame()
+        HBoxLayout(self.controls, [self.zoom_combobox, self.auto_fit_button])
+
+        self.main.register_graphic_view(self)
+
+    def auto_fit_button_clicked(self, checked: bool) -> None:
+        self.autofit = checked
+
+    @property
+    def autofit(self) -> bool:
+        return self._autofit
+
+    @autofit.setter
+    def autofit(self, new_state: bool) -> None:
+        self.zoom_combobox.setEnabled(not new_state)
+
+        self._autofit = new_state
+
+        if new_state:
+            self.setZoom(None)
+        else:
+            self.setZoom(self.zoom_combobox.currentData())
+
+    def on_wheel_scrolled(self, steps: int) -> None:
+        new_index = self.zoom_combobox.currentIndex() + steps
+
+        if new_index < 0:
+            new_index = 0
+        elif new_index >= len(self.main.settings.zoom_levels):
+            new_index = len(self.main.settings.zoom_levels) - 1
+
+        self.zoom_combobox.setCurrentIndex(new_index)
+
     def setZoom(self, value: float | None) -> None:
         if self.underReload or value == 0:
             return
 
         if value is None:
-            if self.autofit:
+            if self.autofit and self.main.current_output:
                 viewport = self.viewport()
                 value = min(
                     viewport.width() / self.main.current_output.width,

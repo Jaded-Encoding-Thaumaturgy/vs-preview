@@ -5,14 +5,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast, overload
 
 from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg
+from . import utils
 from .abstract import AbstractPlugin, PluginConfig
+from .utils import *  # noqa: F401,F403
 
 if TYPE_CHECKING:
     from ..main import MainWindow
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig'
+    'AbstractPlugin', 'PluginConfig',
+    *utils.__all__
 ]
 
 

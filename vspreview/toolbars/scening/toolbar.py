@@ -241,10 +241,6 @@ class SceningToolbar(AbstractToolbar):
     def current_list(self) -> SceningList | None:
         return self.items_combobox.currentValue()
 
-    @current_list.setter
-    def current_list(self, item: SceningList) -> None:
-        self.items_combobox.setCurrentValue(item)
-
     @property
     def current_list_index(self) -> int:
         return self.items_combobox.currentIndex()

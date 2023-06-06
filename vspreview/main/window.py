@@ -698,13 +698,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     def current_output(self) -> VideoOutput:
         return cast(VideoOutput, self.toolbars.main.outputs_combobox.currentData())
 
-    @current_output.setter
-    def current_output(self, value: VideoOutput) -> None:
-        if not self.outputs:
-            return
-
-        self.switch_output(self.outputs.index_of(value))
-
     @property
     def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs

@@ -105,7 +105,7 @@ class PlottingCanvas(FigureCanvasQTAgg):
         self.ypad = (ypad, ypad) if (not isinstance(ypad, tuple) and ypad is not None) else ypad
 
     def _on_mouse_moved(self, event: PlotMouseEvent) -> None:
-        if not event.inaxes:
+        if not event.inaxes or not self.axes.lines:
             return
 
         if event.xdata is None or event.ydata is None:

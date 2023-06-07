@@ -61,7 +61,8 @@ class PlottingCanvas(FigureCanvasQTAgg):
 
     def __init__(
         self, main: MainWindow, ylog: bool = False, xlog: bool = False, controls: bool = True,
-        xpad: float | tuple[float, float] | None = None, ypad: float | tuple[float, float] | None = None
+        xpad: float | tuple[float, float] | None = None, ypad: float | tuple[float, float] | None = None,
+        figsize: tuple[int, int] = (5, 4)
     ) -> None:
         from ..abstracts import HBoxLayout, PushButton
         from ..types import Stretch
@@ -70,7 +71,7 @@ class PlottingCanvas(FigureCanvasQTAgg):
 
         self.ylog, self.xlog = ylog, xlog
 
-        self.figure = Figure((5, 4), 100)
+        self.figure = Figure(figsize, self.main.settings.base_ppi)
 
         self.axes = self.figure.add_subplot(111)
 

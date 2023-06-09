@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, overload
 
+from PyQt6.QtWidgets import QSizePolicy, QWidget
 from vstools import vs, vs_object
 
 from ..core import Frame, GraphicsView, VideoOutput, VideoOutputNode, main_window
@@ -13,7 +14,9 @@ if TYPE_CHECKING:
 __all__ = [
     'PluginVideoOutputs', 'LazyMapPluginVideoOutputs',
 
-    'MappedNodesPlugin', 'MappedNodesViewPlugin'
+    'MappedNodesPlugin', 'MappedNodesViewPlugin',
+
+    'PluginGraphicsView'
 ]
 
 
@@ -90,12 +93,36 @@ class MappedNodesPlugin(AbstractPlugin):
         raise NotImplementedError
 
 
-        self.outputs.current.render_frame(frame, None, None, self.current_scene)
+class PluginGraphicsView(GraphicsView):
+    plugin: MappedNodesPlugin
+
+    def __init__(
+        self, main: MainWindow | MappedNodesPlugin, plugin: MappedNodesPlugin | None = None,
+        parent: QWidget | None = None
+    ) -> None:
+        if isinstance(main, MappedNodesPlugin):
+            plugin = main
+            main = main.main
+
+        super().__init__(main, parent)
+
+        if plugin:
+            self.plugin = plugin
+            self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        elif isinstance(self, MappedNodesPlugin):
+            self.plugin = self
+        else:
+            raise RuntimeError('This GraphicsView has to be bound to a MappedNodesPlugin!')
 
     @property
     def content_width(self) -> int:
-        return self.outputs.current.width
+        return self.plugin.outputs.current.width
 
     @property
     def content_height(self) -> int:
-        return self.outputs.current.height
+        return self.plugin.outputs.current.height
+
+
+class MappedNodesViewPlugin(MappedNodesPlugin, PluginGraphicsView):
+    def on_current_frame_changed(self, frame: Frame) -> None:
+        self.outputs.current.render_frame(frame, None, None, self.current_scene)

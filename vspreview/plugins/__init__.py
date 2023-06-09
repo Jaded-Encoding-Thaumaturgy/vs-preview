@@ -148,6 +148,12 @@ class Plugins(AbstractYAMLObjectSingleton):
             fallback(prev_index, self.main.current_output.index),
         )
 
+        sizey, sizex = self.main.main_split.sizes()
+
+        if sizex:
+            self.main.main_split.setSizes([sizey, sizex - 1])
+            self.main.main_split.setSizes([sizey, sizex])
+
     @overload
     def __getitem__(self, _sub: str | int) -> AbstractPlugin:
         ...

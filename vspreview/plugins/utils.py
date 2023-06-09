@@ -81,12 +81,15 @@ class MappedNodesPlugin(AbstractPlugin):
 
         self.outputs.clear()
 
+    def reset(self) -> None:
+        self.init_outputs()
+
+        self.on_current_frame_changed(self.main.current_output.last_showed_frame)
+
     def on_current_frame_changed(self, frame: Frame) -> None:
         raise NotImplementedError
 
 
-class MappedNodesViewPlugin(MappedNodesPlugin, GraphicsView):
-    def on_current_frame_changed(self, frame: Frame) -> None:
         self.outputs.current.render_frame(frame, None, None, self.current_scene)
 
     @property

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast, overload
 
@@ -78,8 +79,40 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         self.plugins = dict[str, AbstractPlugin]()
 
-        for name in [*Path(__file__).parent.glob('*.ppy'), *self.main.global_plugins_dir.glob('*.ppy')]:
-            for plugin in self.file_to_plugins(name):
+        plugin_files = list[Path]()
+
+        def _find_files(folder: Path, ignore_path: bool = False) -> None:
+            files = list(folder.glob('*.ppy'))
+
+            if files:
+                if not ignore_path:
+                    sys.path.append(str(folder))
+
+                plugin_files.extend(files)
+
+        def _check_folder(folder: str | Path, ignore_path: bool = False) -> None:
+            if not folder:
+                return
+
+            folder = Path(folder.strip()) if isinstance(folder, str) else folder
+
+            if not folder.is_dir():
+                return
+
+            _find_files(folder, ignore_path)
+
+            for folder in (f for f in folder.glob('*') if f.is_dir()):
+                _find_files(folder, ignore_path)
+
+        _check_folder(Path(__file__).parent, True)
+        _check_folder(self.main.global_plugins_dir)
+
+        for paths_file in self.main.global_plugins_dir.glob('*.pth'):
+            for path in paths_file.read_text('utf8').splitlines():
+                _check_folder(path)
+
+        for plugin_file in plugin_files:
+            for plugin in self.file_to_plugins(plugin_file):
                 if plugin._config.namespace in self.plugins:
                     print(UserWarning(
                         f'Tried to register plugin "{plugin._config.display_name} '

@@ -94,7 +94,13 @@ class Plugins(AbstractYAMLObjectSingleton):
             if not folder:
                 return
 
-            folder = Path(folder.strip()) if isinstance(folder, str) else folder
+            if isinstance(folder, str):
+                folder = folder.strip()
+
+                if folder.startswith(';'):
+                    return
+
+                folder = Path(folder)
 
             if not folder.is_dir():
                 return

@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import QApplication
 from .core.vsenv import set_vsengine_loop
 from .core.logger import set_log_level, setup_logger
 from .main import MainWindow
+from .plugins.install import install_plugins, plugins_commands, uninstall_plugins
 
 __all__ = [
     'main'
@@ -24,7 +25,12 @@ __all__ = [
 def main(_args: Sequence[str] | None = None) -> None:
     parser = ArgumentParser(prog='VSPreview')
     parser.add_argument(
-        'script_path', help='Path to Vapoursynth script', type=Path, nargs='?'
+        'script_path_or_command', type=str, nargs='?',
+        help=f'Path to Vapoursynth script or plugins command {",".join(plugins_commands)}'
+    )
+    parser.add_argument(
+        'plugins', type=str, nargs='+',
+        help='Plugins to install/uninstall/update'
     )
     parser.add_argument(
         '--version', '-v', action='version', version='%(prog)s 0.2b'
@@ -43,6 +49,12 @@ def main(_args: Sequence[str] | None = None) -> None:
     parser.add_argument(
         "--verbose", help="Set the logging to verbose.", action="store_true"
     )
+    parser.add_argument(
+        "--force", help="Force the install of a plugin even if it exists already.", action="store_true"
+    )
+    parser.add_argument(
+        "--no-deps", help="Ignore downloading dependencies.", action="store_true"
+    )
 
     args = parser.parse_args(_args)
 
@@ -60,11 +72,32 @@ def main(_args: Sequence[str] | None = None) -> None:
 
         sys.exit(0)
 
-    if args.script_path is None:
+    script_path_or_command = args.script_path_or_command
+
+    if not script_path_or_command and not (args.plugins and (script_path_or_command := next(iter(args.plugins)))):
         logging.error('Script path required.')
         sys.exit(1)
 
-    script_path = args.script_path.resolve()
+    if (command := script_path_or_command) in plugins_commands:
+        if not args.plugins:
+            logging.error('You must provide at least one plugin!')
+            sys.exit(1)
+
+        set_log_level(logging.INFO)
+
+        plugins = list(args.plugins)
+
+        if command == 'install':
+            install_plugins(plugins, args.force, args.no_deps)
+        elif command == 'uninstall':
+            uninstall_plugins(plugins)
+        elif command == 'update':
+            uninstall_plugins(plugins, True)
+            install_plugins(plugins, True, args.no_deps)
+
+        sys.exit(0)
+
+    script_path = Path(script_path_or_command).resolve()
     if not script_path.exists():
         logging.error('Script path is invalid.')
         sys.exit(1)

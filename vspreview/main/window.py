@@ -82,6 +82,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
     )
 
+    global_config_dir = VSP_GLOBAL_DIR_NAME / VSP_DIR_NAME
+    global_storage_path = global_config_dir / '.global.yml'
+    global_plugins_dir = global_config_dir / 'plugins'
+
     VSP_VERSION = 3.2
     BREAKING_CHANGES_VERSIONS = list[str](['3.0', '3.1'])
 
@@ -122,9 +126,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.settings = MainSettings(MainToolbar)
 
         self.current_config_dir = config_dir / self.VSP_DIR_NAME
-        self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
-        self.global_storage_path = self.global_config_dir / '.global.yml'
-        self.global_plugins_dir = self.global_config_dir / 'plugins'
         self.global_plugins_dir.mkdir(parents=True, exist_ok=True)
 
         self.app = cast(QApplication, QApplication.instance())

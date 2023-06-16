@@ -29,7 +29,7 @@ def main(_args: Sequence[str] | None = None) -> None:
         help=f'Path to Vapoursynth script or plugins command {",".join(plugins_commands)}'
     )
     parser.add_argument(
-        'plugins', type=str, nargs='+',
+        'plugins', type=str, nargs='*',
         help='Plugins to install/uninstall/update'
     )
     parser.add_argument(

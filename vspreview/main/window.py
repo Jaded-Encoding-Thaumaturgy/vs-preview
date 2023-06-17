@@ -19,8 +19,8 @@ from vsengine import vpy  # type: ignore
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
-    GraphicsView, HBoxLayout, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
-    _monkey_runpy_dicts, get_current_environment, make_environment, MainVideoOutputGraphicsView
+    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
+    VBoxLayout, VideoOutput, _monkey_runpy_dicts, dispose_environment, get_current_environment, make_environment
 )
 from ..models import GeneralModel, VideoOutputs
 from ..plugins import Plugins
@@ -612,7 +612,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.clear_monkey_runpy()
         make_environment()
-        old_environment.dispose()
+        dispose_environment(old_environment)
         self.gc_collect()
 
         try:

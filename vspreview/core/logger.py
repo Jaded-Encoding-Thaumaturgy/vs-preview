@@ -61,6 +61,7 @@ def get_vs_logger() -> Callable[[MessageType, str], None]:
     setup_logger()
 
     def _logger(mType: MessageType, msg: str) -> None:
+        import logging
         return logging.log(_vsLogType_to_logging[mType], msg)
 
     return _logger

@@ -54,8 +54,6 @@ class PipetteToolbar(AbstractToolbar):
 
         self.last_pos: tuple[VideoOutput, QPoint] | None = None
 
-        main.reload_signal.connect(self.clear_outputs)
-
         self.set_qobject_names()
 
         self.data_types = {
@@ -69,9 +67,6 @@ class PipetteToolbar(AbstractToolbar):
                 4: ctypes.c_float,
             }
         }
-
-    def clear_outputs(self) -> None:
-        self.outputs.clear()
 
     def setup_ui(self) -> None:
         super().setup_ui()

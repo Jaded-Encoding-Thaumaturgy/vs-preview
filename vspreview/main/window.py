@@ -593,6 +593,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.timecodes.clear()
         self.norm_timecodes.clear()
 
+        self.toolbars.pipette._curr_frame_cache.clear()
+        self.toolbars.pipette._curr_alphaframe_cache.clear()
+        self.toolbars.pipette.outputs.clear()
+
         for v in self.user_output_names.values():
             v.clear()
 

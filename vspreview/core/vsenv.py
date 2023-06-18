@@ -139,8 +139,19 @@ def make_environment() -> None:
 
 
 def dispose_environment(env: ManagedEnvironment) -> None:
+    import logging
+
     if current_log:
         env.core.remove_log_handler(current_log)
+
+    if logging.getLogger().level <= logging.DEBUG:
+        from gc import get_referrers
+
+        # There has to be the environment referencing it
+        ref_count = len(get_referrers(env.core)) - 1
+
+        if ref_count:
+            logging.debug(f'Core {id(env.core)} is being held reference by {ref_count} objects!')
 
     env.dispose()
 

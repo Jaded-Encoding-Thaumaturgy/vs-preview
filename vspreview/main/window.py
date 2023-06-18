@@ -584,12 +584,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         for graphics_view in self.graphics_views:
             graphics_view.graphics_scene.init_scenes()
 
-    def reload_script(self) -> None:
+    def clean_core_references(self) -> None:
         from vstools.utils.vs_proxy import clear_cache
 
-        self.reload_before_signal.emit()
+        for graphics_view in self.graphics_views:
+            graphics_view.graphics_scene.clear()
 
-        self.dump_storage()
+        self.timecodes.clear()
+        self.norm_timecodes.clear()
+
+        for v in self.user_output_names.values():
+            v.clear()
 
         try:
             with self.env:
@@ -598,16 +603,20 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             ...
 
         vs.clear_outputs()
-        for graphics_view in self.graphics_views:
-            graphics_view.graphics_scene.clear()
 
-        self.timecodes.clear()
-        self.norm_timecodes.clear()
-        for v in self.user_output_names.values():
-            v.clear()
         if self.outputs:
+
             self.outputs.clear()
+
         self.gc_collect()
+
+    def reload_script(self) -> None:
+        self.reload_before_signal.emit()
+
+        self.dump_storage()
+
+        self.clean_core_references()
+
         old_environment = get_current_environment()
 
         self.clear_monkey_runpy()

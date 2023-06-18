@@ -78,7 +78,14 @@ class VideoOutput(AbstractYAMLObject):
     _stateset: bool
 
     def clear(self) -> None:
-        self.source = self.prepared = None  # type: ignore
+        if self.source:
+            del self.source.clip, self.source.alpha
+        if self.prepared:
+            del self.prepared.clip, self.prepared.alpha
+        if self.props:
+            self.props.clear()
+        del self.source, self.prepared, self.props
+        self.source = self.prepared = self.props = None
 
     def __init__(
         self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False

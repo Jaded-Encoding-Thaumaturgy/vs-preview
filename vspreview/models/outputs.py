@@ -47,8 +47,6 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
         outputs = OrderedDict(sorted(vs.get_outputs().items()))
 
-        main.reload_signal.connect(self.clear_outputs)
-
         for i, vs_output in outputs.items():
             if not isinstance(vs_output, self.vs_type):
                 continue
@@ -64,8 +62,8 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         self._items = list(self.items)
 
     def clear_outputs(self) -> None:
-        for o in self.items:
-            o.clear()
+        for output in (*self.items, *self._items):
+            output.clear()
 
     def __getitem__(self, i: int) -> T:
         return self.items[i]
@@ -88,6 +86,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         return len(self.items) - 1
 
     def clear(self) -> None:
+        self.clear_outputs()
         self.beginRemoveRows(QModelIndex(), 0, len(self.items))
         self.items.clear()
         self._items.clear()

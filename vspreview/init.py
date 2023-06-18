@@ -61,7 +61,9 @@ def main(_args: Sequence[str] | None = None) -> None:
     setup_logger()
 
     if args.verbose:
+        from vstools import VSDebug
         set_log_level(logging.DEBUG, logging.DEBUG)
+        VSDebug(use_logging=True)
     else:
         set_log_level(logging.WARNING)
 

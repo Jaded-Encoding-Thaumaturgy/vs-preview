@@ -605,7 +605,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         vs.clear_outputs()
 
         if self.outputs:
-
             self.outputs.clear()
 
         self.gc_collect()

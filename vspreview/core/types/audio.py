@@ -41,6 +41,8 @@ class AudioOutput(AbstractYAMLObject):
         self.vs_output = self.source_vs_output
         self.is_mono = self.vs_output.num_channels == 1
 
+        self.info = self.main.user_output_info[vs.AudioNode].get(self.index, {})
+
         (self.arrayType, sampleTypeQ) = (
             'f', QAudioFormat.SampleFormat.Float
         ) if self.vs_output.sample_type == vs.FLOAT else (
@@ -89,7 +91,7 @@ class AudioOutput(AbstractYAMLObject):
             from ...models.outputs import AudioOutputs
 
             if vs_output in (vs_outputs := list(vs.get_outputs().values())):
-                self.name = self.main.user_output_names[vs.AudioNode].get(self.index, 'Track ' + str(self.index))
+                self.name = self.info.get('name', 'Track ' + str(self.index))
                 if isinstance(self.main.toolbars.playback.audio_outputs, AudioOutputs):
                     self.main.toolbars.playback.audio_outputs.setData(
                         self.main.toolbars.playback.audio_outputs.index(index), self.name

@@ -163,8 +163,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         ]()
         self.norm_timecodes = dict[int, list[float]]()
 
-        self.user_output_names = {
-            vs.VideoNode: dict[int, str](), vs.AudioNode: dict[int, str](), vs.RawNode: dict[int, str]()
+        self.user_output_info = {
+            vs.VideoNode: dict[int, dict[str, Any]](),
+            vs.AudioNode: dict[int, dict[str, Any]](),
+            vs.RawNode: dict[int, dict[str, Any]]()
         }
 
         # global
@@ -595,7 +597,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.toolbars.pipette._curr_alphaframe_cache.clear()
         self.toolbars.pipette.outputs.clear()
 
-        for v in self.user_output_names.values():
+        for v in self.user_output_info.values():
+            for k in v.values():
+                k.clear()
             v.clear()
 
         try:
@@ -828,8 +832,13 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     ) -> None:
         self.timecodes[index] = (timecodes, den)
 
-    def set_node_name(self, node_type: type, index: int, name: str) -> None:
-        self.user_output_names[node_type][index] = name
+    def set_node_info(self, node_type: type, index: int, **kwargs: Any) -> None:
+        base = self.user_output_info[node_type]
+
+        if index not in base:
+            base[index] = {**kwargs}
+        else:
+            base[index] |= kwargs
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.Type.LayoutRequest:

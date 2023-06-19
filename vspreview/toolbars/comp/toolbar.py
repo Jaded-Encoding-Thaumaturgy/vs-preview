@@ -796,9 +796,7 @@ class CompToolbar(AbstractToolbar):
 
         filtered_outputs = []
         for output in self.main.outputs:
-            props = output.source.clip.get_frame(check_frame).props
-
-            if '_VSPDisableComp' in props and props._VSPDisableComp == 1:
+            if output.info.get('disable_comp', False):
                 continue
 
             filtered_outputs.append(output)

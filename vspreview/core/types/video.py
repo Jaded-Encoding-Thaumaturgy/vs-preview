@@ -60,7 +60,7 @@ PACKING_TYPE: PackingTypeInfo = None  # type: ignore
 
 class VideoOutput(AbstractYAMLObject):
     storable_attrs = (
-        'title', 'last_showed_frame', 'play_fps', 'crop_values'
+        'name', 'last_showed_frame', 'play_fps', 'crop_values'
     )
 
     __slots__ = (
@@ -72,7 +72,7 @@ class VideoOutput(AbstractYAMLObject):
 
     source: VideoOutputNode
     prepared: VideoOutputNode
-    title: str | None
+    name: str
     last_showed_frame: Frame
     crop_values: CroppingInfo
     _stateset: bool
@@ -123,9 +123,12 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.title = self.main.user_output_names[vs.VideoNode].get(self.vs_index, None)  # type: ignore
+        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
+
+        self.name = self.info.get('name', 'Video Node %d' % self.vs_index)
+
         if self.main.outputs is not None:
-            self.main.outputs.setData(self.main.outputs.index(self.vs_index), self.title)
+            self.main.outputs.setData(self.main.outputs.index(self.vs_index), self.name)
 
         self.props = cast(vs.FrameProps, {})
 
@@ -247,21 +250,6 @@ class VideoOutput(AbstractYAMLObject):
                 PACKING_TYPE = PackingType.none_10bit if _default_10bits else PackingType.none_8bit
 
         self.set_fmt_values()
-
-    @property
-    def name(self) -> str:
-        placeholder = 'Video Node %d' % self.index
-        if not hasattr(self, 'title') or self.title in {None, placeholder}:
-            if 'Name' in self.props:
-                self.title = cast(bytes, self.props['Name']).decode('utf-8')
-            elif not self.title:
-                self.title = placeholder
-
-        return self.title or placeholder
-
-    @name.setter
-    def name(self, newname: str) -> None:
-        self.title = newname
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics
@@ -575,7 +563,7 @@ class VideoOutput(AbstractYAMLObject):
         return new_output
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'title', str, self.__setattr__)
+        try_load(state, 'name', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', Fraction, self.__setattr__)
         try_load(state, 'crop_values', CroppingInfo, self.__setattr__)

@@ -309,13 +309,14 @@ class VideoOutput(AbstractYAMLObject):
         if PACKING_TYPE.shuffle:
             clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
 
+        shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
+        r_shift, g_shift, b_shift = (x * shift for x in (1, 0x400, 0x100000))
+        high_bits_mask = 0xc0000000
+
         if PACKING_TYPE in {
             PackingType.none_8bit, PackingType.none_10bit, PackingType.numpy_8bit, PackingType.numpy_10bit
         }:
-            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, color=0xc0000000, keep=True)
-
-            shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
-            r_shift, g_shift, b_shift = (x * shift for x in (1, 1024, 1048576))
+            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, color=high_bits_mask, keep=True)
 
             if PACKING_TYPE in {PackingType.none_8bit, PackingType.none_10bit}:
                 from functools import partial
@@ -385,13 +386,11 @@ class VideoOutput(AbstractYAMLObject):
         if PACKING_TYPE in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
             # x, y, z => b, g, r
             # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
-            # R stays like it is + shift if it's 8 bits (gets applied to all clips), then G gets shifted
+            # R stays like it is * shift if it's 8 bits (gets applied to all planes), then G gets shifted
             # by 10 bits, (we multiply by 2 ** 10) and same for B but by 20 bits and it all gets summed
-            shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
-
             return vs.core.akarin.Expr(
                 clip.std.SplitPlanes(),
-                f'z {shift * 0x100000}  * y {shift * 0x400} * x {shift} * + + 0xc0000000 +', vs.GRAY32, True
+                f'z {b_shift} * y {g_shift} * x {r_shift} * + + {high_bits_mask} +', vs.GRAY32, True
             )
 
         return clip

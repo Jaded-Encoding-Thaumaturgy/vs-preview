@@ -26,10 +26,10 @@ class PackingTypeInfo:
     _getid = iter_count()
 
     def __init__(
-        self, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool,
-        can_playback: bool = True
+        self, name: str, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool, can_playback: bool = True
     ):
         self.id = next(self._getid)
+        self.name = name
         self.vs_format = vs.core.get_video_format(vs_format)
         self.qt_format = qt_format
         self.shuffle = shuffle
@@ -45,14 +45,14 @@ class PackingTypeInfo:
 
 
 class PackingType(PackingTypeInfo):
-    none_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False, False)
-    none_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, False, False)
-    numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
-    numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
-    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_RGB32, False)
-    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
-    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False)
-    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, False)
+    none_8bit = PackingTypeInfo('none-8bit', vs.RGB24, QImage.Format.Format_BGR30, False, False)
+    none_10bit = PackingTypeInfo('none-10bit', vs.RGB30, QImage.Format.Format_BGR30, False, False)
+    numpy_8bit = PackingTypeInfo('numpy-8bit', vs.RGB24, QImage.Format.Format_BGR30, True)
+    numpy_10bit = PackingTypeInfo('numpy-10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
+    libp2p_8bit = PackingTypeInfo('libp2p-8bit', vs.RGB24, QImage.Format.Format_RGB32, False)
+    libp2p_10bit = PackingTypeInfo('libp2p-10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
+    akarin_8bit = PackingTypeInfo('akarin-8bit', vs.RGB24, QImage.Format.Format_BGR30, False)
+    akarin_10bit = PackingTypeInfo('akarin-10bit', vs.RGB30, QImage.Format.Format_BGR30, False)
 
 
 PACKING_TYPE: PackingTypeInfo = None  # type: ignore

@@ -235,7 +235,14 @@ class PlaybackToolbar(AbstractToolbar):
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if (
             self.main.current_output.last_showed_frame > self.main.current_output.total_frames
-        ) or not video.PACKING_TYPE.can_playback:
+        ):
+            return
+
+        if not video.PACKING_TYPE.can_playback:
+            import logging
+            logging.warn(
+                f'The current backend ({video.PACKING_TYPE.name}) can\'t playback! Install akarin or libp2p plugins.'
+            )
             return
 
         if self.main.statusbar.label.text() == 'Ready':

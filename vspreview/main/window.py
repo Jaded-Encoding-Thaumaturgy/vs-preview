@@ -219,9 +219,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.main_split = CentralSplitter(self, QtCore.Qt.Orientation.Horizontal)
         self.main_split.addWidget(self.graphics_view)
         self.main_split.addWidget(self.plugins_tab)
-        self.main_split.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
-        )
+        self.main_split.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         HBoxLayout(self.main_layout, [self.main_split])
         self.main_layout.addWidget(self.timeline)
@@ -844,6 +842,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         super().showEvent(event)
         for graphics_view in self.graphics_views:
             graphics_view.setSizePolicy(self.EVENT_POLICY)
+
+        self.main_split.setSizePolicy(self.EVENT_POLICY)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.settings.autosave_control.value() != Time(seconds=0):

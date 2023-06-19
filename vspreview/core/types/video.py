@@ -312,7 +312,7 @@ class VideoOutput(AbstractYAMLObject):
         if PACKING_TYPE in {
             PackingType.none_8bit, PackingType.none_10bit, PackingType.numpy_8bit, PackingType.numpy_10bit
         }:
-            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, keep=True)
+            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, color=0xc0000000, keep=True)
 
             shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
             r_shift, g_shift, b_shift = (x * shift for x in (1, 1024, 1048576))
@@ -332,7 +332,7 @@ class VideoOutput(AbstractYAMLObject):
                     src_g: vs.video_view, src_b: vs.video_view,
                     idx: tuple[int, int]
                 ) -> None:
-                    bfp[idx] = (src_r[idx] * r_shift) + (src_g[idx] * g_shift) + (src_b[idx] * b_shift)
+                    bfp[idx] += (src_r[idx] * r_shift) + (src_g[idx] * g_shift) + (src_b[idx] * b_shift)
 
                 def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
                     bf = f[0].copy()
@@ -348,27 +348,31 @@ class VideoOutput(AbstractYAMLObject):
                 try:
                     import cupy as cp  # type: ignore
 
+                    self.__base_cupy_add = base_add = cp.asarray(blank.get_frame(0).copy()[0]).copy()
+
                     ein_shift = cp.asarray(ein_shift)
 
                     def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
                         bf = f[0].copy()
 
-                        cp.asnumpy(cp.einsum(
+                        cp.asnumpy(cp.add(cp.einsum(
                             'kji,k->ji', cp.asarray(f[1], cp.uint32), ein_shift, optimize='greedy'
-                        ), out=np.asarray(bf[0]))
+                        ), base_add), out=np.asarray(bf[0]))
 
                         return bf
                 except ModuleNotFoundError:
                     from numpy.core._multiarray_umath import c_einsum  # type: ignore
                     from numpy.core.numeric import tensordot
 
+                    self.__base_numpy_add = base_add = np.asarray(blank.get_frame(0).copy()[0]).copy()
+
                     def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
                         bf = f[0].copy()
 
-                        c_einsum(
-                            'ji->ji',
-                            tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,))),
-                            out=np.asarray(bf[0])
+                        np.add(
+                            c_einsum(
+                                'ji->ji', tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,)))
+                            ), base_add, np.asarray(bf[0])
                         )
 
                         return bf

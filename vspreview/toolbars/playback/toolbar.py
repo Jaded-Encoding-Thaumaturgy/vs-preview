@@ -198,7 +198,7 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.fps_spinbox.setValue, float(self.main.current_output.play_fps))
 
     def rescan_outputs(self, outputs: AudioOutputs | None = None) -> None:
-        self.audio_outputs = outputs or AudioOutputs(self.main)
+        self.audio_outputs = outputs if isinstance(outputs, AudioOutputs) else AudioOutputs(self.main)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
     def get_true_fps(self, n: int | Frame, frameprops: vs.FrameProps, force: bool = False) -> Fraction:

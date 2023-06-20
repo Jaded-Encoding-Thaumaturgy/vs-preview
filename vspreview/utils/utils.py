@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from functools import partial, wraps
 from string import Template
 from typing import TYPE_CHECKING, Any, Callable
@@ -12,11 +13,19 @@ if TYPE_CHECKING:
 from ..core import Time, main_window
 
 __all__ = [
+    'exit_func',
     'qt_silent_call',
     'strfdelta',
     'fire_and_forget',
     'set_status_label'
 ]
+
+
+def exit_func(ret_code: int, no_exit: bool) -> int:
+    if not no_exit:
+        sys.exit(ret_code)
+
+    return ret_code
 
 
 # it is a BuiltinMethodType at the same time

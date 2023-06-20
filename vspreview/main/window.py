@@ -118,10 +118,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     autosave_timer: Timer
 
-    def __init__(self, config_dir: Path) -> None:
+    def __init__(self, config_dir: Path, no_exit: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
+
+        self.no_exit = no_exit
 
         self.settings = MainSettings(MainToolbar)
 
@@ -341,7 +343,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 module_name="__vspreview__"
             ).result()
             self.env.module.__dict__['_monkey_runpy'] = random()
-            self.env = vpy.script(script_path, environment=self.env).result()
+            self.env = vpy.script(self.script_path, environment=self.env).result()
         except vpy.ExecutionFailed as e:
             from traceback import TracebackException
 

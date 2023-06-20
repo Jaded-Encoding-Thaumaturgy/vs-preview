@@ -130,6 +130,7 @@ current_log: LogHandle | None = None
 def make_environment() -> None:
     global environment, current_log
     assert policy is not None
+
     if environment and current_log:
         environment.core.remove_log_handler(current_log)
 
@@ -174,8 +175,12 @@ def get_current_environment() -> ManagedEnvironment:
 
 
 def _dispose() -> None:
+    global current_log
+
     if environment:
         dispose_environment(environment)
+
+    current_log = None
 
 
 atexit.register(_dispose)

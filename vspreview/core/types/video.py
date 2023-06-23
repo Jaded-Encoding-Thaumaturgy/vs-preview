@@ -103,18 +103,20 @@ class VideoOutput(AbstractYAMLObject):
 
         self.set_fmt_values()
 
-        # runtime attributes
-        self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
-        self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha)
-
-        if self.source.alpha is not None:
-            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
-
         with self.main.env:
             vs_outputs = list(vs.get_outputs().values())
 
         self.vs_index = index
         self.index = vs_outputs.index(vs_output) if vs_output in vs_outputs else index
+
+        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
+
+        self.cached = not not self.info.get('cache', False)
+        self.source = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
+        self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
+
+        if self.source.alpha is not None:
+            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
 
         self.prepared.clip = self.prepare_vs_output(self.source.clip).std.CopyFrameProps(self.source.clip)
         self.width = self.prepared.clip.width
@@ -123,7 +125,6 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
 
         self.name = self.info.get('name', 'Video Node %d' % self.vs_index)
 
@@ -552,7 +553,7 @@ class VideoOutput(AbstractYAMLObject):
 
     def with_node(self, new_node: vs.VideoNode | VideoOutputNode) -> VideoOutput:
         if isinstance(new_node, vs.VideoNode):
-            new_node = VideoOutputNode(new_node, None)
+            new_node = VideoOutputNode(new_node, None, self.cached)
 
         new_output = VideoOutput(new_node, self.vs_index, False)
         new_output.index = self.index

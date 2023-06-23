@@ -25,6 +25,16 @@ class CroppingInfo:
 class VideoOutputNode:
     clip: vs.VideoNode
     alpha: vs.VideoNode | None
+    cache: bool = False
+
+    def __post_init__(self) -> None:
+        if self.cache:
+            from vstools import cache_clip
+
+            self.clip = cache_clip(self.clip)
+
+            if self.alpha:
+                self.alpha = cache_clip(self.alpha)
 
 
 @dataclass

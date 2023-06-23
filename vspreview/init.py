@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from . import qt_patch  # noqa: F401
+
 import logging
 import os
 import signal

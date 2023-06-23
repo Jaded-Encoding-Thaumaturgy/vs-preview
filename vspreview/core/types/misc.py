@@ -28,6 +28,8 @@ class VideoOutputNode:
     cache: bool = False
 
     def __post_init__(self) -> None:
+        self.original_clip = self.clip
+
         if self.cache:
             from vstools import cache_clip
 

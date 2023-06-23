@@ -136,7 +136,7 @@ class BenchmarkToolbar(AbstractToolbar):
                 self._request_next_frame_unsequenced()
             else:
                 frame = self.start_frame + Frame(offset)
-                future = self.main.current_output.prepared.clip.get_frame_async(int(frame))
+                future = self.main.current_output.source.original_clip.get_frame_async(int(frame))
                 self.buffer.appendleft(future)
 
         self.update_info_timer.setInterval(round(float(self.settings.refresh_interval) * 1000))
@@ -161,7 +161,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         next_frame = self.end_frame + Frame(1) - self.frames_left
         if next_frame <= self.end_frame:
-            new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
+            new_future = self.main.current_output.source.original_clip.get_frame_async(int(next_frame))
             self.buffer.appendleft(new_future)
 
         self.frames_left -= Frame(1)
@@ -173,7 +173,7 @@ class BenchmarkToolbar(AbstractToolbar):
 
         if self.running:
             next_frame = self.end_frame + Frame(1) - self.frames_left
-            new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
+            new_future = self.main.current_output.source.original_clip.get_frame_async(int(next_frame))
             new_future.add_done_callback(self._request_next_frame_unsequenced)  # type: ignore
 
         if future is not None:

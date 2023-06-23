@@ -89,7 +89,7 @@ class EventFilter(QObject):
         total_async = 0
         for i in range(start_frame_async, start_frame_async + N):
             s1 = perf_counter_ns()
-            f1 = self.main.current_output.prepared.clip.get_frame_async(i)
+            f1 = self.main.current_output.source.original_clip.get_frame_async(i)
             f1.result()
             s2 = perf_counter_ns()
             logging.debug(f'async test time: {s2 - s1} ns')
@@ -101,7 +101,7 @@ class EventFilter(QObject):
 
         for i in range(start_frame_sync, start_frame_sync + N):
             s1 = perf_counter_ns()
-            self.main.current_output.prepared.clip.get_frame(i)
+            self.main.current_output.source.original_clip.get_frame(i)
             s2 = perf_counter_ns()
             if i != start_frame_sync:
                 total_sync += s2 - s1

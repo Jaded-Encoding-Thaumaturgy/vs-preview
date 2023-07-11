@@ -140,10 +140,6 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.frame_control.setMaximum, self.main.current_output.total_frames - 1)
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.total_time - Frame(1))
 
-        for graphics_view in self.main.graphics_views:
-            if graphics_view.autofit:
-                graphics_view.setZoom(None)
-
     def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
         self.outputs = outputs if isinstance(outputs, VideoOutputs) else VideoOutputs(self.main)
         self.main.init_outputs()

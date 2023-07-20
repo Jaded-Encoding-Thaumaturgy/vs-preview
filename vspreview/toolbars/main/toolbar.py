@@ -120,13 +120,19 @@ class MainToolbar(AbstractToolbar):
             return
 
         if checked:
+            from ...main.timeline import Timeline
+
             if not force_frame:
                 force_frame = self.main.current_output.last_showed_frame
 
-            for output in self.outputs:
-                output.last_showed_frame = output.to_frame(
-                    self.main.current_output.to_time(force_frame)
-                )
+            if self.main.timeline.mode == Timeline.Mode.TIME:
+                for output in self.outputs:
+                    output.last_showed_frame = output.to_frame(
+                        self.main.current_output.to_time(force_frame)
+                    )
+            else:
+                for output in self.outputs:
+                    output.last_showed_frame = force_frame
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)

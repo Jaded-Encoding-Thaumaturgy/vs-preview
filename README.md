@@ -36,3 +36,18 @@ It can be used by running `vspreview script.vpy` or your preferred way in [your 
 * [Visual Studio Code](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_vscode.rst)
 * [Vim](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_vim.rst)
 * [Notepad++](https://github.com/Irrational-Encoding-Wizardry/vs-preview/tree/master/docs/installation/install_notepad++.rst)
+
+
+# Plugins
+
+You can install external plugins by using the following command:
+
+```bash
+vspreview install [plugin-name]
+```
+
+A list of plugins can be found in [this repo](https://github.com/Irrational-Encoding-Wizardry/vs-preview-plugins).
+`plugin-name` is the name of the plugin directory in the repo.
+
+To develop new plugins or manually install them, create a .ppy file inside the global plugins directory. You can find the path to that in the storage file.
+You can add additional search paths by adding them to a .pth file inside the global plugins directory, just like you can with python path and site-packages.

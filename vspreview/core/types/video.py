@@ -267,7 +267,9 @@ class VideoOutput(AbstractYAMLObject):
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
         } | heuristics | {
-            'dither_type': self.main.toolbars.playback.settings.dither_type
+            'dither_type': self.main.toolbars.playback.settings.dither_type,
+            'filter_param_a': self.main.toolbars.playback.settings.kernel['b'],
+            'filter_param_b': self.main.toolbars.playback.settings.kernel['c']
         })
 
         if clip.format.color_family == vs.RGB:

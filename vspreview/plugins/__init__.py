@@ -42,6 +42,8 @@ class Plugins(AbstractYAMLObjectSingleton):
         spec = spec_from_file_location(path.stem, path)
         module = module_from_spec(spec)
 
+        sys.modules[module.__name__] = module
+
         spec.loader.exec_module(module)
 
         try:

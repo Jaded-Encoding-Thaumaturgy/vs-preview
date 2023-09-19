@@ -452,11 +452,11 @@ class PlaybackToolbar(AbstractToolbar):
 
     def seek_to_start(self, checked: bool | None = None) -> None:
         self.stop()
-        self.main.current_output.last_showed_frame = Frame(0)
+        self.main.switch_frame(Frame(0))
 
     def seek_to_end(self, checked: bool | None = None) -> None:
         self.stop()
-        self.main.current_output.last_showed_frame = self.main.current_output.total_frames - 1
+        self.main.switch_frame(self.main.current_output.total_frames - 1)
 
     def seek_offset(self, offset: int) -> None:
         new_pos = self.main.current_output.last_showed_frame + offset

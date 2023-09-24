@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
-
+from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast, Mapping
 import vapoursynth as vs
 from PyQt6 import QtCore
 from PyQt6.QtCore import QKeyCombination, Qt, QObject, QThread, pyqtSignal
@@ -11,7 +10,7 @@ from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
     AbstractToolbar, CheckBox, ComboBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
-    VideoOutput, main_window
+    VideoOutput, main_window, try_load
 )
 from ...models import GeneralModel
 from .settings import CompSettings
@@ -319,6 +318,15 @@ class Worker(QObject):
 
         self.finished.emit(conf.uuid)
 
+try:
+    import requests
+    from datetime import datetime
+    import re
+except ModuleNotFoundError:
+    raise ModuleNotFoundError(
+        'You are missing `requests`!\n'
+        'Install them with "pip install requests"!'
+    )
 
 class CompToolbar(AbstractToolbar):
     _thread_running = False
@@ -346,14 +354,6 @@ class CompToolbar(AbstractToolbar):
         self.add_shortcuts()
 
     def setup_ui(self) -> None:
-        try:
-            import requests
-            from datetime import datetime
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                'You are missing `requests`!\n'
-                'Install them with "pip install requests"!'
-            )
         super().setup_ui()
 
         self.collection_name_lineedit = LineEdit('Collection name', self)
@@ -428,35 +428,22 @@ class CompToolbar(AbstractToolbar):
             self.tag_filter_lineedit.setHidden(not is_checked)
             self.tag_list_combox.setHidden(not is_checked)
             self.tag_separator.setHidden(not is_checked)
+            self.on_public_toggle(is_checked)
 
-        def _collection_click(is_checked: bool):
-            elements = []
-            try:
-                if self.settings.tmdb_apikey and self.tmdb_id_lineedit.text():
+        self.collection_name_cache = None
 
-                    tmdb_type = self.tmdb_type_combox.currentText().lower()
+        def _handle_collection_name_down():
+            self.collection_name_cache = self.collection_name_lineedit.text()
+            self.collection_name_lineedit.setText(self._handle_collection_generate())
 
-                    url = f"https://api.themoviedb.org/3/{tmdb_type}/{self.tmdb_id_lineedit.text()}?language=en-US"
-                    headers = {
-                        "accept": "application/json",
-                        "Authorization": f"Bearer {self.settings.tmdb_apikey}"
-                    }
-                    resp = requests.get(url, headers=headers)
-                    assert resp.status_code == 200, "Response isn't 200"
-                    data: dict = resp.json()
-                    assert data.get("success", True), "Success is false"
-                        
-                    year = datetime.strptime(data["first_air_date"], '%Y-%m-%d').year
+        def _handle_collection_name_up():
+            if self.collection_name_cache is not None:
+                self.collection_name_lineedit.setText(self.collection_name_cache)
+                self.collection_name_cache = None
 
-                    elements.append(f"{data['name']} ({year})")
-            except AssertionError:
-                pass
-
-                elements.append(" vs ".join([video.title for video in self.main.outputs]))
-
-                self.collection_name_lineedit.setText(" - ".join(elements))
-
-        self.collection_name_button = PushButton('Generate Name', self, clicked=_collection_click)
+        self.collection_name_button = PushButton(
+            '🛈', self, pressed=_handle_collection_name_down, released=_handle_collection_name_up
+        )
 
         self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=_force_clicked('I'))
         self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=_force_clicked('P'))
@@ -470,7 +457,7 @@ class CompToolbar(AbstractToolbar):
             currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
-        self.tag_data = {"Error": "Error"}
+        self.tag_data = {}
         self.current_tags = []
 
         self.tag_list_combox = ComboBox[str](
@@ -588,6 +575,65 @@ class CompToolbar(AbstractToolbar):
 
         self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
 
+    tmdb_data = {}
+
+    def _get_replace_option(self, key: str) -> str:
+        tmdb_id = self.tmdb_id_lineedit.text() or ""
+        if "tmdb_" in key and tmdb_id not in self.tmdb_data:
+            return ""
+
+        data: dict = self.tmdb_data.get(tmdb_id)
+        match key:
+            case "{tmdb_title}":
+                return data.get("name", self.tmdb_data.get("title", ""))
+            case "{tmdb_year}":
+                return str(
+                    datetime.strptime(
+                        data.get("first_air_date", data.get("release_date", "1970-1-1")),
+                        '%Y-%m-%d'
+                    ).year
+                )
+            case "{video_nodes}":
+                return " vs ".join([video.title for video in self.main.outputs])
+
+        return None
+
+    def _do_tmdb_request(self) -> None:
+        if not (self.settings.tmdb_apikey and self.tmdb_id_lineedit.text()):
+            return False
+        tmdb_type = self.tmdb_type_combox.currentText().lower()
+        tmdb_id = self.tmdb_id_lineedit.text()
+        url = f"https://api.themoviedb.org/3/{tmdb_type}/{self.tmdb_id_lineedit.text()}?language=en-US"
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {self.settings.tmdb_apikey}"
+        }
+        resp = requests.get(url, headers=headers)
+
+        assert resp.status_code == 200, "Response isn't 200"
+        data: dict = resp.json()
+        assert data.get("success", True), "Success is false"
+
+        self.tmdb_data[tmdb_id] = data
+
+        return True
+
+    KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
+
+    def _handle_collection_generate(self):
+        self._do_tmdb_request()
+
+        collection_text = self.collection_name_lineedit.text()
+
+        matches = set(re.findall(self.KEYWORD_RE, collection_text))
+
+        for match in matches:
+            replace = self._get_replace_option(match)
+            if replace is not None:
+                collection_text = collection_text.replace(match, replace)
+
+        return collection_text
+
     def add_shortcuts(self) -> None:
         self.main.add_shortcut(
             QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.add_current_frame_to_comp
@@ -596,7 +642,9 @@ class CompToolbar(AbstractToolbar):
     def update_tags(self) -> None:
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
 
-    def on_toggle(self, new_state: bool) -> None:
+    def on_public_toggle(self, new_state: bool) -> None:
+        if not new_state or self.tag_data:
+            return
         try:
             from requests import Session
 
@@ -612,8 +660,6 @@ class CompToolbar(AbstractToolbar):
             self.tag_data = {"No Internet": "No Internet"}
 
         self.update_tags()
-
-        super().on_toggle(new_state)
 
     def add_current_frame_to_comp(self) -> None:
         frame = str(self.main.current_output.last_showed_frame).strip()
@@ -788,7 +834,7 @@ class CompToolbar(AbstractToolbar):
         if self.current_frame_checkbox.isChecked():
             samples.append(int(self.main.current_output.last_showed_frame))
 
-        collection_name = self.collection_name_lineedit.text().strip()
+        collection_name = self._handle_collection_generate().strip()
 
         if not collection_name:
             collection_name = self.settings.DEFAULT_COLLECTION_NAME
@@ -887,3 +933,12 @@ class CompToolbar(AbstractToolbar):
             self.main.show_message(str(e))
 
         return False
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return super().__getstate__() | {
+            'collection_format': self.collection_name_lineedit.text()
+        }
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        super().__setstate__(state)
+        try_load(state, 'collection_format', str, self.collection_name_lineedit.setText)

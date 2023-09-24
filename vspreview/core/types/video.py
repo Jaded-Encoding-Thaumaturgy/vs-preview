@@ -257,7 +257,7 @@ class VideoOutput(AbstractYAMLObject):
 
         assert clip.format
 
-        heuristics = video_heuristics(clip, None)
+        heuristics = video_heuristics(clip, True)
 
         resizer_kwargs = KwargsT({
             'format': self._NORML_FMT.id,

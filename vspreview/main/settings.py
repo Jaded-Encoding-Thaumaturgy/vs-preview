@@ -73,6 +73,12 @@ class MainSettings(AbstractToolbarSettings):
 
         self.dragnavigator_timeout_spinbox = SpinBox(self, 0, 1000 * 60 * 5)
 
+        self.primaries_combobox = ComboBox[str](
+            model=GeneralModel[str]([
+                'sRGB', 'DCI-P3 (6300K White point)', 'DCI-P3 (6500K White point)'
+            ], False)
+        )
+
         self.color_management_checkbox = CheckBox('Color management', self)
 
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
@@ -109,6 +115,8 @@ class MainSettings(AbstractToolbarSettings):
         ])
 
         HBoxLayout(self.vlayout, [QLabel('Drag Navigator Timeout (ms)'), self.dragnavigator_timeout_spinbox])
+
+        HBoxLayout(self.vlayout, [QLabel('Output Primaries'), self.primaries_combobox])
 
         if sys.platform == 'win32':
             HBoxLayout(self.vlayout, [self.color_management_checkbox])
@@ -277,6 +285,11 @@ class MainSettings(AbstractToolbarSettings):
         self.zoom_levels = [x for x in zoom_levels if round(x) != round(old_value)]
 
     @property
+    def output_primaries_zimg(self) -> int:
+        from vstools.enums.color import Primaries
+        return Primaries([1, 11, 12][self.primaries_combobox.currentIndex()])
+
+    @property
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
 
@@ -293,6 +306,7 @@ class MainSettings(AbstractToolbarSettings):
             'force_old_storages_removal': self.force_old_storages_removal,
             'zoom_levels': sorted([int(x * 100) for x in self.zoom_levels]),
             'zoom_default_index': self.zoom_default_index,
+            'output_primaries_index': self.primaries_combobox.currentIndex(),
             'dragnavigator_timeout': self.dragnavigator_timeout,
             'color_management': self.color_management
         }
@@ -310,6 +324,7 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'zoom_levels', list, self)
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
         try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)
+        try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
 
 

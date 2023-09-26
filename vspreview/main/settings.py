@@ -75,7 +75,7 @@ class MainSettings(AbstractToolbarSettings):
 
         self.primaries_combobox = ComboBox[str](
             model=GeneralModel[str]([
-                'sRGB', 'DCI-P3 (6300K White point)', 'DCI-P3 (6500K White point)'
+                'sRGB', 'DCI-P3'
             ], False)
         )
 
@@ -287,7 +287,7 @@ class MainSettings(AbstractToolbarSettings):
     @property
     def output_primaries_zimg(self) -> int:
         from vstools.enums.color import Primaries
-        return Primaries([1, 11, 12][self.primaries_combobox.currentIndex()])
+        return Primaries([1, 12][self.primaries_combobox.currentIndex()])
 
     @property
     def color_management(self) -> bool:

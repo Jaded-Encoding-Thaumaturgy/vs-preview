@@ -268,6 +268,7 @@ class VideoOutput(AbstractYAMLObject):
             'chromaloc_in': ChromaLocation.LEFT
         } | heuristics | {
             'dither_type': self.main.toolbars.playback.settings.dither_type,
+            'transfer': Transfer.BT709,
             'primaries': self.main.settings.output_primaries_zimg
         })
 

@@ -12,7 +12,7 @@ __all__ = [
 
 
 class CompSettings(AbstractToolbarSettings):
-    __slots__ = ('delete_cache_checkbox', 'login_browser_id', 'login_session')
+    __slots__ = ('delete_cache_checkbox', 'login_browser_id_edit', 'login_session_edit', 'tmdb_apikey_edit')
 
     DEFAULT_COLLECTION_NAME = 'Unknown'
 
@@ -21,8 +21,10 @@ class CompSettings(AbstractToolbarSettings):
 
         self.delete_cache_checkbox = CheckBox('Delete images cache after upload')
 
-        self.login_browser_id = LineEdit('Browser ID')
-        self.login_session = LineEdit('Session ID')
+        self.login_browser_id_edit = LineEdit('Browser ID')
+        self.login_session_edit = LineEdit('Session ID')
+
+        self.tmdb_apikey_edit = LineEdit('API Key')
 
         label = QLabel(
             'To get this info: Open Dev console in browser, go to network tab, upload a comparison,'
@@ -38,9 +40,10 @@ class CompSettings(AbstractToolbarSettings):
         HBoxLayout(
             self.vlayout,
             VBoxLayout([
+                HBoxLayout([QLabel("TMDB API Key"), self.tmdb_apikey_edit]),
                 label,
-                HBoxLayout([QLabel("Browser ID"), self.login_browser_id]),
-                HBoxLayout([QLabel("Session ID"), self.login_session])
+                HBoxLayout([QLabel("Browser ID"), self.login_browser_id_edit]),
+                HBoxLayout([QLabel("Session ID"), self.login_session_edit]),
             ])
         )
 
@@ -53,20 +56,26 @@ class CompSettings(AbstractToolbarSettings):
 
     @property
     def browser_id(self) -> str:
-        return self.login_browser_id.text()
+        return self.login_browser_id_edit.text()
 
     @property
     def session_id(self) -> str:
-        return self.login_session.text()
+        return self.login_session_edit.text()
+
+    @property
+    def tmdb_apikey(self) -> str:
+        return self.tmdb_apikey_edit.text()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'delete_cache_enabled': self.delete_cache_enabled,
             'browser_id': self.browser_id,
             'session_id': self.session_id,
+            'tmdb_apikey': self.tmdb_apikey,
         }
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'delete_cache_enabled', bool, self.delete_cache_checkbox.setChecked)
-        try_load(state, 'browser_id', str, self.login_browser_id.setText)
-        try_load(state, 'session_id', str, self.login_session.setText)
+        try_load(state, 'browser_id', str, self.login_browser_id_edit.setText)
+        try_load(state, 'session_id', str, self.login_session_edit.setText)
+        try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)

@@ -9,7 +9,7 @@ import vapoursynth as vs
 from PyQt6.QtCore import QMetaObject, Qt
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer
+from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer, SpinBox
 from ...core.custom import FrameEdit
 from ...utils import qt_silent_call, strfdelta
 from .settings import BenchmarkSettings
@@ -65,11 +65,16 @@ class BenchmarkToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.start_frame_control = FrameEdit(self, valueChanged=lambda value: self.update_controls(start=value))
-
-        self.end_frame_control = FrameEdit(self, valueChanged=lambda value: self.update_controls(end=value))
-
-        self.total_frames_control = FrameEdit(self, 1, valueChanged=lambda value: self.update_controls(total=value))
+        self.start_frame_control = FrameEdit(
+            self, 0, maximum=10000, valueChanged=lambda value: self.update_controls(start=value)
+        )
+        self.end_frame_control = FrameEdit(
+            self, maximum=10000, valueChanged=lambda value: self.update_controls(end=value)
+        )
+        self.total_frames_control = FrameEdit(
+            self, 1, maximum=10000, valueChanged=lambda value: self.update_controls(total=value)
+        )
+        self.total_frames_control.setValue(1000)
 
         self.unsequenced_checkbox = CheckBox(
             'Unsequenced', self, checked=True, tooltip=(
@@ -87,21 +92,27 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.info_label = QLabel(self)
 
+        self.usable_cpus_spinbox = SpinBox(self, 1, self.settings.default_usable_cpus_spinbox.maximum())
+        self.usable_cpus_spinbox.setValue(self.settings.default_usable_cpus_count)
+
         self.hlayout.addWidgets([
             QLabel('Start:'), self.start_frame_control,
             QLabel('End:'), self.end_frame_control,
             QLabel('Total:'), self.total_frames_control,
+            QLabel('Usable CPUs Count:'), self.usable_cpus_spinbox,
             self.prefetch_checkbox,
             self.unsequenced_checkbox,
             self.run_abort_button,
-            self.info_label,
+            self.info_label
         ])
         self.hlayout.addStretch()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
-        self.start_frame_control.setMaximum(self.main.current_output.total_frames - 1)
-        self.end_frame_control.setMaximum(self.main.current_output.total_frames - 1)
-        self.total_frames_control.setMaximum(self.main.current_output.total_frames - Frame(1))
+        max_frames = 1000 if self.main.current_output is None else self.main.current_output.total_frames
+        self.start_frame_control.setMaximum(max_frames - 1)
+        self.end_frame_control.setMaximum(max_frames - 1)
+        self.total_frames_control.setMaximum(max_frames - Frame(1))
+        self.total_frames_control.setValue(min(self.total_frames_control.value() or 1000, max_frames))
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
@@ -110,15 +121,19 @@ class BenchmarkToolbar(AbstractToolbar):
 
         if self.settings.frame_data_sharing_fix_enabled:
             self.main.current_output.update_graphic_item(
-                self.main.current_output.graphics_scene_item.pixmap().copy()
+                self.main.current_scene.pixmap().copy(),
+                graphics_scene_item=self.main.current_output.graphics_scene_item
             )
+
+        self.frames_done = 0
 
         self.start_frame = self.start_frame_control.value()
         self.end_frame = self.end_frame_control.value()
         self.total_frames = self.total_frames_control.value()
         self.frames_left = deepcopy(self.total_frames)
+
         if self.prefetch_checkbox.isChecked():
-            concurrent_requests_count = self.main.settings.usable_cpus_count
+            concurrent_requests_count = self.usable_cpus_spinbox.value()
         else:
             concurrent_requests_count = 1
 
@@ -129,14 +144,15 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.running = True
         self.run_start_time = perf_counter()
+        self.update_info()
 
         for offset in range(min(int(self.frames_left), concurrent_requests_count)):
             if self.unsequenced:
                 self._request_next_frame_unsequenced()
             else:
-                frame = self.start_frame + Frame(offset)
-                future = self.main.current_output.prepared.clip.get_frame_async(int(frame))
-                self.buffer.appendleft(future)
+                self.buffer.appendleft(
+                    self.main.current_output.source.original_clip.get_frame_async(self.start_frame + offset)
+                )
 
         self.update_info_timer.setInterval(round(float(self.settings.refresh_interval) * 1000))
         self.update_info_timer.start()
@@ -156,27 +172,32 @@ class BenchmarkToolbar(AbstractToolbar):
             self.abort()
             return
 
+        self.frames_done += 1
         self.buffer.pop().result()
 
-        next_frame = self.end_frame + Frame(1) - self.frames_left
-        if next_frame <= self.end_frame:
-            new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
-            self.buffer.appendleft(new_future)
+        if (next_frame := self.end_frame + 1 - self.frames_left) <= self.end_frame:
+            self.buffer.appendleft(
+                self.main.current_output.source.original_clip.get_frame_async(next_frame)
+            )
 
         self.frames_left -= Frame(1)
 
     def _request_next_frame_unsequenced(self, future: Future[vs.VideoFrame] | None = None) -> None:
-        if self.frames_left <= Frame(0):
+        if self.frames_done >= self.total_frames:
             self.abort()
             return
 
         if self.running:
-            next_frame = self.end_frame + Frame(1) - self.frames_left
-            new_future = self.main.current_output.prepared.clip.get_frame_async(int(next_frame))
-            new_future.add_done_callback(self._request_next_frame_unsequenced)  # type: ignore
+            self.main.current_output.source.original_clip.get_frame_async(
+                self.end_frame + 1 - self.frames_left
+            ).add_done_callback(
+                self._request_next_frame_unsequenced
+            )
 
         if future is not None:
             future.result()
+            self.frames_done += 1
+
         self.frames_left -= Frame(1)
 
     def on_run_abort_pressed(self, checked: bool) -> None:
@@ -189,9 +210,11 @@ class BenchmarkToolbar(AbstractToolbar):
     def on_prefetch_changed(self, new_state: Qt.CheckState) -> None:
         if new_state == Qt.CheckState.Checked:
             self.unsequenced_checkbox.setEnabled(True)
+            self.usable_cpus_spinbox.setEnabled(True)
         elif new_state == Qt.CheckState.Unchecked:
             self.unsequenced_checkbox.setChecked(False)
             self.unsequenced_checkbox.setEnabled(False)
+            self.usable_cpus_spinbox.setEnabled(False)
 
     def set_ui_editable(self, new_state: bool) -> None:
         self. start_frame_control.setEnabled(new_state)
@@ -205,6 +228,11 @@ class BenchmarkToolbar(AbstractToolbar):
     ) -> None:
         if not hasattr(self.main, 'current_output'):
             return
+
+        if self.main.current_output is None:
+            max_frames = 1000
+        else:
+            max_frames = self.main.current_output.total_frames
 
         if start is not None:
             end = self.end_frame_control.value()
@@ -227,7 +255,7 @@ class BenchmarkToolbar(AbstractToolbar):
             delta = total - old_total
 
             end += delta
-            if end > (e := self.main.current_output.total_frames - 1):
+            if end > (e := max_frames - 1):
                 start -= end - e
                 end = e
         else:
@@ -239,8 +267,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
     def update_info(self) -> None:
         run_time = Time(seconds=(perf_counter() - self.run_start_time))
-        frames_done = self.total_frames - self.frames_left
-        fps = int(frames_done) / float(run_time)
+        fps = int(self.frames_done) / float(run_time)
 
-        info_str = (f"{frames_done}/{self.total_frames} frames in {strfdelta(run_time, '%M:%S.%Z')}, {fps:.4f} fps")
-        self.info_label.setText(info_str)
+        self.info_label.setText(
+            f"{self.frames_done}/{self.total_frames} frames in {strfdelta(run_time, '%M:%S.%Z')}, {fps:.4f} fps"
+        )

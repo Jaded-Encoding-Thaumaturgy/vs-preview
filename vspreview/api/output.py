@@ -4,11 +4,11 @@ from __future__ import annotations
 import inspect
 from fractions import Fraction
 from pathlib import Path
+from typing import Any
 
-import vapoursynth as vs
+from vapoursynth import AudioNode, RawNode, VideoNode, get_outputs
 
-from .info import is_preview
-from .timecodes import set_timecodes
+from .nodes import set_timecodes, update_node_info
 
 __all__ = [
     'set_output'
@@ -16,21 +16,23 @@ __all__ = [
 
 
 def set_output(
-    node: vs.RawNode, name: str | bool | None = None,
-    *, timecodes: str | Path | dict[
+    node: RawNode, name: str | bool | None = None,
+    *, cache: bool = True, disable_comp: bool = False,
+    timecodes: str | Path | dict[
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
-    ] | list[Fraction] | None = None, denominator: int = 1001
+    ] | list[Fraction] | None = None, denominator: int = 1001,
+    **kwargs: Any
 ) -> None:
-    index = len(vs.get_outputs())
+    index = len(get_outputs())
 
     ref_id = str(id(node))
 
-    if isinstance(node, vs.VideoNode):
-        title, node_type = 'Clip', vs.VideoNode
-    elif isinstance(node, vs.AudioNode):
-        title, node_type = 'Audio', vs.AudioNode
+    if isinstance(node, VideoNode):
+        title, node_type = 'Clip', VideoNode
+    elif isinstance(node, AudioNode):
+        title, node_type = 'Audio', AudioNode
     else:
-        title, node_type = 'Node', vs.RawNode
+        title, node_type = 'Node', RawNode
 
     if (not name and name is not False) or name is True:
         name = f"{title} {index}"
@@ -47,13 +49,10 @@ def set_output(
 
     node.set_output(index)
 
-    if is_preview():
-        from ..core import main_window
+    update_node_info(node_type, index, cache=cache, disable_comp=disable_comp, **kwargs)
 
-        if isinstance(name, str):
-            main_window().set_node_name(node_type, index, name.title())
+    if name:
+        update_node_info(node_type, index, name=name)
 
-        if timecodes:
-            set_timecodes(index, timecodes, (
-                node.fps_den if (node.fps_den and node.fps_num) else 1001  # type: ignore[attr-defined]
-            ) if isinstance(node, vs.VideoNode) else denominator)
+    if timecodes:
+        set_timecodes(index, timecodes, node, denominator)

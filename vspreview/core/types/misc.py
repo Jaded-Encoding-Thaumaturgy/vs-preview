@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 
 import vapoursynth as vs
 
 __all__ = [
     'CroppingInfo',
     'VideoOutputNode',
-    'ViewMode',
     'Stretch'
 ]
 
@@ -27,11 +25,18 @@ class CroppingInfo:
 class VideoOutputNode:
     clip: vs.VideoNode
     alpha: vs.VideoNode | None
+    cache: bool = False
 
+    def __post_init__(self) -> None:
+        self.original_clip = self.clip
 
-class ViewMode(str, Enum):
-    NORMAL = 'Normal'
-    FFTSPECTRUM = 'FFTSpectrum'
+        if self.cache:
+            from vstools import cache_clip
+
+            self.clip = cache_clip(self.clip)
+
+            if self.alpha:
+                self.alpha = cache_clip(self.alpha)
 
 
 @dataclass

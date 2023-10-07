@@ -32,7 +32,10 @@ setuptools.setup(
     python_requires='>=3.10',
     packages=setuptools.find_packages('.', ('docs', 'stubs')),
     package_data={
-        package_name: ['py.typed']
+        package_name: ['py.typed'],
+        f'{package_name}.plugins': [
+            file.name for file in (Path(package_name) / 'plugins').glob('*.ppy')
+        ]
     },
     classifiers=[
         'Topic :: Multimedia :: Graphics',

@@ -69,10 +69,6 @@ Toolbars
       - Seek to next frame
     * - Alt + S
       - Save storage (both local file and global settings)
-    * - Shift + F
-      - Switch to FFTSpectrum view mode
-    * - Shift + D
-      - Switch to descale helper view mode
 
 .. list-table:: Scening toolbar
     :widths: 30 70

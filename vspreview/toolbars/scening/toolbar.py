@@ -217,7 +217,8 @@ class SceningToolbar(AbstractToolbar):
             self.check_add_to_list_possibility()
             self.check_remove_export_possibility()
 
-        self.status_label.setVisible(self.is_notches_visible())
+        self.status_label.setVisible(self.is_notches_visible)
+
         super().on_toggle(new_state)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
@@ -240,10 +241,6 @@ class SceningToolbar(AbstractToolbar):
     def current_list(self) -> SceningList | None:
         return self.items_combobox.currentValue()
 
-    @current_list.setter
-    def current_list(self, item: SceningList) -> None:
-        self.items_combobox.setCurrentValue(item)
-
     @property
     def current_list_index(self) -> int:
         return self.items_combobox.currentIndex()
@@ -254,6 +251,7 @@ class SceningToolbar(AbstractToolbar):
             return self.items_combobox.setCurrentIndex(index)
         raise IndexError
 
+    @property
     def is_notches_visible(self) -> bool:
         return self.always_show_scene_marks_checkbox.isChecked() or self.toggle_button.isChecked()
 
@@ -328,7 +326,7 @@ class SceningToolbar(AbstractToolbar):
         if self.current_list is None:
             self.on_add_list_clicked()
 
-        assert self.current_list
+        assert self.current_list is not None
 
         self.current_list.add(self.main.current_output.last_showed_frame, label=self.label_lineedit.text())
 

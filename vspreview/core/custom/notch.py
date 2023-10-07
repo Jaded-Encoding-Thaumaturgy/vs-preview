@@ -1,10 +1,11 @@
 
 from __future__ import annotations
 
-from typing import Iterator, cast
+from typing import Iterable, Iterator, Sequence, TypeVar, cast
 
 from PyQt6.QtCore import QLineF, Qt
 from PyQt6.QtGui import QColor
+from vstools import fallback
 
 from ..types import Frame, Scene, Time
 
@@ -16,45 +17,71 @@ __all__ = [
 
 class Notch:
     def __init__(
-        self, data: Frame | Time, color: QColor = cast(QColor, Qt.GlobalColor.white),
-        label: str = '', line: QLineF = QLineF()
+        self, data: int | Frame | Time, color: QColor | Qt.GlobalColor | None = None,
+        label: str | None = None, line: QLineF = QLineF()
     ) -> None:
+        if isinstance(data, int):
+            data = Frame(data)
+
         self.data = data
-        self.color = color
-        self.label = label
+        self.color = cast(QColor, fallback(color, Qt.GlobalColor.white))
+        self.label = fallback(label, '')
         self.line = line
 
     def __repr__(self) -> str:
         return '{}({}, {}, {}, {})'.format(
-            type(self).__name__, repr(self.data), repr(self.color),
-            repr(self.label), repr(self.line))
+            type(self).__name__, repr(self.data), repr(self.color), repr(self.label), repr(self.line)
+        )
+
+    @classmethod
+    def from_param(
+        cls: type[NotchSelf], data: NotchT, color: QColor | Qt.GlobalColor | None = None, label: str | None = None
+    ) -> Iterable[NotchSelf]:
+        if isinstance(data, Notch):
+            yield Notch(data.data, color if data.color is None else data.color, data.label or label, data.line)
+            return
+
+        if isinstance(data, Scene):
+            if not label:
+                label = data.label
+
+            yield Notch(data.start, color, label)
+
+            if data.end != data.start:
+                yield Notch(data.end, color, label)
+
+            return
+
+        if isinstance(data, (int, Frame, Time)):
+            yield Notch(data, color, label)
+            return
+
+        raise TypeError
+
+
+NotchT = int | Frame | Scene | Time | Notch
+NotchSelf = TypeVar('NotchSelf', bound=Notch)
 
 
 class Notches:
-    def __init__(self, other: Notches | None = None) -> None:
+    def __init__(
+        self, other: Sequence[NotchT] | Notches | None = None,
+        color: QColor | Qt.GlobalColor | None = None, label: str | None = None
+    ) -> None:
         self.items = list[Notch]()
 
-        if other is None:
+        if isinstance(other, Notches):
+            self.items = list(other.items)
             return
-        self.items = other.items
+
+        if isinstance(other, Sequence):
+            for notch in other:
+                self.add(notch, color, label)
 
     def add(
-        self, data: Frame | Scene | Time | Notch,
-        color: QColor = cast(QColor, Qt.GlobalColor.white),
-        label: str = ''
+        self, data: NotchT, color: QColor | Qt.GlobalColor | None = None, label: str | None = None
     ) -> None:
-        if isinstance(data, Notch):
-            self.items.append(data)
-        elif isinstance(data, Scene):
-            if label == '':
-                label = data.label
-            self.items.append(Notch(data.start, color, label))
-            if data.end != data.start:
-                self.items.append(Notch(data.end, color, label))
-        elif isinstance(data, (Frame, Time)):
-            self.items.append(Notch(data, color, label))
-        else:
-            raise TypeError
+        self.items.extend(Notch.from_param(data, color, label))
 
     def __len__(self) -> int:
         return len(self.items)

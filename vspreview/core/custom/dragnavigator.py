@@ -94,11 +94,8 @@ class DragNavigator(QWidget):
         self.repaint_timer.stop()
 
     def paintEvent(self, event: QPaintEvent) -> None:
-        if (
-            (self.contentsW == 0) or (self.contentsH == 0)
-            or (self.viewportW == 0) or (self.viewportH == 0)
-            or (self.viewportX >= self.contentsW) or (self.viewportY >= self.contentsH)
-        ):
+        if (self.contentsW == 0) or (self.contentsH == 0) or (self.viewportW == 0) or \
+                (self.viewportH == 0) or (self.viewportX >= self.contentsW) or (self.viewportY >= self.contentsH):
             event.ignore()
             return
 

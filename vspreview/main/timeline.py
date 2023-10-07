@@ -7,7 +7,7 @@ from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
 from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
 
-from ..core import AbstractToolbar, AbstractYAMLObject, Frame, Notch, Notches, Time, VideoOutput, main_window
+from ..core import NotchProvider, AbstractYAMLObject, Frame, Notch, Notches, Time, VideoOutput, main_window
 from ..utils import strfdelta
 
 __all__ = [
@@ -68,7 +68,7 @@ class Timeline(QWidget):
         # False means that only cursor position'll be recalculated
         self.need_full_repaint = True
 
-        self.toolbars_notches = dict[AbstractToolbar, Notches]()
+        self.notches = dict[NotchProvider, Notches]()
 
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setMouseTracking(True)
@@ -121,8 +121,8 @@ class Timeline(QWidget):
                 self.rect_f.width(), self.scroll_height
             )
 
-            for toolbar, notches in self.toolbars_notches.items():
-                if not toolbar.is_notches_visible():
+            for provider, notches in self.notches.items():
+                if not provider.is_notches_visible:
                     continue
 
                 for notch in notches:
@@ -182,8 +182,8 @@ class Timeline(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.fillRect(self.scroll_rect, Qt.GlobalColor.gray)
 
-        for toolbar, notches in self.toolbars_notches.items():
-            if not toolbar.is_notches_visible():
+        for provider, notches in self.notches.items():
+            if not provider.is_notches_visible:
                 continue
 
             for notch in notches:
@@ -212,8 +212,8 @@ class Timeline(QWidget):
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
-        for toolbar, notches in self.toolbars_notches.items():
-            if not toolbar.is_notches_visible():
+        for provider, notches in self.notches.items():
+            if not provider.is_notches_visible:
                 continue
             for notch in notches:
                 line = notch.line
@@ -233,12 +233,14 @@ class Timeline(QWidget):
 
         return super().event(event)
 
-    def update_notches(self, toolbar: AbstractToolbar | None = None) -> None:
-        if toolbar is not None:
-            self.toolbars_notches[toolbar] = toolbar.get_notches()
-        if toolbar is None:
+    def update_notches(self, provider: NotchProvider | None = None) -> None:
+        if provider is not None:
+            self.notches[provider] = provider.get_notches()
+        else:
             for t in self.main.toolbars:
-                self.toolbars_notches[t] = t.get_notches()
+                self.notches[t] = t.get_notches()
+            for t in self.main.plugins:
+                self.notches[t] = t.get_notches()
         self.full_repaint()
 
     @property

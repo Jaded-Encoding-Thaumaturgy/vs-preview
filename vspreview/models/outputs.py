@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Generic, Iterator, Mapping, OrderedDict, 
 import vapoursynth as vs
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
-from ..core import AudioOutput, QYAMLObject, VideoOutput, VideoOutputNode, main_window, try_load
+from ..core import AudioOutput, QYAMLObject, VideoOutput, main_window, try_load
 
 if TYPE_CHECKING:
     from ..main import MainWindow
@@ -47,8 +47,6 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
         outputs = OrderedDict(sorted(vs.get_outputs().items()))
 
-        main.reload_signal.connect(self.clear_outputs)
-
         for i, vs_output in outputs.items():
             if not isinstance(vs_output, self.vs_type):
                 continue
@@ -64,8 +62,8 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         self._items = list(self.items)
 
     def clear_outputs(self) -> None:
-        for o in self.items:
-            o.clear()
+        for output in (*self.items, *self._items):
+            output.clear()
 
     def __getitem__(self, i: int) -> T:
         return self.items[i]
@@ -88,6 +86,7 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
         return len(self.items) - 1
 
     def clear(self) -> None:
+        self.clear_outputs()
         self.beginRemoveRows(QModelIndex(), 0, len(self.items))
         self.items.clear()
         self._items.clear()
@@ -150,50 +149,6 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 class VideoOutputs(Outputs[VideoOutput]):
     out_type = VideoOutput
     vs_type = vs.VideoOutputTuple
-
-    _fft_spectr_items = list[VideoOutput]()
-
-    def copy_output_props(self, new: VideoOutput, old: VideoOutput) -> None:
-        new.last_showed_frame = old.last_showed_frame
-        new.name = old.name
-
-    def get_new_output(self, new_clip: vs.VideoNode, old_output: VideoOutput) -> VideoOutput:
-        new_videonode = VideoOutputNode(new_clip, old_output.source.alpha)
-
-        new_output = VideoOutput(new_videonode, old_output.index, False)
-
-        self.copy_output_props(new_output, old_output)
-
-        return new_output
-
-    def switchToNormalView(self) -> None:
-        for new, old in zip(self._items, self.items):
-            self.copy_output_props(new, old)
-
-        self.items = list(self._items)
-
-    def switchToFFTSpectrumView(self, force_cache: bool = False) -> None:
-        try:
-            from vsdfft.spectrum import FFTSpectrum
-        except ModuleNotFoundError:
-            raise RuntimeError(
-                'vspreview: You can\'t change to this view mode. You\'re missing the `vsdfft` package!'
-            )
-
-        if not self._fft_spectr_items or force_cache:
-            max_width = max(*(x.width for x in self._items), 140)
-            max_height = max(*(x.height for x in self._items), 140)
-
-            self._fft_spectr_items = [
-                self.get_new_output(
-                    FFTSpectrum(old.source.clip, target_size=(max_width, max_height)), old
-                ) for old in self._items
-            ]
-        else:
-            for new, old in zip(self._fft_spectr_items, self.items):
-                self.copy_output_props(new, old)
-
-        self.items = self._fft_spectr_items
 
 
 class AudioOutputs(Outputs[AudioOutput]):

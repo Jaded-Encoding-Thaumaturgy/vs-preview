@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, Time, TimeEdit, try_load
+from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, Time, TimeEdit, try_load, SpinBox
 
 __all__ = [
     'BenchmarkSettings'
@@ -18,6 +18,8 @@ class BenchmarkSettings(AbstractToolbarSettings):
     )
 
     def setup_ui(self) -> None:
+        from ...main import MainSettings
+
         super().setup_ui()
 
         self.clear_cache_checkbox = CheckBox('Clear VS frame caches before each run', self)
@@ -26,21 +28,32 @@ class BenchmarkSettings(AbstractToolbarSettings):
 
         self.refresh_interval_control = TimeEdit(self)
 
+        self.default_usable_cpus_spinbox = SpinBox(self, 1, MainSettings.get_usable_cpus_count())
+
         self.vlayout.addWidgets([
             self.clear_cache_checkbox,
             self.frame_data_sharing_fix_checkbox
         ])
         self.vlayout.addLayout(
             HBoxLayout([
-                QLabel('Refresh interval', self),
+                QLabel('Refresh interval'),
                 self.refresh_interval_control
+            ])
+        )
+        self.vlayout.addLayout(
+            HBoxLayout([
+                QLabel('Default usable CPUs count'),
+                self.default_usable_cpus_spinbox
             ])
         )
 
     def set_defaults(self) -> None:
+        from ...main import MainSettings
+
         self.clear_cache_checkbox.setChecked(False)
         self.refresh_interval_control.setValue(Time(milliseconds=150))
         self.frame_data_sharing_fix_checkbox.setChecked(True)
+        self.default_usable_cpus_spinbox.setValue(max(1, MainSettings.get_usable_cpus_count() // 2))
 
     @property
     def clear_cache_enabled(self) -> bool:
@@ -53,6 +66,10 @@ class BenchmarkSettings(AbstractToolbarSettings):
     @property
     def frame_data_sharing_fix_enabled(self) -> bool:
         return self.frame_data_sharing_fix_checkbox.isChecked()
+
+    @property
+    def default_usable_cpus_count(self) -> int:
+        return self.default_usable_cpus_spinbox.value()
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 
 from ...core import (
     AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time, VBoxLayout,
-    ViewMode, try_load
+    try_load
 )
 from ...core.custom import ComboBox, Switch
 from ...models import GeneralModel
@@ -33,8 +33,7 @@ class MiscToolbar(AbstractToolbar):
         'toggle_button', 'save_file_types', 'copy_frame_button',
         'crop_top_spinbox', 'crop_left_spinbox', 'crop_width_spinbox',
         'crop_bottom_spinbox', 'crop_right_spinbox', 'crop_height_spinbox',
-        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button',
-        'view_mode_layout', 'view_mode_combox'
+        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button'
     )
 
     settings: MiscSettings
@@ -95,20 +94,6 @@ class MiscToolbar(AbstractToolbar):
             HBoxLayout([self.save_frame_as_button, self.save_template_lineedit, Stretch()])
         ])
 
-        self.view_mode_combox = ComboBox[str](
-            self, model=GeneralModel[str]([str(x.value) for x in ViewMode], False),
-            currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
-        )
-        self.view_mode_combox.currentTextChanged.connect(
-            lambda mode: self.main.change_video_viewmode(ViewMode(mode))
-        )
-
-        self.view_mode_layout = VBoxLayout(self.hlayout, [
-            HBoxLayout([QLabel('View mode:'), self.view_mode_combox]),
-        ])
-
-        self.view_mode_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
         self.hlayout.addStretch()
         self.hlayout.addStretch()
 
@@ -165,17 +150,9 @@ class MiscToolbar(AbstractToolbar):
         self.main.add_shortcut(
             QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click
         )
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_F).toCombined(),
-            lambda: self.view_mode_combox.setCurrentText(
-                ViewMode.FFTSPECTRUM if self.main.current_viewmode != ViewMode.FFTSPECTRUM else ViewMode.NORMAL
-            )
-        )
 
     def copy_frame_to_clipboard(self) -> None:
-        self.main.clipboard.setPixmap(
-            self.main.current_output.graphics_scene_item.pixmap()
-        )
+        self.main.clipboard.setPixmap(self.main.current_scene.pixmap())
         self.main.show_message('Current frame successfully copied to clipboard')
 
     def on_autosave_interval_changed(self, new_value: Time | None) -> None:
@@ -239,9 +216,7 @@ class MiscToolbar(AbstractToolbar):
             self.main.toolbars.debug.toggle_button.setVisible(False)
 
     def save_as_png(self, path: Path) -> None:
-        self.main.current_output.graphics_scene_item.pixmap().save(
-            str(path), 'PNG', self.main.settings.png_compression_level
-        )
+        self.main.current_scene.pixmap().save(str(path), 'PNG', self.main.settings.png_compression_level)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         if index != prev_index:
@@ -279,7 +254,7 @@ class MiscToolbar(AbstractToolbar):
             self.crop_top_spinbox.value(), self.crop_left_spinbox.value(),
             self.crop_width_spinbox.value(), self.crop_height_spinbox.value(),
             self.crop_active_switch.isChecked(), bool(self.crop_mode_combox.currentIndex())
-        ))
+        ), graphics_scene_item=self.main.current_output.graphics_scene_item)
 
     def crop_active_onchange(self, checked: bool) -> None:
         is_absolute = not not self.crop_mode_combox.currentIndex()

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import sys
 import atexit
 import runpy
+import sys
 from concurrent.futures import Future
 from threading import Lock
 from typing import Any, Callable, TypeVar
 
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
+from vapoursynth import LogHandle
 from vsengine.loops import EventLoop, set_loop  # type: ignore[import]
 from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ignore[import]
 
@@ -20,7 +21,7 @@ __all__ = [
 
     'set_vsengine_loop',
     'get_current_environment',
-    'make_environment'
+    'make_environment', 'dispose_environment'
 ]
 
 
@@ -123,12 +124,41 @@ def set_vsengine_loop() -> None:
     set_loop(PyQTLoop())
 
 
+current_log: LogHandle | None = None
+
+
 def make_environment() -> None:
-    global environment
+    global environment, current_log
     assert policy is not None
+
+    if environment and current_log:
+        environment.core.remove_log_handler(current_log)
+
     environment = policy.new_environment()
-    environment.core.add_log_handler(get_vs_logger())
+    current_log = environment.core.add_log_handler(get_vs_logger())
     environment.switch()
+
+
+def dispose_environment(env: ManagedEnvironment) -> None:
+    import logging
+
+    from vstools.utils.vs_proxy import _finalize_core
+
+    if current_log:
+        env.core.remove_log_handler(current_log)
+
+    _finalize_core(env._environment.env_id, id(env.core), True)
+
+    if logging.getLogger().level <= logging.DEBUG:
+        from gc import get_referrers
+
+        # There has to be the environment referencing it
+        ref_count = len(get_referrers(env.core)) - 1
+
+        if ref_count:
+            logging.debug(f'Core {id(env.core)} is being held reference by {ref_count} objects!')
+
+    env.dispose()
 
 
 policy: Policy = Policy(GlobalStore())
@@ -145,8 +175,12 @@ def get_current_environment() -> ManagedEnvironment:
 
 
 def _dispose() -> None:
+    global current_log
+
     if environment:
-        environment.dispose()
+        dispose_environment(environment)
+
+    current_log = None
 
 
 atexit.register(_dispose)

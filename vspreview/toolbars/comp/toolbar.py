@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast, Mapping
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QKeyCombination, Qt, QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QKeyCombination, QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QLabel
 
 from ...core import (
@@ -154,14 +154,8 @@ class Worker(QObject):
         from concurrent.futures import ThreadPoolExecutor
         from uuid import uuid4
 
-        try:
-            from requests import Session
-            from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                'You are missing `requests` and `requests` toolbelt!\n'
-                'Install them with "pip install requests requests_toolbelt"!'
-            )
+        from requests import Session
+        from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
 
         all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
@@ -352,6 +346,10 @@ class CompToolbar(AbstractToolbar):
         self.set_qobject_names()
 
         self.add_shortcuts()
+
+        self.tag_data_cache = None
+
+        self.cache_state = None
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -645,19 +643,29 @@ class CompToolbar(AbstractToolbar):
     def on_public_toggle(self, new_state: bool) -> None:
         if not new_state or self.tag_data:
             return
-        try:
-            from requests import Session
 
-            with Session() as sess:
-                sess.get('https://slow.pics/comparison')
+        if self.tag_data_cache is None or self.cache_state in ["ImportError", "Exception"]:
+            try:
+                from requests import Session
 
-                api_resp = sess.get("https://slow.pics/api/tags", headers=_get_slowpic_headers(0, "application/json", sess)).json()
+                with Session() as sess:
+                    sess.get('https://slow.pics/comparison')
 
-                self.tag_data = {data["label"]: data["value"] for data in api_resp}
-        except ImportError:
-            self.tag_data = {"Missing requests": "Missing requests"}
-        except Exception:
-            self.tag_data = {"No Internet": "No Internet"}
+                    api_resp = sess.get("https://slow.pics/api/tags").json()
+
+                    self.tag_data = {data["label"]: data["value"] for data in api_resp}
+
+                    self.tag_data_cache = self.tag_data
+                    self.cache_state = "Success"
+
+            except ImportError:
+                self.tag_data = {"Missing requests": "Missing requests"}
+                self.cache_state = "ImportError"
+            except Exception:
+                self.tag_data = {"Network error": "Network error"}
+                self.cache_state = "Exception"
+        else:
+            self.tag_data = self.tag_data_cache
 
         self.update_tags()
 
@@ -875,9 +883,7 @@ class CompToolbar(AbstractToolbar):
 
         filtered_outputs = []
         for output in self.main.outputs:
-            props = output.source.clip.get_frame(check_frame).props
-
-            if '_VSPDisableComp' in props and props._VSPDisableComp == 1:
+            if output.info.get('disable_comp', False):
                 continue
 
             filtered_outputs.append(output)
@@ -893,9 +899,7 @@ class CompToolbar(AbstractToolbar):
 
     def upload_to_slowpics(self) -> bool:
         try:
-            self.main.current_output.graphics_scene_item.setPixmap(
-                self.main.current_output.graphics_scene_item.pixmap().copy()
-            )
+            self.main.current_scene.setPixmap(self.main.current_scene.pixmap().copy())
 
             if hasattr(self, 'upload_thread'):
                 self._old_threads_workers.append(self.upload_thread)

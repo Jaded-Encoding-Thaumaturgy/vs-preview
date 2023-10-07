@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from enum import IntEnum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import (
-    QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPixmap, QResizeEvent, QTransform, QWheelEvent
+    QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPalette, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
-from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QGraphicsView, QWidget
+from PyQt6.QtWidgets import (
+    QApplication, QFrame, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QSizePolicy, QWidget
+)
 
 if TYPE_CHECKING:
     from ...main import MainWindow
@@ -17,7 +19,8 @@ if TYPE_CHECKING:
 __all__ = [
     'DragEventType',
     'GraphicsView',
-    'GraphicsImageItem'
+    'GraphicsImageItem',
+    'MainVideoOutputGraphicsView'
 ]
 
 
@@ -26,160 +29,6 @@ class DragEventType(IntEnum):
     stop = auto()
     move = auto()
     repaint = auto()
-
-
-class GraphicsView(QGraphicsView):
-    WHEEL_STEP = 15 * 8  # degrees
-
-    __slots__ = ('app', 'angleRemainder', 'zoomValue',)
-
-    mouseMoved = pyqtSignal(QMouseEvent)
-    mousePressed = pyqtSignal(QMouseEvent)
-    mouseReleased = pyqtSignal(QMouseEvent)
-    wheelScrolled = pyqtSignal(int)
-    dragEvent = pyqtSignal(DragEventType)
-    drag_mode: QGraphicsView.DragMode
-
-    underReload = False
-    last_positions = (0, 0)
-
-    autofit = False
-    main: MainWindow
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-
-        self.app = QApplication.instance()
-        self.angleRemainder = 0
-        self.zoomValue = 0.0
-        self.currentZoom = 0.0
-        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.drag_mode = self.dragMode()
-
-    def setZoom(self, value: float | None) -> None:
-        if self.underReload or value == 0:
-            return
-
-        if value is None:
-            if self.autofit:
-                viewport = self.viewport()
-                value = min(
-                    viewport.width() / self.main.current_output.width,
-                    viewport.height() / self.main.current_output.height
-                )
-            else:
-                return
-
-        self.currentZoom = value / self.devicePixelRatio()
-
-        self.setTransform(QTransform().scale(self.currentZoom, self.currentZoom))
-        self.dragEvent.emit(DragEventType.repaint)
-
-    def event(self, event: QEvent) -> bool:
-        if self.underReload:
-            event.ignore()
-            return False
-
-        if isinstance(event, QNativeGestureEvent):
-            typ = event.gestureType()
-            if typ == Qt.NativeGestureType.BeginNativeGesture:
-                self.zoomValue = 0.0
-            elif typ == Qt.NativeGestureType.ZoomNativeGesture:
-                self.zoomValue += event.value()
-            if typ == Qt.NativeGestureType.EndNativeGesture:
-                self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
-
-        return super().event(event)
-
-    def wheelEvent(self, event: QWheelEvent) -> None:
-        if self.underReload or self.autofit:
-            return event.ignore()
-
-        assert self.app
-
-        modifier = event.modifiers()
-        mouse = event.buttons()
-
-        if modifier == Qt.KeyboardModifier.ControlModifier or mouse in {
-            Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton
-        }:
-            angleDelta = event.angleDelta().y()
-
-            # check if wheel wasn't rotated the other way since last rotation
-            if self.angleRemainder * angleDelta < 0:
-                self.angleRemainder = 0
-
-            self.angleRemainder += angleDelta
-
-            if abs(self.angleRemainder) >= self.WHEEL_STEP:
-                self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
-                self.angleRemainder %= self.WHEEL_STEP
-            return
-        elif modifier == Qt.KeyboardModifier.NoModifier:
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().y())
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().x())
-            return
-        elif modifier == Qt.KeyboardModifier.ShiftModifier:
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().x())
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().y())
-            return
-
-        event.ignore()
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self.underReload or self.autofit:
-            return event.ignore()
-
-        super().mouseMoveEvent(event)
-
-        if self.hasMouseTracking():
-            self.mouseMoved.emit(event)
-        self.dragEvent.emit(DragEventType.move)
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if self.underReload or self.autofit:
-            return event.ignore()
-
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_mode = self.dragMode()
-            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-
-        super().mousePressEvent(event)
-
-        self.mousePressed.emit(event)
-        self.dragEvent.emit(DragEventType.start)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if self.underReload or self.autofit:
-            return event.ignore()
-
-        super().mouseReleaseEvent(event)
-
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.setDragMode(self.drag_mode)
-
-        self.mouseReleased.emit(event)
-        self.dragEvent.emit(DragEventType.stop)
-
-    def beforeReload(self) -> None:
-        self.underReload = True
-        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
-        self.last_positions = (self.verticalScrollBar().value(), self.horizontalScrollBar().value())
-
-    def afterReload(self) -> None:
-        self.underReload = False
-        self.verticalScrollBar().setValue(self.last_positions[0])
-        self.horizontalScrollBar().setValue(self.last_positions[1])
-        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-
-    def registerReloadEvents(self, main: MainWindow) -> None:
-        self.main = main
-        self.main.reload_before_signal.connect(self.beforeReload)
-        self.main.reload_after_signal.connect(self.afterReload)
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        self.setZoom(None)
 
 
 class GraphicsImageItem:
@@ -219,3 +68,285 @@ class GraphicsImageItem:
 
     def show(self) -> None:
         self._graphics_item.show()
+
+
+class GraphicsScene(QGraphicsScene):
+    def __init__(self, view: GraphicsView) -> None:
+        self.view = view
+        self.main = self.view.main
+
+        self.graphics_items = list[GraphicsImageItem]()
+
+        super().__init__(self.main)
+
+    def init_scenes(self) -> None:
+        self.clear()
+        self.graphics_items.clear()
+
+        for _ in range(len(self.main.outputs)):
+            raw_frame_item = self.addPixmap(QPixmap())
+            raw_frame_item.hide()
+
+            self.graphics_items.append(GraphicsImageItem(raw_frame_item))
+
+    @property
+    def current_scene(self) -> GraphicsImageItem:
+        return self.graphics_items[self.main.current_output.index]
+
+
+class GraphicsView(QGraphicsView):
+    WHEEL_STEP = 15 * 8  # degrees
+
+    __slots__ = ('app', 'angleRemainder', 'zoomValue',)
+
+    mouseMoved = pyqtSignal(QMouseEvent)
+    mousePressed = pyqtSignal(QMouseEvent)
+    mouseReleased = pyqtSignal(QMouseEvent)
+    wheelScrolled = pyqtSignal(int)
+    dragEvent = pyqtSignal(DragEventType)
+    drag_mode: QGraphicsView.DragMode
+
+    underReload = False
+    last_positions = (0, 0)
+
+    _autofit = False
+    main: MainWindow
+
+    def __init__(self, main: MainWindow, parent: QWidget | None = None) -> None:
+        from ...core import CheckBox, HBoxLayout
+        from .combobox import ComboBox
+
+        super().__init__(parent)
+
+        self.main = main
+
+        self.app = QApplication.instance()
+        self.angleRemainder = 0
+        self.zoomValue = 0.0
+        self.currentZoom = 0.0
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.drag_mode = self.dragMode()
+
+        self.setBackgroundBrush(self.main.palette().brush(QPalette.ColorRole.Window))
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+
+        if self.main.settings.opengl_rendering_enabled:
+            from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+            self.setViewport(QOpenGLWidget())
+
+        self.wheelScrolled.connect(self.on_wheel_scrolled)
+        self.main.reload_before_signal.connect(self.beforeReload)
+        self.main.reload_after_signal.connect(self.afterReload)
+
+        self.graphics_scene = GraphicsScene(self)
+        self.setScene(self.graphics_scene)
+
+        self.zoom_combobox = ComboBox[float](self, minimumContentsLength=4)
+
+        self.auto_fit_button = CheckBox('Auto-fit', self, clicked=self.auto_fit_button_clicked)
+
+        self.controls = QFrame()
+        HBoxLayout(self.controls, [self.zoom_combobox, self.auto_fit_button])
+
+        self.main.register_graphic_view(self)
+
+        self.dragEvent.connect(self.propagate_move_event)
+
+    def auto_fit_button_clicked(self, checked: bool) -> None:
+        self.autofit = checked
+
+    @property
+    def current_scene(self) -> GraphicsImageItem:
+        return self.graphics_scene.current_scene
+
+    @property
+    def autofit(self) -> bool:
+        return self._autofit
+
+    @autofit.setter
+    def autofit(self, new_state: bool) -> None:
+        self.zoom_combobox.setEnabled(not new_state)
+
+        self._autofit = new_state
+
+        if new_state:
+            self.setZoom(None)
+        else:
+            self.setZoom(self.zoom_combobox.currentData())
+
+    def bind_to(self, other_view: GraphicsView, *, mutual: bool = True) -> None:
+        self.main.bound_graphics_views[other_view].add(self)
+
+        if mutual:
+            self.main.bound_graphics_views[self].add(other_view)
+
+    def on_wheel_scrolled(self, steps: int) -> None:
+        new_index = self.zoom_combobox.currentIndex() + steps
+
+        if new_index < 0:
+            new_index = 0
+        elif new_index >= len(self.main.settings.zoom_levels):
+            new_index = len(self.main.settings.zoom_levels) - 1
+
+        self.zoom_combobox.setCurrentIndex(new_index)
+
+    def setZoom(self, value: float | None) -> None:
+        for view in self.main.bound_graphics_views[self]:
+            view._setZoom(value)
+
+    def _setZoom(self, value: float | None) -> None:
+        if self.underReload or value == 0:
+            return
+
+        if value is None:
+            if not self.autofit:
+                return
+
+            viewport = self.viewport()
+            value = min(viewport.width() / self.content_width, viewport.height() / self.content_height)
+
+        self.currentZoom = value / self.devicePixelRatio()
+
+        self.setTransform(QTransform().scale(self.currentZoom, self.currentZoom))
+        self.dragEvent.emit(DragEventType.repaint)
+
+    def event(self, event: QEvent) -> bool:
+        if self.underReload:
+            event.ignore()
+            return False
+
+        if isinstance(event, QNativeGestureEvent):
+            typ = event.gestureType()
+            if typ == Qt.NativeGestureType.BeginNativeGesture:
+                self.zoomValue = 0.0
+            elif typ == Qt.NativeGestureType.ZoomNativeGesture:
+                self.zoomValue += event.value()
+            if typ == Qt.NativeGestureType.EndNativeGesture:
+                self.wheelScrolled.emit(-1 if self.zoomValue < 0 else 1)
+
+        return super().event(event)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        if self.underReload or self.autofit:
+            return event.ignore()
+
+        assert self.app
+
+        modifier = event.modifiers()
+        mouse = event.buttons()
+
+        self.propagate_move_event()
+
+        if modifier == Qt.KeyboardModifier.ControlModifier or mouse in {
+            Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton
+        }:
+            angleDelta = event.angleDelta().y()
+
+            # check if wheel wasn't rotated the other way since last rotation
+            if self.angleRemainder * angleDelta < 0:
+                self.angleRemainder = 0
+
+            self.angleRemainder += angleDelta
+
+            if abs(self.angleRemainder) >= self.WHEEL_STEP:
+                self.wheelScrolled.emit(self.angleRemainder // self.WHEEL_STEP)
+                self.angleRemainder %= self.WHEEL_STEP
+            return
+        elif modifier == Qt.KeyboardModifier.NoModifier:
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().y())
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().x())
+            return
+        elif modifier == Qt.KeyboardModifier.ShiftModifier:
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - event.angleDelta().x())
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - event.angleDelta().y())
+            return
+
+        event.ignore()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.underReload or self.autofit:
+            return event.ignore()
+
+        super().mouseMoveEvent(event)
+
+        if self.hasMouseTracking():
+            self.mouseMoved.emit(event)
+
+        self.dragEvent.emit(DragEventType.move)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if self.underReload or self.autofit:
+            return event.ignore()
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.drag_mode = self.dragMode()
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+
+        super().mousePressEvent(event)
+
+        self.mousePressed.emit(event)
+        self.dragEvent.emit(DragEventType.start)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self.underReload or self.autofit:
+            return event.ignore()
+
+        super().mouseReleaseEvent(event)
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setDragMode(self.drag_mode)
+
+        self.mouseReleased.emit(event)
+        self.dragEvent.emit(DragEventType.stop)
+
+    def beforeReload(self) -> None:
+        self.underReload = True
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+        self.last_positions = (self.verticalScrollBar().value(), self.horizontalScrollBar().value())
+
+    def afterReload(self) -> None:
+        self.underReload = False
+        self.verticalScrollBar().setValue(self.last_positions[0])
+        self.horizontalScrollBar().setValue(self.last_positions[1])
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.setZoom(None)
+
+    def propagate_move_event(self, _: Any = None) -> None:
+        scrollbarW, scrollbarH = self.horizontalScrollBar(), self.verticalScrollBar()
+
+        if not any({scrollbarW.isVisible(), scrollbarH.isVisible()}):
+            return
+
+        widthMax, heightMax = scrollbarW.maximum(), scrollbarH.maximum()
+
+        for view in self.main.bound_graphics_views[self] - {self}:
+            if view.isVisible():
+                wBar, hBar = view.horizontalScrollBar(), view.verticalScrollBar()
+
+                if widthMax:
+                    wBar.setValue(int(scrollbarW.value() * wBar.maximum() / widthMax))
+
+                if heightMax:
+                    hBar.setValue(int(scrollbarH.value() * hBar.maximum() / heightMax))
+
+    @property
+    def content_width(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def content_height(self) -> int:
+        raise NotImplementedError
+
+
+class MainVideoOutputGraphicsView(GraphicsView):
+    @property
+    def content_width(self) -> int:
+        return self.main.current_output.width
+
+    @property
+    def content_height(self) -> int:
+        return self.main.current_output.height

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QComboBox
 from ...core import (
     AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, PushButton, Time, TimeEdit, VideoOutput, try_load
 )
-from ...models import GeneralModel, VideoOutputs
+from ...models import VideoOutputs
 from ...utils import qt_silent_call
 
 if TYPE_CHECKING:
@@ -28,12 +28,11 @@ class MainToolbar(AbstractToolbar):
     __slots__ = (
         *storable_attrs,
         'outputs_combobox', 'frame_control', 'copy_frame_button',
-        'time_control', 'copy_timestamp_button', 'zoom_combobox',
+        'time_control', 'copy_timestamp_button',
         'switch_timeline_mode_button', 'settings_button'
     )
 
     outputs: VideoOutputs | None
-    zoom_combobox: ComboBox[float]
 
     settings: MainSettings
 
@@ -42,9 +41,6 @@ class MainToolbar(AbstractToolbar):
         self.setup_ui()
 
         self.outputs = None
-
-        self.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
-        self.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
 
         self.add_shortcuts()
 
@@ -78,11 +74,6 @@ class MainToolbar(AbstractToolbar):
             'Sync Outputs', self, checked=self.settings.SYNC_OUTPUTS, clicked=self.on_sync_outputs_clicked
         )
 
-        self.auto_fit_button = CheckBox('Auto-fit', self, clicked=self.auto_fit_button_clicked)
-
-        self.zoom_combobox = ComboBox[float](self, minimumContentsLength=4)
-        self.zoom_combobox.currentTextChanged.connect(self.on_zoom_changed)
-
         self.switch_timeline_mode_button = PushButton(
             'Switch Timeline Mode', self, clicked=self.on_switch_timeline_mode_clicked
         )
@@ -95,7 +86,7 @@ class MainToolbar(AbstractToolbar):
             self.time_control, self.copy_timestamp_button,
             self.sync_outputs_checkbox,
             self.get_separator(),
-            self.auto_fit_button, self.zoom_combobox,
+            self.main.graphics_view.controls,
             self.switch_timeline_mode_button,
             self.settings_button
         ])
@@ -129,21 +120,19 @@ class MainToolbar(AbstractToolbar):
             return
 
         if checked:
+            from ...main.timeline import Timeline
+
             if not force_frame:
                 force_frame = self.main.current_output.last_showed_frame
 
-            for output in self.outputs:
-                output.last_showed_frame = output.to_frame(
-                    self.main.current_output.to_time(force_frame)
-                )
-
-    def auto_fit_button_clicked(self, checked: bool) -> None:
-        self.zoom_combobox.setEnabled(not checked)
-        self.main.graphics_view.autofit = checked
-        if checked:
-            self.main.graphics_view.setZoom(None)
-        else:
-            self.main.graphics_view.setZoom(self.zoom_combobox.currentData())
+            if self.main.timeline.mode == Timeline.Mode.TIME:
+                for output in self.outputs:
+                    output.last_showed_frame = output.to_frame(
+                        self.main.current_output.to_time(force_frame)
+                    )
+            else:
+                for output in self.outputs:
+                    output.last_showed_frame = force_frame
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         qt_silent_call(self.frame_control.setValue, frame)
@@ -156,9 +145,6 @@ class MainToolbar(AbstractToolbar):
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
         qt_silent_call(self.frame_control.setMaximum, self.main.current_output.total_frames - 1)
         qt_silent_call(self.time_control.setMaximum, self.main.current_output.total_time - Frame(1))
-
-        if self.main.graphics_view.autofit:
-            self.main.graphics_view.setZoom(None)
 
     def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
         self.outputs = outputs if isinstance(outputs, VideoOutputs) else VideoOutputs(self.main)
@@ -179,18 +165,13 @@ class MainToolbar(AbstractToolbar):
         elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
             self.main.timeline.mode = self.main.timeline.Mode.TIME
 
-    def on_zoom_changed(self, text: str | None = None) -> None:
-        self.main.graphics_view.setZoom(self.zoom_combobox.currentData())
-
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
             'current_output_index': self.outputs_combobox.currentIndex(),
-            'current_zoom_index': self.zoom_combobox.currentIndex(),
             'sync_outputs': self.sync_outputs_checkbox.isChecked()
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'outputs', VideoOutputs, self.rescan_outputs)
-        try_load(state, 'current_zoom_index', int, self.zoom_combobox.setCurrentIndex)
         try_load(state, 'current_output_index', int, self.main.switch_output)
         try_load(state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked)

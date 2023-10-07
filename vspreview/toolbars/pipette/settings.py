@@ -10,6 +10,8 @@ __all__ = [
 class PipetteSettings(AbstractToolbarSettings):
     __slots__ = ()
 
+    _add_to_tab = False
+
     def setup_ui(self) -> None:
         super().setup_ui()
 

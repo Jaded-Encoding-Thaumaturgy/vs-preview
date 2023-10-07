@@ -4,6 +4,7 @@ import io
 import logging
 import sys
 from fractions import Fraction
+from functools import partial
 from importlib import reload as reload_module
 from pathlib import Path
 from time import time
@@ -11,20 +12,17 @@ from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QByteArray, QEvent, QRectF, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QPalette, QPixmap, QShowEvent
-from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtWidgets import (
-    QApplication, QGraphicsScene, QGraphicsView, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
-)
+from PyQt6.QtCore import QEvent, QKeyCombination, QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
 
 from ..core import (
-    PRELOADED_MODULES, AbstractQItem, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem, GraphicsView, HBoxLayout,
-    QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput, ViewMode, _monkey_runpy_dicts,
-    get_current_environment, make_environment, try_load
+    PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
+    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
+    VBoxLayout, VideoOutput, _monkey_runpy_dicts, dispose_environment, get_current_environment, make_environment
 )
-from ..models import VideoOutputs
+from ..models import GeneralModel, VideoOutputs
 from ..plugins import Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -63,32 +61,33 @@ class CentralSplitter(QSplitter):
 
         self.main_window = main_window
 
+        self.splitterMoved.connect(self.on_splitter_moved)
+
         self.previous_position = 0
 
+    @property
     def current_position(self) -> int:
         return self.sizes()[-1]
 
-    def moveSplitter(self, pos: int, index: int) -> None:
+    def on_splitter_moved(self) -> None:
         if self.previous_position == 0 and self.current_position:
-            self.main_window.plugins.on_current_frame_changed(
-                self.main_window.current_output.last_showed_frame
-            )
-            self.main_window.plugins.on_current_output_changed(
-                self.main_window.current_output.index, self.main_window.current_output.index
-            )
-        return super().moveSplitter(pos, index)
+            self.main_window.plugins.update()
+
+        self.previous_position = self.current_position
 
 
 class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
-    current_viewmode: ViewMode
-
     VSP_DIR_NAME = '.vspreview'
     VSP_GLOBAL_DIR_NAME = Path(
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
     )
 
-    VSP_VERSION = 3.1
-    BREAKING_CHANGES_VERSIONS = list[str](['3.0'])
+    global_config_dir = VSP_GLOBAL_DIR_NAME / VSP_DIR_NAME
+    global_storage_path = global_config_dir / '.global.yml'
+    global_plugins_dir = global_config_dir / 'plugins'
+
+    VSP_VERSION = 3.2
+    BREAKING_CHANGES_VERSIONS = list[str](['3.0', '3.1'])
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
@@ -101,47 +100,55 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     __slots__ = (
         *storable_attrs, 'app', 'display_scale', 'clipboard',
         'script_path', 'timeline', 'main_layout', 'autosave_timer',
-        'graphics_scene', 'graphics_view', 'script_error_dialog',
+        'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
-        'current_storage_path', 'opengl_widget', 'drag_navigator'
+        'current_storage_path'
     )
 
     # emit when about to reload a script: clear all existing references to existing clips.
     reload_signal = pyqtSignal()
     reload_before_signal = pyqtSignal()
     reload_after_signal = pyqtSignal()
+    cropValuesChanged = pyqtSignal(CroppingInfo)
 
     toolbars: Toolbars
     plugins: Plugins
     app_settings: SettingsDialog
-    window_settings: WindowSettings
+    window_settings = WindowSettings()
 
     autosave_timer: Timer
 
-    def __init__(self, config_dir: Path) -> None:
+    def __init__(self, config_dir: Path, no_exit: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
 
+        self.no_exit = no_exit
+
         self.settings = MainSettings(MainToolbar)
 
         self.current_config_dir = config_dir / self.VSP_DIR_NAME
-        self.global_config_dir = self.VSP_GLOBAL_DIR_NAME / self.VSP_DIR_NAME
-        self.global_storage_path = self.global_config_dir / '.global.yml'
+        self.global_plugins_dir.mkdir(parents=True, exist_ok=True)
 
         self.app = cast(QApplication, QApplication.instance())
         assert self.app
 
         self.last_reload_time = time()
 
+        self.bound_graphics_views = dict[GraphicsView, set[GraphicsView]]()
+
         if self.settings.dark_theme_enabled:
+            from ..core import apply_plotting_style
+
             try:
                 from qdarkstyle import _load_stylesheet  # type: ignore[import]
             except ImportError:
                 self.settings.dark_theme_enabled = False
             else:
+                apply_plotting_style()
                 self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
-                self.ensurePolished()
+
+        self.ensurePolished()
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')
@@ -158,8 +165,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         ]()
         self.norm_timecodes = dict[int, list[float]]()
 
-        self.user_output_names = {
-            vs.VideoNode: dict[int, str](), vs.AudioNode: dict[int, str](), vs.RawNode: dict[int, str]()
+        self.user_output_info = {
+            vs.VideoNode: dict[int, dict[str, Any]](),
+            vs.AudioNode: dict[int, dict[str, Any]](),
+            vs.RawNode: dict[int, dict[str, Any]]()
         }
 
         # global
@@ -168,19 +177,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.script_path = Path()
         self.script_exec_failed = False
         self.current_storage_path = Path()
-
-        # graphics view
-        self.graphics_scene = QGraphicsScene(self)
-        self.graphics_view.setScene(self.graphics_scene)
-        self.opengl_widget = None
-
-        if self.settings.opengl_rendering_enabled:
-            self.opengl_widget = QOpenGLWidget()
-            self.graphics_view.setViewport(self.opengl_widget)
-
-        self.graphics_view.wheelScrolled.connect(self.on_wheel_scrolled)
-
-        self.graphics_view.registerReloadEvents(self)
 
         # timeline
         self.timeline.clicked.connect(self.on_timeline_clicked)
@@ -205,8 +201,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
         )
 
-        self.current_viewmode = ViewMode.NORMAL
-
         self.set_qobject_names()
         self.setObjectName('MainWindow')
 
@@ -217,23 +211,19 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.main_layout = VBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
-        self.graphics_view = GraphicsView(self.central_widget)
-        self.graphics_view.setBackgroundBrush(self.palette().brush(QPalette.ColorRole.Window))
-        self.graphics_view.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.graphics_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.graphics_view = MainVideoOutputGraphicsView(self, self.central_widget)
 
-        self.drag_navigator = DragNavigator(self, self.graphics_view)
+        DragNavigator(self, self.graphics_view)
 
         self.timeline = Timeline(self.central_widget)
 
-        self.plugins_tab_widget = QTabWidget(self.central_widget)
+        self.plugins_tab = QTabWidget(self.central_widget)
+        self.plugins_tab.currentChanged.connect(lambda x: self.plugins.update())
 
         self.main_split = CentralSplitter(self, QtCore.Qt.Orientation.Horizontal)
         self.main_split.addWidget(self.graphics_view)
-        self.main_split.addWidget(self.plugins_tab_widget)
-        self.main_split.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
-        )
+        self.main_split.addWidget(self.plugins_tab)
+        self.main_split.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         HBoxLayout(self.main_layout, [self.main_split])
         self.main_layout.addWidget(self.timeline)
@@ -257,6 +247,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.autosave_timer = Timer(timeout=self.dump_storage_async)
         self.reload_signal.connect(self.autosave_timer.stop)
+
+        QShortcut(
+            QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_A).toCombined()),
+            self, activated=self.auto_fit_keyswitch
+        )
+
+    def auto_fit_keyswitch(self) -> None:
+        for view in self.graphics_views:
+            if view.underMouse():
+                view.autofit = not view.autofit
+                break
 
     def patch_dark_stylesheet(self, stylesheet: str) -> str:
         return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
@@ -342,7 +343,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 module_name="__vspreview__"
             ).result()
             self.env.module.__dict__['_monkey_runpy'] = random()
-            self.env = vpy.script(script_path, environment=self.env).result()
+            self.env = vpy.script(self.script_path, environment=self.env).result()
         except vpy.ExecutionFailed as e:
             from traceback import TracebackException
 
@@ -396,8 +397,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             vs.register_on_destroy(self.gc_collect)
 
         if load_error is None:
-            self.change_video_viewmode(self.current_viewmode)
-
             self.autosave_timer.start(round(float(self.settings.autosave_interval) * 1000))
 
             if not reloading:
@@ -527,8 +526,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             current_file.writelines(
                 '\n'.join([
                     version,
-                    f'# VSPreview script storage for: {self.script_path}',
-                    f'# Global setting saved at path: {self.global_storage_path}'
+                    f'# VSPreview local storage for script: {self.script_path}',
+                    f'# Global setting (storage/plugins) saved at path: {self.global_config_dir}'
                 ] + storage_dump[idx:])
             )
 
@@ -582,20 +581,28 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if not self.outputs:
             return
 
-        self.graphics_scene.clear()
+        self.plugins.init_outputs()
 
-        for output in self.outputs:
-            raw_frame_item = self.graphics_scene.addPixmap(QPixmap())
-            raw_frame_item.hide()
+        for graphics_view in self.graphics_views:
+            graphics_view.graphics_scene.init_scenes()
 
-            output.graphics_scene_item = GraphicsImageItem(raw_frame_item)
-
-    def reload_script(self) -> None:
+    def clean_core_references(self) -> None:
         from vstools.utils.vs_proxy import clear_cache
 
-        self.reload_before_signal.emit()
+        for graphics_view in self.graphics_views:
+            graphics_view.graphics_scene.clear()
 
-        self.dump_storage()
+        self.timecodes.clear()
+        self.norm_timecodes.clear()
+
+        self.toolbars.pipette._curr_frame_cache.clear()
+        self.toolbars.pipette._curr_alphaframe_cache.clear()
+        self.toolbars.pipette.outputs.clear()
+
+        for v in self.user_output_info.values():
+            for k in v.values():
+                k.clear()
+            v.clear()
 
         try:
             with self.env:
@@ -604,20 +611,24 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             ...
 
         vs.clear_outputs()
-        self.graphics_scene.clear()
 
-        self.timecodes.clear()
-        self.norm_timecodes.clear()
-        for v in self.user_output_names.values():
-            v.clear()
         if self.outputs:
             self.outputs.clear()
+
         self.gc_collect()
+
+    def reload_script(self) -> None:
+        self.reload_before_signal.emit()
+
+        self.dump_storage()
+
+        self.clean_core_references()
+
         old_environment = get_current_environment()
 
         self.clear_monkey_runpy()
         make_environment()
-        old_environment.dispose()
+        dispose_environment(old_environment)
         self.gc_collect()
 
         try:
@@ -704,11 +715,15 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.switch_frame(self.current_output.last_showed_frame)
 
-        for output in self.outputs:
-            output.graphics_scene_item.hide()
+        for graphics_view in self.graphics_views:
+            for item in graphics_view.graphics_scene.graphics_items:
+                item.hide()
 
-        self.current_output.graphics_scene_item.show()
-        self.graphics_scene.setSceneRect(QRectF(self.current_output.graphics_scene_item.pixmap().rect()))
+            graphics_view.current_scene.show()
+            graphics_view.graphics_scene.setSceneRect(
+                QRectF(graphics_view.current_scene.pixmap().rect())
+            )
+
         self.timeline.update_notches()
 
         for toolbar in self.toolbars[1:]:
@@ -722,30 +737,38 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     def current_output(self) -> VideoOutput:
         return cast(VideoOutput, self.toolbars.main.outputs_combobox.currentData())
 
-    @current_output.setter
-    def current_output(self, value: VideoOutput) -> None:
-        if not self.outputs:
-            return
-
-        self.switch_output(self.outputs.index_of(value))
-
     @property
     def outputs(self) -> VideoOutputs | None:
         return self.toolbars.main.outputs
+
+    @property
+    def current_scene(self) -> GraphicsImageItem:
+        return self.graphics_view.current_scene
+
+    @property
+    def graphics_views(self) -> list[GraphicsView]:
+        return list(self.bound_graphics_views.keys())
+
+    def register_graphic_view(self, view: GraphicsView) -> None:
+        self.bound_graphics_views[view] = {view}
+
+        view.zoom_combobox.currentTextChanged.connect(partial(self.on_zoom_changed, bound_view=view))
+
+        view.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
+        view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
+
+    def on_zoom_changed(self, text: str | None = None, bound_view: GraphicsView | None = None) -> None:
+        if not bound_view:
+            return
+
+        for view in self.bound_graphics_views[bound_view]:
+            view.setZoom(bound_view.zoom_combobox.currentData())
 
     def handle_script_error(self, message: str, script: bool = False) -> None:
         self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.setWindowTitle('Script Loading Error' if script else 'Program Error')
         self.script_error_dialog.open()
-
-    def on_wheel_scrolled(self, steps: int) -> None:
-        new_index = self.toolbars.main.zoom_combobox.currentIndex() + steps
-        if new_index < 0:
-            new_index = 0
-        elif new_index >= len(self.settings.zoom_levels):
-            new_index = len(self.settings.zoom_levels) - 1
-        self.toolbars.main.zoom_combobox.setCurrentIndex(new_index)
 
     def on_timeline_clicked(self, start: int) -> None:
         if self.toolbars.playback.play_timer.isActive():
@@ -757,14 +780,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def update_display_profile(self) -> None:
         if sys.platform == 'win32':
-            if _imagingcms is None:
-                print(ImportWarning(
-                    'You\'re missing packages for the image csm!\n'
-                    'You can install it with "pip install pywin32 Pillow"!'
-                ))
-                return
-
-            assert self.app
+            assert self.app and _imagingcms
 
             screen_name = self.current_screen.name()
 
@@ -818,8 +834,13 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     ) -> None:
         self.timecodes[index] = (timecodes, den)
 
-    def set_node_name(self, node_type: type, index: int, name: str) -> None:
-        self.user_output_names[node_type][index] = name
+    def set_node_info(self, node_type: type, index: int, **kwargs: Any) -> None:
+        base = self.user_output_info[node_type]
+
+        if index not in base:
+            base[index] = {**kwargs}
+        else:
+            base[index] |= kwargs
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.Type.LayoutRequest:
@@ -830,7 +851,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     # misc methods
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
-        self.graphics_view.setSizePolicy(self.EVENT_POLICY)
+        for graphics_view in self.graphics_views:
+            graphics_view.setSizePolicy(self.EVENT_POLICY)
+
+        self.main_split.setSizePolicy(self.EVENT_POLICY)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.settings.autosave_control.value() != Time(seconds=0):
@@ -855,36 +879,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if playback_active:
             self.toolbars.playback.stop()
 
-        self.outputs.items = [
-            self.outputs.get_new_output(old.source.clip, old)
-            for old in self.outputs.items
-        ]
-
-        self.init_outputs()
-
-        self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
-
-        if playback_active:
-            self.toolbars.playback.play()
-
-    def change_video_viewmode(self, new_viewmode: ViewMode, force_cache: bool = False) -> None:
-        if not self.outputs:
-            return
-
-        playback_active = self.toolbars.playback.play_timer.isActive()
-
-        if playback_active:
-            self.toolbars.playback.stop()
-
-        if new_viewmode == ViewMode.NORMAL:
-            self.outputs.switchToNormalView()
-        elif new_viewmode == ViewMode.FFTSPECTRUM:
-            self.outputs.switchToFFTSpectrumView(force_cache)
-        else:
-            raise ValueError('Invalid ViewMode passed!')
-
-        self.current_viewmode = new_viewmode
-
         self.init_outputs()
 
         self.switch_output(self.toolbars.main.outputs_combobox.currentIndex())
@@ -894,24 +888,5 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
-            'window_settings': WindowSettings(
-                self.timeline.mode,
-                bytes(cast(bytearray, self.saveGeometry())),
-                bytes(cast(bytearray, self.saveState()))
-            )
+            'window_settings': self.window_settings
         }
-
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        # toolbars is singleton, so it initialize itself right in its __setstate__()
-        self.window_settings = {}  # type: ignore
-
-        try:
-            try_load(state, 'window_settings', dict, self)
-        except BaseException:
-            try_load(state, 'timeline_mode', str, self.window_settings)
-            try_load(state, 'window_geometry', bytes, self.window_settings)
-            try_load(state, 'window_state', bytes, self.window_settings)
-
-        self.timeline.mode = self.window_settings.timeline_mode
-        self.restoreGeometry(QByteArray(len(x := self.window_settings.window_geometry), x))
-        self.restoreState(QByteArray(len(x := self.window_settings.window_state), x))

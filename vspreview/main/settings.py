@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from functools import partial
 from multiprocessing import cpu_count
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QShortcut
@@ -73,6 +73,12 @@ class MainSettings(AbstractToolbarSettings):
 
         self.dragnavigator_timeout_spinbox = SpinBox(self, 0, 1000 * 60 * 5)
 
+        self.primaries_combobox = ComboBox[str](
+            model=GeneralModel[str]([
+                'sRGB', 'DCI-P3'
+            ], False)
+        )
+
         self.color_management_checkbox = CheckBox('Color management', self)
 
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
@@ -109,6 +115,8 @@ class MainSettings(AbstractToolbarSettings):
         ])
 
         HBoxLayout(self.vlayout, [QLabel('Drag Navigator Timeout (ms)'), self.dragnavigator_timeout_spinbox])
+
+        HBoxLayout(self.vlayout, [QLabel('Output Primaries'), self.primaries_combobox])
 
         if sys.platform == 'win32':
             HBoxLayout(self.vlayout, [self.color_management_checkbox])
@@ -208,8 +216,8 @@ class MainSettings(AbstractToolbarSettings):
                 old_default_idx = min(max(old_default_idx - 1, 0), old_default_idx + 1, len(new_levels) - 1)
             self.zoom_level_default_combobox.setCurrentIndex(old_default_idx)
 
-        if hasattr((main := main_window()), 'toolbars'):
-            main_zoom_comb = main.toolbars.main.zoom_combobox
+        if hasattr((main := main_window()), 'graphics_view'):
+            main_zoom_comb = main.graphics_view.zoom_combobox
             old_index = main_zoom_comb.currentIndex()
             main_zoom_comb.setModel(GeneralModel[float](self.zoom_levels))
             main_zoom_comb.setCurrentIndex(min(max(old_index, 0), len(new_levels) - 1))
@@ -277,6 +285,11 @@ class MainSettings(AbstractToolbarSettings):
         self.zoom_levels = [x for x in zoom_levels if round(x) != round(old_value)]
 
     @property
+    def output_primaries_zimg(self) -> int:
+        from vstools.enums.color import Primaries
+        return Primaries([1, 12][self.primaries_combobox.currentIndex()])
+
+    @property
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
 
@@ -293,6 +306,7 @@ class MainSettings(AbstractToolbarSettings):
             'force_old_storages_removal': self.force_old_storages_removal,
             'zoom_levels': sorted([int(x * 100) for x in self.zoom_levels]),
             'zoom_default_index': self.zoom_default_index,
+            'output_primaries_index': self.primaries_combobox.currentIndex(),
             'dragnavigator_timeout': self.dragnavigator_timeout,
             'color_management': self.color_management
         }
@@ -310,29 +324,43 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'zoom_levels', list, self)
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
         try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)
+        try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
 
 
 class WindowSettings(QYAMLObjectSingleton):
     __slots__ = (
-        'timeline_mode', 'window_geometry', 'window_state'
+        'timeline_mode', 'window_geometry', 'window_state', 'zoom_index', 'x_pos', 'y_pos'
     )
 
-    def __init__(self, timeline_mode: str, window_geometry: bytes, window_state: bytes) -> None:
-        self.timeline_mode = timeline_mode
-        self.window_geometry = window_geometry
-        self.window_state = window_state
-
-        super().__init__()
-
     def __getstate__(self) -> Mapping[str, Any]:
+        main = main_window()
+
         return {
-            'timeline_mode': self.timeline_mode,
-            'window_geometry': self.window_geometry,
-            'window_state': self.window_state
+            'timeline_mode': main.timeline.mode,
+            'window_geometry': bytes(cast(bytearray, main.saveGeometry())),
+            'window_state': bytes(cast(bytearray, main.saveState())),
+            'zoom_index': main.graphics_view.zoom_combobox.currentIndex(),
+            'x_pos': main.graphics_view.horizontalScrollBar().value(),
+            'y_pos': main.graphics_view.verticalScrollBar().value(),
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'timeline_mode', str, self.__setattr__)
         try_load(state, 'window_geometry', bytes, self.__setattr__)
         try_load(state, 'window_state', bytes, self.__setattr__)
+        try_load(state, 'zoom_index', int, self.__setattr__)
+        try_load(state, 'x_pos', int, self.__setattr__)
+        try_load(state, 'y_pos', int, self.__setattr__)
+
+        main = main_window()
+
+        main.timeline.mode = self.timeline_mode
+
+        main.graphics_view.zoom_combobox.setCurrentIndex(self.zoom_index)
+
+        main.graphics_view.horizontalScrollBar().setValue(self.x_pos)
+        main.graphics_view.verticalScrollBar().setValue(self.y_pos)
+
+        main.restoreState(self.window_state)
+        main.restoreGeometry(self.window_geometry)

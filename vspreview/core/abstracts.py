@@ -34,7 +34,7 @@ __all__ = [
 
     'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
-    'AbstractToolbar', 'AbstractToolbarSettings',
+    'NotchProvider', 'AbstractToolbar', 'AbstractToolbarSettings',
 
     'main_window', 'storage_err_msg', 'try_load',
 ]
@@ -323,12 +323,17 @@ class ExtendedTableView(AbstractQItem, QTableView):
 class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
+    _add_to_tab = True
+
     def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
         super().__init__()
 
         self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
+
+        self.vlayout.addStretch(1)
+
         self.set_defaults()
 
         self.set_qobject_names()
@@ -352,7 +357,23 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
                 ...
 
 
-class AbstractToolbar(ExtendedWidget, QABC):
+class NotchProvider(QABC):
+    notches_changed = pyqtSignal(ExtendedWidget)
+
+    def init_notches(self, main: MainWindow = ...) -> None:
+        self.notches_changed.connect(main.timeline.update_notches)
+
+    def get_notches(self) -> Notches:
+        from .custom import Notches
+        return Notches()
+
+    @property
+    @abstractmethod
+    def is_notches_visible(self) -> bool:
+        ...
+
+
+class AbstractToolbar(ExtendedWidget, NotchProvider):
     _no_visibility_choice = False
     storable_attrs = tuple[str, ...]()
     class_storable_attrs = tuple[str, ...](('settings', 'visibility'))
@@ -362,8 +383,6 @@ class AbstractToolbar(ExtendedWidget, QABC):
     ]
 
     __slots__ = ('main', 'toggle_button', *class_storable_attrs)
-
-    notches_changed = pyqtSignal(ExtendedWidget)
 
     main: MainWindow
     name: str
@@ -380,10 +399,9 @@ class AbstractToolbar(ExtendedWidget, QABC):
         self.settings = settings
         self.name = self.__class__.__name__[:-7]
 
-        self.main.app_settings.addTab(settings, self.name)
+        if settings._add_to_tab:
+            self.main.app_settings.addTab(settings, self.name)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-
-        self.notches_changed.connect(self.main.timeline.update_notches)
 
         self.toggle_button = PushButton(
             self.name, self, checkable=True, clicked=self.on_toggle
@@ -392,6 +410,8 @@ class AbstractToolbar(ExtendedWidget, QABC):
 
         self.setVisible(False)
         self.visibility = False
+
+        self.init_notches(self.main)
 
     def setup_ui(self) -> None:
         self.hlayout = HBoxLayout(self)
@@ -415,12 +435,9 @@ class AbstractToolbar(ExtendedWidget, QABC):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         pass
 
-    def get_notches(self) -> Notches:
-        from .custom import Notches
-        return Notches()
-
+    @property
     def is_notches_visible(self) -> bool:
-        return self.isVisible()
+        return self.visibility
 
     def resize_main_window(self, expanding: bool) -> None:
         if self.main.windowState() in {Qt.WindowState.WindowMaximized, Qt.WindowState.WindowFullScreen}:

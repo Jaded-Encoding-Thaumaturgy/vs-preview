@@ -58,7 +58,8 @@ class ScriptErrorDialog(ExtendedDialog):
         self.hide()
         self.script_exec_failed = True
 
-        sys.exit(1)
+        if not self.main.no_exit:
+            sys.exit(1)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.on_exit_clicked()

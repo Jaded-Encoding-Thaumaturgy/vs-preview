@@ -15,6 +15,7 @@ from .units import Frame, Time
 
 if TYPE_CHECKING:
     from vstools import VideoFormatT
+    from ..custom.graphicsview import GraphicsImageItem
 
 __all__ = [
     'VideoOutput'
@@ -25,10 +26,10 @@ class PackingTypeInfo:
     _getid = iter_count()
 
     def __init__(
-        self, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool,
-        can_playback: bool = True
+        self, name: str, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool, can_playback: bool = True
     ):
         self.id = next(self._getid)
+        self.name = name
         self.vs_format = vs.core.get_video_format(vs_format)
         self.qt_format = qt_format
         self.shuffle = shuffle
@@ -44,14 +45,14 @@ class PackingTypeInfo:
 
 
 class PackingType(PackingTypeInfo):
-    none_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False, False)
-    none_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, False, False)
-    numpy_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, True)
-    numpy_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
-    libp2p_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_RGB32, False)
-    libp2p_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, True)
-    akarin_8bit = PackingTypeInfo(vs.RGB24, QImage.Format.Format_BGR30, False)
-    akarin_10bit = PackingTypeInfo(vs.RGB30, QImage.Format.Format_BGR30, False)
+    none_8bit = PackingTypeInfo('none-8bit', vs.RGB24, QImage.Format.Format_BGR30, False, False)
+    none_10bit = PackingTypeInfo('none-10bit', vs.RGB30, QImage.Format.Format_BGR30, False, False)
+    numpy_8bit = PackingTypeInfo('numpy-8bit', vs.RGB24, QImage.Format.Format_BGR30, True)
+    numpy_10bit = PackingTypeInfo('numpy-10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
+    libp2p_8bit = PackingTypeInfo('libp2p-8bit', vs.RGB24, QImage.Format.Format_RGB32, False)
+    libp2p_10bit = PackingTypeInfo('libp2p-10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
+    akarin_8bit = PackingTypeInfo('akarin-8bit', vs.RGB24, QImage.Format.Format_BGR30, False)
+    akarin_10bit = PackingTypeInfo('akarin-10bit', vs.RGB30, QImage.Format.Format_BGR30, False)
 
 
 PACKING_TYPE: PackingTypeInfo = None  # type: ignore
@@ -59,36 +60,41 @@ PACKING_TYPE: PackingTypeInfo = None  # type: ignore
 
 class VideoOutput(AbstractYAMLObject):
     storable_attrs = (
-        'title', 'last_showed_frame', 'play_fps', 'crop_values'
+        'name', 'last_showed_frame', 'play_fps', 'crop_values'
     )
 
     __slots__ = (
         *storable_attrs, 'index', 'width', 'height', 'fps_num', 'fps_den',
-        'total_frames', 'total_time', 'graphics_scene_item',
+        'total_frames', 'total_time',
         'end_frame', 'fps', 'source', 'prepared',
         'main', 'checkerboard', 'props', '_stateset'
     )
 
     source: VideoOutputNode
     prepared: VideoOutputNode
-    title: str | None
+    name: str
     last_showed_frame: Frame
     crop_values: CroppingInfo
     _stateset: bool
 
     def clear(self) -> None:
-        self.source = self.prepared = None  # type: ignore
+        if self.source:
+            del self.source.clip, self.source.alpha
+        if self.prepared:
+            del self.prepared.clip, self.prepared.alpha
+        if self.props:
+            self.props.clear()
+        del self.source, self.prepared, self.props
+        self.source = self.prepared = self.props = None
 
     def __init__(
-        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
+        self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False
     ) -> None:
         self.setValue(vs_output, index, new_storage)
 
     def setValue(
-        self, vs_output: vs.VideoOutputTuple | VideoOutputNode, index: int, new_storage: bool = False
+        self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False
     ) -> None:
-        from ..custom.graphicsview import GraphicsImageItem
-
         self._stateset = not new_storage
 
         self.main = main_window()
@@ -97,14 +103,20 @@ class VideoOutput(AbstractYAMLObject):
 
         self.set_fmt_values()
 
-        # runtime attributes
-        self.source = VideoOutputNode(vs_output.clip, vs_output.alpha)
-        self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha)
+        with self.main.env:
+            vs_outputs = list(vs.get_outputs().values())
+
+        self.vs_index = index
+        self.index = vs_outputs.index(vs_output) if vs_output in vs_outputs else index
+
+        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
+
+        self.cached = not not self.info.get('cache', False)
+        self.source = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
+        self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
 
         if self.source.alpha is not None:
             self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
-
-        self.index = index
 
         self.prepared.clip = self.prepare_vs_output(self.source.clip).std.CopyFrameProps(self.source.clip)
         self.width = self.prepared.clip.width
@@ -113,13 +125,11 @@ class VideoOutput(AbstractYAMLObject):
         self.fps_den = self.prepared.clip.fps.denominator
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.prepared.clip.num_frames)
-        self.title = None
 
-        with self.main.env:
-            if vs_output in (vs_outputs := list(vs.get_outputs().values())):
-                self.title = self.main.user_output_names[vs.VideoNode].get(vs_outputs.index(vs_output))  # type: ignore
-                if self.main.outputs is not None:
-                    self.main.outputs.setData(self.main.outputs.index(index), self.title)
+        self.name = self.info.get('name', 'Video Node %d' % self.vs_index)
+
+        if self.main.outputs is not None:
+            self.main.outputs.setData(self.main.outputs.index(self.vs_index), self.name)
 
         self.props = cast(vs.FrameProps, {})
 
@@ -128,8 +138,6 @@ class VideoOutput(AbstractYAMLObject):
 
         if not hasattr(self, 'last_showed_frame') or not (0 <= self.last_showed_frame < self.total_frames):
             self.last_showed_frame = Frame(0)
-
-        self.graphics_scene_item: GraphicsImageItem
 
         if index in self.main.timecodes:
             timecodes, tden = self.main.timecodes[index]
@@ -242,40 +250,14 @@ class VideoOutput(AbstractYAMLObject):
             except ModuleNotFoundError:
                 PACKING_TYPE = PackingType.none_10bit if _default_10bits else PackingType.none_8bit
 
-                print(ImportWarning(
-                    "\n"
-                    "  One of LibP2P, Akarin, cupy, numpy is required to pack RGB data efficiently for previewing!\n"
-                    "  Now falling back to pure python. You won't be able to playback.\n"
-                    "  You can download one of them from here: \n"
-                    "      https://github.com/DJATOM/LibP2P-Vapoursynth\n"
-                    "      https://github.com/AkarinVS/vapoursynth-plugin\n"
-                    "      https://docs.cupy.dev/en/stable/install.html#installing-cupy\n"
-                    "      pip install numpy\n"
-                ))
-
         self.set_fmt_values()
-
-    @property
-    def name(self) -> str:
-        placeholder = 'Video Node %d' % self.index
-        if not hasattr(self, 'title') or self.title in {None, placeholder}:
-            if 'Name' in self.props:
-                self.title = cast(bytes, self.props['Name']).decode('utf-8')
-            elif not self.title:
-                self.title = placeholder
-
-        return self.title or placeholder
-
-    @name.setter
-    def name(self, newname: str) -> None:
-        self.title = newname
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics
 
         assert clip.format
 
-        heuristics = video_heuristics(clip, None)
+        heuristics = video_heuristics(clip, True)
 
         resizer_kwargs = KwargsT({
             'format': self._NORML_FMT.id,
@@ -285,7 +267,9 @@ class VideoOutput(AbstractYAMLObject):
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
         } | heuristics | {
-            'dither_type': self.main.toolbars.playback.settings.dither_type
+            'dither_type': self.main.toolbars.playback.settings.dither_type,
+            'transfer': Transfer.BT709,
+            'primaries': self.main.settings.output_primaries_zimg
         })
 
         if clip.format.color_family == vs.RGB:
@@ -316,13 +300,14 @@ class VideoOutput(AbstractYAMLObject):
         if PACKING_TYPE.shuffle:
             clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
 
+        shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
+        r_shift, g_shift, b_shift = (x * shift for x in (1, 0x400, 0x100000))
+        high_bits_mask = 0xc0000000
+
         if PACKING_TYPE in {
             PackingType.none_8bit, PackingType.none_10bit, PackingType.numpy_8bit, PackingType.numpy_10bit
         }:
-            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, keep=True)
-
-            shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
-            r_shift, g_shift, b_shift = (x * shift for x in (1, 1024, 1048576))
+            blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, color=high_bits_mask, keep=True)
 
             if PACKING_TYPE in {PackingType.none_8bit, PackingType.none_10bit}:
                 from functools import partial
@@ -339,7 +324,7 @@ class VideoOutput(AbstractYAMLObject):
                     src_g: vs.video_view, src_b: vs.video_view,
                     idx: tuple[int, int]
                 ) -> None:
-                    bfp[idx] = (src_r[idx] * r_shift) + (src_g[idx] * g_shift) + (src_b[idx] * b_shift)
+                    bfp[idx] += (src_r[idx] * r_shift) + (src_g[idx] * g_shift) + (src_b[idx] * b_shift)
 
                 def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
                     bf = f[0].copy()
@@ -355,27 +340,31 @@ class VideoOutput(AbstractYAMLObject):
                 try:
                     import cupy as cp  # type: ignore
 
+                    self.__base_cupy_add = base_add = cp.asarray(blank.get_frame(0).copy()[0]).copy()
+
                     ein_shift = cp.asarray(ein_shift)
 
                     def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
                         bf = f[0].copy()
 
-                        cp.asnumpy(cp.einsum(
+                        cp.asnumpy(cp.add(cp.einsum(
                             'kji,k->ji', cp.asarray(f[1], cp.uint32), ein_shift, optimize='greedy'
-                        ), out=np.asarray(bf[0]))
+                        ), base_add), out=np.asarray(bf[0]))
 
                         return bf
                 except ModuleNotFoundError:
                     from numpy.core._multiarray_umath import c_einsum  # type: ignore
                     from numpy.core.numeric import tensordot
 
+                    self.__base_numpy_add = base_add = np.asarray(blank.get_frame(0).copy()[0]).copy()
+
                     def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
                         bf = f[0].copy()
 
-                        c_einsum(
-                            'ji->ji',
-                            tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,))),
-                            out=np.asarray(bf[0])
+                        np.add(
+                            c_einsum(
+                                'ji->ji', tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,)))
+                            ), base_add, np.asarray(bf[0])
                         )
 
                         return bf
@@ -388,13 +377,11 @@ class VideoOutput(AbstractYAMLObject):
         if PACKING_TYPE in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
             # x, y, z => b, g, r
             # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
-            # R stays like it is + shift if it's 8 bits (gets applied to all clips), then G gets shifted
+            # R stays like it is * shift if it's 8 bits (gets applied to all planes), then G gets shifted
             # by 10 bits, (we multiply by 2 ** 10) and same for B but by 20 bits and it all gets summed
-            shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
-
             return vs.core.akarin.Expr(
                 clip.std.SplitPlanes(),
-                f'z {shift * 0x100000}  * y {shift * 0x400} * x {shift} * + + 0xc0000000 +', vs.GRAY32, True
+                f'z {b_shift} * y {g_shift} * x {r_shift} * + + {high_bits_mask} +', vs.GRAY32, True
             )
 
         return clip
@@ -412,22 +399,44 @@ class VideoOutput(AbstractYAMLObject):
 
         return QImage(pointer, width, height, stride, qt_format).copy()  # type: ignore
 
+    @property
+    def graphics_scene_item(self) -> GraphicsImageItem | None:
+        if self.main.graphics_view.graphics_scene.graphics_items:
+            try:
+                return self.main.graphics_view.graphics_scene.graphics_items[self.index]
+            except IndexError:
+                ...
+
+        return None
+
     def update_graphic_item(
-        self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None
+        self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None,
+        graphics_scene_item: GraphicsImageItem | None = None
     ) -> QPixmap | None:
+        from vstools import complex_hash
+
+        old_crop = complex_hash.hash(self.crop_values)
+
         if isinstance(crop_values, bool):
             self.crop_values.active = crop_values
         elif crop_values is not None:
             self.crop_values = crop_values
 
-        if hasattr(self, 'graphics_scene_item'):
-            self.graphics_scene_item.setPixmap(pixmap, self.crop_values)
+        new_crop = complex_hash.hash(self.crop_values)
+
+        if graphics_scene_item:
+            graphics_scene_item.setPixmap(pixmap, self.crop_values)
+
+        if old_crop != new_crop:
+            self.main.cropValuesChanged.emit(self.crop_values)
+
         return pixmap
 
     def render_frame(
         self, frame: Frame | None, vs_frame: vs.VideoFrame | None = None,
-        vs_alpha_frame: vs.VideoFrame | None = None, do_painting: bool = True,
-        output_colorspace: QColorSpace | None = None
+        vs_alpha_frame: vs.VideoFrame | None = None,
+        graphics_scene_item: GraphicsImageItem | None = None,
+        do_painting: bool = True, output_colorspace: QColorSpace | None = None
     ) -> QPixmap:
         if frame is None or not self._stateset:
             return QPixmap()
@@ -448,11 +457,14 @@ class VideoOutput(AbstractYAMLObject):
             vs_frame.close()
             del vs_frame
 
+        if graphics_scene_item is None:
+            graphics_scene_item = self.graphics_scene_item
+
         if self.prepared.alpha is None:
             qpixmap = QPixmap.fromImage(frame_image, Qt.ImageConversionFlag.NoFormatConversion)
 
             if do_painting:
-                self.update_graphic_item(qpixmap)
+                self.update_graphic_item(qpixmap, graphics_scene_item=graphics_scene_item)
 
             return qpixmap
 
@@ -476,7 +488,7 @@ class VideoOutput(AbstractYAMLObject):
         qpixmap = QPixmap.fromImage(result_image, Qt.ImageConversionFlag.NoFormatConversion)
 
         if do_painting:
-            self.update_graphic_item(qpixmap)
+            self.update_graphic_item(qpixmap, graphics_scene_item=graphics_scene_item)
 
         return qpixmap
 
@@ -541,8 +553,20 @@ class VideoOutput(AbstractYAMLObject):
     def to_time(self, frame: Frame) -> Time:
         return Time(seconds=self._calculate_seconds(int(frame)))
 
+    def with_node(self, new_node: vs.VideoNode | VideoOutputNode) -> VideoOutput:
+        if isinstance(new_node, vs.VideoNode):
+            new_node = VideoOutputNode(new_node, None, self.cached)
+
+        new_output = VideoOutput(new_node, self.vs_index, False)
+        new_output.index = self.index
+
+        new_output.last_showed_frame = self.last_showed_frame
+        new_output.name = self.name
+
+        return new_output
+
     def __setstate__(self, state: Mapping[str, Any]) -> None:
-        try_load(state, 'title', str, self.__setattr__)
+        try_load(state, 'name', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', Fraction, self.__setattr__)
         try_load(state, 'crop_values', CroppingInfo, self.__setattr__)

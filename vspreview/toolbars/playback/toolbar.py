@@ -198,13 +198,12 @@ class PlaybackToolbar(AbstractToolbar):
         qt_silent_call(self.fps_spinbox.setValue, float(self.main.current_output.play_fps))
 
     def rescan_outputs(self, outputs: AudioOutputs | None = None) -> None:
-        self.audio_outputs = outputs or AudioOutputs(self.main)
+        self.audio_outputs = outputs if isinstance(outputs, AudioOutputs) else AudioOutputs(self.main)
         self.audio_outputs_combobox.setModel(self.audio_outputs)
 
     def get_true_fps(self, n: int | Frame, frameprops: vs.FrameProps, force: bool = False) -> Fraction:
         if (
-            hasattr(self.main.current_output, 'got_timecodes')
-            and self.main.current_output.got_timecodes and not force
+            hasattr(self.main.current_output, 'got_timecodes') and self.main.current_output.got_timecodes and not force
         ):
             return Fraction(self.main.current_output.timecodes[int(n)])
 
@@ -235,9 +234,15 @@ class PlaybackToolbar(AbstractToolbar):
 
     def play(self, stop_at_frame: int | Frame | None = None) -> None:
         if (
-            (self.main.current_output.last_showed_frame > self.main.current_output.total_frames)
-            or not video.PACKING_TYPE.can_playback
+            self.main.current_output.last_showed_frame > self.main.current_output.total_frames
         ):
+            return
+
+        if not video.PACKING_TYPE.can_playback:
+            import logging
+            logging.warn(
+                f'The current backend ({video.PACKING_TYPE.name}) can\'t playback! Install akarin or libp2p plugins.'
+            )
             return
 
         if self.main.statusbar.label.text() == 'Ready':
@@ -447,11 +452,11 @@ class PlaybackToolbar(AbstractToolbar):
 
     def seek_to_start(self, checked: bool | None = None) -> None:
         self.stop()
-        self.main.current_output.last_showed_frame = Frame(0)
+        self.main.switch_frame(Frame(0))
 
     def seek_to_end(self, checked: bool | None = None) -> None:
         self.stop()
-        self.main.current_output.last_showed_frame = self.main.current_output.total_frames - 1
+        self.main.switch_frame(self.main.current_output.total_frames - 1)
 
     def seek_offset(self, offset: int) -> None:
         new_pos = self.main.current_output.last_showed_frame + offset
@@ -482,11 +487,8 @@ class PlaybackToolbar(AbstractToolbar):
 
     def on_timeline_clicked(self, frame: Frame, time: Time) -> None:
         if (
-            not self.play_timer.isActive()
-            or not self.play_timer_audio.isActive()
-            or self.current_audio_output is None
-            or self.current_audio_output.vs_output is None
-        ):
+            not self.play_timer.isActive() or not self.play_timer_audio.isActive() or self.current_audio_output is None
+        ) or self.current_audio_output.vs_output is None:
             return
 
         self.current_audio_output.iodevice.reset()

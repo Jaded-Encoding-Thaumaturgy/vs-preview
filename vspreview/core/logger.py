@@ -52,7 +52,9 @@ def setup_logger() -> None:
 
 def set_log_level(main: int = LOG_LEVEL, engine: int = logging.ERROR) -> None:
     from vsengine import _hospice  # type: ignore[import]
+    from vsengine import policy
 
+    policy.logger.addFilter(lambda record: 'dead environment' not in record.msg)
     _hospice.logger.setLevel(engine)
     logging.getLogger().level = main
 
@@ -61,6 +63,7 @@ def get_vs_logger() -> Callable[[MessageType, str], None]:
     setup_logger()
 
     def _logger(mType: MessageType, msg: str) -> None:
+        import logging
         return logging.log(_vsLogType_to_logging[mType], msg)
 
     return _logger

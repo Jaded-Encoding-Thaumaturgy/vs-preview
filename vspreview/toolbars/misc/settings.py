@@ -11,6 +11,8 @@ __all__ = [
 class MiscSettings(AbstractToolbarSettings):
     __slots__ = ()
 
+    _add_to_tab = False
+
     SAVE_TEMPLATE = '{script_name}_{frame}'
 
     def setup_ui(self) -> None:

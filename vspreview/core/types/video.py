@@ -291,6 +291,9 @@ class VideoOutput(AbstractYAMLObject):
 
         clip = clip.resize.Bicubic(**resizer_kwargs)
 
+        if not self.cached:
+            clip.std.SetVideoCache(0)
+
         if is_alpha:
             return clip
 

@@ -8,7 +8,8 @@ from functools import partial
 from importlib import reload as reload_module
 from pathlib import Path
 from time import time
-from typing import Any, Iterable, Mapping, cast
+from typing import Any, Iterable, Mapping, NamedTuple, cast
+from numpy import bool_
 
 import vapoursynth as vs
 from PyQt6 import QtCore
@@ -23,7 +24,7 @@ from ..core import (
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, dispose_environment, get_current_environment, make_environment
 )
 from ..models import GeneralModel, VideoOutputs
-from ..plugins import Plugins
+from ..plugins import Plugins, FileResolverPlugin
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -128,6 +129,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.no_exit = no_exit
         self.reload_enabled = reload_enabled
+
+        self.resolve_plugins = set[FileResolverPlugin]()
 
         self.settings = MainSettings(MainToolbar)
 
@@ -268,12 +271,16 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def load_script(
         self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int | None = None, display_name: str | None = None
+        start_frame: int | None = None, display_name: str | None = None,
+        resolve_plugin: FileResolverPlugin | None = None
     ) -> None:
         from random import random
 
         self.display_name = display_name or script_path
         self.external_args = external_args or []
+
+        if resolve_plugin:
+            self.resolve_plugins.add(resolve_plugin)
 
         self.toolbars.playback.stop()
         self.setWindowTitle(f'VSPreview: {self.display_name} {self.external_args}')
@@ -866,6 +873,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.dump_storage_async()
 
         self.reload_signal.emit()
+
+        for file_resolve_plugin in self.resolve_plugins:
+            file_resolve_plugin.cleanup()
 
     def moveEvent(self, _move_event: QMoveEvent) -> None:
         if self.settings.color_management:

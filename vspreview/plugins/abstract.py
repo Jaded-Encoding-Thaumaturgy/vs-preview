@@ -105,5 +105,8 @@ class FileResolverPlugin:
     def resolve_path(self, filepath: Path) -> ResolvedScript:
         raise NotImplementedError
 
+    def cleanup(self) -> None:
+        ...
+
 
 _BasePluginT = _BasePlugin | AbstractPlugin | FileResolverPlugin

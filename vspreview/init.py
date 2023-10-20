@@ -117,10 +117,12 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
 
         return exit_func(0, no_exit)
 
-    script, file_resolve_plugin = get_resolved_script(Path(script_path_or_command).resolve())
+    script_or_err = get_resolved_script(Path(script_path_or_command).resolve())
 
-    if isinstance(script, int):
-        return exit_func(script, no_exit)
+    if isinstance(script_or_err, int):
+        return exit_func(script_or_err, no_exit)
+
+    script, file_resolve_plugin = script_or_err
 
     if not args.preserve_cwd:
         os.chdir(script.path.parent)

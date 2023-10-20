@@ -268,14 +268,14 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def load_script(
         self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int | None = None
+        start_frame: int | None = None, display_name: str | None = None
     ) -> None:
         from random import random
 
         self.external_args = external_args or []
 
         self.toolbars.playback.stop()
-        self.setWindowTitle('VSPreview: %s %s' % (script_path, self.external_args))
+        self.setWindowTitle(f'VSPreview: {display_name or script_path} {self.external_args}')
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path

@@ -16,6 +16,7 @@ from PyQt6.QtCore import QEvent, QKeyCombination, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
+from vstools import get_prop
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
@@ -91,7 +92,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     # status bar
     def STATUS_FRAME_PROP(self, prop: Any) -> str:
-        return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
+        return f"Type: {get_prop(prop, '_PictType', str, None, '?')}"
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 

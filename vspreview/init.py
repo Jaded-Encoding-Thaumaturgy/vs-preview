@@ -137,18 +137,30 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    arguments = []
+    arguments = script.arguments.copy()
+
+    def _parse_arg(kv: str) -> tuple[str, str | int | float]:
+        v: str | int | float
+        k, v = kv.split('=', maxsplit=1)
+
+        try:
+            v = int(v)
+        except ValueError:
+            try:
+                v = float(v)
+            except ValueError:
+                ...
+
+        return k, v
 
     if args.arg:
-        arguments.extend([tuple(a.split('=', maxsplit=1)) for a in args.arg])
-
-    arguments.extend(map(tuple, script.arguments.items()))
+        arguments |= {k: v for k, v in map(_parse_arg, args.arg)}
 
     main.main_window = MainWindow(
         Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled
     )
     main.main_window.load_script(
-        script.path, arguments, False, args.frame or None, script.display_name, file_resolve_plugin
+        script.path, list(arguments.items()), False, args.frame or None, script.display_name, file_resolve_plugin
     )
     main.main_window.show()
 

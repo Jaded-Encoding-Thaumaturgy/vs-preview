@@ -8,8 +8,7 @@ from functools import partial
 from importlib import reload as reload_module
 from pathlib import Path
 from time import time
-from typing import Any, Iterable, Mapping, NamedTuple, cast
-from numpy import bool_
+from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore

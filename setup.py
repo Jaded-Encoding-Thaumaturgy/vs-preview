@@ -29,7 +29,7 @@ setuptools.setup(
         'Contact': 'https://discord.gg/qxTxVJGtst'
     },
     install_requires=requirements,
-    python_requires='>=3.10',
+    python_requires='>=3.11',
     packages=setuptools.find_packages('.', ('docs', 'stubs')),
     package_data={
         package_name: ['py.typed'],

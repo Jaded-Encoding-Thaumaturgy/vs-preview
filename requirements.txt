@@ -1,4 +1,4 @@
-VapourSynth>=63
+VapourSynth>=64
 vstools>=2.3.0
 vsengine>=0.2.0
 PyQt6>=6.4.0

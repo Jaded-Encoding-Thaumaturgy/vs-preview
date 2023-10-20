@@ -38,7 +38,7 @@ def get_resolved_script(filepath: Path) -> tuple[ResolvedScript, FileResolverPlu
     return ResolvedScript(filepath, str(filepath)), None
 
 
-def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
+def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     from .utils import exit_func
 
     parser = ArgumentParser(prog='VSPreview')

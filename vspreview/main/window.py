@@ -117,13 +117,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     window_settings = WindowSettings()
 
     autosave_timer: Timer
+    
+    no_exit: bool
+    reload_enabled: bool
 
-    def __init__(self, config_dir: Path, no_exit: bool) -> None:
+    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
 
         self.no_exit = no_exit
+        self.reload_enabled = reload_enabled
 
         self.settings = MainSettings(MainToolbar)
 

@@ -123,7 +123,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    main.main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent, no_exit)
+    main.main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent, no_exit, True)
     main.main_window.load_script(
         script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False, args.frame or None
     )

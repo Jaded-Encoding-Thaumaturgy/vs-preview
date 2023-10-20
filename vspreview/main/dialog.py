@@ -38,17 +38,19 @@ class ScriptErrorDialog(ExtendedDialog):
         self.vlayout = VBoxLayout(self)
 
         self.label = QLabel()
-
-        self.reload_button = PushButton('Reload', self, clicked=self.on_reload_clicked)
+        self.reload_button = PushButton(
+            'Reload', self, clicked=self.on_reload_clicked, hidden=not self.main.reload_enabled
+        )
         self.exit_button = PushButton('Exit', self, clicked=self.on_exit_clicked)
 
         self.vlayout.addWidget(self.label)
-        self.vlayout.addLayout(HBoxLayout([
-            self.reload_button, self.exit_button
-        ]))
+        self.vlayout.addLayout(HBoxLayout(
+            [self.reload_button, self.exit_button] if self.main.reload_enabled else [self.exit_button]
+        ))
 
     def setup_shortcuts(self) -> None:
-        self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.reload_button.click)
+        if self.main.reload_enabled:
+            self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.reload_button.click)
 
     def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()

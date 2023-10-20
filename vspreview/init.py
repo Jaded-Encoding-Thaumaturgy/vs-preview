@@ -17,11 +17,25 @@ from .core.logger import set_log_level, setup_logger
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import set_vsengine_loop
 from .main import MainWindow
+from .plugins import get_plugins
 from .plugins.install import install_plugins, plugins_commands, uninstall_plugins
+from .plugins.abstract import FileResolverPlugin, ResolvedScript
 
 __all__ = [
     'main'
 ]
+
+
+def get_resolved_script(filepath: Path) -> ResolvedScript | int:
+    for plugin in get_plugins(FileResolverPlugin).values():
+        if plugin.can_run_file(filepath):
+            return plugin.resolve_path(filepath)
+
+    if not filepath.exists():
+        logging.error('Script or file path is invalid.')
+        return 1
+
+    return ResolvedScript(filepath, str(filepath))
 
 
 def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
@@ -103,13 +117,13 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
 
         return exit_func(0, no_exit)
 
-    script_path = Path(script_path_or_command).resolve()
-    if not script_path.exists():
-        logging.error('Script path is invalid.')
-        return exit_func(1, no_exit)
+    script = get_resolved_script(Path(script_path_or_command).resolve())
+
+    if isinstance(script, int):
+        return exit_func(script, no_exit)
 
     if not args.preserve_cwd:
-        os.chdir(script_path.parent)
+        os.chdir(script.path.parent)
 
     first_run = not hasattr(main, 'app')
 
@@ -123,10 +137,17 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    main.main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent, no_exit, True)
-    main.main_window.load_script(
-        script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False, args.frame or None
+    arguments = []
+
+    if args.arg:
+        arguments.extend([tuple(a.split('=', maxsplit=1)) for a in args.arg])
+
+    arguments.extend(map(tuple, script.arguments.items()))
+
+    main.main_window = MainWindow(
+        Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled
     )
+    main.main_window.load_script(script.path, arguments, False, args.frame or None, script.display_name)
     main.main_window.show()
 
     ret_code = main.app.exec()

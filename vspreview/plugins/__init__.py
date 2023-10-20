@@ -8,9 +8,13 @@ from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, TypeVar, overload
 
+from PyQt6.QtWidgets import QWidget
+
 from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg
 from . import utils
-from .abstract import AbstractPlugin, PluginConfig, _BasePluginT
+from .abstract import (
+    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, ResolvedScript, _BasePluginT
+)
 from .utils import *  # noqa: F401,F403
 
 if True:
@@ -26,12 +30,19 @@ PluginT = TypeVar('PluginT', bound=_BasePluginT)
 
 __all__ = [
     'AbstractPlugin', 'PluginConfig',
+    'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript',
     *utils.__all__
 ]
 
 
 class PluginModule:
     __all__: tuple[str, ...]
+
+    def __new__(cls, path: Path) -> PluginModule:
+        if (h := hash(path)) in _hash_module_map:
+            return _hash_module_map[h]
+
+        return super().__new__(cls)
 
     def __init__(self, path: Path) -> None:
         spec = spec_from_file_location(path.stem, path)
@@ -48,6 +59,7 @@ class PluginModule:
 
         spec.loader.exec_module(module)
 
+        _hash_module_map[hash(path)] = self
         _module_proxy_map[self] = (path, module)
 
         try:
@@ -64,6 +76,7 @@ class PluginModule:
         return _module_proxy_map[self][0].stem
 
 
+_hash_module_map = dict[int, PluginModule]()
 _module_proxy_map = dict[PluginModule, tuple[Path, ModuleType | None]]()
 
 
@@ -178,6 +191,8 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         i = 0
         for name, plugin in self.plugins.items():
+            assert isinstance(plugin, QWidget)
+
             plugin.setObjectName(f'Plugins.{name}')
 
             if not plugin._config.visible_in_tab:

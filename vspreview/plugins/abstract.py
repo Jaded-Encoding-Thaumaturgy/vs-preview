@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, NamedTuple, TypeVar
 
-from PyQt6.QtWidgets import QSizePolicy
+from PyQt6.QtWidgets import QSizePolicy, QWidget
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider
 
@@ -13,7 +12,9 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig'
+    'AbstractPlugin', 'PluginConfig',
+
+    'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript'
 ]
 
 
@@ -25,13 +26,26 @@ if TYPE_CHECKING:
     class _BasePlugin:
         _config: ClassVar[_BasePluginConfig]
 else:
-    _BasePlugin = _BasePluginConfig = object
+    T = TypeVar('T')
+    _BasePlugin, _BasePluginConfig = object, Generic[T]
 
 
 class PluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
     namespace: str
     display_name: str
     visible_in_tab: bool = True
+
+
+class FileResolvePluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
+    namespace: str
+    display_name: str
+
+
+class ResolvedScript(NamedTuple):
+    path: Path
+    display_name: str
+    arguments: dict[str, Any] = {}
+    reload_enabled: bool = True
 
 
 class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
@@ -41,8 +55,10 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
     def __init__(self, main: MainWindow) -> None:
         try:
-            super().__init__(main)
+            super().__init__(main)  # type: ignore
             self.init_notches(main)
+
+            assert isinstance(self, QWidget)
         except TypeError as e:
             print('\tMake sure you\'re inheriting a QWidget!\n')
 
@@ -72,7 +88,22 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
     @property
     def is_notches_visible(self) -> bool:
-        return (not self._config.visible_in_tab) or self.index == self.main.plugins.plugins_tab.currentIndex()
+        return (
+            not self._config.visible_in_tab
+        ) or self.index == self.main.plugins.plugins_tab.currentIndex()  # type: ignore
 
 
-_BasePluginT = _BasePlugin | AbstractPlugin
+class FileResolverPlugin:
+    _config: ClassVar[FileResolvePluginConfig]
+
+    def get_extensions(self) -> Iterable[str]:
+        return []
+
+    def can_run_file(self, filepath: Path) -> bool:
+        raise NotImplementedError
+
+    def resolve_path(self, filepath: Path) -> ResolvedScript:
+        raise NotImplementedError
+
+
+_BasePluginT = _BasePlugin | AbstractPlugin | FileResolverPlugin

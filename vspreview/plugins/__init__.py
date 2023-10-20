@@ -2,22 +2,155 @@ from __future__ import annotations
 
 import logging
 import sys
+from functools import lru_cache
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast, overload
+from types import ModuleType
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, TypeVar, overload
 
 from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg
 from . import utils
-from .abstract import AbstractPlugin, PluginConfig
+from .abstract import AbstractPlugin, PluginConfig, _BasePluginT
 from .utils import *  # noqa: F401,F403
+
+if True:
+    # has to be imported after the main
+    from importlib._bootstrap_external import SOURCE_SUFFIXES  # type: ignore
+    SOURCE_SUFFIXES.append('.ppy')
 
 if TYPE_CHECKING:
     from ..main import MainWindow
+
+PluginT = TypeVar('PluginT', bound=_BasePluginT)
 
 
 __all__ = [
     'AbstractPlugin', 'PluginConfig',
     *utils.__all__
 ]
+
+
+class PluginModule:
+    __all__: tuple[str, ...]
+
+    def __init__(self, path: Path) -> None:
+        spec = spec_from_file_location(path.stem, path)
+
+        if spec is None:
+            raise ImportError
+
+        module = module_from_spec(spec)
+
+        sys.modules[module.__name__] = module
+
+        if spec.loader is None:
+            raise ImportError
+
+        spec.loader.exec_module(module)
+
+        _module_proxy_map[self] = (path, module)
+
+        try:
+            module.__all__
+        except AttributeError:
+            print(ImportWarning(f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'))
+
+            raise ImportError
+
+    def __getattr__(self, key: str) -> Any:
+        return object.__getattribute__(_module_proxy_map[self][1], key)
+
+    def __str__(self) -> str:
+        return _module_proxy_map[self][0].stem
+
+
+_module_proxy_map = dict[PluginModule, tuple[Path, ModuleType | None]]()
+
+
+@lru_cache
+def resolve_plugins() -> Iterable[Path]:
+    from ..main import MainWindow
+
+    plugin_files = list[Path]()
+
+    def _find_files(folder: Path, ignore_path: bool = False) -> None:
+        files = list(folder.glob('*.ppy'))
+
+        if files:
+            if not ignore_path:
+                sys.path.append(str(folder))
+
+            plugin_files.extend(files)
+
+    def _check_folder(folder: str | Path, ignore_path: bool = False) -> None:
+        if not folder:
+            return
+
+        if isinstance(folder, str):
+            folder = folder.strip()
+
+            if folder.startswith(';'):
+                return
+
+            folder = Path(folder)
+
+        if not folder.is_dir():
+            return
+
+        _find_files(folder, ignore_path)
+
+        for folder in (f for f in folder.glob('*') if f.is_dir()):
+            _find_files(folder, ignore_path)
+
+    _check_folder(Path(__file__).parent, True)
+    _check_folder(MainWindow.global_plugins_dir)
+
+    for paths_file in MainWindow.global_plugins_dir.glob('*.pth'):
+        for path in paths_file.read_text('utf8').splitlines():
+            _check_folder(path)
+
+    return plugin_files
+
+
+def file_to_plugins(path: Path, plugin_type: type[PluginT]) -> Iterable[type[PluginT]]:
+    try:
+        module = PluginModule(path)
+    except ImportError:
+        return
+
+    for export in module.__all__:
+        exp_obj = getattr(module, export)
+
+        if not isinstance(exp_obj, type):
+            continue
+
+        if not issubclass(exp_obj, plugin_type):
+            continue
+
+        if not hasattr(exp_obj, '_config'):
+            print(ImportWarning(
+                f'The plugin "{exp_obj.__name__}" has no config set up and thus can\'t be imported!'
+            ))
+            continue
+
+        yield exp_obj
+
+
+def get_plugins(plugin_type: type[PluginT], *args: Any, **kwargs: Any) -> dict[str, PluginT]:
+    plugins = dict[str, PluginT]()
+
+    for plugin_file in resolve_plugins():
+        for plugin in file_to_plugins(plugin_file, plugin_type):
+            if plugin._config.namespace in plugins:
+                print(UserWarning(
+                    f'Tried to register plugin "{plugin._config.display_name} '
+                    f'({plugin._config.namespace})" twice!'
+                ))
+                continue
+
+            plugins[plugin._config.namespace] = plugin(*args, **kwargs)  # type: ignore
+
+    return plugins
 
 
 class Plugins(AbstractYAMLObjectSingleton):
@@ -31,44 +164,6 @@ class Plugins(AbstractYAMLObjectSingleton):
     # tab idx, clip idx
     last_output_change: tuple[int, int]
 
-    @classmethod
-    def file_to_plugins(cls, path: Path) -> Iterable[type[AbstractPlugin]]:
-        from importlib.util import module_from_spec, spec_from_file_location
-        if True:
-            # has to be imported after the main
-            from importlib._bootstrap_external import SOURCE_SUFFIXES  # type: ignore
-            SOURCE_SUFFIXES.append('.ppy')
-
-        spec = spec_from_file_location(path.stem, path)
-        module = module_from_spec(spec)
-
-        sys.modules[module.__name__] = module
-
-        spec.loader.exec_module(module)
-
-        try:
-            module_all = object.__getattribute__(module, '__all__')
-        except AttributeError:
-            print(ImportWarning(f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'))
-            return
-
-        for export in cast(tuple[str, ...], module_all):
-            exp_obj = object.__getattribute__(module, export)
-
-            if not isinstance(exp_obj, type):
-                continue
-
-            if not issubclass(exp_obj, AbstractPlugin):
-                continue
-
-            if not hasattr(exp_obj, '_config'):
-                print(ImportWarning(
-                    f'The plugin "{exp_obj.__name__}" has no config set up and thus can\'t be imported!'
-                ))
-                continue
-
-            yield exp_obj
-
     def __init__(self, main: MainWindow) -> None:
         main.plugins = self
 
@@ -79,55 +174,7 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         self.reset_last_reload()
 
-        self.plugins = dict[str, AbstractPlugin]()
-
-        plugin_files = list[Path]()
-
-        def _find_files(folder: Path, ignore_path: bool = False) -> None:
-            files = list(folder.glob('*.ppy'))
-
-            if files:
-                if not ignore_path:
-                    sys.path.append(str(folder))
-
-                plugin_files.extend(files)
-
-        def _check_folder(folder: str | Path, ignore_path: bool = False) -> None:
-            if not folder:
-                return
-
-            if isinstance(folder, str):
-                folder = folder.strip()
-
-                if folder.startswith(';'):
-                    return
-
-                folder = Path(folder)
-
-            if not folder.is_dir():
-                return
-
-            _find_files(folder, ignore_path)
-
-            for folder in (f for f in folder.glob('*') if f.is_dir()):
-                _find_files(folder, ignore_path)
-
-        _check_folder(Path(__file__).parent, True)
-        _check_folder(self.main.global_plugins_dir)
-
-        for paths_file in self.main.global_plugins_dir.glob('*.pth'):
-            for path in paths_file.read_text('utf8').splitlines():
-                _check_folder(path)
-
-        for plugin_file in plugin_files:
-            for plugin in self.file_to_plugins(plugin_file):
-                if plugin._config.namespace in self.plugins:
-                    print(UserWarning(
-                        f'Tried to register plugin "{plugin._config.display_name} '
-                        f'({plugin._config.namespace})" twice!'
-                    ))
-
-                self.plugins[plugin._config.namespace] = plugin(self.main)
+        self.plugins = get_plugins(AbstractPlugin, self.main)
 
         i = 0
         for name, plugin in self.plugins.items():
@@ -215,7 +262,7 @@ class Plugins(AbstractYAMLObjectSingleton):
 
             _sub = list(self.plugins.keys())[_sub]
 
-        return cast(AbstractPlugin, self.plugins[_sub])
+        return self.plugins[_sub]
 
     def __len__(self) -> int:
         return len(self.plugins)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 from PyQt6.QtWidgets import QSizePolicy
@@ -11,12 +13,22 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'AbstractPlugin',
-    'PluginConfig'
+    'AbstractPlugin', 'PluginConfig'
 ]
 
 
-class PluginConfig(NamedTuple):
+if TYPE_CHECKING:
+    class _BasePluginConfig(NamedTuple):
+        namespace: str
+        display_name: str
+
+    class _BasePlugin:
+        _config: ClassVar[_BasePluginConfig]
+else:
+    _BasePlugin = _BasePluginConfig = object
+
+
+class PluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
     namespace: str
     display_name: str
     visible_in_tab: bool = True
@@ -61,3 +73,6 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     @property
     def is_notches_visible(self) -> bool:
         return (not self._config.visible_in_tab) or self.index == self.main.plugins.plugins_tab.currentIndex()
+
+
+_BasePluginT = _BasePlugin | AbstractPlugin

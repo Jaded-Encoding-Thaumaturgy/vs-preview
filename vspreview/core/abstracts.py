@@ -207,7 +207,7 @@ else:
 
 
 class ExtendedItemInit(ExtItemBase):
-    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
+    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, hidden: bool = False, **kwargs: Any) -> None:
         try:
             super().__init__(*args, **kwargs)  # type: ignore
         except TypeError:
@@ -215,6 +215,9 @@ class ExtendedItemInit(ExtItemBase):
 
         if tooltip:
             super().setToolTip(tooltip)
+
+        if hidden:
+            super().hide()
 
 
 class ExtendedItemWithName(ExtendedItemInit):

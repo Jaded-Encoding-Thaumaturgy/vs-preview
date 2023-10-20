@@ -48,16 +48,13 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     )
     parser.add_argument(
         'plugins', type=str, nargs='*',
-        help='Plugins to install/uninstall/update'
+        help='Plugins to install/uninstall/update or arguments to pass to the script environment.'
     )
     parser.add_argument(
         '--version', '-v', action='version', version='%(prog)s 0.2b'
     )
     parser.add_argument(
         '--preserve-cwd', '-c', action='store_true', help='do not chdir to script parent directory'
-    )
-    parser.add_argument(
-        '--arg', '-a', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
     )
     parser.add_argument('-f', '--frame', type=int, help='Frame to load initially (defaults to 0)')
     parser.add_argument(
@@ -97,6 +94,10 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     if not script_path_or_command and not (args.plugins and (script_path_or_command := next(iter(args.plugins)))):
         logging.error('Script path required.')
         return exit_func(1, no_exit)
+
+    if script_path_or_command.startswith('--') and args.plugins:
+        script_path_or_command = args.plugins.pop()
+        args.plugins = [args.script_path_or_command, *args.plugins]
 
     if (command := script_path_or_command) in plugins_commands:
         if not args.plugins:
@@ -153,10 +154,10 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
             except ValueError:
                 ...
 
-        return k, v
+        return k.strip('--'), v
 
-    if args.arg:
-        arguments |= {k: v for k, v in map(_parse_arg, args.arg)}
+    if args.plugins:
+        arguments |= {k: v for k, v in map(_parse_arg, args.plugins)}
 
     main.main_window = MainWindow(
         Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled

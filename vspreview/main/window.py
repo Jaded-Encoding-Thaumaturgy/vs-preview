@@ -283,7 +283,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.resolve_plugins.add(resolve_plugin)
 
         self.toolbars.playback.stop()
-        self.setWindowTitle(f'VSPreview: {self.display_name} {self.external_args}')
+        self.setWindowTitle(
+            f'VSPreview: {self.display_name}' + (
+                f', Arguments({", ".join(f"{k}={v}" for k, v in self.external_args)})'
+                if self.external_args else ''
+            )
+        )
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path

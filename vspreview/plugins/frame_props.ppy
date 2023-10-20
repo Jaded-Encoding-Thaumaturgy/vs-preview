@@ -78,7 +78,10 @@ class FramePropsPlugin(AbstractPlugin, QTableView):
         self.verticalHeader().hide()
 
     def on_current_frame_changed(self, frame: Frame) -> None:
-        self.update_frame_props(self.main.current_output.props)
+        if (props := self.main.current_output.props) is None:
+            return
+
+        self.update_frame_props(props)  # type: ignore
 
     def update_frame_props(self, props: FrameProps) -> None:
         data = []

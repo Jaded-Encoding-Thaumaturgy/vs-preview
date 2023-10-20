@@ -26,16 +26,16 @@ __all__ = [
 ]
 
 
-def get_resolved_script(filepath: Path) -> ResolvedScript | int:
+def get_resolved_script(filepath: Path) -> tuple[ResolvedScript, FileResolverPlugin | None] | int:
     for plugin in get_plugins(FileResolverPlugin).values():
         if plugin.can_run_file(filepath):
-            return plugin.resolve_path(filepath)
+            return plugin.resolve_path(filepath), plugin
 
     if not filepath.exists():
         logging.error('Script or file path is invalid.')
         return 1
 
-    return ResolvedScript(filepath, str(filepath))
+    return ResolvedScript(filepath, str(filepath)), None
 
 
 def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
@@ -117,7 +117,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
 
         return exit_func(0, no_exit)
 
-    script = get_resolved_script(Path(script_path_or_command).resolve())
+    script, file_resolve_plugin = get_resolved_script(Path(script_path_or_command).resolve())
 
     if isinstance(script, int):
         return exit_func(script, no_exit)
@@ -147,7 +147,9 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
     main.main_window = MainWindow(
         Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled
     )
-    main.main_window.load_script(script.path, arguments, False, args.frame or None, script.display_name)
+    main.main_window.load_script(
+        script.path, arguments, False, args.frame or None, script.display_name, file_resolve_plugin
+    )
     main.main_window.show()
 
     ret_code = main.app.exec()

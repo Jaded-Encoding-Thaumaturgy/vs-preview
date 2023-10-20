@@ -44,11 +44,10 @@ else:
 
     if filepath.is_dir():
         for file in filepath.glob(pattern):
-            print(file)
             try:
                 parse_video_filepath(file)
-                set_output(source(file))
+                set_output(source(file), file.name)
             except Exception:
                 ...
     else:
-        set_output(source(filepath))
+        set_output(source(filepath), filepath.name)

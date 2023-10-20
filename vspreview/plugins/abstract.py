@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, NamedTuple, TypeVar
 
 from PyQt6.QtWidgets import QSizePolicy, QWidget
+from vstools import SPath
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider
 
@@ -96,6 +97,8 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 class FileResolverPlugin:
     _config: ClassVar[FileResolvePluginConfig]
 
+    temp_handles = set[SPath]()
+
     def get_extensions(self) -> Iterable[str]:
         return []
 
@@ -106,7 +109,31 @@ class FileResolverPlugin:
         raise NotImplementedError
 
     def cleanup(self) -> None:
-        ...
+        for file in self.temp_handles:
+            try:
+                if not file.exists():
+                    continue
+
+                if file.is_dir():
+                    file.rmdirs(True)
+                else:
+                    file.unlink(True)
+            except PermissionError:
+                continue
+
+    def get_temp_path(self, is_folder: bool = False) -> SPath:
+        from tempfile import mkdtemp, mkstemp
+
+        if is_folder:
+            temp = mkdtemp()
+        else:
+            temp = mkstemp()[1]
+
+        temp_path = SPath(temp)
+
+        self.temp_handles.add(temp_path)
+
+        return temp_path
 
 
 _BasePluginT = _BasePlugin | AbstractPlugin | FileResolverPlugin

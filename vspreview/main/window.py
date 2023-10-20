@@ -117,7 +117,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     window_settings = WindowSettings()
 
     autosave_timer: Timer
-    
+
     no_exit: bool
     reload_enabled: bool
 
@@ -272,10 +272,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     ) -> None:
         from random import random
 
+        self.display_name = display_name or script_path
         self.external_args = external_args or []
 
         self.toolbars.playback.stop()
-        self.setWindowTitle(f'VSPreview: {display_name or script_path} {self.external_args}')
+        self.setWindowTitle(f'VSPreview: {self.display_name} {self.external_args}')
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path
@@ -636,7 +637,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.gc_collect()
 
         try:
-            self.load_script(self.script_path, reloading=True)
+            self.load_script(self.script_path, self.external_args, True, None, self.display_name)
         finally:
             self.clear_monkey_runpy()
 

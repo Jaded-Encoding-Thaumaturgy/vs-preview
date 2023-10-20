@@ -12,12 +12,12 @@ class FileResolveWithVSSource(FileResolverPlugin):
     _config = FileResolvePluginConfig('dev.setsugen.vssource_load', 'FileResolveWithVSSource')
 
     def can_run_file(self, filepath: Path) -> bool:
-        if filepath.suffix in ('.py', '.vpy'):
-            return False
-
         try:
-            from vssource import source
-            source(filepath)
+            from vssource import source, parse_video_filepath
+
+            parse_video_filepath(filepath)
+            source(filepath).get_frame(0)
+
             return True
         except Exception:
             ...

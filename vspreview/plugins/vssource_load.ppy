@@ -1,0 +1,31 @@
+from __future__ import annotations
+from pathlib import Path
+
+from vspreview.plugins import FileResolvePluginConfig, FileResolverPlugin, ResolvedScript
+
+__all__ = [
+    'FileResolveWithVSSource'
+]
+
+
+class FileResolveWithVSSource(FileResolverPlugin):
+    _config = FileResolvePluginConfig('dev.setsugen.vssource_load', 'FileResolveWithVSSource')
+
+    def can_run_file(self, filepath: Path) -> bool:
+        if filepath.suffix in ('.py', '.vpy'):
+            return False
+
+        try:
+            from vssource import source
+            source(filepath)
+            return True
+        except Exception:
+            ...
+
+        return False
+
+    def resolve_path(self, filepath: Path) -> ResolvedScript:
+        file = self.get_temp_path()
+        file.write_text("""from vssource import source; source(filepath).set_output()""")
+
+        return ResolvedScript(file, str(filepath), dict(filepath=filepath), False)

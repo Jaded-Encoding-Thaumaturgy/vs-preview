@@ -266,7 +266,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.settings.dark_theme_enabled = False
         else:
             palette = DarkPalette if self.settings.dark_theme_enabled else LightPalette
-            apply_plotting_style()
+            if self.settings.dark_theme_enabled:
+                apply_plotting_style()
 
             stylesheet = _load_stylesheet('pyqt6', palette)
             stylesheet += ' QGraphicsView { border: 0px; padding: 0px; }'

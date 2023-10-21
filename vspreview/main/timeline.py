@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, cast
+from math import floor
+from typing import Any, Iterable, Sequence, cast
 
 from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
 from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
+from vstools import to_arr
 
-from ..core import NotchProvider, AbstractYAMLObject, Frame, Notch, Notches, Time, VideoOutput, main_window
+from ..core import AbstractYAMLObject, Frame, Notch, Notches, NotchProvider, Time, main_window
 from ..utils import strfdelta
 
 __all__ = [
@@ -30,10 +32,6 @@ class Timeline(QWidget):
         FRAME = 'frame'
         TIME = 'time'
 
-        @classmethod
-        def is_valid(cls, value: str) -> bool:
-            return value in {cls.FRAME, cls.TIME}
-
     clicked = pyqtSignal(Frame, Time)
 
     def __init__(self, parent: QWidget, **kwargs: Any) -> None:
@@ -45,118 +43,121 @@ class Timeline(QWidget):
 
         self.rect_f = QRectF()
 
-        self.end_t = Time(seconds=1)
-        self.end_f = Frame(1)
+        self.set_sizes()
 
-        self.notch_interval_target_x = round(75 * self.main.display_scale)
-        self.notch_height = round(6 * self.main.display_scale)
-        self.font_height = round(10 * self.main.display_scale)
-        self.notch_label_interval = round(-1 * self.main.display_scale)
-        self.notch_scroll_interval = round(2 * self.main.display_scale)
-        self.scroll_height = round(10 * self.main.display_scale)
-
-        self.setMinimumSize(self.notch_interval_target_x, round(33 * self.main.display_scale))
-
-        font = self.font()
-        font.setPixelSize(self.font_height)
-        self.setFont(font)
-
-        self.cursor_x = 0
-        # used as a fallback when self.rectF.width() is 0,
-        # so cursorX is incorrect
-        self.cursor_ftx: Frame | Time | int | None = None
-        # False means that only cursor position'll be recalculated
-        self.need_full_repaint = True
+        self._cursor_x: int | Frame | Time = 0
 
         self.notches = dict[NotchProvider, Notches]()
 
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setMouseTracking(True)
 
+        self.main.reload_before_signal.connect(lambda: self.__setattr__('_after_reload', True))
+
+    @property
+    def cursor_x(self) -> int:
+        return self.c_to_x(self._cursor_x)
+
+    @cursor_x.setter
+    def cursor_x(self, x: int | Frame | Time) -> None:
+        self._cursor_x = x
+        self.update()
+
+    @property
+    def mode(self) -> str:
+        return self._mode
+
+    @mode.setter
+    def mode(self, value: str) -> None:
+        if value == self._mode:
+            return
+
+        self._mode = value
+        self.update()
+
+    def set_sizes(self) -> None:
+        self.notches_cache = _default_cache
+
+        self.notch_interval_target_x = round(75 * self.main.display_scale)
+        self.notch_height = round(6 * self.main.display_scale)
+        self.font_height = round(10 * self.main.display_scale)
+        self.notch_scroll_interval = round(2 * self.main.display_scale)
+        self.scroll_height = round(10 * self.main.display_scale)
+
+        self.setMinimumSize(self.notch_interval_target_x, round(33 * self.main.display_scale))
+
+        font = self.main.font()
+        font.setPixelSize(self.font_height)
+        self.setFont(font)
+
+        self.update()
+
     def paintEvent(self, event: QPaintEvent) -> None:
         super().paintEvent(event)
         self.rect_f = QRectF(event.rect())
-        # self.rectF.adjust(0, 0, -1, -1)
 
-        if self.cursor_ftx is not None:
-            self.set_position(self.cursor_ftx)
-        self.cursor_ftx = None
-
-        painter = QPainter(self)
-        self.drawWidget(painter)
+        self.drawWidget(QPainter(self))
 
     def drawWidget(self, painter: QPainter) -> None:
-        if self.need_full_repaint:
+        setup_key = (self.rect_f, self.main.current_output.index)
+
+        curr_key, (scroll_rect, labels_notches, rects_to_draw) = self.notches_cache[self.mode]
+
+        if setup_key != curr_key:
+            lnotch_y, lnotch_x = self.rect_f.top() + self.font_height + self.notch_height + 5, self.rect_f.left()
+            lnotch_top = lnotch_y - self.notch_height
+
             labels_notches = Notches()
-            label_notch_bottom = (
-                self.rect_f.top() + self.font_height + self.notch_label_interval + self.notch_height + 5
-            )
-            label_notch_top = label_notch_bottom - self.notch_height
-            label_notch_x = self.rect_f.left()
 
             if self.mode == self.Mode.TIME:
-                notch_interval_t = self.calculate_notch_interval_t(self.notch_interval_target_x)
-                label_format = self.generate_label_format(notch_interval_t, self.end_t)
-                label_notch_t = Time()
-
-                while (label_notch_x < self.rect_f.right() and label_notch_t <= self.end_t):
-                    line = QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
-                    labels_notches.add(Notch(deepcopy(label_notch_t), line=line))
-                    label_notch_t += notch_interval_t
-                    label_notch_x = self.t_to_x(label_notch_t)
-
+                max_value = self.main.current_output.total_time
+                notch_interval = self.calculate_notch_interval_t(self.notch_interval_target_x)
+                label_format = self.generate_label_format(notch_interval, max_value)
+                label_notch = Time()
             elif self.mode == self.Mode.FRAME:
-                notch_interval_f = self.calculate_notch_interval_f(self.notch_interval_target_x)
-                label_notch_f = Frame(0)
+                max_value = self.main.current_output.total_frames  # type: ignore
+                notch_interval = self.calculate_notch_interval_f(self.notch_interval_target_x)  # type: ignore
+                label_notch = Frame()  # type: ignore
 
-                while (label_notch_x < self.rect_f.right() and label_notch_f <= self.end_f):
-                    line = QLineF(label_notch_x, label_notch_bottom, label_notch_x, label_notch_top)
-                    labels_notches.add(Notch(deepcopy(label_notch_f), line=line))
-                    label_notch_f += notch_interval_f
-                    label_notch_x = self.f_to_x(label_notch_f)
+            while (lnotch_x < self.rect_f.right() and label_notch <= max_value):
+                labels_notches.add(
+                    Notch(deepcopy(label_notch), line=QLineF(lnotch_x, lnotch_y, lnotch_x, lnotch_top))
+                )
+                label_notch += notch_interval
+                lnotch_x = self.c_to_x(label_notch)
 
-            self.scroll_rect = QRectF(
-                self.rect_f.left(),
-                label_notch_bottom + self.notch_scroll_interval,
-                self.rect_f.width(), self.scroll_height
+            labels_notches.add(
+                Notch(max_value, line=QLineF(self.rect_f.right(), lnotch_y, self.rect_f.right(), lnotch_top))
             )
 
-            for provider, notches in self.notches.items():
-                if not provider.is_notches_visible:
-                    continue
-
-                for notch in notches:
-                    if isinstance(notch.data, Frame):
-                        x = self.f_to_x(notch.data)
-                    elif isinstance(notch.data, Time):
-                        x = self.t_to_x(notch.data)
-                    y = self.scroll_rect.top()
-                    notch.line = QLineF(x, y, x, y + self.scroll_rect.height() - 1)
+            scroll_rect = QRectF(
+                self.rect_f.left(), lnotch_y + self.notch_scroll_interval, self.rect_f.width(), self.scroll_height
+            )
 
         cursor_line = QLineF(
-            self.cursor_x, self.scroll_rect.top(), self.cursor_x,
-            self.scroll_rect.top() + self.scroll_rect.height() - 1
+            self.cursor_x, scroll_rect.top(), self.cursor_x, scroll_rect.top() + scroll_rect.height() - 1
         )
 
-        # drawing
+        for provider, notches in self.notches.items():
+            if not provider.is_notches_visible:
+                continue
 
-        if self.need_full_repaint:
-            painter.fillRect(self.rect_f, self.palette().color(QPalette.ColorRole.Window))
+            notches.norm_lines(self, scroll_rect)
 
-            painter.setPen(QPen(self.palette().color(QPalette.ColorRole.WindowText)))
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-            painter.drawLines([notch.line for notch in labels_notches])  # type: ignore
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect_f, self.palette().color(QPalette.ColorRole.Window))
+        painter.setPen(QPen(self.palette().color(QPalette.ColorRole.WindowText)))
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        if setup_key != curr_key:
+            rects_to_draw = []
 
             for i, notch in enumerate(labels_notches):
-                line = notch.line
-                anchor_rect = QRectF(
-                    line.x2(), line.y2() - self.notch_label_interval, 0, 0)
+                anchor_rect = QRectF(notch.line.x2(), notch.line.y2(), 0, 0)
 
                 if self.mode == self.Mode.TIME:
                     time = cast(Time, notch.data)
                     label = strfdelta(time, label_format)
-                if self.mode == self.Mode.FRAME:
+                elif self.mode == self.Mode.FRAME:
                     label = str(notch.data)
 
                 if i == 0:
@@ -167,20 +168,44 @@ class Timeline(QWidget):
                         rect.moveLeft(-2.5)
                 elif i == (len(labels_notches) - 1):
                     rect = painter.boundingRect(
+                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight, label
+                    )
+                elif i == (len(labels_notches) - 2):
+                    rect = painter.boundingRect(
                         anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, label
                     )
-                    if rect.right() > self.rect_f.right():
-                        rect = painter.boundingRect(
-                            anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight, label
-                        )
+
+                    last_notch = labels_notches[-1]
+
+                    if self.mode == self.Mode.TIME:
+                        last_label = strfdelta(cast(Time, last_notch.data), label_format)
+                    elif self.mode == self.Mode.FRAME:
+                        last_label = str(last_notch.data)
+
+                    anchor_rect = QRectF(last_notch.line.x2(), last_notch.line.y2(), 0, 0)
+                    last_rect = painter.boundingRect(
+                        anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight, last_label
+                    )
+
+                    if last_rect.left() - rect.right() < self.notch_interval_target_x / 10:
+                        labels_notches.items.pop(-2)
+                        rects_to_draw.append((last_rect, last_label))
+                        break
                 else:
                     rect = painter.boundingRect(
                         anchor_rect, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, label
                     )
-                painter.drawText(rect, label)
+
+                rects_to_draw.append((rect, label))
+
+                self.notches_cache[self.mode] = (setup_key, (scroll_rect, labels_notches, rects_to_draw))
+
+        for rect, text in rects_to_draw:
+            painter.drawText(rect, text)
 
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.fillRect(self.scroll_rect, Qt.GlobalColor.gray)
+        painter.drawLines([notch.line for notch in labels_notches])  # type: ignore
+        painter.fillRect(scroll_rect, Qt.GlobalColor.gray)
 
         for provider, notches in self.notches.items():
             if not provider.is_notches_visible:
@@ -193,28 +218,26 @@ class Timeline(QWidget):
         painter.setPen(Qt.GlobalColor.black)
         painter.drawLine(cursor_line)
 
-        self.need_full_repaint = False
-
-    def full_repaint(self) -> None:
-        self.need_full_repaint = True
-        self.update()
-
     def moveEvent(self, event: QMoveEvent) -> None:
         super().moveEvent(event)
-        self.full_repaint()
+        self.update()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         super().mousePressEvent(event)
+
         pos = event.pos().toPointF()
-        if self.scroll_rect.contains(pos):
-            self.set_position(int(pos.x()))
-            self.clicked.emit(self.x_to_f(self.cursor_x, Frame), self.x_to_t(self.cursor_x, Time))
+
+        if self.notches_cache[self.mode][1][0].contains(pos):
+            self.cursor_x = int(pos.x())
+            self.clicked.emit(self.x_to_f(self.cursor_x), self.x_to_t(self.cursor_x))
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
+
         for provider, notches in self.notches.items():
             if not provider.is_notches_visible:
                 continue
+
             for notch in notches:
                 line = notch.line
                 if line.x1() - 0.5 <= event.pos().x() <= line.x1() + 0.5:
@@ -223,122 +246,113 @@ class Timeline(QWidget):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self.full_repaint()
+        self.update()
 
     def event(self, event: QEvent) -> bool:
         if event.type() in {QEvent.Type.Polish, QEvent.Type.ApplicationPaletteChange}:
             self.setPalette(self.main.palette())
-            self.full_repaint()
+            self.update()
             return True
 
         return super().event(event)
 
-    def update_notches(self, provider: NotchProvider | None = None) -> None:
-        if provider is not None:
-            self.notches[provider] = provider.get_notches()
-        else:
-            for t in self.main.toolbars:
-                self.notches[t] = t.get_notches()
-            for t in self.main.plugins:
-                self.notches[t] = t.get_notches()
-        self.full_repaint()
+    def update_notches(self, provider: NotchProvider | Sequence[NotchProvider] | None = None) -> None:
+        if provider is None:
+            provider = [*self.main.toolbars, *self.main.plugins]
 
-    @property
-    def mode(self) -> str:
-        return self._mode
+        for t in cast(list[NotchProvider], to_arr(provider)):
+            self.notches[t] = t.get_notches()
 
-    @mode.setter
-    def mode(self, value: str) -> None:
-        if value == self._mode:
-            return
-
-        self._mode = value
-        self.full_repaint()
-
-    notch_intervals_t = list(
-        Time(seconds=n) for n in [
-            1, 2, 5, 10, 15, 30, 60, 90, 120, 300, 600,
-            900, 1200, 1800, 2700, 3600, 5400, 7200
-        ]
-    )
+        self.update()
 
     def calculate_notch_interval_t(self, target_interval_x: int) -> Time:
+        notch_intervals_t = list(
+            Time(seconds=n) for n in [
+                1, 2, 5, 10, 15, 30, 60, 90, 120, 300, 600,
+                900, 1200, 1800, 2700, 3600, 5400, 7200
+            ]
+        )
+
         margin = 1 + self.main.settings.timeline_label_notches_margin / 100
-        target_interval_t = self.x_to_t(target_interval_x, Time)
-        if target_interval_t >= self.notch_intervals_t[-1] * margin:
-            return self.notch_intervals_t[-1]
-        for interval in self.notch_intervals_t:
+        target_interval_t = self.x_to_t(target_interval_x)
+
+        if target_interval_t >= notch_intervals_t[-1] * margin:
+            return notch_intervals_t[-1]
+
+        for interval in notch_intervals_t:
             if target_interval_t < interval * margin:
                 return interval
+
         raise RuntimeError
 
-    notch_intervals_f = list(
-        Frame(n) for n in [
-            1, 5, 10, 20, 25, 50, 75, 100, 200, 250, 500, 750, 1000,
-            2000, 2500, 5000, 7500, 10000, 20000, 25000, 50000, 75000
-        ]
-    )
+    notch_intervals_f = list(map(Frame, [
+        1, 5, 10, 20, 25, 50, 75, 100, 200, 250, 500, 750, 1000,
+        2000, 2500, 5000, 7500, 10000, 20000, 25000, 50000, 75000
+    ]))
 
     def calculate_notch_interval_f(self, target_interval_x: int) -> Frame:
         margin = 1 + self.main.settings.timeline_label_notches_margin / 100
-        target_interval_f = self.x_to_f(target_interval_x, Frame)
-        if target_interval_f >= Frame(
-                round(int(self.notch_intervals_f[-1]) * margin)):
+
+        target_interval_f = self.x_to_f(target_interval_x)
+
+        if target_interval_f >= Frame(round(int(self.notch_intervals_f[-1]) * margin)):
             return self.notch_intervals_f[-1]
+
         for interval in self.notch_intervals_f:
-            if target_interval_f < Frame(
-                    round(int(interval) * margin)):
+            if target_interval_f < Frame(round(int(interval) * margin)):
                 return interval
+
         raise RuntimeError
 
     def generate_label_format(self, notch_interval_t: Time, end_time: Time | Time) -> str:
         if end_time >= Time(hours=1):
             return '%h:%M:00'
-        elif notch_interval_t >= Time(minutes=1):
+
+        if notch_interval_t >= Time(minutes=1):
             return '%m:00'
-        else:
+
+        if end_time > Time(seconds=10):
             return '%m:%S'
 
-    def set_end_frame(self, node: VideoOutput) -> None:
-        self.end_f = node.total_frames
-        self.end_t = node.total_time
-        self.full_repaint()
+        return '%s.%Z'
 
-    def set_position(self, pos: Frame | Time | int) -> None:
-        if self.rect_f.width() == 0.0:
-            self.cursor_ftx = pos
+    def x_to_t(self, x: int) -> Time:
+        return Time(seconds=(x * float(self.main.current_output.total_time) / self.rect_f.width()))
 
-        if isinstance(pos, Frame):
-            self.cursor_x = self.f_to_x(pos)
-        elif isinstance(pos, Time):
-            self.cursor_x = self.t_to_x(pos)
-        elif isinstance(pos, int):
-            self.cursor_x = pos
-        else:
-            raise TypeError
-        self.update()
+    def x_to_f(self, x: int) -> Frame:
+        return Frame(round(x / self.rect_f.width() * int(self.main.current_output.total_frames)))
 
-    def t_to_x(self, t: Time) -> int:
-        width = self.rect_f.width()
+    def c_to_x(self, cursor: int | Frame | Time) -> int:
+        if isinstance(cursor, int):
+            return cursor
+
         try:
-            x = round(float(t) / float(self.end_t) * width)
+            if isinstance(cursor, Frame):
+                return round(int(cursor) / int(self.main.current_output.total_frames) * self.rect_f.width())
+
+            if isinstance(cursor, Time):
+                return floor(float(cursor) / float(self.main.current_output.total_time) * self.rect_f.width())
         except ZeroDivisionError:
-            x = 0
-        return x
+            ...
 
-    def x_to_t(self, x: int, ty: type[Time]) -> Time:
-        width = self.rect_f.width()
-        return ty(seconds=(x * float(self.end_t) / width))
+        return 0
 
-    def f_to_x(self, f: Frame) -> int:
-        width = self.rect_f.width()
-        try:
-            x = round(int(f) / int(self.end_f) * width)
-        except ZeroDivisionError:
-            x = 0
-        return x
+    def cs_to_x(self, *cursors: int | Frame | Time) -> Iterable[int]:
+        r_f = self.rect_f.width()
+        t_d = float(self.main.current_output.total_time) * r_f
+        f_d = int(self.main.current_output.total_frames) * r_f
 
-    def x_to_f(self, x: int, ty: type[Frame]) -> Frame:
-        width = self.rect_f.width()
-        value = round(x / width * int(self.end_f))
-        return ty(value)
+        for c in cursors:
+            if isinstance(c, int):
+                yield c
+
+            try:
+                yield round(int(c) / (f_d if isinstance(c, Time) else t_d))
+            except ZeroDivisionError:
+                yield 0
+
+
+_default_cache = {
+    Timeline.Mode.FRAME: ((QRectF(), -1), (QRectF(), Notches(), list[tuple[QRectF, str]]())),
+    Timeline.Mode.TIME: ((QRectF(), -1), (QRectF(), Notches(), list[tuple[QRectF, str]]()))
+}

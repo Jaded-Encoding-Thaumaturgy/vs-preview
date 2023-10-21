@@ -1,13 +1,16 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Iterator, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Iterable, Iterator, Sequence, TypeVar, cast
 
-from PyQt6.QtCore import QLineF, Qt
+from PyQt6.QtCore import QLineF, Qt, QRectF
 from PyQt6.QtGui import QColor
 from vstools import fallback
 
 from ..types import Frame, Scene, Time
+
+if TYPE_CHECKING:
+    from ...main.timeline import Timeline
 
 __all__ = [
     'Notch',
@@ -38,22 +41,22 @@ class Notch:
         cls: type[NotchSelf], data: NotchT, color: QColor | Qt.GlobalColor | None = None, label: str | None = None
     ) -> Iterable[NotchSelf]:
         if isinstance(data, Notch):
-            yield Notch(data.data, color if data.color is None else data.color, data.label or label, data.line)
+            yield cls(data.data, color if data.color is None else data.color, data.label or label, data.line)
             return
 
         if isinstance(data, Scene):
             if not label:
                 label = data.label
 
-            yield Notch(data.start, color, label)
+            yield cls(data.start, color, label)
 
             if data.end != data.start:
-                yield Notch(data.end, color, label)
+                yield cls(data.end, color, label)
 
             return
 
         if isinstance(data, (int, Frame, Time)):
-            yield Notch(data, color, label)
+            yield cls(data, color, label)
             return
 
         raise TypeError
@@ -94,3 +97,47 @@ class Notches:
 
     def __repr__(self) -> str:
         return '{}({})'.format(type(self).__name__, repr(self.items))
+
+    def norm_lines(self, timeline: Timeline, rect: QRectF) -> None:
+        from ...main.timeline import Timeline
+
+        y = rect.top()
+        y_t = rect.height() - 1
+
+        # fastpaths for Notches that match Timeline.Mode
+        if timeline.mode == Timeline.Mode.FRAME:
+            try:
+                for notch in self:
+                    x = timeline.c_to_x(notch.data)  # type: ignore
+                    notch.line = QLineF(x, y, x, y_t)
+                return
+            except Exception:
+                try:
+                    for notch in self:
+                        x = timeline.t_to_x(notch.data)  # type: ignore
+                        notch.line = QLineF(x, y, x, y_t)
+                    return
+                except Exception:
+                    ...
+        else:
+            try:
+                for notch in self:
+                    x = timeline.t_to_x(notch.data)  # type: ignore
+                    notch.line = QLineF(x, y, x, y_t)
+                return
+            except Exception:
+                try:
+                    for notch in self:
+                        x = timeline.c_to_x(notch.data)  # type: ignore
+                        notch.line = QLineF(x, y, x, y_t)
+                    return
+                except Exception:
+                    ...
+
+        for notch in self:
+            if isinstance(notch.data, Frame):
+                x = timeline.c_to_x(notch.data)
+            elif isinstance(notch.data, Time):
+                x = timeline.t_to_x(notch.data)
+
+            notch.line = QLineF(x, y, x, y_t)

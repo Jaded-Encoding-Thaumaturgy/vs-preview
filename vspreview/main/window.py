@@ -100,7 +100,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     storable_attrs = ('settings', 'toolbars')
 
     __slots__ = (
-        *storable_attrs, 'app', 'display_scale', 'clipboard',
+        *storable_attrs, 'app', 'clipboard',
         'script_path', 'timeline', 'main_layout', 'autosave_timer',
         'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
@@ -147,7 +147,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.bound_graphics_views = dict[GraphicsView, set[GraphicsView]]()
 
-        self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')
 
         desktop_size = self.app.primaryScreen().size()
@@ -202,6 +201,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.setObjectName('MainWindow')
 
         self.env: vpy.Script | None = None
+
+    @property
+    def display_scale(self) -> float:
+        return self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
 
     def setup_ui(self) -> None:
         self.central_widget = ExtendedWidget(self)
@@ -417,6 +420,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             load_error = e
 
         self.apply_stylesheet()
+        self.timeline.set_sizes()
 
         with self.env:
             vs.register_on_destroy(self.gc_collect)
@@ -706,7 +710,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.current_output.last_showed_frame = frame
 
-        self.timeline.set_position(frame)
+        self.timeline.cursor_x = frame
 
         for toolbar in self.toolbars:
             toolbar.on_current_frame_changed(frame)
@@ -736,7 +740,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         # current_output relies on outputs_combobox
         self.toolbars.main.on_current_output_changed(index, prev_index)
-        self.timeline.set_end_frame(self.current_output)
 
         self.switch_frame(self.current_output.last_showed_frame)
 
@@ -869,7 +872,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.Type.LayoutRequest:
-            self.timeline.full_repaint()
+            self.timeline.update()
 
         return super().event(event)
 

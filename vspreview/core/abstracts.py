@@ -450,7 +450,7 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
             self.main.resize(self.main.width(), self.main.height() + self.height() + round(6 * self.main.display_scale))
         if not expanding:
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
-            self.main.timeline.full_repaint()
+            self.main.timeline.update()
 
     def __get_storable_attr__(self) -> tuple[str, ...]:
         attributes = list(self.class_storable_attrs + self.storable_attrs)

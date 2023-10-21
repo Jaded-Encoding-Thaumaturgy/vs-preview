@@ -40,7 +40,9 @@ class MainSettings(AbstractToolbarSettings):
 
         self.autosave_control = TimeEdit(self)
 
-        self.base_ppi_spinbox = SpinBox(self, 1, 999)
+        self.base_ppi_spinbox = SpinBox(
+            self, 1, 999, valueChanged=lambda: hasattr(main_window(), 'timeline') and main_window().timeline.set_sizes()
+        )
 
         self.dark_theme_checkbox = CheckBox('Dark theme', self, clicked=lambda: main_window().apply_stylesheet())
 

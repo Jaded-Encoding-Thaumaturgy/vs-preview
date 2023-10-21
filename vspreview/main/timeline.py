@@ -127,7 +127,7 @@ class Timeline(QWidget):
                 lnotch_x = self.c_to_x(label_notch)
 
             labels_notches.add(
-                Notch(max_value, line=QLineF(self.rect_f.right(), lnotch_y, self.rect_f.right(), lnotch_top))
+                Notch(max_value, line=QLineF(self.rect_f.right() - 1, lnotch_y, self.rect_f.right() - 1, lnotch_top))
             )
 
             scroll_rect = QRectF(

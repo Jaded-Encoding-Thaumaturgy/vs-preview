@@ -195,6 +195,9 @@ class VideoOutput(AbstractYAMLObject):
             else:
                 self.play_fps = Fraction(self.fps_num, self.fps_den)
 
+        if self.fps_num == 0 and self._stateset:
+            self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
+
         if index in self.main.norm_timecodes:
             norm_timecodes = self.main.norm_timecodes[index]  # type: ignore
 

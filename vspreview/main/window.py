@@ -21,10 +21,11 @@ from vstools import get_prop
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
     GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
-    VBoxLayout, VideoOutput, _monkey_runpy_dicts, dispose_environment, get_current_environment, make_environment
+    VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
+    make_environment
 )
 from ..models import GeneralModel, VideoOutputs
-from ..plugins import Plugins, FileResolverPlugin
+from ..plugins import FileResolverPlugin, Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -112,6 +113,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     reload_after_signal = pyqtSignal()
     cropValuesChanged = pyqtSignal(CroppingInfo)
 
+    reload_stylesheet_signal = pyqtSignal()
+
     toolbars: Toolbars
     plugins: Plugins
     app_settings: SettingsDialog
@@ -143,19 +146,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.last_reload_time = time()
 
         self.bound_graphics_views = dict[GraphicsView, set[GraphicsView]]()
-
-        if self.settings.dark_theme_enabled:
-            from ..core import apply_plotting_style
-
-            try:
-                from qdarkstyle import _load_stylesheet  # type: ignore[import]
-            except ImportError:
-                self.settings.dark_theme_enabled = False
-            else:
-                apply_plotting_style()
-                self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
-
-        self.ensurePolished()
 
         self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')
@@ -266,8 +256,23 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 view.autofit = not view.autofit
                 break
 
-    def patch_dark_stylesheet(self, stylesheet: str) -> str:
-        return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
+    def apply_stylesheet(self) -> None:
+        try:
+            from qdarkstyle import _load_stylesheet, DarkPalette, LightPalette  # type: ignore[import]
+        except ImportError:
+            self.settings.dark_theme_enabled = False
+        else:
+            palette = DarkPalette if self.settings.dark_theme_enabled else LightPalette
+            apply_plotting_style()
+
+            stylesheet = _load_stylesheet('pyqt6', palette)
+            stylesheet += ' QGraphicsView { border: 0px; padding: 0px; }'
+
+            self.app.setStyleSheet(stylesheet)
+
+        self.ensurePolished()
+        self.reload_stylesheet_signal.emit()
+        self.repaint()
 
     def load_script(
         self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
@@ -410,6 +415,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 self.load_storage()
         except Exception as e:
             load_error = e
+
+        self.apply_stylesheet()
 
         with self.env:
             vs.register_on_destroy(self.gc_collect)

@@ -127,7 +127,10 @@ class GraphicsView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.drag_mode = self.dragMode()
 
-        self.setBackgroundBrush(self.main.palette().brush(QPalette.ColorRole.Window))
+        self.main.reload_stylesheet_signal.connect(
+            lambda: self.setBackgroundBrush(self.main.palette().brush(QPalette.ColorRole.Window))
+        )
+
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 

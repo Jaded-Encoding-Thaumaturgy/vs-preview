@@ -42,7 +42,7 @@ class MainSettings(AbstractToolbarSettings):
 
         self.base_ppi_spinbox = SpinBox(self, 1, 999)
 
-        self.dark_theme_checkbox = CheckBox('Dark theme', self)
+        self.dark_theme_checkbox = CheckBox('Dark theme', self, clicked=lambda: main_window().apply_stylesheet())
 
         self.opengl_rendering_checkbox = CheckBox('OpenGL rendering', self)
 

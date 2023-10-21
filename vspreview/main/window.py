@@ -744,13 +744,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.switch_frame(self.current_output.last_showed_frame)
 
         for graphics_view in self.graphics_views:
-            for item in graphics_view.graphics_scene.graphics_items:
-                item.hide()
-
-            graphics_view.current_scene.show()
-            graphics_view.graphics_scene.setSceneRect(
-                QRectF(graphics_view.current_scene.pixmap().rect())
-            )
+            graphics_view.setup_view()
 
         self.timeline.update_notches()
 

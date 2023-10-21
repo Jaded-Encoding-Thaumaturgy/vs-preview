@@ -278,6 +278,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.display_name = display_name or script_path
         self.external_args = external_args or []
+        self.start_frame = Frame(start_frame or 0)
 
         if resolve_plugin:
             self.resolve_plugins.add(resolve_plugin)

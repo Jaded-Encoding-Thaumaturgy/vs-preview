@@ -21,6 +21,8 @@ __all__ = [
     'VideoOutput'
 ]
 
+_default_props = {}
+
 
 class PackingTypeInfo:
     _getid = iter_count()
@@ -131,7 +133,7 @@ class VideoOutput(AbstractYAMLObject):
         if self.main.outputs is not None:
             self.main.outputs.setData(self.main.outputs.index(self.vs_index), self.name)
 
-        self.props = cast(vs.FrameProps, {})
+        self.props = cast(vs.FrameProps, _default_props)
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
@@ -184,6 +186,9 @@ class VideoOutput(AbstractYAMLObject):
                 self.play_fps = Fraction(norm_timecodes[self.last_showed_frame])
         elif not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
+                if self.props is _default_props:
+                    self.props = self.prepared.clip.get_frame(self.main.start_frame).props
+
                 self.play_fps = self.main.toolbars.playback.get_true_fps(
                     self.last_showed_frame.value, self.props
                 )

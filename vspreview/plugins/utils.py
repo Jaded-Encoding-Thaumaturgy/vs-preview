@@ -114,7 +114,10 @@ class PluginGraphicsView(GraphicsView):
         else:
             raise RuntimeError('This GraphicsView has to be bound to a MappedNodesPlugin!')
 
-        self.plugin.on_first_load.connect(self.first_load)
+        if isinstance(self, AbstractPlugin):
+            self.plugin.on_first_load.connect(PluginGraphicsView.first_load.__get__(self))
+        else:
+            self.plugin.on_first_load.connect(self.first_load)
 
     def first_load(self) -> None:
         self.graphics_scene.init_scenes()

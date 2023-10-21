@@ -102,7 +102,7 @@ class Notches:
         from ...main.timeline import Timeline
 
         y = rect.top()
-        y_t = rect.height() - 1
+        y_t = y + rect.height() - 1
 
         # fastpaths for Notches that match Timeline.Mode
         if timeline.mode == Timeline.Mode.FRAME:

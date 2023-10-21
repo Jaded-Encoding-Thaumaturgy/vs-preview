@@ -106,7 +106,7 @@ class VideoOutput(AbstractYAMLObject):
         self.set_fmt_values()
 
         with self.main.env:
-            vs_outputs = list(vs.get_outputs().values())
+            vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.VideoOutputTuple))
 
         self.vs_index = index
         self.index = vs_outputs.index(vs_output) if vs_output in vs_outputs else index

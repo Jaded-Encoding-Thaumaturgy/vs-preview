@@ -261,7 +261,8 @@ class Timeline(QWidget):
             provider = [*self.main.toolbars, *self.main.plugins]
 
         for t in cast(list[NotchProvider], to_arr(provider)):
-            self.notches[t] = t.get_notches()
+            if t.is_notches_visible:
+                self.notches[t] = t.get_notches()
 
         self.update()
 

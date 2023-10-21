@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, NamedTuple, TypeVar
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 from vstools import SPath
 
@@ -52,6 +53,8 @@ class ResolvedScript(NamedTuple):
 class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     _config: ClassVar[PluginConfig]
 
+    on_first_load = pyqtSignal()
+
     index: int = -1
 
     def __init__(self, main: MainWindow) -> None:
@@ -69,11 +72,19 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
         self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
 
-        self.setup_ui()
+        self._first_load_done = False
 
-        self.add_shortcuts()
+    def first_load(self) -> None:
+        if not self._first_load_done:
+            self.setup_ui()
 
-        self.set_qobject_names()
+            self.add_shortcuts()
+
+            self.set_qobject_names()
+
+            self.on_first_load.emit()
+
+            self._first_load_done = True
 
     def init_outputs(self) -> None:
         ...

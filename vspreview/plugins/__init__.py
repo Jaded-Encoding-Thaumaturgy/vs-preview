@@ -215,7 +215,8 @@ class Plugins(AbstractYAMLObjectSingleton):
 
     def init_outputs(self) -> None:
         for plugin in self:
-            plugin.init_outputs()
+            if plugin._first_load_done:
+                plugin.init_outputs()
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         tab_idx = self.plugins_tab.currentIndex()
@@ -223,6 +224,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         curr_render = (tab_idx, self.main.current_output.index, int(frame))
 
         if self.main.main_split.current_position and self.last_frame_change != curr_render:
+            self[tab_idx].first_load()
             self[tab_idx].on_current_frame_changed(frame)
 
             self.last_frame_change = curr_render
@@ -233,6 +235,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         curr_output = (tab_idx, index)
 
         if self.main.main_split.current_position and self.last_output_change != curr_output:
+            self[tab_idx].first_load()
             self[tab_idx].on_current_output_changed(index, prev_index)
 
             self.last_output_change = curr_output

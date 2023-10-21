@@ -114,6 +114,12 @@ class PluginGraphicsView(GraphicsView):
         else:
             raise RuntimeError('This GraphicsView has to be bound to a MappedNodesPlugin!')
 
+        self.plugin.on_first_load.connect(self.first_load)
+
+    def first_load(self) -> None:
+        self.graphics_scene.init_scenes()
+        self.setup_view()
+
     @property
     def content_width(self) -> int:
         return self.plugin.outputs.current.width

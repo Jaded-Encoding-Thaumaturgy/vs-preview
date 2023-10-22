@@ -114,6 +114,13 @@ class VideoOutput(AbstractYAMLObject):
         self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
 
         self.cached = not not self.info.get('cache', False)
+
+        if vs_output in vs_outputs and not hasattr(self, 'props'):
+            try:
+                self.props = vs_output.clip.get_frame(self.main.start_frame).props.copy()
+            except Exception as e:
+                raise e from None
+
         self.source = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
 
@@ -186,9 +193,6 @@ class VideoOutput(AbstractYAMLObject):
                 self.play_fps = Fraction(norm_timecodes[self.last_showed_frame])
         elif not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
-                if self.props is _default_props:
-                    self.props = self.prepared.clip.get_frame(self.main.start_frame).props
-
                 self.play_fps = self.main.toolbars.playback.get_true_fps(
                     self.last_showed_frame.value, self.props
                 )
@@ -454,7 +458,12 @@ class VideoOutput(AbstractYAMLObject):
 
         frame = min(max(frame, Frame(0)), self.total_frames - 1)
 
-        vs_frame = vs_frame or self.prepared.clip.get_frame(frame.value)
+        if not vs_frame:
+            try:
+                vs_frame = self.prepared.clip.get_frame(frame.value)
+            except vs.Error as e:
+                self.main.handle_error(e)
+                return QPixmap()
 
         self.props = cast(vs.FrameProps, vs_frame.props.copy())
 

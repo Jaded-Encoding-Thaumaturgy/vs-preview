@@ -165,7 +165,6 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     main.main_window.load_script(
         script.path, list(arguments.items()), False, args.frame or None, script.display_name, file_resolve_plugin
     )
-    main.main_window.show()
 
     ret_code = main.app.exec()
 

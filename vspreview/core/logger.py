@@ -65,6 +65,11 @@ def set_log_level(main: int = LOG_LEVEL, engine: int = logging.ERROR) -> None:
     _hospice.logger.setLevel(engine)
     logging.getLogger().level = main
 
+    if main != logging.DEBUG:
+        sys.tracebacklimit = 0
+    elif hasattr(sys, 'tracebacklimit'):
+        del sys.tracebacklimit
+
 
 def get_vs_logger() -> Callable[[MessageType, str], None]:
     setup_logger()

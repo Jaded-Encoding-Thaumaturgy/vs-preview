@@ -371,20 +371,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             ).result()
             self.env.module.__dict__['_monkey_runpy'] = random()
             self.env = vpy.script(self.script_path, environment=self.env).result()
-        except vpy.ExecutionFailed as e:
-            from traceback import TracebackException
-
-            logging.error(e.parent_error)
-
-            te = TracebackException.from_exception(e.parent_error)
-            logging.error(''.join(te.format()))
-
-            self.script_exec_failed = True
-            return self.handle_script_error(
-                '\n'.join([
-                    str(e), 'See console output for details.'
-                ]), True
-            )
+        except Exception as e:
+            return self.handle_error(e)
         finally:
             if argv_orig is not None:
                 sys.argv = argv_orig
@@ -443,6 +431,31 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             return self.handle_script_error(
                 f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.', False
             )
+
+        self.show()
+
+    def handle_error(self, e: Exception) -> None:
+        import logging
+        from vsengine import vpy
+        from traceback import TracebackException
+
+        if not isinstance(e, vpy.ExecutionFailed):
+            e = vpy.ExecutionFailed(e)
+
+        self.hide()
+        self.apply_stylesheet()
+
+        logging.error(e.parent_error)
+
+        te = TracebackException.from_exception(e.parent_error)
+        logging.error(''.join(te.format()))
+
+        self.script_exec_failed = True
+        self.handle_script_error(
+            '\n'.join([
+                str(e), 'See console output for details.'
+            ]), True
+        )
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

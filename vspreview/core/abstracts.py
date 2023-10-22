@@ -207,7 +207,9 @@ else:
 
 
 class ExtendedItemInit(ExtItemBase):
-    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, hidden: bool = False, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, hidden: bool = False, **kwargs: Any
+    ) -> None:
         try:
             super().__init__(*args, **kwargs)  # type: ignore
         except TypeError:
@@ -526,28 +528,51 @@ def try_load(
         if nullable:
             value = None
 
-    func_error = None
-
     if isinstance(receiver, expected_type):
         receiver = value
     elif callable(receiver):
-        try:
-            cast(_SetterFunction, receiver)(name, value)
-        except Exception as e:
-            if 'positional arguments but' not in str(e):
-                func_error = e
+        from inspect import Signature, _ParameterKind
 
+        try:
+            len_params = len([
+                x for x in Signature.from_callable(receiver).parameters.values()
+                if x.kind in (_ParameterKind.POSITIONAL_ONLY, _ParameterKind.POSITIONAL_OR_KEYWORD)
+            ])
+
+            if len_params >= 2:
+                param_tries = [2, 1, 0]
+            elif len_params >= 1:
+                param_tries = [1, 0, 2]
+            else:
+                param_tries = [0, 1, 2]
+        except ValueError:
+            param_tries = [2, 1, 0]
+
+        exceptions = []
+
+        for ptry in param_tries:
             try:
-                cast(_OneArgumentFunction, receiver)(value)
-                func_error = None
-            except Exception as ee:
-                func_error = ee
+                if ptry == 2:
+                    receiver(name, value)
+                elif ptry == 1:
+                    receiver(value)
+                elif ptry == 0:
+                    receiver()
+            except Exception as e:
+                exceptions.append(e)
+            else:
+                exceptions.clear()
+                break
+
+        if exceptions:
+            filtered = [
+                e for e in exceptions if 'positional arguments but' not in str(e)
+            ]
+
+            return main_window().handle_error(filtered[0] if filtered else exceptions[0])
     elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
         try:
             receiver.__setattr__(name, value)
         except AttributeError as e:
             logging.error(e)
             logging.warning(error_msg)
-
-    if func_error:
-        raise func_error from None

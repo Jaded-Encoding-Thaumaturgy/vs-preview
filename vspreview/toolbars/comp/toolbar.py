@@ -792,6 +792,32 @@ class CompToolbar(AbstractToolbar):
 
         return list(samples)
 
+    def create_slowpics_tags(self):
+        tags = []
+        try:
+            from requests import Session
+        except Exception:
+            return tags
+
+        with Session() as sess:
+            sess.get('https://slow.pics/comparison')
+
+            for tag in self.current_tags:
+                if tag in self.tag_data:
+                    tags.append(self.tag_data.get(tag))
+                    continue
+
+                api_resp: dict = sess.post(
+                    "https://slow.pics/api/tags",
+                    data=tag,
+                    headers=_get_slowpic_headers(len(tag), "application/json", sess)
+                ).json()
+
+                self.tag_data[api_resp.get("label")] = api_resp.get("value")
+                tags.append(api_resp.get("value"))
+        self.update_tags()
+        return tags
+
     def get_slowpics_conf(self) -> WorkerConfiguration:
         import logging
         import random
@@ -879,7 +905,7 @@ class CompToolbar(AbstractToolbar):
             if not tmdb_id.startswith(suffix):
                 tmdb_id = f"{suffix}{tmdb_id}"
 
-        tags = [self.tag_data.get(tag, tag) for tag in self.current_tags]
+        tags = self.create_slowpics_tags()
 
         filtered_outputs = []
         for output in self.main.outputs:

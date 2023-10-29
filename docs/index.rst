@@ -65,7 +65,7 @@ and much, much more!
 Special Credits
 ---------------
 | A special thanks to everyone who has contributed to ``vs-preview``.
-| `A comprehensive list of contributors can be found here. <https://github.com/Irrational-Encoding-Wizardry/vs-preview/graphs/contributors>`_
+| `A comprehensive list of contributors can be found here. <https://github.com/Setsugennoao/vs-preview/graphs/contributors>`_
 
 
 .. toctree::

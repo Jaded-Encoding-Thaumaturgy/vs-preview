@@ -8,7 +8,7 @@ from typing import Iterable
 from ..main import MainWindow
 
 BASE_URL = 'https://api.github.com/repos'
-PLUGINS_PATH = 'Irrational-Encoding-Wizardry/vs-preview-plugins'
+PLUGINS_PATH = 'Setsugennoao/vs-preview-plugins'
 BRANCH = 'master'
 
 CONTENT_URL = f'https://raw.githubusercontent.com/{PLUGINS_PATH}/{BRANCH}/{{path}}'

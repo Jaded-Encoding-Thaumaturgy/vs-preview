@@ -35,6 +35,10 @@ __all__ = [
 ]
 
 
+class PluginImportError(ImportError):
+    ...
+
+
 class PluginModule:
     __all__: tuple[str, ...]
 
@@ -55,7 +59,7 @@ class PluginModule:
         sys.modules[module.__name__] = module
 
         if spec.loader is None:
-            raise ImportError
+            raise PluginImportError
 
         spec.loader.exec_module(module)
 
@@ -65,9 +69,9 @@ class PluginModule:
         try:
             module.__all__
         except AttributeError:
-            print(ImportWarning(f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'))
-
-            raise ImportError
+            raise PluginImportError(
+                f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'
+            )
 
     def __getattr__(self, key: str) -> Any:
         return object.__getattribute__(_module_proxy_map[self][1], key)
@@ -125,11 +129,24 @@ def resolve_plugins() -> Iterable[Path]:
     return plugin_files
 
 
+_import_warnings = set[Path]()
+
+
+def _import_warning_once(path: Path, message: str) -> None:
+    if message and path not in _import_warnings:
+        _import_warnings.add(path)
+        print(ImportWarning(message))
+
+
 def file_to_plugins(path: Path, plugin_type: type[PluginT]) -> Iterable[type[PluginT]]:
     try:
         module = PluginModule(path)
-    except ImportError:
-        return
+    except PluginImportError as e:
+        return _import_warning_once(path, e.msg)
+    except ImportError as e:
+        return _import_warning_once(
+            path, f'The plugin at "{path}" could not be loaded because of this import error: \n\t{str(e)}'
+        )
 
     for export in module.__all__:
         exp_obj = getattr(module, export)

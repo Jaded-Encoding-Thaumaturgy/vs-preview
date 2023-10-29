@@ -78,6 +78,7 @@ class VideoOutput(AbstractYAMLObject):
     last_showed_frame: Frame
     crop_values: CroppingInfo
     _stateset: bool
+    props: vs.FrameProps | None
 
     def clear(self) -> None:
         if self.source:
@@ -87,7 +88,7 @@ class VideoOutput(AbstractYAMLObject):
         if self.props:
             self.props.clear()
         del self.source, self.prepared, self.props
-        self.source = self.prepared = self.props = None
+        self.source = self.prepared = self.props = None  # type: ignore
 
     def __init__(
         self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False
@@ -111,13 +112,13 @@ class VideoOutput(AbstractYAMLObject):
         self.vs_index = index
         self.index = vs_outputs.index(vs_output) if vs_output in vs_outputs else index
 
-        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
+        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})
 
         self.cached = not not self.info.get('cache', False)
 
         if vs_output in vs_outputs and not hasattr(self, 'props'):
             try:
-                self.props = vs_output.clip.get_frame(self.main.start_frame).props.copy()
+                self.props = cast(vs.FrameProps, vs_output.clip.get_frame(self.main.start_frame).props.copy())
             except Exception as e:
                 raise e from None
 

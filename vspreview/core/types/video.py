@@ -126,9 +126,10 @@ class VideoOutput(AbstractYAMLObject):
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
 
         if self.source.alpha is not None:
-            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
+            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True)
 
-        self.prepared.clip = self.prepare_vs_output(self.source.clip).std.CopyFrameProps(self.source.clip)
+        self.prepared.clip = self.prepare_vs_output(self.source.clip)
+
         self.width = self.prepared.clip.width
         self.height = self.prepared.clip.height
         self.fps_num = self.prepared.clip.fps.numerator
@@ -268,7 +269,7 @@ class VideoOutput(AbstractYAMLObject):
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
         from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics
 
-        assert clip.format
+        assert (src := clip).format
 
         heuristics = video_heuristics(clip, True)
 
@@ -285,9 +286,9 @@ class VideoOutput(AbstractYAMLObject):
             'primaries': self.main.settings.output_primaries_zimg
         })
 
-        if clip.format.color_family == vs.RGB:
+        if src.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']
-        elif clip.format.color_family == vs.GRAY:
+        elif src.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
 
         if isinstance(resizer_kwargs['range_in'], ColorRange):
@@ -296,10 +297,10 @@ class VideoOutput(AbstractYAMLObject):
         assert clip.format
 
         if is_alpha:
-            if clip.format.id == self._ALPHA_FMT.id:
+            if src.format.id == self._ALPHA_FMT.id:
                 return clip
             resizer_kwargs['format'] = self._ALPHA_FMT.id
-        elif clip.format.id == vs.GRAY32:
+        elif src.format.id == vs.GRAY32:
             return clip
 
         clip = clip.resize.Bicubic(**resizer_kwargs)
@@ -307,10 +308,10 @@ class VideoOutput(AbstractYAMLObject):
         if not self.cached:
             clip.std.SetVideoCache(0)
 
-        if is_alpha:
-            return clip
+        if not is_alpha:
+            clip = self.pack_rgb_clip(clip)
 
-        return self.pack_rgb_clip(clip)
+        return clip.std.CopyFrameProps(src)
 
     def pack_rgb_clip(self, clip: vs.VideoNode) -> vs.VideoNode:
         if PACKING_TYPE.shuffle:

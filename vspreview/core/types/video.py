@@ -267,21 +267,21 @@ class VideoOutput(AbstractYAMLObject):
         self.set_fmt_values()
 
     def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
-        from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics
+        from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics, DitherType, depth
 
         assert (src := clip).format
 
         heuristics = video_heuristics(clip, True)
+        dither_type = DitherType(self.main.toolbars.playback.settings.dither_type.lower())
 
         resizer_kwargs = KwargsT({
-            'format': self._NORML_FMT.id,
+            'format': self._NORML_FMT,
             'matrix_in': Matrix.BT709,
             'transfer_in': Transfer.BT709,
             'primaries_in': Primaries.BT709,
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
         } | heuristics | {
-            'dither_type': self.main.toolbars.playback.settings.dither_type,
             'transfer': Transfer.BT709,
             'primaries': self.main.settings.output_primaries_zimg
         })
@@ -299,11 +299,17 @@ class VideoOutput(AbstractYAMLObject):
         if is_alpha:
             if src.format.id == self._ALPHA_FMT.id:
                 return clip
-            resizer_kwargs['format'] = self._ALPHA_FMT.id
+            resizer_kwargs['format'] = self._ALPHA_FMT
         elif src.format.id == vs.GRAY32:
             return clip
 
-        clip = clip.resize.Bicubic(**resizer_kwargs)
+        if dither_type.is_fmtc:
+            to_fmt: vs.VideoFormat = resizer_kwargs.pop('format')
+            temp_fmt = to_fmt.replace(sample_type=src.format.sample_type, bits_per_sample=src.format.bits_per_sample)
+            clip = clip.resize.Bicubic(**resizer_kwargs, format=temp_fmt.id)
+            clip = depth(clip, to_fmt, dither_type=dither_type)
+        else:
+            clip = clip.resize.Bicubic(**resizer_kwargs, dither_type=dither_type.value)
 
         if not self.cached:
             clip.std.SetVideoCache(0)

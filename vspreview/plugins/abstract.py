@@ -86,6 +86,10 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
             self._first_load_done = True
 
+            return True
+
+        return False
+
     def init_outputs(self) -> None:
         ...
 

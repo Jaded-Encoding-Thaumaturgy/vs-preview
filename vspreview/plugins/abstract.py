@@ -74,7 +74,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
         self._first_load_done = False
 
-    def first_load(self) -> None:
+    def first_load(self) -> bool:
         if not self._first_load_done:
             self.setup_ui()
 

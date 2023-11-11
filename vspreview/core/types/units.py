@@ -84,6 +84,9 @@ class Frame(YAMLObjectWrapper):
             'Failed to load Frame instance'
         )
 
+    def __hash__(self) -> int:
+        return hash(self.value)
+
 
 class Time(YAMLObjectWrapper):
     __slots__ = ('value', )
@@ -153,3 +156,6 @@ class Time(YAMLObjectWrapper):
             state, 'value', timedelta, self.__init__,  # type: ignore
             'Failed to load Time instance'
         )
+
+    def __hash__(self) -> int:
+        return hash(self.value)

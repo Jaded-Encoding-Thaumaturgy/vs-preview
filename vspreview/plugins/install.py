@@ -57,7 +57,7 @@ def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = Fal
 
     not_found_plugins = set(plugins) - found_plugins
     if not_found_plugins:
-        logging.warn(f'Not found the following plugins: "{", ".join(not_found_plugins)}"')
+        logging.warn(f'Could not find the following plugins: "{", ".join(not_found_plugins)}"')
 
     with Session() as s:
         for plugin in found_plugins:
@@ -115,6 +115,6 @@ def uninstall_plugins(plugins: list[str], ignore: bool = False) -> None:
     found_plugins = set(plugins) - not_found_plugins
 
     if not_found_plugins:
-        logging.warn(f'Not found the following plugins: "{", ".join(not_found_plugins)}"')
+        logging.warn(f'Could not find plugins: "{", ".join(not_found_plugins)}"')
 
     logging.info(f'Successfully uninstalled "{", ".join(found_plugins)}"')

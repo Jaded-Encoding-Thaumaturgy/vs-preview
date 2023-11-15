@@ -48,7 +48,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     )
     parser.add_argument(
         'plugins', type=str, nargs='*',
-        help='Plugins to install/uninstall/update or arguments to pass to the script environment.'
+        help=f'Plugins to {"/".join(plugins_commands[:-1])} or arguments to pass to the script environment.'
     )
     parser.add_argument(
         '--version', '-v', action='version', version='%(prog)s 0.2b'

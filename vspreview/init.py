@@ -17,7 +17,7 @@ from .core.logger import set_log_level, setup_logger
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import set_vsengine_loop
 from .main import MainWindow
-from .plugins import get_plugins
+from .plugins import get_installed_plugins
 from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 from .plugins.abstract import FileResolverPlugin, ResolvedScript
 
@@ -27,7 +27,7 @@ __all__ = [
 
 
 def get_resolved_script(filepath: Path) -> tuple[ResolvedScript, FileResolverPlugin | None] | int:
-    for plugin in get_plugins(FileResolverPlugin, False).values():
+    for plugin in get_installed_plugins(FileResolverPlugin, False).values():
         if plugin.can_run_file(filepath):
             return plugin.resolve_path(filepath), plugin
 

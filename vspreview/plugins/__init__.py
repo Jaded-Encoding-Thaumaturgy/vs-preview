@@ -167,18 +167,18 @@ def file_to_plugins(path: Path, plugin_type: type[PluginT]) -> Iterable[type[Plu
 
 
 @overload
-def get_plugins(
+def get_installed_plugins(
     plugin_type: type[PluginT], ret_class: Literal[False], *args: Any, **kwargs: Any
 ) -> dict[str, PluginT]:
     ...
 
 
 @overload
-def get_plugins(plugin_type: type[PluginT], ret_class: Literal[True]) -> dict[str, type[PluginT]]:
+def get_installed_plugins(plugin_type: type[PluginT], ret_class: Literal[True]) -> dict[str, type[PluginT]]:
     ...
 
 
-def get_plugins(
+def get_installed_plugins(
     plugin_type: type[PluginT], ret_class: bool, *args: Any, **kwargs: Any
 ) -> dict[str, PluginT] | dict[str, type[PluginT]]:
     plugins = dict[str, Any]()
@@ -221,7 +221,7 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         self.reset_last_reload()
 
-        self.plugins = get_plugins(AbstractPlugin, False, self.main)
+        self.plugins = get_installed_plugins(AbstractPlugin, False, self.main)
 
         i = 0
         for name, plugin in self.plugins.items():

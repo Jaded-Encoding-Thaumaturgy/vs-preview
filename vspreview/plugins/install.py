@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Iterable
 
 from ..main import MainWindow
-from . import get_plugins as get_installed_plugins
+from . import get_installed_plugins
 from .abstract import AbstractPlugin, FileResolverPlugin
 
 BASE_URL = 'https://api.github.com/repos'

@@ -18,7 +18,7 @@ from .core.logger import set_log_level, setup_logger
 from .core.vsenv import set_vsengine_loop
 from .main import MainWindow
 from .plugins import get_plugins
-from .plugins.install import install_plugins, plugins_commands, uninstall_plugins
+from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 from .plugins.abstract import FileResolverPlugin, ResolvedScript
 
 __all__ = [
@@ -100,6 +100,10 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         args.plugins = [args.script_path_or_command, *args.plugins]
 
     if (command := script_path_or_command) in plugins_commands:
+        if command == 'available':
+            print_available_plugins()
+            return exit_func(0, no_exit)
+
         if not args.plugins:
             logging.error('You must provide at least one plugin!')
             return exit_func(1, no_exit)

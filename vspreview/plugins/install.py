@@ -21,7 +21,7 @@ PLUGIN_STRING = ' {:25s}{install_from}{:10s} {:30s} {:s}'
 plugins_commands = ('install', 'uninstall', 'update', 'available')
 
 
-def get_plugins() -> dict[str, Iterable[str]]:
+def get_repo_plugins() -> dict[str, Iterable[str]]:
     from requests import get
 
     response = get(f'{BASE_URL}/{PLUGINS_PATH}/git/trees/{BRANCH}?recursive=1')
@@ -56,7 +56,7 @@ def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = Fal
 
     from requests import Session
 
-    existing_packages = get_plugins()
+    existing_packages = get_repo_plugins()
 
     found_plugins = set(existing_packages.keys()).intersection(plugins)
 
@@ -126,7 +126,7 @@ def uninstall_plugins(plugins: list[str], ignore: bool = False) -> None:
 
 
 def print_available_plugins() -> None:
-    existing_packages = set(get_plugins().keys())
+    existing_packages = set(get_repo_plugins().keys())
 
     def _header(value: str) -> str:
         return f'{value}\n{"-" * len(value)}'

@@ -81,7 +81,7 @@ class FramePropsPlugin(AbstractPlugin, QTableView):
         if (props := self.main.current_output.props) is None:
             return
 
-        self.update_frame_props(props)  # type: ignore
+        self.update_frame_props(props)
 
     def update_frame_props(self, props: FrameProps) -> None:
         data = []

@@ -82,7 +82,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
             self.set_qobject_names()
 
-            self.on_first_load.emit()
+            self.on_first_load.emit()  # type: ignore
 
             self._first_load_done = True
 

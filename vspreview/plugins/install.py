@@ -51,9 +51,9 @@ def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = Fal
 
     from requests import Session
 
-    existing_plugins = get_plugins()
+    existing_packages = get_plugins()
 
-    found_plugins = set(existing_plugins.keys()).intersection(plugins)
+    found_plugins = set(existing_packages.keys()).intersection(plugins)
 
     not_found_plugins = set(plugins) - found_plugins
     if not_found_plugins:
@@ -70,12 +70,12 @@ def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = Fal
 
             logging.info(f'Downloading "{plugin}"...')
 
-            with TemporaryDirectory() as tempdir:
-                tempdir = Path(tempdir)
+            with TemporaryDirectory() as tmpdir:
+                tempdir = Path(tmpdir)
 
                 requirements = list[Path]()
 
-                for file in existing_plugins[plugin]:
+                for file in existing_packages[plugin]:
                     logging.info(f'Collecting "{file}"...')
 
                     temp = tempdir / file

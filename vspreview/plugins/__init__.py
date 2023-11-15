@@ -6,7 +6,7 @@ from functools import lru_cache
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, TypeVar, overload, Literal
 
 from PyQt6.QtWidgets import QWidget
 
@@ -166,8 +166,22 @@ def file_to_plugins(path: Path, plugin_type: type[PluginT]) -> Iterable[type[Plu
         yield exp_obj
 
 
-def get_plugins(plugin_type: type[PluginT], *args: Any, **kwargs: Any) -> dict[str, PluginT]:
-    plugins = dict[str, PluginT]()
+@overload
+def get_plugins(
+    plugin_type: type[PluginT], ret_class: Literal[False], *args: Any, **kwargs: Any
+) -> dict[str, PluginT]:
+    ...
+
+
+@overload
+def get_plugins(plugin_type: type[PluginT], ret_class: Literal[True]) -> dict[str, type[PluginT]]:
+    ...
+
+
+def get_plugins(
+    plugin_type: type[PluginT], ret_class: bool, *args: Any, **kwargs: Any
+) -> dict[str, PluginT] | dict[str, type[PluginT]]:
+    plugins = dict[str, Any]()
 
     for plugin_file in resolve_plugins():
         for plugin in file_to_plugins(plugin_file, plugin_type):
@@ -178,7 +192,10 @@ def get_plugins(plugin_type: type[PluginT], *args: Any, **kwargs: Any) -> dict[s
                 ))
                 continue
 
-            plugins[plugin._config.namespace] = plugin(*args, **kwargs)  # type: ignore
+            if ret_class:
+                plugins[plugin._config.namespace] = plugin  # type: ignore
+            else:
+                plugins[plugin._config.namespace] = plugin(*args, **kwargs)  # type: ignore
 
     return plugins
 
@@ -204,7 +221,7 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         self.reset_last_reload()
 
-        self.plugins = get_plugins(AbstractPlugin, self.main)
+        self.plugins = get_plugins(AbstractPlugin, False, self.main)
 
         i = 0
         for name, plugin in self.plugins.items():

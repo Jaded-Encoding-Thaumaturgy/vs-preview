@@ -27,7 +27,7 @@ __all__ = [
 
 
 def get_resolved_script(filepath: Path) -> tuple[ResolvedScript, FileResolverPlugin | None] | int:
-    for plugin in get_plugins(FileResolverPlugin).values():
+    for plugin in get_plugins(FileResolverPlugin, False).values():
         if plugin.can_run_file(filepath):
             return plugin.resolve_path(filepath), plugin
 

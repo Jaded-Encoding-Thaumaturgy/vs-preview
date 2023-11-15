@@ -11,7 +11,7 @@ if __name__ != '__vspreview__':
     ]
 
     class FileResolveWithVSSource(FileResolverPlugin):
-        _config = FileResolvePluginConfig('dev.setsugen.vssource_load', 'FileResolveWithVSSource')
+        _config = FileResolvePluginConfig('dev.setsugen.vssource_load', 'VSSource Loader')
 
         def can_run_file(self, filepath: Path) -> bool:
             if filepath.is_dir():

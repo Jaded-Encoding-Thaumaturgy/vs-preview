@@ -18,7 +18,7 @@ import vapoursynth as vs
 from PyQt6 import QtCore
 from PyQt6.QtCore import QKeyCombination, QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
-from requests import Session
+from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
 
@@ -60,7 +60,6 @@ def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) 
 
 
 def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
-
     upload_info = MultipartEncoder({
         'collectionUuid': collection,
         'imageUuid': imageUuid,
@@ -68,10 +67,17 @@ def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, im
         'browserId': browser_id,
     }, str(uuid4()))
 
-    sess.post(
-        'https://slow.pics/upload/image', data=upload_info.to_string(),
-        headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
-    )
+    while True:
+        try:
+            req = sess.post(
+                'https://slow.pics/upload/image', data=upload_info.to_string(),
+                headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
+            )
+
+            req.raise_for_status()
+            break
+        except HTTPError as e:
+            logging.debug(e)
 
 
 def clear_filename(filename: str) -> str:

@@ -23,7 +23,7 @@ from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
 
 from ...core import (
-    AbstractToolbar, CheckBox, ComboBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
+    AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
     VideoOutput, main_window, try_load
 )
 from ...models import GeneralModel
@@ -132,7 +132,7 @@ class WorkerConfiguration(NamedTuple):
     nsfw: bool
     optimise: bool
     remove_after: str | None
-    frames: list[int]
+    frames: list[list[int]]
     compression: int
     path: Path
     main: MainWindow
@@ -175,20 +175,20 @@ class Worker(QObject):
                 path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
 
-                max_num = max(conf.frames)
+                max_num = max(conf.frames[i])
 
                 path_images = [
                     path_name / (f'{folder_name}_' + f'{f}'.zfill(len('%i' % max_num)) + '.png')
-                    for f in conf.frames
+                    for f in conf.frames[i]
                 ]
 
                 base_clip = output.prepared.clip
 
-                if len(conf.frames) < 20:
-                    decimated = vs.core.std.Splice([base_clip[i] for i in conf.frames])
+                if len(conf.frames[i]) < 20:
+                    decimated = vs.core.std.Splice([base_clip[i] for i in conf.frames[i]])
                 else:
-                    decimated = output.prepared.clip.std.BlankClip(length=len(conf.frames))
-                    decimated = decimated.std.FrameEval(lambda n: base_clip[conf.frames[n]])
+                    decimated = output.prepared.clip.std.BlankClip(length=len(conf.frames[i]))
+                    decimated = decimated.std.FrameEval(lambda n: base_clip[conf.frames[i][n]])
 
                 for i, f in enumerate(decimated.frames(close=True)):
                     if self.isFinished():
@@ -216,7 +216,7 @@ class Worker(QObject):
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
-            for j, (image, frame) in enumerate(zip(images, conf.frames)):
+            for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
                 fields[f'comparisons[{j}].name'] = str(frame)
@@ -278,7 +278,7 @@ class Worker(QObject):
                 for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
                     if self.isFinished():
                         return self.finished.emit(conf.uuid)
-                    for j, (image, frame) in enumerate(zip(images, conf.frames)):
+                    for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                         if self.isFinished():
                             return self.finished.emit(conf.uuid)
                         while len(futures) >= 5:
@@ -771,7 +771,7 @@ class CompToolbar(AbstractToolbar):
 
         return rnum
 
-    def _select_samples_ptypes(self, num_frames: int, k: int, picture_types: set[str]) -> list[int]:
+    def _select_samples_ptypes(self, num_frames: int, k: int, picture_types: set[str]) -> list[Frame]:
         samples = set[int]()
         _max_attempts = 0
         _rnum_checked = set[int]()
@@ -817,7 +817,7 @@ class CompToolbar(AbstractToolbar):
                 self.upload_progressbar.setValue(int())
                 self.upload_progressbar.setValue(int(100 * len(samples) / k))
 
-        return list(samples)
+        return list(map(Frame, samples))
 
     def create_slowpics_tags(self) -> list[str]:
         tags = list[str]()
@@ -850,8 +850,8 @@ class CompToolbar(AbstractToolbar):
         assert self.main.outputs
 
         num = int(self.random_frames_control.value())
-        frames = list[int](
-            map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
+        frames = list[Frame](
+            map(lambda x: Frame(int(x)), filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
 
         picture_types = set[str]()
@@ -878,7 +878,7 @@ class CompToolbar(AbstractToolbar):
 
         if num:
             if picture_types == {'I', 'P', 'B'}:
-                samples = random.sample(range(lens_n), num)
+                samples = list(map(Frame, random.sample(range(lens_n), num)))
             else:
                 logging.info('Making samples according to specified picture types...')
                 samples = self._select_samples_ptypes(lens_n, num, picture_types)
@@ -889,7 +889,7 @@ class CompToolbar(AbstractToolbar):
             samples.extend(frames)
 
         if self.current_frame_checkbox.isChecked():
-            samples.append(int(self.main.current_output.last_showed_frame))
+            samples.append(self.main.current_output.last_showed_frame)
 
         collection_name = self._handle_collection_generate().strip()
 
@@ -904,7 +904,16 @@ class CompToolbar(AbstractToolbar):
 
         collection_name = collection_name.format(script_name=self.main.script_path.stem)
 
-        sample_frames = list(sorted(set(samples)))
+        sample_frames_current_output = list(sorted(set(samples)))
+
+        if self.main.timeline.mode == self.main.timeline.Mode.FRAME:
+            sample_frames = [sample_frames_current_output] * len(self.main.outputs)
+        else:
+            sample_timestamps = list(map(self.main.current_output.to_time, sample_frames_current_output))
+            sample_frames = [
+                list(map(output.to_frame, sample_timestamps))
+                for output in self.main.outputs
+            ]
 
         delete_after = self.delete_after_lineedit.text() or None
 
@@ -933,10 +942,12 @@ class CompToolbar(AbstractToolbar):
 
             filtered_outputs.append(output)
 
+        sample_frames_int = [list(map(int, x)) for x in sample_frames]
+
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, delete_after, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled,
+            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled,
             self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
 

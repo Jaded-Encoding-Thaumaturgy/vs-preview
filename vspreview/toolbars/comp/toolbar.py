@@ -14,13 +14,13 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Mapping, NamedTuple, cas
 from uuid import uuid4
 
 import requests
-import vapoursynth as vs
 from PyQt6 import QtCore
 from PyQt6.QtCore import QKeyCombination, QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
+from vstools import remap_frames, vs
 
 from ...core import (
     AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
@@ -182,13 +182,7 @@ class Worker(QObject):
                     for f in conf.frames[i]
                 ]
 
-                base_clip = output.prepared.clip
-
-                if len(conf.frames[i]) < 20:
-                    decimated = vs.core.std.Splice([base_clip[i] for i in conf.frames[i]])
-                else:
-                    decimated = output.prepared.clip.std.BlankClip(length=len(conf.frames[i]))
-                    decimated = decimated.std.FrameEval(lambda n: base_clip[conf.frames[i][n]])
+                decimated = remap_frames(output.prepared.clip, conf.frames[i])
 
                 for i, f in enumerate(decimated.frames(close=True)):
                     if self.isFinished():

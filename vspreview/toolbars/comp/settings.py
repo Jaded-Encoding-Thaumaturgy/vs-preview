@@ -29,7 +29,7 @@ class CompSettings(AbstractToolbarSettings):
         label = QLabel(
             'To get this info: Open Dev console in browser, go to network tab, upload a comparison,'
             'click request called "comparison" Copy browserId from payload, copy session token from '
-            'SLPSESSION cookie from cookies'
+            'SLP-SESSION cookie from cookies'
         )
         label.setMaximumHeight(50)
         label.setMinimumWidth(400)

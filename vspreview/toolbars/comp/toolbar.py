@@ -227,7 +227,7 @@ class Worker(QObject):
 
         with Session() as sess:
             if conf.browser_id and conf.session_id:
-                sess.cookies.set('SLPSESSION', conf.session_id, domain='slow.pics')
+                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
                 browser_id = conf.browser_id
                 check_session = True
             else:

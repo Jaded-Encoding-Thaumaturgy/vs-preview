@@ -694,7 +694,7 @@ class CompToolbar(AbstractToolbar):
         else:
             current_frames_l = current_frames.split(',')
 
-            if frame not in current_frames:
+            if frame not in current_frames_l:
                 current_frames_l.append(frame)
             else:
                 current_frames_l.remove(frame)

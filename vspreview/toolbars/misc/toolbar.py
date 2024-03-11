@@ -73,8 +73,9 @@ class MiscToolbar(AbstractToolbar):
             tooltip='''
                 Available placeholders:
                     {format}, {fps_den}, {fps_num}, {frame},
-                    {height}, {index}, {matrix}, {primaries}, {range},
-                    {script_name}, {total_frames}, {transfer}, {width}.
+                    {height}, {index}, {node_name}, {matrix},
+                    {primaries}, {range}, {script_name}, {total_frames},
+                    {transfer}, {width}.
                 Frame props can be accessed as well using their names.
             '''.replace(' ' * 16, ' ').strip()
         )
@@ -193,6 +194,7 @@ class MiscToolbar(AbstractToolbar):
             'height': self.main.current_output.height,
             'script_name': self.main.script_path.stem,
             'index': self.main.current_output.index,
+            'node_name': self.main.current_output.name,
             'frame': self.main.current_output.last_showed_frame,
             'total_frames': self.main.current_output.total_frames
         }

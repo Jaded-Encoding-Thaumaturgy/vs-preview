@@ -165,6 +165,15 @@ class Worker(QObject):
         all_images = list[list[Path]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
+        if conf.browser_id and conf.session_id:
+            with Session() as sess:
+                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
+                browser_id = conf.browser_id
+                base_page = sess.get('https://slow.pics/comparison')
+                if base_page.text.find('id="logoutBtn"') == -1:
+                    self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
+                    return
+
         try:
             for i, output in enumerate(conf.outputs):
                 if self.isFinished():

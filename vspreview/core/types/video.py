@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 from itertools import count as iter_count
+import logging
 from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import vapoursynth as vs
@@ -271,8 +272,11 @@ class VideoOutput(AbstractYAMLObject):
 
         assert (src := clip).format
 
-        heuristics = video_heuristics(clip, True)
+        heuristics, assumed_props = video_heuristics(clip, True, assumed_return=True)
         dither_type = DitherType(self.main.toolbars.playback.settings.dither_type.lower())
+
+        if self._stateset and assumed_props:
+            logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <"{', '.join(assumed_props)}>')
 
         resizer_kwargs = KwargsT({
             'format': self._NORML_FMT,

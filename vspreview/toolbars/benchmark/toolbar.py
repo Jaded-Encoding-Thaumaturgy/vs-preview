@@ -60,6 +60,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.update_info_timer = Timer(timeout=self.update_info, timerType=Qt.TimerType.PreciseTimer)
 
+        self.main.reload_before_signal.connect(self.abort)
+
         self.set_qobject_names()
 
     def setup_ui(self) -> None:

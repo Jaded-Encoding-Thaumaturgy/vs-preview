@@ -276,7 +276,7 @@ class VideoOutput(AbstractYAMLObject):
         dither_type = DitherType(self.main.toolbars.playback.settings.dither_type.lower())
 
         if self._stateset and assumed_props:
-            logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <"{', '.join(assumed_props)}>')
+            logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <{", ".join(assumed_props)}>')
 
         resizer_kwargs = KwargsT({
             'format': self._NORML_FMT,

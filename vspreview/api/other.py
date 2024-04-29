@@ -15,7 +15,7 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore'], path: s
     vscode_settings_path.mkdir(0o777, True, True)
 
     common_args = {
-        "type": "python",
+        "type": "debugpy",
         "request": "launch",
         "console": "internalConsole",
         "gevent": False,

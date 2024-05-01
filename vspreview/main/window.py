@@ -399,7 +399,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             if self.storage_not_found or reload_from_error:
                 self.load_storage()
 
-            if not reloading:
+            if not reloading or (self.outputs is None):
                 self.toolbars.main.rescan_outputs()
                 self.toolbars.playback.rescan_outputs()
 

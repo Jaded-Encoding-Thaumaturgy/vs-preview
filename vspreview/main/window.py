@@ -274,6 +274,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
             self.app.setStyleSheet(stylesheet)
 
+        if sys.platform == 'win32': self.app.setStyle("windowsvista")
         self.ensurePolished()
         self.reload_stylesheet_signal.emit()
         self.repaint()

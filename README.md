@@ -6,7 +6,7 @@ This program is meant to be paired with a code editor with integrated terminal l
 
 # Prerequisites
 
-1. [Python](https://www.Python.org/downloads) (3.10+ required)
+1. [Python](https://www.Python.org/downloads) (3.12+ required)
    - Make sure to install Python to your `PATH`.
 1. [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases) (R65+ required)
 

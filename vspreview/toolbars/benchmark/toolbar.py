@@ -34,7 +34,7 @@ class BenchmarkToolbar(AbstractToolbar):
         'prefetch_checkbox', 'unsequenced_checkbox',
         'run_abort_button', 'info_label', 'running',
         'unsequenced', 'run_start_time', 'start_frame',
-        'end_frame', 'total_frames', 'frames_left', 'buffer',
+        'end_frame', 'total_frames', 'buffer',
         'update_info_timer', 'sequenced_timer'
     )
 
@@ -52,7 +52,6 @@ class BenchmarkToolbar(AbstractToolbar):
         self.start_frame = Frame(0)
         self.end_frame = Frame(0)
         self.total_frames = Frame(0)
-        self.frames_left = Frame(0)
 
         self.sequenced_timer = Timer(
             timeout=self._request_next_frame_sequenced, timerType=Qt.TimerType.PreciseTimer, interval=0
@@ -132,7 +131,6 @@ class BenchmarkToolbar(AbstractToolbar):
         self.start_frame = self.start_frame_control.value()
         self.end_frame = self.end_frame_control.value()
         self.total_frames = self.total_frames_control.value()
-        self.frames_left = deepcopy(self.total_frames)
 
         if self.prefetch_checkbox.isChecked():
             concurrent_requests_count = self.usable_cpus_spinbox.value()
@@ -148,7 +146,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.run_start_time = perf_counter()
         self.update_info()
 
-        for offset in range(min(int(self.frames_left), concurrent_requests_count)):
+        for offset in range(min(int(self.end_frame - self.frames_done), concurrent_requests_count)):
             if self.unsequenced:
                 self._request_next_frame_unsequenced()
             else:
@@ -170,19 +168,18 @@ class BenchmarkToolbar(AbstractToolbar):
             self.run_abort_button.click()
 
     def _request_next_frame_sequenced(self) -> None:
-        if self.frames_left <= Frame(0):
+        if self.frames_done >= (self.end_frame - self.start_frame):
             self.abort()
             return
 
-        self.frames_done += 1
         self.buffer.pop().result()
 
-        if (next_frame := self.end_frame + 1 - self.frames_left) <= self.end_frame:
+        if (next_frame := self.start_frame + self.frames_done + 1) <= self.end_frame:
             self.buffer.appendleft(
                 self.main.current_output.source.original_clip.get_frame_async(next_frame)
             )
 
-        self.frames_left -= Frame(1)
+        self.frames_done += 1
 
     def _request_next_frame_unsequenced(self, future: Future[vs.VideoFrame] | None = None) -> None:
         if self.frames_done >= self.total_frames:
@@ -191,16 +188,12 @@ class BenchmarkToolbar(AbstractToolbar):
 
         if self.running:
             self.main.current_output.source.original_clip.get_frame_async(
-                self.end_frame + 1 - self.frames_left
-            ).add_done_callback(
-                self._request_next_frame_unsequenced
-            )
+                self.start_frame + self.frames_done + 1
+            ).add_done_callback(self._request_next_frame_unsequenced)
 
         if future is not None:
             future.result()
             self.frames_done += 1
-
-        self.frames_left -= Frame(1)
 
     def on_run_abort_pressed(self, checked: bool) -> None:
         self.set_ui_editable(not checked)

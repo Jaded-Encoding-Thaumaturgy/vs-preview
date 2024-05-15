@@ -52,6 +52,8 @@ class ScriptErrorDialog(ExtendedDialog):
         if self.main.reload_enabled:
             self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.reload_button.click)
 
+        self.add_shortcut(Qt.Key.Key_Escape, self.exit_button.click)
+
     def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()
         self.main.reload_script()

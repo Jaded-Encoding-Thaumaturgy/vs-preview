@@ -18,20 +18,13 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
         if node.format.color_family is vs.GRAY:
             return node
         
-        planes = split(node)
-        
         if node.format.sample_type is vs.FLOAT:
-            fmt = node.format.replace(bits_per_sample=32)
+            node = depth(node, 32)
 
             if node.format.color_family is vs.YUV:
-                planes = [
-                    plane.std.Expr('x 0.5 +' if i else 'x', fmt)
-                    for i, plane in enumerate(planes)
-                ]
-            elif node.format.bits_per_sample != 32:
-                planes = [depth(plane, fmt) for plane in planes]
+                node = node.std.Expr(['x', 'x 0.5 +'])
 
-        planes = [c.text.Text(text=k) for k, c in zip(node.format.name, planes)]
+        planes = [c.text.Text(text=k) for k, c in zip(node.format.name, split(node))]
 
         subsampling = node.format.subsampling_w, node.format.subsampling_h
 

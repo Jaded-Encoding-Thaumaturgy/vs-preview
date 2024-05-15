@@ -113,7 +113,7 @@ class BenchmarkToolbar(AbstractToolbar):
         max_frames = 1000 if self.main.current_output is None else self.main.current_output.total_frames
         self.start_frame_control.setMaximum(max_frames - 1)
         self.end_frame_control.setMaximum(max_frames - 1)
-        self.total_frames_control.setMaximum(max_frames - Frame(1))
+        self.total_frames_control.setMaximum(max_frames)
         self.total_frames_control.setValue(min(self.total_frames_control.value() or 1000, max_frames))
 
     def run(self) -> None:

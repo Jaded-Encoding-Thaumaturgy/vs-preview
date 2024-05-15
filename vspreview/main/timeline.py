@@ -115,7 +115,7 @@ class Timeline(QWidget):
                 label_format = self.generate_label_format(notch_interval, max_value)
                 label_notch = Time()
             elif self.mode == self.Mode.FRAME:
-                max_value = self.main.current_output.total_frames  # type: ignore
+                max_value = self.main.current_output.total_frames - 1  # type: ignore
                 notch_interval = self.calculate_notch_interval_f(self.notch_interval_target_x)  # type: ignore
                 label_notch = Frame()  # type: ignore
 

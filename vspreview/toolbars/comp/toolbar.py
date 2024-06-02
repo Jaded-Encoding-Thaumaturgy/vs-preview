@@ -137,6 +137,7 @@ class WorkerConfiguration(NamedTuple):
     path: Path
     main: MainWindow
     delete_cache: bool
+    frame_type: bool
     browser_id: str
     session_id: str
     tmdb: str
@@ -227,7 +228,7 @@ class Worker(QObject):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
                 fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].imageNames[{i}]'] = f'({all_image_types[i][j]}) {output.name}'
+                fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
@@ -954,7 +955,7 @@ class CompToolbar(AbstractToolbar):
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled,
+            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
             self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
 

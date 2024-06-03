@@ -12,7 +12,7 @@ __all__ = [
 
 
 class CompSettings(AbstractToolbarSettings):
-    __slots__ = ('delete_cache_checkbox', 'login_browser_id_edit', 'login_session_edit', 'tmdb_apikey_edit')
+    __slots__ = ('delete_cache_checkbox', 'frame_type_checkbox', 'login_browser_id_edit', 'login_session_edit', 'tmdb_apikey_edit')
 
     DEFAULT_COLLECTION_NAME = 'Unknown'
 
@@ -20,6 +20,8 @@ class CompSettings(AbstractToolbarSettings):
         super().setup_ui()
 
         self.delete_cache_checkbox = CheckBox('Delete images cache after upload')
+
+        self.frame_type_checkbox = CheckBox('Include frametype in image name')
 
         self.login_browser_id_edit = LineEdit('Browser ID')
         self.login_session_edit = LineEdit('Session ID')
@@ -36,6 +38,7 @@ class CompSettings(AbstractToolbarSettings):
         label.setWordWrap(True)
 
         self.vlayout.addWidget(self.delete_cache_checkbox)
+        self.vlayout.addWidget(self.frame_type_checkbox)
 
         HBoxLayout(
             self.vlayout,
@@ -49,10 +52,15 @@ class CompSettings(AbstractToolbarSettings):
 
     def set_defaults(self) -> None:
         self.delete_cache_checkbox.setChecked(True)
+        self.frame_type_checkbox.setChecked(True)
 
     @property
     def delete_cache_enabled(self) -> bool:
         return self.delete_cache_checkbox.isChecked()
+
+    @property
+    def frame_type_enabled(self) -> bool:
+        return self.frame_type_checkbox.isChecked()
 
     @property
     def browser_id(self) -> str:
@@ -69,6 +77,7 @@ class CompSettings(AbstractToolbarSettings):
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'delete_cache_enabled': self.delete_cache_enabled,
+            'frame_type_enabled': self.frame_type_enabled,
             'browser_id': self.browser_id,
             'session_id': self.session_id,
             'tmdb_apikey': self.tmdb_apikey,
@@ -76,6 +85,7 @@ class CompSettings(AbstractToolbarSettings):
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'delete_cache_enabled', bool, self.delete_cache_checkbox.setChecked)
+        try_load(state, 'frame_type_enabled', bool, self.frame_type_checkbox.setChecked)
         try_load(state, 'browser_id', str, self.login_browser_id_edit.setText)
         try_load(state, 'session_id', str, self.login_session_edit.setText)
         try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)

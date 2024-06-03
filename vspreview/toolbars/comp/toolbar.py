@@ -137,6 +137,7 @@ class WorkerConfiguration(NamedTuple):
     path: Path
     main: MainWindow
     delete_cache: bool
+    frame_type: bool
     browser_id: str
     session_id: str
     tmdb: str
@@ -163,6 +164,7 @@ class Worker(QObject):
 
     def run(self, conf: WorkerConfiguration) -> None:
         all_images = list[list[Path]]()
+        all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
         if conf.browser_id and conf.session_id:
@@ -191,12 +193,14 @@ class Worker(QObject):
                     for f in conf.frames[i]
                 ]
 
+                image_types = []
                 decimated = remap_frames(output.prepared.clip, conf.frames[i])
 
                 for i, f in enumerate(decimated.frames(close=True)):
                     if self.isFinished():
                         raise StopIteration
 
+                    image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
                     conf.main.current_output.frame_to_qimage(f).save(
                         str(path_images[i]), 'PNG', conf.compression
                     )
@@ -207,6 +211,7 @@ class Worker(QObject):
                     raise StopIteration
 
                 all_images.append(sorted(path_images))
+                all_image_types.append(image_types)
         except StopIteration:
             return self.finished.emit(conf.uuid)
         except vs.Error as e:
@@ -223,7 +228,7 @@ class Worker(QObject):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
                 fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].imageNames[{i}]'] = output.name
+                fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
@@ -950,7 +955,7 @@ class CompToolbar(AbstractToolbar):
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled,
+            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
             self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
 

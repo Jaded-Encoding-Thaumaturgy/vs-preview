@@ -200,10 +200,10 @@ class Worker(QObject):
                     clip = output.prepare_vs_output(clip, is_comp=True)
                     clip = vs.core.fpng.Write(clip, filename=path_name / f'{folder_name}_%d.png', compression=1)
 
-                    for j, frame_no in enumerate(conf.frames[i]):
+                    decimated = remap_frames(clip, conf.frames[i])
+                    for j, f in enumerate(decimated.frames(close=True)):
                         if self.isFinished():
                             raise StopIteration
-                        f = clip.get_frame(frame_no)
                         image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
                         self._progress_update_func(j + 1, len_num, uuid=conf.uuid)
                 else:

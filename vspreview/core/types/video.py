@@ -308,7 +308,7 @@ class VideoOutput(AbstractYAMLObject):
             return clip
 
         to_fmt: vs.VideoFormat = resizer_kwargs.pop('format')
-        if (is_comp):
+        if is_comp:
             to_fmt = to_fmt.replace(bits_per_sample=8)
 
         if dither_type.is_fmtc:

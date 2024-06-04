@@ -307,13 +307,16 @@ class VideoOutput(AbstractYAMLObject):
         elif src.format.id == vs.GRAY32:
             return clip
 
+        to_fmt: vs.VideoFormat = resizer_kwargs.pop('format')
+        if (is_comp):
+            to_fmt = to_fmt.replace(bits_per_sample=8)
+
         if dither_type.is_fmtc:
-            to_fmt: vs.VideoFormat = resizer_kwargs.pop('format')
             temp_fmt = to_fmt.replace(sample_type=src.format.sample_type, bits_per_sample=src.format.bits_per_sample)
             clip = clip.resize.Bicubic(**resizer_kwargs, format=temp_fmt.id)
             clip = depth(clip, to_fmt, dither_type=dither_type)
         else:
-            clip = clip.resize.Bicubic(**resizer_kwargs, dither_type=dither_type.value)
+            clip = clip.resize.Bicubic(**resizer_kwargs, format=to_fmt, dither_type=dither_type.value)
 
         if not self.cached:
             clip.std.SetVideoCache(0)

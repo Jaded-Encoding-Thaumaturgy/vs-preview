@@ -197,7 +197,8 @@ class Worker(QObject):
 
                     image_types = []
 
-                    clip = vs.core.resize.Lanczos(output.source.clip, format=vs.RGB24, matrix_in=1, dither_type="error_diffusion")
+                    clip = output.source.clip
+                    clip = output.prepare_vs_output(clip, is_comp=True)
                     clip = vs.core.fpng.Write(clip, filename=path_name / f'{folder_name}_%d.png', compression=1)
 
                     for j, frame_no in enumerate(conf.frames[i]):

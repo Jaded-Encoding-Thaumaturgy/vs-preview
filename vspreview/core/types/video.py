@@ -267,7 +267,7 @@ class VideoOutput(AbstractYAMLObject):
 
         self.set_fmt_values()
 
-    def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
+    def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False, is_comp: bool = False) -> vs.VideoNode:
         from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics, DitherType, depth
 
         assert (src := clip).format
@@ -318,7 +318,7 @@ class VideoOutput(AbstractYAMLObject):
         if not self.cached:
             clip.std.SetVideoCache(0)
 
-        if not is_alpha:
+        if not is_alpha and not is_comp:
             clip = self.pack_rgb_clip(clip)
 
         return clip.std.CopyFrameProps(src)

@@ -188,14 +188,13 @@ class Worker(QObject):
 
                 max_num = max(conf.frames[i])
                 len_num = len(conf.frames[i])
+                image_types = []
 
                 if hasattr(vs.core, "fpng"):
                     path_images = [
                         path_name / (f'{folder_name}_{f}.png')
                         for f in conf.frames[i]
                     ]
-
-                    image_types = []
 
                     clip = output.source.clip
                     clip = output.prepare_vs_output(clip, is_comp=True)

@@ -196,8 +196,7 @@ class Worker(QObject):
                         for f in conf.frames[i]
                     ]
 
-                    clip = output.source.clip
-                    clip = output.prepare_vs_output(clip, is_comp=True)
+                    clip = output.prepare_vs_output(output.source.clip, is_comp=True)
                     clip = vs.core.fpng.Write(clip, filename=path_name / f'{folder_name}_%d.png', compression=1)
 
                     decimated = remap_frames(clip, conf.frames[i])

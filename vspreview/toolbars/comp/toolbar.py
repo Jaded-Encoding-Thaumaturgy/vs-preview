@@ -806,16 +806,18 @@ class CompToolbar(AbstractToolbar):
 
         picture_types_b = {p.encode() for p in picture_types}
 
+        interval = num_frames // k
         while len(samples) < k:
             _attempts = 0
             while True:
                 if self.upload_worker.is_finished:
                     raise RuntimeError
 
+                num = len(samples)
                 self.update_status_label(self.curr_uuid, 'search', _attempts, _MAX_ATTEMPTS_PER_PICTURE_TYPE)
                 if len(_rnum_checked) >= num_frames:
                     raise ValueError(f'There aren\'t enough of {picture_types} in these clips')
-                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=0, stop=num_frames))
+                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval*num, stop=(interval*(num+1))-1))
                 _rnum_checked.add(rnum)
 
                 if all(
@@ -904,7 +906,8 @@ class CompToolbar(AbstractToolbar):
 
         if num:
             if picture_types == {'I', 'P', 'B'}:
-                samples = list(map(Frame, random.sample(range(lens_n), num)))
+                interval = lens_n // num
+                samples = list(map(Frame, list(random.randrange(interval*i, (interval*(i+1))-1) for i in range(num))))
             else:
                 logging.info('Making samples according to specified picture types...')
                 samples = self._select_samples_ptypes(lens_n, num, picture_types)

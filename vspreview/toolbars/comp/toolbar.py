@@ -138,8 +138,8 @@ class WorkerConfiguration(NamedTuple):
     main: MainWindow
     delete_cache: bool
     frame_type: bool
-    browser_id: str
-    session_id: str
+    username: str
+    password_path: Path
     tmdb: str
     tags: list[str]
 
@@ -166,15 +166,6 @@ class Worker(QObject):
         all_images = list[list[Path]]()
         all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
-
-        if conf.browser_id and conf.session_id:
-            with Session() as sess:
-                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
-                browser_id = conf.browser_id
-                base_page = sess.get('https://slow.pics/comparison')
-                if base_page.text.find('id="logoutBtn"') == -1:
-                    self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
-                    return
 
         try:
             for i, output in enumerate(conf.outputs):
@@ -252,13 +243,31 @@ class Worker(QObject):
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
 
         with Session() as sess:
-            if conf.browser_id and conf.session_id:
-                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
-                browser_id = conf.browser_id
-                check_session = True
-            else:
+
+            sess.headers.update(
+                {
+                    'Accept': '*/*',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Access-Control-Allow-Origin': '*',
+                    'Origin': 'https://slow.pics/',
+                    'Referer': 'https://slow.pics/comparison',
+                    'User-Agent': (
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                        '(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
+                    )
+                }
+            )
+
+            if conf.username:
+                resp = sess.get("https://slow.pics/login")
+                csrf = re.search(r'<input type="hidden" name="_csrf" value="([a-zA-Z0-9-_]+)"\/>', resp.text)
+                if not csrf:
+                    self.progress_status.emit(conf.uuid, 'Unable to get _csrf', 0, 0)
+                    return
+                resp = sess.post("https://slow.pics/login", data={"_csrf": csrf.group(1), "username": conf.username, "password": conf.password_path.read_text()})
                 browser_id = str(uuid4())
-                check_session = False
+                check_session = True
 
             base_page = sess.get('https://slow.pics/comparison')
             if self.isFinished():
@@ -266,7 +275,7 @@ class Worker(QObject):
 
             if check_session:
                 if base_page.text.find('id="logoutBtn"') == -1:
-                    self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
+                    self.progress_status.emit(conf.uuid, 'Login failed', 0, 0)
                     return
 
             head_conf = {
@@ -974,7 +983,7 @@ class CompToolbar(AbstractToolbar):
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
             True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
-            self.settings.browser_id, self.settings.session_id, tmdb_id, tags
+            self.settings.username, self.settings.password_location, tmdb_id, tags
         )
 
     def upload_to_slowpics(self) -> bool:

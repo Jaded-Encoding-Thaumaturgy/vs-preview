@@ -187,30 +187,48 @@ class Worker(QObject):
                 path_name.mkdir(parents=True)
 
                 max_num = max(conf.frames[i])
-
-                path_images = [
-                    path_name / (f'{folder_name}_' + f'{f}'.zfill(len('%i' % max_num)) + '.png')
-                    for f in conf.frames[i]
-                ]
-
+                len_num = len(conf.frames[i])
                 image_types = []
-                decimated = remap_frames(output.prepared.clip, conf.frames[i])
 
-                for i, f in enumerate(decimated.frames(close=True)):
-                    if self.isFinished():
-                        raise StopIteration
+                if hasattr(vs.core, "fpng"):
+                    path_images = [
+                        path_name / (f'{folder_name}_{f}.png')
+                        for f in conf.frames[i]
+                    ]
 
-                    image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
-                    conf.main.current_output.frame_to_qimage(f).save(
-                        str(path_images[i]), 'PNG', conf.compression
-                    )
+                    clip = output.prepare_vs_output(output.source.clip, is_comp=True)
+                    clip = vs.core.fpng.Write(clip, filename=path_name / f'{folder_name}_%d.png', compression=1)
 
-                    self._progress_update_func(i + 1, decimated.num_frames, uuid=conf.uuid)
+                    decimated = remap_frames(clip, conf.frames[i])
+                    for j, f in enumerate(decimated.frames(close=True)):
+                        if self.isFinished():
+                            raise StopIteration
+                        image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
+                        self._progress_update_func(j + 1, len_num, uuid=conf.uuid)
+                else:
+                    path_images = [
+                        path_name / (f'{folder_name}_' + f'{f}'.zfill(len('%i' % max_num)) + '.png')
+                        for f in conf.frames[i]
+                    ]
+
+                    decimated = remap_frames(output.prepared.clip, conf.frames[i])
+
+                    for i, f in enumerate(decimated.frames(close=True)):
+                        if self.isFinished():
+                            raise StopIteration
+
+                        image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
+
+                        conf.main.current_output.frame_to_qimage(f).save(
+                            str(path_images[i]), 'PNG', conf.compression
+                        )
+
+                        self._progress_update_func(i + 1, decimated.num_frames, uuid=conf.uuid)
 
                 if self.isFinished():
                     raise StopIteration
 
-                all_images.append(sorted(path_images))
+                all_images.append(path_images)
                 all_image_types.append(image_types)
         except StopIteration:
             return self.finished.emit(conf.uuid)
@@ -611,11 +629,11 @@ class CompToolbar(AbstractToolbar):
         if 'tmdb_' in key and tmdb_id not in self.tmdb_data:
             return ''
 
-        data = self.tmdb_data[tmdb_id]
+        data = self.tmdb_data.get(tmdb_id, {"name": "Unknown"})
 
         match key:
             case '{tmdb_title}':
-                return data.get('name', self.tmdb_data.get('title', ''))
+                return data.get('name', data.get('title', ''))
             case '{tmdb_year}':
                 return str(
                     datetime.strptime(
@@ -950,7 +968,7 @@ class CompToolbar(AbstractToolbar):
 
             filtered_outputs.append(output)
 
-        sample_frames_int = [list(map(int, x)) for x in sample_frames]
+        sample_frames_int = sorted([list(map(int, x)) for x in sample_frames])
 
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,

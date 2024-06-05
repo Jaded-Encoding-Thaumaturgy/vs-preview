@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
-from vstools import remap_frames, vs
+from vstools import remap_frames, vs, get_prop
 
 from ...core import (
     AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
@@ -203,7 +203,7 @@ class Worker(QObject):
                     for j, f in enumerate(decimated.frames(close=True)):
                         if self.isFinished():
                             raise StopIteration
-                        image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
+                        image_types.append(get_prop(f.props, '_PictType', str, None, '?'))
                         self._progress_update_func(j + 1, len_num, uuid=conf.uuid)
                 else:
                     path_images = [
@@ -217,7 +217,7 @@ class Worker(QObject):
                         if self.isFinished():
                             raise StopIteration
 
-                        image_types.append(f.props['_PictType'].decode() if "_PictType" in f.props else "N/a")
+                        image_types.append(get_prop(f.props, '_PictType', str, None, '?'))
 
                         conf.main.current_output.frame_to_qimage(f).save(
                             str(path_images[i]), 'PNG', conf.compression

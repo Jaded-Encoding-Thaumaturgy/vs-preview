@@ -63,6 +63,8 @@ class CompSettings(AbstractToolbarSettings):
         if password:
             self.password_location.write_text(password)
             self.login_password_edit.setText("")
+        else:
+            self.password_location.unlink(True)
 
     def set_defaults(self) -> None:
         self.delete_cache_checkbox.setChecked(True)

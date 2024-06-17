@@ -1,6 +1,6 @@
 """Previewer for VapourSynth scripts"""
 
-__version__ = '0.8.1'
+__version__ = '0.9.0'
 
 __author_name__, __author_email__ = 'Endilll', ''
 __maintainer_name__, __maintainer_email__ = 'Setsugen no ao', 'setsugen@setsugen.dev'

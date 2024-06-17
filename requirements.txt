@@ -1,5 +1,5 @@
 VapourSynth>=68
-vstools>=3.0.0
+vstools>=3.2.0
 vsengine>=0.2.0
 PyQt6>=6.6.1
 PyQt6-sip>=13.4.0

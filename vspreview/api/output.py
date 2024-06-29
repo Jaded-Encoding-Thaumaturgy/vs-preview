@@ -16,7 +16,7 @@ __all__ = [
 
 
 def set_output(
-    node: RawNode, name: str | bool | None = None,
+    node: RawNode, name: str | bool | None = None, alpha: vs.VideoNode | None = None,
     *, cache: bool = True, disable_comp: bool = False,
     timecodes: str | Path | dict[
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
@@ -47,7 +47,7 @@ def set_output(
                 name = vname
                 break
 
-    node.set_output(index)
+    node.set_output(index, alpha)
 
     update_node_info(node_type, index, cache=cache, disable_comp=disable_comp, **kwargs)
 

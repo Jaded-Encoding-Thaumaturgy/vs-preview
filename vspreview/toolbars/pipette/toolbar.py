@@ -181,7 +181,7 @@ class PipetteToolbar(AbstractToolbar):
         )
 
         if cache is None or cache[0] != last_showed_frame:
-            cache = self._curr_frame_cache[self.main.current_output] = (
+            cache = self._curr_alphaframe_cache[self.main.current_output] = (
                 last_showed_frame, self.main.current_output.source.alpha.get_frame(last_showed_frame)
             )
 

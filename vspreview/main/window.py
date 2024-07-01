@@ -19,7 +19,7 @@ from vsengine import vpy  # type: ignore
 from vstools import get_prop
 
 from ..core import (
-    PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
+    PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
     GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
@@ -112,6 +112,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     reload_before_signal = pyqtSignal()
     reload_after_signal = pyqtSignal()
     cropValuesChanged = pyqtSignal(CroppingInfo)
+    arValuesChanged = pyqtSignal(ArInfo)
 
     reload_stylesheet_signal = pyqtSignal()
 

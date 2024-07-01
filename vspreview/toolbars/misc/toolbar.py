@@ -106,9 +106,10 @@ class MiscToolbar(AbstractToolbar):
         self.hlayout.addStretch()
         self.hlayout.addStretch()
 
+        # TODO: Remember state when switching outputs
         self.ar_active_switch = Switch(
-            clicked=self.display_sar_as_dar,
-            tooltip='Toggle respect output SAR properties'
+            10, clicked=self.display_sar_as_dar,
+            tooltip='Toggle respect SAR properties'
         )
 
         self.crop_active_switch = Switch(10, 22, checked=True, clicked=self.crop_active_onchange)
@@ -279,8 +280,8 @@ class MiscToolbar(AbstractToolbar):
 
         try:
             sar = (
-                max(get_prop(props, '_SARNum', int, None, 1, self.display_sar_as_dar), 1),
-                max(get_prop(props, '_SARDen', int, None, 1, self.display_sar_as_dar), 1)
+                max(get_prop(props, '_SARNum', int), 1),
+                max(get_prop(props, '_SARDen', int), 1)
             )
         except FramePropError:
             logging.error('Failed to get SAR properties')

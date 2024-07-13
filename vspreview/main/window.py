@@ -12,7 +12,7 @@ from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QKeyCombination, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
@@ -90,10 +90,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     VSP_VERSION = 3.2
     BREAKING_CHANGES_VERSIONS = list[str](['3.0', '3.1'])
-
-    # status bar
-    def STATUS_FRAME_PROP(self, prop: Any) -> str:
-        return f"Type: {get_prop(prop, '_PictType', str, None, '?')}"
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -261,7 +257,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def apply_stylesheet(self) -> None:
         try:
-            from qdarkstyle import _load_stylesheet, DarkPalette, LightPalette  # type: ignore[import]
+            from qdarkstyle import DarkPalette, LightPalette, _load_stylesheet  # type: ignore[import]
         except ImportError:
             self.settings.dark_theme_enabled = False
         else:
@@ -439,8 +435,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def handle_error(self, e: Exception) -> None:
         import logging
-        from vsengine import vpy
         from traceback import TracebackException
+
+        from vsengine import vpy
 
         if not isinstance(e, vpy.ExecutionFailed):
             e = vpy.ExecutionFailed(e)
@@ -740,7 +737,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.plugins.on_current_frame_changed(frame)
 
-        self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
+        self.statusbar.frame_props_label.setText(
+            f"Type: {get_prop(self.current_output.props, '_PictType', str, None, '?')}"
+        )
 
     def switch_output(self, value: int | VideoOutput) -> None:
         if not self.outputs or len(self.outputs) == 0:

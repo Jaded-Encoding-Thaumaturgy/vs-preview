@@ -6,7 +6,7 @@ from functools import lru_cache
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, TypeVar, overload, Literal
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Mapping, TypeVar, overload
 
 from PyQt6.QtWidgets import QWidget
 
@@ -119,7 +119,7 @@ def resolve_plugins() -> Iterable[Path]:
         for folder in (f for f in folder.glob('*') if f.is_dir()):
             _find_files(folder, ignore_path)
 
-    _check_folder(Path(__file__).parent, True)
+    _check_folder(Path(__file__).parent / 'builtins', True)
     _check_folder(MainWindow.global_plugins_dir)
 
     for paths_file in MainWindow.global_plugins_dir.glob('*.pth'):

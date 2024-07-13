@@ -18,8 +18,8 @@ from .core.logger import set_log_level, setup_logger
 from .core.vsenv import set_vsengine_loop
 from .main import MainWindow
 from .plugins import get_installed_plugins
-from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 from .plugins.abstract import FileResolverPlugin, ResolvedScript
+from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 
 __all__ = [
     'main'
@@ -138,7 +138,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         main.app = QApplication(sys.argv)
         set_vsengine_loop()
     else:
-        from .core.vsenv import make_environment, get_current_environment
+        from .core.vsenv import get_current_environment, make_environment
         make_environment()
         get_current_environment().use()
 

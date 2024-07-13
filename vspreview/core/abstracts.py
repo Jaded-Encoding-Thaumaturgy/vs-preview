@@ -310,9 +310,9 @@ class ExtendedWidgetBase(AbstractQItem):
     def add_shortcuts(self) -> None:
         pass
 
-    def get_separator(self) -> QFrame:
+    def get_separator(self, horizontal: bool = False) -> QFrame:
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShape(QFrame.Shape.HLine if horizontal else QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import traceback
 from functools import lru_cache
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -138,14 +139,18 @@ def _import_warning_once(path: Path, message: str) -> None:
         print(ImportWarning(message))
 
 
+def get_clean_trace():
+    return traceback.format_exc().split('_call_with_frames_removed\n')[1]
+
+
 def file_to_plugins(path: Path, plugin_type: type[PluginT]) -> Iterable[type[PluginT]]:
     try:
         module = PluginModule(path)
-    except PluginImportError as e:
-        return _import_warning_once(path, e.msg)
-    except ImportError as e:
+    except PluginImportError:
+        return _import_warning_once(path, get_clean_trace())
+    except ImportError:
         return _import_warning_once(
-            path, f'The plugin at "{path}" could not be loaded because of this import error: \n\t{str(e)}'
+            path, f'The plugin at "{path}" could not be loaded because of this import error: \n{get_clean_trace()}'
         )
 
     for export in module.__all__:

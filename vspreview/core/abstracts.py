@@ -34,7 +34,11 @@ __all__ = [
 
     'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
-    'NotchProvider', 'AbstractToolbar', 'AbstractToolbarSettings',
+    'NotchProvider',
+
+    'AbstractSettingsWidget',
+
+    'AbstractToolbar', 'AbstractToolbarSettings',
 
     'main_window', 'storage_err_msg', 'try_load',
 ]
@@ -325,15 +329,11 @@ class ExtendedTableView(AbstractQItem, QTableView):
     ...
 
 
-class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
+class AbstractSettingsWidget(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
-    _add_to_tab = True
-
-    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
+    def __init__(self) -> None:
         super().__init__()
-
-        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
 
@@ -348,6 +348,15 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
+
+
+class AbstractToolbarSettings(AbstractSettingsWidget):
+    _add_to_tab = True
+
+    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
+        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
+
+        super().__init__()
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         ...

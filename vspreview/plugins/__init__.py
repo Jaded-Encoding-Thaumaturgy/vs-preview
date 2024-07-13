@@ -50,16 +50,20 @@ class PluginModule:
         return super().__new__(cls)
 
     def __init__(self, path: Path) -> None:
-        spec = spec_from_file_location(path.stem, path)
+        spec = spec_from_file_location(path.stem, path, submodule_search_locations=[])
 
         if spec is None:
             raise ImportError
 
         module = module_from_spec(spec)
 
+        import_path = str(path.parent)
+
+        sys.path.append(import_path)
         sys.modules[module.__name__] = module
 
         if spec.loader is None:
+            sys.path.remove(import_path)
             raise PluginImportError
 
         spec.loader.exec_module(module)
@@ -70,6 +74,7 @@ class PluginModule:
         try:
             module.__all__
         except AttributeError:
+            sys.path.remove(import_path)
             raise PluginImportError(
                 f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'
             )

@@ -177,7 +177,7 @@ class MainSettings(AbstractToolbarSettings):
 
     @property
     def force_old_storages_removal(self) -> int:
-        return self.force_old_storages_removal_checkbox.isChecked()
+        return main_window().force_storage or self.force_old_storages_removal_checkbox.isChecked()
 
     @property
     def azerty_keybinds(self) -> int:

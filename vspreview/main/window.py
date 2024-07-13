@@ -121,13 +121,14 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     no_exit: bool
     reload_enabled: bool
 
-    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool) -> None:
+    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool, force_storage: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
 
         self.no_exit = no_exit
         self.reload_enabled = reload_enabled
+        self.force_storage = force_storage
 
         self.resolve_plugins = set[FileResolverPlugin]()
 
@@ -501,7 +502,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     logging.warning(
                         '\n\tThe storage was created on an old version of VSPreview.'
                         '\n\tSave any scening or other important info and delete it.'
-                        '\n\tIf you want the program to silently delete old storages, go into settings.'
+                        '\n\tIf you want the program to silently delete old storages,'
+                        '\n\tgo into settings or set --force-storage flag.'
                     )
                     sys.exit(1)
 

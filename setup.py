@@ -32,7 +32,7 @@ setuptools.setup(
     packages=setuptools.find_packages('.', ('docs', 'stubs')),
     package_data={
         package_name: ['py.typed'],
-        f'{package_name}.plugins': [
+        f'{package_name}.plugins.builtins': [
             file.name for file in (Path(package_name) / 'plugins' / 'builtins').glob('*.ppy')
         ]
     },

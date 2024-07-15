@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
+import os
+from ctypes import Array
 from fractions import Fraction
 from itertools import count as iter_count
-import logging
 from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
+from stgpytools import cachedproperty, classproperty, fallback
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .misc import CroppingInfo, VideoOutputNode
@@ -16,9 +19,11 @@ from .units import Frame, Time
 
 if TYPE_CHECKING:
     from vstools import VideoFormatT
+
     from ..custom.graphicsview import GraphicsImageItem
 
 __all__ = [
+    'PackingType',
     'VideoOutput'
 ]
 
@@ -31,12 +36,21 @@ class PackingTypeInfo:
     def __init__(
         self, name: str, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool, can_playback: bool = True
     ):
+        from ctypes import c_char
+
         self.id = next(self._getid)
         self.name = name
         self.vs_format = vs.core.get_video_format(vs_format)
+        self.vs_alpha_format = vs.core.get_video_format(vs.GRAY8)
         self.qt_format = qt_format
         self.shuffle = shuffle
         self.can_playback = can_playback
+
+        nbps, abps = self.vs_format.bits_per_sample, self.vs_alpha_format.bytes_per_sample
+        self.conv_info: dict[bool, tuple[type[Array[c_char]], QImage.Format]] = {
+            False: (c_char * nbps, self.qt_format),
+            True: (c_char * abps, QImage.Format.Format_Alpha8)
+        }
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PackingTypeInfo):
@@ -47,7 +61,7 @@ class PackingTypeInfo:
         return int(self.id)
 
 
-class PackingType(PackingTypeInfo):
+class PackingType(cachedproperty.baseclass, metaclass=classproperty.metaclass):
     none_8bit = PackingTypeInfo('none-8bit', vs.RGB24, QImage.Format.Format_BGR30, False, False)
     none_10bit = PackingTypeInfo('none-10bit', vs.RGB30, QImage.Format.Format_BGR30, False, False)
     numpy_8bit = PackingTypeInfo('numpy-8bit', vs.RGB24, QImage.Format.Format_BGR30, True)
@@ -57,8 +71,26 @@ class PackingType(PackingTypeInfo):
     akarin_8bit = PackingTypeInfo('akarin-8bit', vs.RGB24, QImage.Format.Format_BGR30, False)
     akarin_10bit = PackingTypeInfo('akarin-10bit', vs.RGB30, QImage.Format.Format_BGR30, False)
 
+    @cachedproperty
+    @classproperty
+    def CURRENT(cls) -> PackingTypeInfo:
+        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30  # type: ignore
 
-PACKING_TYPE: PackingTypeInfo = None  # type: ignore
+        # From fastest to slowest
+        if hasattr(vs.core, 'akarin'):
+            return PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
+
+        if hasattr(vs.core, 'libp2p'):
+            return PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+        else:
+            try:
+                import numpy  # noqa: F401
+
+                return PackingType.numpy_10bit if _default_10bits else PackingType.numpy_8bit
+            except ModuleNotFoundError:
+                ...
+
+        return PackingType.none_10bit if _default_10bits else PackingType.none_8bit
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -105,8 +137,6 @@ class VideoOutput(AbstractYAMLObject):
 
         assert self.main.env
 
-        self.set_fmt_values()
-
         with self.main.env:
             vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.VideoOutputTuple))
 
@@ -127,9 +157,9 @@ class VideoOutput(AbstractYAMLObject):
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
 
         if self.source.alpha is not None:
-            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True)
+            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, False)
 
-        self.prepared.clip = self.prepare_vs_output(self.source.clip)
+        self.prepared.clip = self.prepare_vs_output(self.source.clip, True)
 
         self.width = self.prepared.clip.width
         self.height = self.prepared.clip.height
@@ -230,45 +260,10 @@ class VideoOutput(AbstractYAMLObject):
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
-    def set_fmt_values(self) -> None:
-        import os
-        from ctypes import c_char
-
-        global PACKING_TYPE
-
-        if PACKING_TYPE is not None:
-            if hasattr(self, '_FRAME_CONV_INFO'):
-                return
-
-            self._NORML_FMT = PACKING_TYPE.vs_format
-            self._ALPHA_FMT = vs.core.get_video_format(vs.GRAY8)
-
-            nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
-            self._FRAME_CONV_INFO = {
-                False: (c_char * nbps, PACKING_TYPE.qt_format),
-                True: (c_char * abps, QImage.Format.Format_Alpha8)
-            }
-
-            return
-
-        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30  # type: ignore
-
-        # From fastest to slowest
-        if hasattr(vs.core, 'akarin'):
-            PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
-        elif hasattr(vs.core, 'libp2p'):
-            PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
-        else:
-            try:
-                import numpy  # noqa: F401
-                PACKING_TYPE = PackingType.numpy_10bit if _default_10bits else PackingType.numpy_8bit
-            except ModuleNotFoundError:
-                PACKING_TYPE = PackingType.none_10bit if _default_10bits else PackingType.none_8bit
-
-        self.set_fmt_values()
-
-    def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False, is_comp: bool = False) -> vs.VideoNode:
-        from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics, DitherType, depth
+    def prepare_vs_output(self, clip: vs.VideoNode, pack_rgb: bool = True, fmt: vs.VideoFormat | None = None) -> vs.VideoNode:
+        from vstools import (
+            ChromaLocation, ColorRange, DitherType, KwargsT, Matrix, Primaries, Transfer, depth, video_heuristics
+        )
 
         assert (src := clip).format
 
@@ -279,7 +274,7 @@ class VideoOutput(AbstractYAMLObject):
             logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <"{', '.join(assumed_props)}>')
 
         resizer_kwargs = KwargsT({
-            'format': self._NORML_FMT,
+            'format': fallback(fmt, PackingType.CURRENT.vs_format if pack_rgb else PackingType.CURRENT.vs_alpha_format),
             'matrix_in': Matrix.BT709,
             'transfer_in': Transfer.BT709,
             'primaries_in': Primaries.BT709,
@@ -300,16 +295,13 @@ class VideoOutput(AbstractYAMLObject):
 
         assert clip.format
 
-        if is_alpha:
-            if src.format.id == self._ALPHA_FMT.id:
-                return clip
-            resizer_kwargs['format'] = self._ALPHA_FMT
-        elif src.format.id == vs.GRAY32:
+        if src.format.id == vs.GRAY32:
             return clip
 
         to_fmt: vs.VideoFormat = resizer_kwargs.pop('format')
-        if is_comp:
-            to_fmt = to_fmt.replace(bits_per_sample=8)
+
+        if src.format.id == to_fmt:
+            return clip
 
         if dither_type.is_fmtc:
             temp_fmt = to_fmt.replace(sample_type=src.format.sample_type, bits_per_sample=src.format.bits_per_sample)
@@ -321,25 +313,25 @@ class VideoOutput(AbstractYAMLObject):
         if not self.cached:
             clip.std.SetVideoCache(0)
 
-        if not is_alpha and not is_comp:
+        if pack_rgb:
             clip = self.pack_rgb_clip(clip)
 
         return clip.std.CopyFrameProps(src)
 
     def pack_rgb_clip(self, clip: vs.VideoNode) -> vs.VideoNode:
-        if PACKING_TYPE.shuffle:
+        if PackingType.CURRENT.shuffle:
             clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
 
-        shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
+        shift = 2 ** (10 - PackingType.CURRENT.vs_format.bits_per_sample)
         r_shift, g_shift, b_shift = (x * shift for x in (1, 0x400, 0x100000))
         high_bits_mask = 0xc0000000
 
-        if PACKING_TYPE in {
+        if PackingType.CURRENT in {
             PackingType.none_8bit, PackingType.none_10bit, PackingType.numpy_8bit, PackingType.numpy_10bit
         }:
             blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, color=high_bits_mask, keep=True)
 
-            if PACKING_TYPE in {PackingType.none_8bit, PackingType.none_10bit}:
+            if PackingType.CURRENT in {PackingType.none_8bit, PackingType.none_10bit}:
                 from functools import partial
                 from multiprocessing.pool import ThreadPool
 
@@ -401,10 +393,10 @@ class VideoOutput(AbstractYAMLObject):
 
             return blank.std.ModifyFrame([blank, clip], _packrgb)
 
-        if PACKING_TYPE in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
+        if PackingType.CURRENT in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
             return vs.core.libp2p.Pack(clip)
 
-        if PACKING_TYPE in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
+        if PackingType.CURRENT in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
             # x, y, z => b, g, r
             # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
             # R stays like it is * shift if it's 8 bits (gets applied to all planes), then G gets shifted
@@ -421,7 +413,7 @@ class VideoOutput(AbstractYAMLObject):
         from ctypes import cast as ccast
 
         width, height, stride = frame.width, frame.height, frame.get_stride(0)
-        point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
+        point_size, qt_format = PackingType.CURRENT.conv_info[is_alpha]
 
         pointer = cast(
             sip.voidptr, ccast(frame.get_read_ptr(0), POINTER(point_size * stride)).contents

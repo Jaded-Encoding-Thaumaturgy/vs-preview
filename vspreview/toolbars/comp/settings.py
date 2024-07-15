@@ -4,7 +4,8 @@ from typing import Any, Mapping
 
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit, VBoxLayout, try_load
+from ...core import AbstractToolbarSettings, CheckBox, ComboBox, HBoxLayout, LineEdit, VBoxLayout, try_load
+from ...models import GeneralModel
 
 __all__ = [
     'CompSettings'
@@ -26,6 +27,8 @@ class CompSettings(AbstractToolbarSettings):
         self.login_browser_id_edit = LineEdit('Browser ID')
         self.login_session_edit = LineEdit('Session ID')
 
+        self.compression_combobox = ComboBox[str](model=GeneralModel[str](['fast', 'slow', 'uncompressed']))
+
         self.tmdb_apikey_edit = LineEdit('API Key')
 
         label = QLabel(
@@ -37,8 +40,19 @@ class CompSettings(AbstractToolbarSettings):
         label.setMinimumWidth(400)
         label.setWordWrap(True)
 
-        self.vlayout.addWidget(self.delete_cache_checkbox)
-        self.vlayout.addWidget(self.frame_type_checkbox)
+        HBoxLayout(
+            self.vlayout, [
+                VBoxLayout([
+                    self.delete_cache_checkbox,
+                    self.frame_type_checkbox
+                ]),
+                self.get_separator(),
+                VBoxLayout([
+                    QLabel("Compression Type:"),
+                    self.compression_combobox
+                ])
+            ]
+        )
 
         HBoxLayout(
             self.vlayout,
@@ -74,6 +88,10 @@ class CompSettings(AbstractToolbarSettings):
     def tmdb_apikey(self) -> str:
         return self.tmdb_apikey_edit.text()
 
+    @property
+    def compression(self) -> int:
+        return self.compression_combobox.currentIndex()
+
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'delete_cache_enabled': self.delete_cache_enabled,
@@ -81,6 +99,7 @@ class CompSettings(AbstractToolbarSettings):
             'browser_id': self.browser_id,
             'session_id': self.session_id,
             'tmdb_apikey': self.tmdb_apikey,
+            'compression': self.compression
         }
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
@@ -89,3 +108,4 @@ class CompSettings(AbstractToolbarSettings):
         try_load(state, 'browser_id', str, self.login_browser_id_edit.setText)
         try_load(state, 'session_id', str, self.login_session_edit.setText)
         try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)
+        try_load(state, 'compression', int, self.compression_combobox.setCurrentIndex)

@@ -9,7 +9,6 @@ import unicodedata
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, Mapping, NamedTuple, cast
 from uuid import uuid4
 
@@ -20,11 +19,12 @@ from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
-from vstools import remap_frames, vs, get_prop
+from stgpytools import ndigits, SPath
+from vstools import get_prop, remap_frames, vs, clip_data_gather
 
 from ...core import (
     AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
-    VideoOutput, main_window, try_load
+    VideoOutput, main_window, try_load, PackingType
 )
 from ...models import GeneralModel
 from .settings import CompSettings
@@ -59,7 +59,7 @@ def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) 
     }
 
 
-def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
+def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: SPath, browser_id: str) -> None:
     upload_info = MultipartEncoder({
         'collectionUuid': collection,
         'imageUuid': imageUuid,
@@ -134,7 +134,7 @@ class WorkerConfiguration(NamedTuple):
     remove_after: str | None
     frames: list[list[int]]
     compression: int
-    path: Path
+    path: SPath
     main: MainWindow
     delete_cache: bool
     frame_type: bool
@@ -163,7 +163,7 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        all_images = list[list[Path]]()
+        all_images = list[list[SPath]]()
         all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
@@ -186,44 +186,36 @@ class Worker(QObject):
                 path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
 
-                max_num = max(conf.frames[i])
-                len_num = len(conf.frames[i])
-                image_types = []
+                curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
+
+                clip = output.prepare_vs_output(
+                    output.source.clip, False, PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
+                )
+
+                path_images = [curr_filename.format(n) for n in conf.frames[i]]
+
+                def _frame_callback(n: int, f: vs.VideoFrame) -> str:
+                    if self.isFinished():
+                        raise StopIteration
+
+                    return get_prop(f.props, '_PictType', str, None, '?')
 
                 if hasattr(vs.core, "fpng"):
-                    path_images = [
-                        path_name / (f'{folder_name}_{f}.png')
-                        for f in conf.frames[i]
-                    ]
-
-                    clip = output.prepare_vs_output(output.source.clip, is_comp=True)
-                    clip = vs.core.fpng.Write(clip, filename=path_name / f'{folder_name}_%d.png', compression=1)
-
-                    decimated = remap_frames(clip, conf.frames[i])
-                    for j, f in enumerate(decimated.frames(close=True)):
-                        if self.isFinished():
-                            raise StopIteration
-                        image_types.append(get_prop(f.props, '_PictType', str, None, '?'))
-                        self._progress_update_func(j + 1, len_num, uuid=conf.uuid)
+                    clip = vs.core.fpng.Write(clip, filename=curr_filename, compression=conf.compression)
+                    frame_callback = _frame_callback
                 else:
-                    path_images = [
-                        path_name / (f'{folder_name}_' + f'{f}'.zfill(len('%i' % max_num)) + '.png')
-                        for f in conf.frames[i]
-                    ]
+                    qcomp = (0 if conf.compression == 1 else 100) if conf.compression else 80
 
-                    decimated = remap_frames(output.prepared.clip, conf.frames[i])
-
-                    for i, f in enumerate(decimated.frames(close=True)):
-                        if self.isFinished():
-                            raise StopIteration
-
-                        image_types.append(get_prop(f.props, '_PictType', str, None, '?'))
-
+                    def frame_callback(n: int, f: vs.VideoFrame) -> str:
                         conf.main.current_output.frame_to_qimage(f).save(
-                            str(path_images[i]), 'PNG', conf.compression
+                            curr_filename.format(n).to_str(), 'PNG', qcomp
                         )
 
-                        self._progress_update_func(i + 1, decimated.num_frames, uuid=conf.uuid)
+                        return _frame_callback(n, f)
+
+                decimated = remap_frames(clip, conf.frames[i])
+
+                image_types = clip_data_gather(decimated, partial(self._progress_update_func, uuid=conf.uuid), frame_callback)
 
                 if self.isFinished():
                     raise StopIteration
@@ -817,7 +809,7 @@ class CompToolbar(AbstractToolbar):
                 self.update_status_label(self.curr_uuid, 'search', _attempts, _MAX_ATTEMPTS_PER_PICTURE_TYPE)
                 if len(_rnum_checked) >= num_frames:
                     raise ValueError(f'There aren\'t enough of {picture_types} in these clips')
-                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval*num, stop=(interval*(num+1))-1))
+                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
                 _rnum_checked.add(rnum)
 
                 if all(
@@ -900,14 +892,14 @@ class CompToolbar(AbstractToolbar):
 
         lens_n = min(lens)
 
-        path = Path(main_window().current_config_dir) / ''.join(
+        path = SPath(main_window().current_config_dir) / ''.join(
             random.choices(string.ascii_uppercase + string.digits, k=16)
         )
 
         if num:
             if picture_types == {'I', 'P', 'B'}:
                 interval = lens_n // num
-                samples = list(map(Frame, list(random.randrange(interval*i, (interval*(i+1))-1) for i in range(num))))
+                samples = list(map(Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(num))))
             else:
                 logging.info('Making samples according to specified picture types...')
                 samples = self._select_samples_ptypes(lens_n, num, picture_types)
@@ -976,7 +968,8 @@ class CompToolbar(AbstractToolbar):
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
+            True, delete_after, sample_frames_int, self.settings.compression, path,
+            self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
             self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
 

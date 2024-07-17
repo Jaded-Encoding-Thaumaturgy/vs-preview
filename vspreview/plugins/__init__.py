@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Mapping, Typ
 
 from PyQt6.QtWidgets import QWidget
 
-from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg
+from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg, try_load
 from . import utils
 from .abstract import (
-    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, ResolvedScript, _BasePluginT
+    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, PluginSettings, ResolvedScript,
+    _BasePluginT, SettingsNamespace
 )
 from .utils import *  # noqa: F401,F403
 
@@ -205,9 +206,52 @@ def get_installed_plugins(
             if ret_class:
                 plugins[plugin._config.namespace] = plugin  # type: ignore
             else:
-                plugins[plugin._config.namespace] = plugin(*args, **kwargs)  # type: ignore
+                plugins[plugin._config.namespace] = pl = plugin(*args, **kwargs)  # type: ignore
+                pl.settings = plugin._config.settings_type(plugins[plugin._config.namespace])
 
     return plugins
+
+
+class LocalPluginsSettings(AbstractYAMLObjectSingleton):
+    def __init__(self, state: dict[str, Mapping[str, Any]]) -> None:
+        self.state = state
+
+    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+        return self.state | {
+            plugin._config.namespace: plugin.settings.local
+            for plugin in Plugins.instance[0]
+        }
+
+    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+        if not hasattr(self, 'state'):
+            self.state = {}
+
+        self.state |= state
+
+        for plugin in Plugins.instance[0]:
+            if plugin._config.namespace in self.state:
+                plugin.settings.local = self.state[plugin._config.namespace]
+
+
+class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
+    def __init__(self, state: dict[str, Mapping[str, Any]]) -> None:
+        self.state = state
+
+    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+        return self.state | {
+            plugin._config.namespace: plugin.settings.globals
+            for plugin in Plugins.instance[0]
+        }
+
+    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+        if not hasattr(self, 'state'):
+            self.state = {}
+
+        self.state |= state
+
+        for plugin in Plugins.instance[0]:
+            if plugin._config.namespace in self.state:
+                plugin.settings.globals = self.state[plugin._config.namespace]
 
 
 class Plugins(AbstractYAMLObjectSingleton):
@@ -225,6 +269,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         main.plugins = self
 
         self.main = main
+        self.settings = {}
         self.plugins_tab = main.plugins_tab
         self.main.main_split.setSizes([0, 0])
         self.main.reload_before_signal.connect(self.reset_last_reload)
@@ -338,17 +383,18 @@ class Plugins(AbstractYAMLObjectSingleton):
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {
-            toolbar_name: getattr(self, toolbar_name).__getstate__()
-            for toolbar_name in self.plugins
+            'global_settings': GlobalPluginsSettings({
+                k: v.globals
+                for k, v in self.settings
+            } | {
+                plugin._config.namespace: plugin.settings.globals
+                for plugin in self
+            }),
+            'local_settings': LocalPluginsSettings({
+                k: v.local
+                for k, v in self.settings
+            } | {
+                plugin._config.namespace: plugin.settings.local
+                for plugin in self
+            })
         }
-
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
-        for toolbar_name in self.plugins:
-            try:
-                storage = state[toolbar_name]
-                if not isinstance(storage, Mapping):
-                    raise TypeError
-                getattr(self, toolbar_name).__setstate__(storage)
-            except (KeyError, TypeError) as e:
-                logging.error(e)
-                logging.warning(storage_err_msg(toolbar_name))

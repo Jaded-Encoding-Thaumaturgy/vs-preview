@@ -1,34 +1,64 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, Mapping, NamedTuple
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QSizePolicy, QWidget
-from vstools import SPath
+from stgpytools import CustomRuntimeError
+from vstools import SPath, T
 
-from ..core import ExtendedWidgetBase, Frame, NotchProvider
+from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject, try_load
 
 if TYPE_CHECKING:
     from ..main import MainWindow
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig',
+    'AbstractPlugin', 'PluginConfig', 'PluginSettings',
 
     'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript'
 ]
+
+
+class SettingsNamespace(dict[str, Any]):
+    def __getattr__(self, __key: str) -> Any:
+        return self.__getitem__(__key)
+
+    def __setattr__(self, __key: str, __value: Any) -> None:
+        return self.__setitem__(__key, __value)
+
+    def __delattr__(self, __key: str) -> None:
+        return self.__delitem__(__key)
+
+    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+        self.update(state)
+
+
+class PluginSettings(QYAMLObject):
+    def __init__(self, plugin: AbstractPlugin) -> None:
+        self.plugin = plugin
+        self.local = SettingsNamespace()
+        self.globals = SettingsNamespace()
+
+    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+        return {'local': self.local, 'globals': self.globals}
+
+    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+        try_load(state, 'globals', dict, self.__setattr__)
+        try_load(state, 'local', dict, self.__setattr__)
 
 
 if TYPE_CHECKING:
     class _BasePluginConfig(NamedTuple):
         namespace: str
         display_name: str
+        settings_type: type[PluginSettings] = PluginSettings
 
     class _BasePlugin:
         _config: ClassVar[_BasePluginConfig]
+        settings: PluginSettings
 else:
-    T = TypeVar('T')
     _BasePlugin, _BasePluginConfig = object, Generic[T]
 
 
@@ -36,11 +66,13 @@ class PluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
     namespace: str
     display_name: str
     visible_in_tab: bool = True
+    settings_type: type[PluginSettings] = PluginSettings
 
 
 class FileResolvePluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
     namespace: str
     display_name: str
+    settings_type: type[PluginSettings] = PluginSettings
 
 
 class ResolvedScript(NamedTuple):
@@ -52,6 +84,7 @@ class ResolvedScript(NamedTuple):
 
 class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     _config: ClassVar[PluginConfig]
+    settings: PluginSettings
 
     on_first_load = pyqtSignal()
 
@@ -111,6 +144,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
 class FileResolverPlugin:
     _config: ClassVar[FileResolvePluginConfig]
+    settings: PluginSettings
 
     temp_handles = set[SPath]()
 

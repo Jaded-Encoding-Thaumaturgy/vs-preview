@@ -93,7 +93,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    storable_attrs = ('settings', 'toolbars')
+    storable_attrs = ('settings', 'toolbars', 'plugins')
 
     __slots__ = (
         *storable_attrs, 'app', 'clipboard',
@@ -591,12 +591,25 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
         data = cast(dict[str, Any], self.__getstate__())
+
         data['_globals'] = {
             'settings': data['settings'],
             'window_settings': data['window_settings']
         }
 
+        plugins = data['plugins'].__getstate__()
+
+        del data['plugins']
+
         data['_globals']['toolbars'] = data['toolbars'].__getstate__()
+        data['_globals']['plugins'] = {
+            'settings': plugins['global_settings']
+        }
+
+        data['plugins'] = {
+            'settings': plugins['local_settings']
+        }
+
         gtoolbars = data['_globals']['toolbars']
 
         for toolbar_name in gtoolbars:

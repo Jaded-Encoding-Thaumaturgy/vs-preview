@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Mapping, Sequence, TypeAlias, cast, overload
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -515,9 +515,27 @@ def storage_err_msg(name: str, level: int = 0) -> str:
     return f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
 
 
+@overload
 def try_load(
     state: Mapping[str, Any], name: str, expected_type: type[T],
-    receiver: T | _OneArgumentFunction | _SetterFunction,
+    receiver: Literal[None] = ...,
+    error_msg: str | None = None, nullable: bool = False
+) -> T:
+    ...
+
+
+@overload
+def try_load(
+    state: Mapping[str, Any], name: str, expected_type: type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction = ...,
+    error_msg: str | None = None, nullable: bool = False
+) -> None:
+    ...
+
+
+def try_load(
+    state: Mapping[str, Any], name: str, expected_type: type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction | None = None,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:
     import logging
@@ -536,6 +554,9 @@ def try_load(
     finally:
         if nullable:
             value = None
+
+    if receiver is None:
+        return value
 
     if isinstance(receiver, expected_type):
         receiver = value

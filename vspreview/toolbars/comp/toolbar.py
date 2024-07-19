@@ -239,11 +239,15 @@ class Worker(QObject):
             for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
+
+                image_name = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+
                 if is_comparison:
                     fields[f'comparisons[{j}].name'] = str(frame)
-                    fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+                    fields[f'comparisons[{j}].imageNames[{i}]'] = image_name
                 else:
-                    fields[f'imageNames[{j}]'] = f'{frame} - {(f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'}'
+                    fields[f'imageNames[{j}]'] = f'{frame} - {image_name}'
+
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)

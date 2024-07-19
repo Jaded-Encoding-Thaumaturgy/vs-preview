@@ -189,7 +189,8 @@ class Worker(QObject):
                 curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
 
                 clip = output.prepare_vs_output(
-                    output.source.clip, False, PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
+                    output.source.clip, not hasattr(vs.core, "fpng"),
+                    PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
                 )
 
                 path_images = [SPath(str(curr_filename) % n) for n in conf.frames[i]]
@@ -207,7 +208,8 @@ class Worker(QObject):
                     qcomp = (0 if conf.compression == 1 else 100) if conf.compression else 80
 
                     def frame_callback(n: int, f: vs.VideoFrame) -> str:
-                        conf.main.current_output.frame_to_qimage(f).save(path_images[n].to_str(), 'PNG', qcomp)
+                        if not conf.main.current_output.frame_to_qimage(f).save(path_images[n].to_str(), 'PNG', qcomp):
+                            raise StopIteration('There was an error saving the image to disk!')
 
                         return _frame_callback(n, f)
 

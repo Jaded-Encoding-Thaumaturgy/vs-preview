@@ -192,7 +192,7 @@ class Worker(QObject):
                     output.source.clip, False, PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
                 )
 
-                path_images = [curr_filename.format(n) for n in conf.frames[i]]
+                path_images = [SPath(str(curr_filename) % n) for n in conf.frames[i]]
 
                 def _frame_callback(n: int, f: vs.VideoFrame) -> str:
                     if self.isFinished():
@@ -207,9 +207,7 @@ class Worker(QObject):
                     qcomp = (0 if conf.compression == 1 else 100) if conf.compression else 80
 
                     def frame_callback(n: int, f: vs.VideoFrame) -> str:
-                        conf.main.current_output.frame_to_qimage(f).save(
-                            curr_filename.format(n).to_str(), 'PNG', qcomp
-                        )
+                        conf.main.current_output.frame_to_qimage(f).save(path_images[n].to_str(), 'PNG', qcomp)
 
                         return _frame_callback(n, f)
 

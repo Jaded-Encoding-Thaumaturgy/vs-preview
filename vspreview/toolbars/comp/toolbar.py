@@ -41,21 +41,25 @@ __all__ = [
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+def _get_slowpic_upload_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+    return {        
+        'Content-Length': str(content_length),
+        'Content-Type': content_type,
+    } | _get_slowpic_headers(sess)
+
+def _get_slowpic_headers(sess: Session) -> dict[str, str]:
     return {
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'en-US,en;q=0.9',
         'Access-Control-Allow-Origin': '*',
-        'Content-Length': str(content_length),
-        'Content-Type': content_type,
         'Origin': 'https://slow.pics/',
         'Referer': 'https://slow.pics/comparison',
         'User-Agent': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
             '(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
         ),
-        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN')
+        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN', None),
     }
 
 
@@ -71,9 +75,8 @@ def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, im
         try:
             req = sess.post(
                 'https://slow.pics/upload/image', data=upload_info.to_string(),
-                headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
+                headers=_get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess)
             )
-
             req.raise_for_status()
             break
         except HTTPError as e:
@@ -228,6 +231,7 @@ class Worker(QObject):
             raise e
 
         total_images = 0
+        is_comparison = len(all_images) > 1
         fields = dict[str, Any]()
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -235,8 +239,11 @@ class Worker(QObject):
             for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
-                fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+                if is_comparison:
+                    fields[f'comparisons[{j}].name'] = str(frame)
+                    fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+                else:
+                    fields[f'imageNames[{j}]'] = f'{frame} - {(f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'}'
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
@@ -250,7 +257,7 @@ class Worker(QObject):
                 browser_id = str(uuid4())
                 check_session = False
 
-            base_page = sess.get('https://slow.pics/comparison')
+            base_page = sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
 
@@ -280,12 +287,13 @@ class Worker(QObject):
             files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
             comp_response = sess.post(
-                'https://slow.pics/upload/comparison', data=monitor.to_string(),
-                headers=_get_slowpic_headers(monitor.len, monitor.content_type, sess)
+                f'https://slow.pics/upload/{"comparison" if is_comparison else "collection"}', data=monitor.to_string(),
+                headers=_get_slowpic_upload_headers(monitor.len, monitor.content_type, sess)
             ).json()
             collection = comp_response['collectionUuid']
             key = comp_response['key']
             image_ids = comp_response['images']
+            print(image_ids)
             images_done = 0
             self._progress_update_func(0, total_images, uuid=conf.uuid)
             with ThreadPoolExecutor() as executor:
@@ -310,10 +318,11 @@ class Worker(QObject):
                                         images_done, total_images, uuid=conf.uuid
                                     )
 
+                        imageUuid = image_ids[j][i] if is_comparison else image_ids[0][j]
                         futures.append(
                             executor.submit(
                                 _do_single_slowpic_upload,
-                                sess=sess, collection=collection, imageUuid=image_ids[j][i],
+                                sess=sess, collection=collection, imageUuid=imageUuid,
                                 image=image, browser_id=browser_id
                             )
                         )
@@ -691,9 +700,9 @@ class CompToolbar(AbstractToolbar):
         if self.tag_data_cache is None or self.tag_data_error:
             try:
                 with Session() as sess:
-                    sess.get('https://slow.pics/comparison')
+                    sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
 
-                    api_resp = sess.get('https://slow.pics/api/tags').json()
+                    api_resp = sess.get('https://slow.pics/api/tags', headers=_get_slowpic_headers(sess) | {"Content-Type": "application/json"}).json()
 
                     self.tag_data = {data['label']: data['value'] for data in api_resp}
 
@@ -841,7 +850,7 @@ class CompToolbar(AbstractToolbar):
         tags = list[str]()
 
         with Session() as sess:
-            sess.get('https://slow.pics/comparison')
+            sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
 
             for tag in self.current_tags:
                 if tag in self.tag_data:
@@ -851,7 +860,7 @@ class CompToolbar(AbstractToolbar):
                 api_resp: dict[str, str] = sess.post(
                     'https://slow.pics/api/tags',
                     data=tag,
-                    headers=_get_slowpic_headers(len(tag), 'application/json', sess)
+                    headers=_get_slowpic_upload_headers(len(tag), 'application/json', sess)
                 ).json()
 
                 label, value = api_resp['label'], api_resp['value']

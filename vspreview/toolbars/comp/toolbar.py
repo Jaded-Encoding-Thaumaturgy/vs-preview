@@ -293,7 +293,6 @@ class Worker(QObject):
             collection = comp_response['collectionUuid']
             key = comp_response['key']
             image_ids = comp_response['images']
-            print(image_ids)
             images_done = 0
             self._progress_update_func(0, total_images, uuid=conf.uuid)
             with ThreadPoolExecutor() as executor:

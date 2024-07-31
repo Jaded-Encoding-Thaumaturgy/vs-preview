@@ -106,3 +106,4 @@ class FramePropsPlugin(AbstractPlugin, QTableView):
             self._model._data.append(['Pixel aspect ratio', f"{props['_SARNum']}/{props['_SARDen']}"])
 
         self.setModel(self._model)
+        self._model.layoutChanged.emit()

@@ -9,7 +9,6 @@ import unicodedata
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, Mapping, NamedTuple, cast
 from uuid import uuid4
 
@@ -20,11 +19,12 @@ from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
-from vstools import remap_frames, vs, get_prop
+from stgpytools import ndigits, SPath
+from vstools import get_prop, remap_frames, vs, clip_data_gather
 
 from ...core import (
     AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
-    VideoOutput, main_window, try_load
+    VideoOutput, main_window, try_load, PackingType
 )
 from ...models import GeneralModel
 from .settings import CompSettings
@@ -41,25 +41,29 @@ __all__ = [
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+def _get_slowpic_upload_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+    return {        
+        'Content-Length': str(content_length),
+        'Content-Type': content_type,
+    } | _get_slowpic_headers(sess)
+
+def _get_slowpic_headers(sess: Session) -> dict[str, str]:
     return {
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'en-US,en;q=0.9',
         'Access-Control-Allow-Origin': '*',
-        'Content-Length': str(content_length),
-        'Content-Type': content_type,
         'Origin': 'https://slow.pics/',
         'Referer': 'https://slow.pics/comparison',
         'User-Agent': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
             '(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
         ),
-        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN')
+        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN', None),
     }
 
 
-def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
+def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: SPath, browser_id: str) -> None:
     upload_info = MultipartEncoder({
         'collectionUuid': collection,
         'imageUuid': imageUuid,
@@ -71,9 +75,8 @@ def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, im
         try:
             req = sess.post(
                 'https://slow.pics/upload/image', data=upload_info.to_string(),
-                headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
+                headers=_get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess)
             )
-
             req.raise_for_status()
             break
         except HTTPError as e:
@@ -134,7 +137,7 @@ class WorkerConfiguration(NamedTuple):
     remove_after: str | None
     frames: list[list[int]]
     compression: int
-    path: Path
+    path: SPath
     main: MainWindow
     delete_cache: bool
     frame_type: bool
@@ -163,7 +166,7 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        all_images = list[list[Path]]()
+        all_images = list[list[SPath]]()
         all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
@@ -186,44 +189,36 @@ class Worker(QObject):
                 path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
 
-                max_num = max(conf.frames[i])
-                len_num = len(conf.frames[i])
-                image_types = []
+                curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
+
+                clip = output.prepare_vs_output(
+                    output.source.clip, not hasattr(vs.core, "fpng"),
+                    PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
+                )
+
+                path_images = [SPath(str(curr_filename) % n) for n in conf.frames[i]]
+
+                def _frame_callback(n: int, f: vs.VideoFrame) -> str:
+                    if self.isFinished():
+                        raise StopIteration
+
+                    return get_prop(f.props, '_PictType', str, None, '?')
 
                 if hasattr(vs.core, "fpng"):
-                    path_images = [
-                        path_name / (f'{folder_name}_{f}.png')
-                        for f in conf.frames[i]
-                    ]
-
-                    clip = output.prepare_vs_output(output.source.clip, is_comp=True)
-                    clip = vs.core.fpng.Write(clip, filename=path_name / f'{folder_name}_%d.png', compression=1)
-
-                    decimated = remap_frames(clip, conf.frames[i])
-                    for j, f in enumerate(decimated.frames(close=True)):
-                        if self.isFinished():
-                            raise StopIteration
-                        image_types.append(get_prop(f.props, '_PictType', str, None, '?'))
-                        self._progress_update_func(j + 1, len_num, uuid=conf.uuid)
+                    clip = vs.core.fpng.Write(clip, filename=curr_filename, compression=conf.compression)
+                    frame_callback = _frame_callback
                 else:
-                    path_images = [
-                        path_name / (f'{folder_name}_' + f'{f}'.zfill(len('%i' % max_num)) + '.png')
-                        for f in conf.frames[i]
-                    ]
+                    qcomp = (0 if conf.compression == 1 else 100) if conf.compression else 80
 
-                    decimated = remap_frames(output.prepared.clip, conf.frames[i])
+                    def frame_callback(n: int, f: vs.VideoFrame) -> str:
+                        if not conf.main.current_output.frame_to_qimage(f).save(path_images[n].to_str(), 'PNG', qcomp):
+                            raise StopIteration('There was an error saving the image to disk!')
 
-                    for i, f in enumerate(decimated.frames(close=True)):
-                        if self.isFinished():
-                            raise StopIteration
+                        return _frame_callback(n, f)
 
-                        image_types.append(get_prop(f.props, '_PictType', str, None, '?'))
+                decimated = remap_frames(clip, conf.frames[i])
 
-                        conf.main.current_output.frame_to_qimage(f).save(
-                            str(path_images[i]), 'PNG', conf.compression
-                        )
-
-                        self._progress_update_func(i + 1, decimated.num_frames, uuid=conf.uuid)
+                image_types = clip_data_gather(decimated, partial(self._progress_update_func, uuid=conf.uuid), frame_callback)
 
                 if self.isFinished():
                     raise StopIteration
@@ -238,6 +233,7 @@ class Worker(QObject):
             raise e
 
         total_images = 0
+        is_comparison = len(all_images) > 1
         fields = dict[str, Any]()
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -245,8 +241,15 @@ class Worker(QObject):
             for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
-                fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+
+                image_name = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+
+                if is_comparison:
+                    fields[f'comparisons[{j}].name'] = str(frame)
+                    fields[f'comparisons[{j}].imageNames[{i}]'] = image_name
+                else:
+                    fields[f'imageNames[{j}]'] = f'{frame} - {image_name}'
+
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
@@ -260,7 +263,7 @@ class Worker(QObject):
                 browser_id = str(uuid4())
                 check_session = False
 
-            base_page = sess.get('https://slow.pics/comparison')
+            base_page = sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
 
@@ -290,8 +293,8 @@ class Worker(QObject):
             files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
             comp_response = sess.post(
-                'https://slow.pics/upload/comparison', data=monitor.to_string(),
-                headers=_get_slowpic_headers(monitor.len, monitor.content_type, sess)
+                f'https://slow.pics/upload/{"comparison" if is_comparison else "collection"}', data=monitor.to_string(),
+                headers=_get_slowpic_upload_headers(monitor.len, monitor.content_type, sess)
             ).json()
             collection = comp_response['collectionUuid']
             key = comp_response['key']
@@ -320,10 +323,11 @@ class Worker(QObject):
                                         images_done, total_images, uuid=conf.uuid
                                     )
 
+                        imageUuid = image_ids[j][i] if is_comparison else image_ids[0][j]
                         futures.append(
                             executor.submit(
                                 _do_single_slowpic_upload,
-                                sess=sess, collection=collection, imageUuid=image_ids[j][i],
+                                sess=sess, collection=collection, imageUuid=imageUuid,
                                 image=image, browser_id=browser_id
                             )
                         )
@@ -701,9 +705,9 @@ class CompToolbar(AbstractToolbar):
         if self.tag_data_cache is None or self.tag_data_error:
             try:
                 with Session() as sess:
-                    sess.get('https://slow.pics/comparison')
+                    sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
 
-                    api_resp = sess.get('https://slow.pics/api/tags').json()
+                    api_resp = sess.get('https://slow.pics/api/tags', headers=_get_slowpic_headers(sess) | {"Content-Type": "application/json"}).json()
 
                     self.tag_data = {data['label']: data['value'] for data in api_resp}
 
@@ -817,7 +821,7 @@ class CompToolbar(AbstractToolbar):
                 self.update_status_label(self.curr_uuid, 'search', _attempts, _MAX_ATTEMPTS_PER_PICTURE_TYPE)
                 if len(_rnum_checked) >= num_frames:
                     raise ValueError(f'There aren\'t enough of {picture_types} in these clips')
-                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval*num, stop=(interval*(num+1))-1))
+                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
                 _rnum_checked.add(rnum)
 
                 if all(
@@ -851,7 +855,7 @@ class CompToolbar(AbstractToolbar):
         tags = list[str]()
 
         with Session() as sess:
-            sess.get('https://slow.pics/comparison')
+            sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
 
             for tag in self.current_tags:
                 if tag in self.tag_data:
@@ -861,7 +865,7 @@ class CompToolbar(AbstractToolbar):
                 api_resp: dict[str, str] = sess.post(
                     'https://slow.pics/api/tags',
                     data=tag,
-                    headers=_get_slowpic_headers(len(tag), 'application/json', sess)
+                    headers=_get_slowpic_upload_headers(len(tag), 'application/json', sess)
                 ).json()
 
                 label, value = api_resp['label'], api_resp['value']
@@ -900,14 +904,14 @@ class CompToolbar(AbstractToolbar):
 
         lens_n = min(lens)
 
-        path = Path(main_window().current_config_dir) / ''.join(
+        path = SPath(main_window().current_config_dir) / ''.join(
             random.choices(string.ascii_uppercase + string.digits, k=16)
         )
 
         if num:
             if picture_types == {'I', 'P', 'B'}:
                 interval = lens_n // num
-                samples = list(map(Frame, list(random.randrange(interval*i, (interval*(i+1))-1) for i in range(num))))
+                samples = list(map(Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(num))))
             else:
                 logging.info('Making samples according to specified picture types...')
                 samples = self._select_samples_ptypes(lens_n, num, picture_types)
@@ -976,7 +980,8 @@ class CompToolbar(AbstractToolbar):
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, delete_after, sample_frames_int, -1, path, self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
+            True, delete_after, sample_frames_int, self.settings.compression, path,
+            self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
             self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
 

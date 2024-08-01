@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import deque
-from copy import deepcopy
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -9,15 +8,15 @@ import vapoursynth as vs
 from PyQt6.QtCore import QMetaObject, Qt
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbar, CheckBox, Frame, PushButton, Time, Timer, SpinBox
+from ...core import AbstractToolbar, CheckBox, Frame, PushButton, SpinBox, Time, Timer
 from ...core.custom import FrameEdit
 from ...utils import qt_silent_call, strfdelta
 from .settings import BenchmarkSettings
 
-
 if TYPE_CHECKING:
-    from ...main import MainWindow
     from vapoursynth import _Future as Future
+
+    from ...main import MainWindow
 else:
     from concurrent.futures import Future
 

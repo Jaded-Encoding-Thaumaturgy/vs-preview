@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from vapoursynth import AudioNode, RawNode, VideoNode, get_outputs
+from vstools import Keyframes
 
-from .nodes import set_timecodes, update_node_info
+from .nodes import set_scening, set_timecodes, update_node_info
 
 __all__ = [
     'set_output'
@@ -16,11 +17,12 @@ __all__ = [
 
 
 def set_output(
-    node: RawNode, name: str | bool | None = None, alpha: vs.VideoNode | None = None,
+    node: RawNode, name: str | bool | None = None, alpha: VideoNode | None = None,
     *, cache: bool = True, disable_comp: bool = False,
     timecodes: str | Path | dict[
         tuple[int | None, int | None], float | tuple[int, int] | Fraction
     ] | list[Fraction] | None = None, denominator: int = 1001,
+    scenes: Keyframes | list[tuple[int, int]] | list[Keyframes | list[tuple[int, int]]] | None = None,
     **kwargs: Any
 ) -> None:
     index = len(get_outputs())
@@ -56,3 +58,6 @@ def set_output(
 
     if timecodes:
         set_timecodes(index, timecodes, node, denominator)
+
+    if scenes and node_type is VideoNode:
+        set_scening(scenes, node, name or f'Clip {index}')

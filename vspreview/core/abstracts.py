@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Mapping, Sequence, TypeAlias, cast, overload
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -34,7 +34,11 @@ __all__ = [
 
     'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
-    'NotchProvider', 'AbstractToolbar', 'AbstractToolbarSettings',
+    'NotchProvider',
+
+    'AbstractSettingsWidget',
+
+    'AbstractToolbar', 'AbstractToolbarSettings',
 
     'main_window', 'storage_err_msg', 'try_load',
 ]
@@ -306,9 +310,9 @@ class ExtendedWidgetBase(AbstractQItem):
     def add_shortcuts(self) -> None:
         pass
 
-    def get_separator(self) -> QFrame:
+    def get_separator(self, horizontal: bool = False) -> QFrame:
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShape(QFrame.Shape.HLine if horizontal else QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
 
@@ -325,15 +329,11 @@ class ExtendedTableView(AbstractQItem, QTableView):
     ...
 
 
-class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
+class AbstractSettingsWidget(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
-    _add_to_tab = True
-
-    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
+    def __init__(self) -> None:
         super().__init__()
-
-        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
 
@@ -348,6 +348,15 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
+
+
+class AbstractToolbarSettings(AbstractSettingsWidget):
+    _add_to_tab = True
+
+    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
+        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
+
+        super().__init__()
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         ...
@@ -506,9 +515,27 @@ def storage_err_msg(name: str, level: int = 0) -> str:
     return f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
 
 
+@overload
 def try_load(
     state: Mapping[str, Any], name: str, expected_type: type[T],
-    receiver: T | _OneArgumentFunction | _SetterFunction,
+    receiver: Literal[None] = ...,
+    error_msg: str | None = None, nullable: bool = False
+) -> T:
+    ...
+
+
+@overload
+def try_load(
+    state: Mapping[str, Any], name: str, expected_type: type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction = ...,
+    error_msg: str | None = None, nullable: bool = False
+) -> None:
+    ...
+
+
+def try_load(
+    state: Mapping[str, Any], name: str, expected_type: type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction | None = None,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:
     import logging
@@ -527,6 +554,9 @@ def try_load(
     finally:
         if nullable:
             value = None
+
+    if receiver is None:
+        return value
 
     if isinstance(receiver, expected_type):
         receiver = value

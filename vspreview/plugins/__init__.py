@@ -1,19 +1,21 @@
 from __future__ import annotations
 
-import logging
 import sys
+import traceback
 from functools import lru_cache
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, TypeVar, overload, Literal
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Mapping, TypeVar, overload
 
 from PyQt6.QtWidgets import QWidget
+from stgpytools import KwargsT
 
-from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg
+from ..core import AbstractYAMLObjectSingleton, Frame
 from . import utils
 from .abstract import (
-    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, ResolvedScript, _BasePluginT
+    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, PluginSettings, ResolvedScript,
+    SettingsNamespace, _BasePluginT
 )
 from .utils import *  # noqa: F401,F403
 
@@ -29,7 +31,7 @@ PluginT = TypeVar('PluginT', bound=_BasePluginT)
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig',
+    'AbstractPlugin', 'PluginConfig', 'PluginSettings', 'SettingsNamespace',
     'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript',
     *utils.__all__
 ]
@@ -49,16 +51,20 @@ class PluginModule:
         return super().__new__(cls)
 
     def __init__(self, path: Path) -> None:
-        spec = spec_from_file_location(path.stem, path)
+        spec = spec_from_file_location(path.stem, path, submodule_search_locations=[])
 
         if spec is None:
             raise ImportError
 
         module = module_from_spec(spec)
 
+        import_path = str(path.parent)
+
+        sys.path.append(import_path)
         sys.modules[module.__name__] = module
 
         if spec.loader is None:
+            sys.path.remove(import_path)
             raise PluginImportError
 
         spec.loader.exec_module(module)
@@ -69,6 +75,7 @@ class PluginModule:
         try:
             module.__all__
         except AttributeError:
+            sys.path.remove(import_path)
             raise PluginImportError(
                 f'The plugin "{path.stem}" has no __all__ defined and thus can\'t be imported!'
             )
@@ -119,7 +126,7 @@ def resolve_plugins() -> Iterable[Path]:
         for folder in (f for f in folder.glob('*') if f.is_dir()):
             _find_files(folder, ignore_path)
 
-    _check_folder(Path(__file__).parent, True)
+    _check_folder(Path(__file__).parent / 'builtins', True)
     _check_folder(MainWindow.global_plugins_dir)
 
     for paths_file in MainWindow.global_plugins_dir.glob('*.pth'):
@@ -138,14 +145,18 @@ def _import_warning_once(path: Path, message: str) -> None:
         print(ImportWarning(message))
 
 
+def get_clean_trace() -> str:
+    return traceback.format_exc().split('_call_with_frames_removed\n')[1]
+
+
 def file_to_plugins(path: Path, plugin_type: type[PluginT]) -> Iterable[type[PluginT]]:
     try:
         module = PluginModule(path)
-    except PluginImportError as e:
-        return _import_warning_once(path, e.msg)
-    except ImportError as e:
+    except PluginImportError:
+        return _import_warning_once(path, get_clean_trace())
+    except ImportError:
         return _import_warning_once(
-            path, f'The plugin at "{path}" could not be loaded because of this import error: \n\t{str(e)}'
+            path, f'The plugin at "{path}" could not be loaded because of this import error: \n{get_clean_trace()}'
         )
 
     for export in module.__all__:
@@ -193,11 +204,60 @@ def get_installed_plugins(
                 continue
 
             if ret_class:
-                plugins[plugin._config.namespace] = plugin  # type: ignore
+                plugins[plugin._config.namespace] = plugin
             else:
-                plugins[plugin._config.namespace] = plugin(*args, **kwargs)  # type: ignore
+                plugins[plugin._config.namespace] = pl = plugin(*args, **kwargs)
+                pl.settings = plugin._config.settings_type(plugins[plugin._config.namespace])
 
     return plugins
+
+
+class LocalPluginsSettings(AbstractYAMLObjectSingleton):
+    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+        return self.state | {
+            plugin._config.namespace: plugin.settings.local
+            for plugin in Plugins.instance[0]
+        }
+
+    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+        if not hasattr(self, 'state'):
+            self.state = {}
+
+        self.state |= state
+
+        for plugin in Plugins.instance[0]:
+            if plugin._config.namespace in self.state:
+                plugin.settings.local = self.state[plugin._config.namespace]
+                plugin.settings.__setstate__(False)
+
+        if 'gui' in self.state:
+            Plugins.instance[0].gui_settings.local = self.state['gui']
+
+        Plugins.instance[0].__setstate__(False)
+
+
+class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
+    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+        return self.state | {
+            plugin._config.namespace: plugin.settings.globals
+            for plugin in Plugins.instance[0]
+        }
+
+    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+        if not hasattr(self, 'state'):
+            self.state = {}
+
+        self.state |= state
+
+        for plugin in Plugins.instance[0]:
+            if plugin._config.namespace in self.state:
+                plugin.settings.globals = self.state[plugin._config.namespace]
+                plugin.settings.__setstate__(True)
+
+        if 'gui' in self.state:
+            Plugins.instance[0].gui_settings.globals = self.state['gui']
+
+        Plugins.instance[0].__setstate__(True)
 
 
 class Plugins(AbstractYAMLObjectSingleton):
@@ -215,8 +275,10 @@ class Plugins(AbstractYAMLObjectSingleton):
         main.plugins = self
 
         self.main = main
+        self.settings = SettingsNamespace()
+        self.gui_settings = SettingsNamespace({'local': SettingsNamespace(), 'globals': SettingsNamespace()})
         self.plugins_tab = main.plugins_tab
-        self.main.main_split.setSizes([0, 0])
+
         self.main.reload_before_signal.connect(self.reset_last_reload)
 
         self.reset_last_reload()
@@ -242,10 +304,36 @@ class Plugins(AbstractYAMLObjectSingleton):
             self.plugins_tab.addTab(plugin, plugin._config.display_name)
             i += 1
 
+    def setup_ui(self) -> None:
+        if self.main.settings.plugins_bar_save_behaviour:
+            gui = self.gui_settings[['globals', 'local'][self.main.settings.plugins_bar_save_behaviour - 1]]
+
+            if 'sizes' in gui:
+                self.main.main_split.setSizes(gui.sizes)
+
+            if 'lastplugin' in gui:
+                self.main.plugins_tab.setCurrentIndex(
+                    next((plugin.index for nsp, plugin in self.plugins.items() if nsp == gui['lastplugin']), 0)
+                )
+        else:
+            self.main.main_split.setSizes([0, 0])
+            self.main.plugins_tab.setCurrentIndex(0)
+
     def reset_last_reload(self) -> None:
         self.last_frame_change = (-1, -1, -1)
 
         self.last_output_change = (-1, -1)
+
+    def get_gui_settings(self, isglobal: bool) -> KwargsT:
+        sett_global = not bool(self.main.settings.plugins_bar_save_behaviour - 1)
+
+        if (not self.main.settings.plugins_bar_save_behaviour) or (isglobal != sett_global):
+            return self.gui_settings.globals if isglobal else self.gui_settings.local
+
+        return SettingsNamespace({
+            'sizes': self.main.main_split.sizes(),
+            'lastplugin': list(self.plugins.keys())[self.main.plugins_tab.currentIndex()]
+        })
 
     def init_outputs(self) -> None:
         for plugin in self:
@@ -257,7 +345,9 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         curr_render = (tab_idx, self.main.current_output.index, int(frame))
 
-        if self.main.main_split.current_position and self.last_frame_change != curr_render:
+        if self.main.main_split.current_position and (
+            self.last_frame_change != curr_render or self.instant_update
+        ):
             if self[tab_idx].first_load():
                 self[tab_idx].init_outputs()
             self[tab_idx].on_current_frame_changed(frame)
@@ -269,7 +359,9 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         curr_output = (tab_idx, index)
 
-        if self.main.main_split.current_position and self.last_output_change != curr_output:
+        if self.main.main_split.current_position and (
+            self.last_output_change != curr_output or self.instant_update
+        ):
             if self[tab_idx].first_load():
                 self[tab_idx].init_outputs()
             self[tab_idx].on_current_output_changed(index, prev_index)
@@ -294,6 +386,16 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         self.main.main_split.setSizes([sizel, sizer - 1])
         self.main.main_split.setSizes([sizel, sizer])
+
+    @property
+    def instant_update(self) -> bool:
+        if self.main.settings.plugins_bar_save_behaviour:
+            gui = self.gui_settings[['globals', 'local'][self.main.settings.plugins_bar_save_behaviour - 1]]
+
+            if 'sizes' in gui:
+                return bool(gui.sizes[-1])
+
+        return False
 
     @overload
     def __getitem__(self, _sub: str | int) -> AbstractPlugin:
@@ -327,18 +429,34 @@ class Plugins(AbstractYAMLObjectSingleton):
             ...
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+        GlobalPluginsSettings().state = (
+            {
+                k: v.globals
+                for k, v in self.settings
+            } | {
+                plugin._config.namespace: plugin.settings.globals
+                for plugin in self
+            } | {
+                'gui': self.get_gui_settings(True)
+            }
+        )
+
+        LocalPluginsSettings().state = (
+            {
+                k: v.local
+                for k, v in self.settings
+            } | {
+                plugin._config.namespace: plugin.settings.local
+                for plugin in self
+            } | {
+                'gui': self.get_gui_settings(False)
+            }
+        )
+
         return {
-            toolbar_name: getattr(self, toolbar_name).__getstate__()
-            for toolbar_name in self.plugins
+            'global_settings': GlobalPluginsSettings(),
+            'local_settings': LocalPluginsSettings()
         }
 
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
-        for toolbar_name in self.plugins:
-            try:
-                storage = state[toolbar_name]
-                if not isinstance(storage, Mapping):
-                    raise TypeError
-                getattr(self, toolbar_name).__setstate__(storage)
-            except (KeyError, TypeError) as e:
-                logging.error(e)
-                logging.warning(storage_err_msg(toolbar_name))
+    def __setstate__(self, isglobal: bool) -> None:
+        self.setup_ui()

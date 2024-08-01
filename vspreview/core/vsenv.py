@@ -8,9 +8,9 @@ from threading import Lock
 from typing import Any, Callable, TypeVar
 
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
-from vapoursynth import LogHandle
-from vsengine.loops import EventLoop, set_loop  # type: ignore[import]
-from vsengine.policy import GlobalStore, ManagedEnvironment, Policy  # type: ignore[import]
+from vapoursynth import CoreCreationFlags, LogHandle
+from vsengine.loops import EventLoop, set_loop  # type: ignore[import-untyped]
+from vsengine.policy import GlobalStore, ManagedEnvironment, Policy, logger  # type: ignore[import-untyped]
 
 from .logger import get_vs_logger
 
@@ -30,6 +30,14 @@ PRELOADED_MODULES = set(sys.modules.values())
 _monkey_runpy_dicts = {}
 
 orig_runpy_run_code = runpy._run_code  # type: ignore
+
+
+class FlagsPolicy(Policy):
+    def new_environment(self) -> ManagedEnvironment:
+        data = self.api.create_environment(CoreCreationFlags.ENABLE_GRAPH_INSPECTION)
+        env = self.api.wrap_environment(data)
+        logger.debug("Created new environment")
+        return ManagedEnvironment(env, data, self)
 
 
 def _monkey_runpy_func(*args: Any, **kwargs: Any) -> Any:
@@ -161,7 +169,7 @@ def dispose_environment(env: ManagedEnvironment) -> None:
     env.dispose()
 
 
-policy: Policy = Policy(GlobalStore())
+policy: FlagsPolicy = FlagsPolicy(GlobalStore())
 policy.register()
 
 environment: ManagedEnvironment | None = None

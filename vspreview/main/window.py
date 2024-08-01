@@ -12,7 +12,7 @@ from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QKeyCombination, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
@@ -24,7 +24,7 @@ from ..core import (
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
-from ..models import GeneralModel, VideoOutputs
+from ..models import GeneralModel, VideoOutputs, SceningList
 from ..plugins import FileResolverPlugin, Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -91,13 +91,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     VSP_VERSION = 3.2
     BREAKING_CHANGES_VERSIONS = list[str](['3.0', '3.1'])
 
-    # status bar
-    def STATUS_FRAME_PROP(self, prop: Any) -> str:
-        return f"Type: {get_prop(prop, '_PictType', str, None, '?')}"
-
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    storable_attrs = ('settings', 'toolbars')
+    storable_attrs = ('settings', 'toolbars', 'plugins')
 
     __slots__ = (
         *storable_attrs, 'app', 'clipboard',
@@ -126,13 +122,14 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     no_exit: bool
     reload_enabled: bool
 
-    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool) -> None:
+    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool, force_storage: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
 
         self.no_exit = no_exit
         self.reload_enabled = reload_enabled
+        self.force_storage = force_storage
 
         self.resolve_plugins = set[FileResolverPlugin]()
 
@@ -160,6 +157,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 tuple[int | None, int | None], float | tuple[int, int] | Fraction
             ] | list[Fraction], int | None]
         ]()
+        self.temporary_scenes = list[SceningList]()
         self.norm_timecodes = dict[int, list[float]]()
 
         self.user_output_info = {
@@ -262,7 +260,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def apply_stylesheet(self) -> None:
         try:
-            from qdarkstyle import _load_stylesheet, DarkPalette, LightPalette  # type: ignore[import]
+            from qdarkstyle import DarkPalette, LightPalette, _load_stylesheet  # type: ignore[import]
         except ImportError:
             self.settings.dark_theme_enabled = False
         else:
@@ -437,11 +435,13 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             )
 
         self.show()
+        self.plugins.setup_ui()
 
     def handle_error(self, e: Exception) -> None:
         import logging
-        from vsengine import vpy
         from traceback import TracebackException
+
+        from vsengine import vpy
 
         if not isinstance(e, vpy.ExecutionFailed):
             e = vpy.ExecutionFailed(e)
@@ -505,7 +505,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     logging.warning(
                         '\n\tThe storage was created on an old version of VSPreview.'
                         '\n\tSave any scening or other important info and delete it.'
-                        '\n\tIf you want the program to silently delete old storages, go into settings.'
+                        '\n\tIf you want the program to silently delete old storages,'
+                        '\n\tgo into settings or set --force-storage flag.'
                     )
                     sys.exit(1)
 
@@ -593,12 +594,25 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
         data = cast(dict[str, Any], self.__getstate__())
+
         data['_globals'] = {
             'settings': data['settings'],
             'window_settings': data['window_settings']
         }
 
+        plugins = data['plugins'].__getstate__()
+
+        del data['plugins']
+
         data['_globals']['toolbars'] = data['toolbars'].__getstate__()
+        data['_globals']['plugins'] = {
+            'settings': plugins['global_settings']
+        }
+
+        data['plugins'] = {
+            'settings': plugins['local_settings']
+        }
+
         gtoolbars = data['_globals']['toolbars']
 
         for toolbar_name in gtoolbars:
@@ -741,7 +755,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.plugins.on_current_frame_changed(frame)
 
-        self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
+        self.statusbar.frame_props_label.setText(
+            f"Type: {get_prop(self.current_output.props, '_PictType', str, None, '?')}"
+        )
 
     def switch_output(self, value: int | VideoOutput) -> None:
         if not self.outputs or len(self.outputs) == 0:
@@ -872,6 +888,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             )
 
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
+
+    def set_temporary_scenes(self, scenes: SceningList) -> None:
+        self.temporary_scenes = scenes
 
     def update_timecodes_info(
         self, index: int, timecodes: str | Path | dict[

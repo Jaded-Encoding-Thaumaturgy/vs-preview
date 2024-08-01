@@ -5,19 +5,25 @@ from functools import partial, wraps
 from string import Template
 from typing import TYPE_CHECKING, Any, Callable
 
-from PyQt6.QtCore import QSignalBlocker
+from PyQt6.QtCore import QSignalBlocker, QTime
 
 if TYPE_CHECKING:
     from vstools import F, P, R, T
 
-from ..core import Time, main_window
+from ..core.types import Time
 
 __all__ = [
     'exit_func',
-    'qt_silent_call',
+
     'strfdelta',
+
+    'qt_silent_call',
     'fire_and_forget',
-    'set_status_label'
+
+    'set_status_label',
+
+    'to_qtime',
+    'from_qtime'
 ]
 
 
@@ -77,6 +83,8 @@ def fire_and_forget(f: F) -> F:
 
 
 def set_status_label(label: str) -> Callable[[F], F]:
+    from ..core import main_window
+
     def _decorator(func: Callable[..., T]) -> Any:
         @wraps(func)
         def _wrapped(*args: Any, **kwargs: Any) -> T:
@@ -92,3 +100,17 @@ def set_status_label(label: str) -> Callable[[F], F]:
         return _wrapped
 
     return _decorator
+
+
+def to_qtime(time: Time) -> QTime:
+    seconds = time.value.seconds % (24 * 3600)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    milliseconds = time.value.microseconds // 1000
+    return QTime(hours, minutes, seconds, milliseconds)
+
+
+def from_qtime(qtime: QTime, t: type[Time]) -> Time:
+    return t(milliseconds=qtime.msecsSinceStartOfDay())

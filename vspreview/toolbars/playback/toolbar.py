@@ -13,10 +13,9 @@ from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QSlider
 
 from ...core import (
-    AbstractToolbar, AudioOutput, CheckBox, ComboBox, DoubleSpinBox, Frame, FrameEdit, PushButton, Time, TimeEdit,
-    Timer, try_load
+    AbstractToolbar, AudioOutput, CheckBox, ComboBox, DoubleSpinBox, Frame, FrameEdit, PackingType, PushButton, Time,
+    TimeEdit, Timer, try_load
 )
-from ...core.types import video
 from ...models import AudioOutputs
 from ...utils import qt_silent_call
 from .settings import PlaybackSettings
@@ -238,10 +237,10 @@ class PlaybackToolbar(AbstractToolbar):
         ):
             return
 
-        if not video.PACKING_TYPE.can_playback:
+        if not PackingType.CURRENT.can_playback:
             import logging
             logging.warn(
-                f'The current backend ({video.PACKING_TYPE.name}) can\'t playback! Install akarin or libp2p plugins.'
+                f'The current backend ({PackingType.CURRENT.name}) can\'t playback! Install akarin or libp2p plugins.'
             )
             return
 

@@ -18,8 +18,8 @@ from .core.logger import set_log_level, setup_logger
 from .core.vsenv import set_vsengine_loop
 from .main import MainWindow
 from .plugins import get_installed_plugins
-from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 from .plugins.abstract import FileResolverPlugin, ResolvedScript
+from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 
 __all__ = [
     'main'
@@ -69,6 +69,9 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     )
     parser.add_argument(
         "--no-deps", help="Ignore downloading dependencies.", action="store_true"
+    )
+    parser.add_argument(
+        "--force-storage", help="Force override or local/global storage.", action="store_true", default=False
     )
 
     args = parser.parse_args(_args)
@@ -138,7 +141,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         main.app = QApplication(sys.argv)
         set_vsengine_loop()
     else:
-        from .core.vsenv import make_environment, get_current_environment
+        from .core.vsenv import get_current_environment, make_environment
         make_environment()
         get_current_environment().use()
 
@@ -164,7 +167,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         arguments |= {k: v for k, v in map(_parse_arg, args.plugins)}
 
     main.main_window = MainWindow(
-        Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled
+        Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled, args.force_storage
     )
     main.main_window.load_script(
         script.path, list(arguments.items()), False, args.frame or None, script.display_name, file_resolve_plugin

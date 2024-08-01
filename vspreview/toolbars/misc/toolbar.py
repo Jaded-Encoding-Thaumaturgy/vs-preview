@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import logging
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
+from vstools import FramePropError, get_prop
 
 from ...core import (
-    AbstractToolbar, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time, VBoxLayout,
-    try_load
+    AbstractToolbar, ArInfo, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time,
+    VBoxLayout, try_load
 )
 from ...core.custom import ComboBox, Switch
 from ...models import GeneralModel
@@ -33,7 +35,8 @@ class MiscToolbar(AbstractToolbar):
         'toggle_button', 'save_file_types', 'copy_frame_button',
         'crop_top_spinbox', 'crop_left_spinbox', 'crop_width_spinbox',
         'crop_bottom_spinbox', 'crop_right_spinbox', 'crop_height_spinbox',
-        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button'
+        'crop_active_switch', 'crop_mode_combox', 'crop_copycommand_button',
+        'ar_active_switch'
     )
 
     settings: MiscSettings
@@ -104,6 +107,11 @@ class MiscToolbar(AbstractToolbar):
         self.hlayout.addStretch()
         self.hlayout.addStretch()
 
+        self.ar_active_switch = Switch(
+            10, checked=False, clicked=lambda active: (ArInfo.active.__set__(ArInfo, active), self.update_sar()),
+            tooltip='Toggle respect SAR properties'
+        )
+
         self.crop_active_switch = Switch(10, 22, checked=True, clicked=self.crop_active_onchange)
 
         self.crop_top_spinbox = SpinBox(None, 0, 2 ** 16, valueChanged=self.crop_top_onchange)
@@ -124,6 +132,11 @@ class MiscToolbar(AbstractToolbar):
         self.crop_active_switch.click()
 
         HBoxLayout(self.hlayout, [
+            VBoxLayout([
+                HBoxLayout([
+                    QLabel('Toggle SAR'), self.ar_active_switch,
+                ], spacing=0)
+            ]),
             VBoxLayout([
                 HBoxLayout([
                     QLabel('Top'), self.crop_top_spinbox, QSpacerItem(35, 10)
@@ -232,6 +245,7 @@ class MiscToolbar(AbstractToolbar):
 
         curr = self.main.current_output
         crop = curr.crop_values
+        ar = curr.ar_values
 
         self.crop_top_spinbox.setMaximum(curr.height - 1)
         self.crop_bottom_spinbox.setMaximum(curr.height - 1)
@@ -248,9 +262,33 @@ class MiscToolbar(AbstractToolbar):
         qt_silent_call(self.crop_height_spinbox.setValue, crop.height)
 
         self.crop_active_switch.setChecked(not crop.active)
+        self.ar_active_switch.setChecked(not ar.active)
         self.crop_active_switch.click()
 
         self.crop_mode_combox.setCurrentIndex(int(crop.is_absolute))
+
+    def update_sar(self, index: int | None = None) -> None:
+        if not hasattr(self.main, 'current_output') or not self.main.outputs:
+            return
+
+        output = self.main.current_output if index is None else self.main.outputs[index]
+
+        if not output._stateset or output.props is None:
+            return
+
+        try:
+            sar = (
+                max(get_prop(output.props, '_SARNum', int), 1),
+                max(get_prop(output.props, '_SARDen', int), 1)
+            )
+        except FramePropError:
+            logging.error('Failed to get SAR properties')
+            return
+
+        output.update_graphic_item(
+            None, None, ArInfo(*sar),
+            graphics_scene_item=self.main.current_output.graphics_scene_item
+        )
 
     def update_crop(self, index: int | None = None) -> None:
         if not hasattr(self.main, 'current_output') or not self.main.outputs:

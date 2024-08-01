@@ -283,8 +283,6 @@ class VideoOutput(AbstractYAMLObject):
         ):
             standard_gamut = {}
 
-        print(standard_gamut)
-
         resizer_kwargs = KwargsT({
             'format': fallback(fmt, PackingType.CURRENT.vs_format if pack_rgb else PackingType.CURRENT.vs_alpha_format),
             'matrix_in': Matrix.BT709,

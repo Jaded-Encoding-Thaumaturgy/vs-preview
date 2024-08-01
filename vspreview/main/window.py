@@ -783,8 +783,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.switch_frame(self.current_output.last_showed_frame)
 
-        for graphics_view in self.graphics_views:
-            graphics_view.setup_view()
+        self.refresh_graphics_views()
 
         self.timeline.update_notches()
 
@@ -794,6 +793,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.plugins.on_current_output_changed(index, prev_index)
 
         self.update_statusbar_output_info()
+
+    def refresh_graphics_views(self) -> None:
+        for graphics_view in self.graphics_views:
+            graphics_view.setup_view()
 
     @property
     def current_output(self) -> VideoOutput:

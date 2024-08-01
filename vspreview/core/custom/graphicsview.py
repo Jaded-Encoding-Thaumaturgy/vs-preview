@@ -52,6 +52,9 @@ class GraphicsImageItem:
         crop_values: CroppingInfo | None = None,
         ar_values: ArInfo | None = None
     ) -> None:
+
+        sizes = (self._pixmap.width(), self._pixmap.height())
+
         if new_pixmap is None:
             new_pixmap = self._pixmap
         else:
@@ -64,6 +67,11 @@ class GraphicsImageItem:
             new_pixmap = self._set_crop(new_pixmap, crop_values)
 
         self._graphics_item.setPixmap(new_pixmap)
+
+        if sizes != (new_pixmap.width(), new_pixmap.height()):
+            from ...core import main_window
+
+            main_window().refresh_graphics_views()
 
     def show(self) -> None:
         self._graphics_item.show()
@@ -101,7 +109,6 @@ class GraphicsImageItem:
         return stretched
 
     def _set_crop(self, pixmap: QPixmap, crop_values: CroppingInfo) -> QPixmap:
-        # TODO: Fix this still reading the old abs width/height even if AR is set
         padded = QPixmap(pixmap.width(), pixmap.height())
         padded.fill(QColor(0, 0, 0, 0))
 
@@ -110,6 +117,7 @@ class GraphicsImageItem:
             QPoint(crop_values.left, crop_values.top), pixmap,
             QRect(crop_values.left, crop_values.top, crop_values.width, crop_values.height)
         )
+
         painter.end()
 
         return padded

@@ -262,7 +262,7 @@ class VideoOutput(AbstractYAMLObject):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
         if not hasattr(self, 'ar_values'):
-            self.ar_values = ArInfo(1, 1, False)
+            self.ar_values = ArInfo(1, 1)
 
     def prepare_vs_output(self, clip: vs.VideoNode, pack_rgb: bool = True, fmt: vs.VideoFormat | None = None) -> vs.VideoNode:
         from vstools import (

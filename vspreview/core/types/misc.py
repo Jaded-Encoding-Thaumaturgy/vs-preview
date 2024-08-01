@@ -22,11 +22,23 @@ class CroppingInfo:
     is_absolute: bool = False
 
 
+_arinfo_active = False
+
+
 @dataclass
 class ArInfo:
     sarnum: int
     sarden: int
-    active: bool = True
+
+    @property
+    def active(self) -> bool:
+        return _arinfo_active
+
+    @active.setter
+    def active(self, active: bool) -> None:
+        global _arinfo_active
+
+        _arinfo_active = active
 
 
 @dataclass

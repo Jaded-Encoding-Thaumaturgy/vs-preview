@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Mapping
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
+from vstools import FramePropError, get_prop
 
 from ...core import (
     AbstractToolbar, ArInfo, CheckBox, CroppingInfo, HBoxLayout, LineEdit, PushButton, SpinBox, Stretch, Time,
@@ -106,9 +107,8 @@ class MiscToolbar(AbstractToolbar):
         self.hlayout.addStretch()
         self.hlayout.addStretch()
 
-        # TODO: Remember state when switching outputs
         self.ar_active_switch = Switch(
-            10, clicked=self.display_sar_as_dar,
+            10, checked=False, clicked=lambda active: (ArInfo.active.__set__(ArInfo, active), self.update_sar()),
             tooltip='Toggle respect SAR properties'
         )
 
@@ -267,28 +267,26 @@ class MiscToolbar(AbstractToolbar):
 
         self.crop_mode_combox.setCurrentIndex(int(crop.is_absolute))
 
-    def display_sar_as_dar(self, index: int | None = None) -> None:
+    def update_sar(self, index: int | None = None) -> None:
         if not hasattr(self.main, 'current_output') or not self.main.outputs:
             return
 
-        props = self.main.current_output.props
+        output = self.main.current_output if index is None else self.main.outputs[index]
 
-        if props is None:
+        if not output._stateset or output.props is None:
             return
-
-        from vstools import get_prop, FramePropError
 
         try:
             sar = (
-                max(get_prop(props, '_SARNum', int), 1),
-                max(get_prop(props, '_SARDen', int), 1)
+                max(get_prop(output.props, '_SARNum', int), 1),
+                max(get_prop(output.props, '_SARDen', int), 1)
             )
         except FramePropError:
             logging.error('Failed to get SAR properties')
             return
 
-        self.main.current_output.update_graphic_item(
-            None, ar_values=ArInfo(*sar, self.ar_active_switch.isChecked()),
+        output.update_graphic_item(
+            None, None, ArInfo(*sar),
             graphics_scene_item=self.main.current_output.graphics_scene_item
         )
 

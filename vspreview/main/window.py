@@ -24,7 +24,7 @@ from ..core import (
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
-from ..models import GeneralModel, VideoOutputs
+from ..models import GeneralModel, VideoOutputs, SceningList
 from ..plugins import FileResolverPlugin, Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -156,6 +156,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 tuple[int | None, int | None], float | tuple[int, int] | Fraction
             ] | list[Fraction], int | None]
         ]()
+        self.temporary_scenes = list[SceningList]()
         self.norm_timecodes = dict[int, list[float]]()
 
         self.user_output_info = {
@@ -886,6 +887,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             )
 
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
+
+    def set_temporary_scenes(self, scenes: SceningList) -> None:
+        self.temporary_scenes = scenes
 
     def update_timecodes_info(
         self, index: int, timecodes: str | Path | dict[

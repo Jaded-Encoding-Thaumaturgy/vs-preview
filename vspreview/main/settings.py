@@ -146,7 +146,7 @@ class MainSettings(AbstractToolbarSettings):
             25, 50, 68, 75, 85, 100, 150, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 2000, 3200
         ]
         self.zoom_level_default_combobox.setCurrentIndex(5)
-        self.color_management_checkbox.setChecked(False)
+        self.color_management_checkbox.setChecked(self.color_management_checkbox.isVisible())
 
     @property
     def autosave_interval(self) -> Time:

@@ -13,7 +13,8 @@ from PyQt6.QtWidgets import QWidget
 from ..core import AbstractYAMLObjectSingleton, Frame
 from . import utils
 from .abstract import (
-    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, ResolvedScript, _BasePluginT
+    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, PluginSettings, ResolvedScript,
+    SettingsNamespace, _BasePluginT
 )
 from .utils import *  # noqa: F401,F403
 
@@ -29,7 +30,7 @@ PluginT = TypeVar('PluginT', bound=_BasePluginT)
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig',
+    'AbstractPlugin', 'PluginConfig', 'PluginSettings', 'SettingsNamespace',
     'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript',
     *utils.__all__
 ]

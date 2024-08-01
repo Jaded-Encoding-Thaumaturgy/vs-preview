@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig', 'PluginSettings',
+    'AbstractPlugin', 'PluginConfig', 'PluginSettings', 'SettingsNamespace',
 
     'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript'
 ]

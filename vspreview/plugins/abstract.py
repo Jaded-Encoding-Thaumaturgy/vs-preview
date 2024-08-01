@@ -7,7 +7,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 from vstools import SPath, T
 
-from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject, try_load
+from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject
 
 if TYPE_CHECKING:
     from ..main import MainWindow
@@ -39,13 +39,16 @@ class PluginSettings(QYAMLObject):
         self.plugin = plugin
         self.local = SettingsNamespace()
         self.globals = SettingsNamespace()
+        self.fired_events = [False, False]
 
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {'local': self.local, 'globals': self.globals}
 
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
-        try_load(state, 'globals', dict, self.__setattr__)
-        try_load(state, 'local', dict, self.__setattr__)
+    def __setstate__(self, isglobal: bool) -> None:
+        self.fired_events[int(isglobal)] = True
+        if all(self.fired_events):
+            self.fired_events = [False, False]
+            self.plugin.__setstate__()
 
 
 if TYPE_CHECKING:
@@ -139,6 +142,9 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
         return (
             not self._config.visible_in_tab
         ) or self.index == self.main.plugins.plugins_tab.currentIndex()  # type: ignore
+
+    def __setstate__(self) -> None:
+        ...
 
 
 class FileResolverPlugin:

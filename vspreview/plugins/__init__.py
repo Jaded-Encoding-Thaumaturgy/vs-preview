@@ -230,6 +230,7 @@ class LocalPluginsSettings(AbstractYAMLObjectSingleton):
         for plugin in Plugins.instance[0]:
             if plugin._config.namespace in self.state:
                 plugin.settings.local = self.state[plugin._config.namespace]
+                plugin.settings.__setstate__(False)
 
 
 class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
@@ -251,6 +252,7 @@ class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
         for plugin in Plugins.instance[0]:
             if plugin._config.namespace in self.state:
                 plugin.settings.globals = self.state[plugin._config.namespace]
+                plugin.settings.__setstate__(True)
 
 
 class Plugins(AbstractYAMLObjectSingleton):

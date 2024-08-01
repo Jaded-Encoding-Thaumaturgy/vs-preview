@@ -26,10 +26,10 @@ class PlaybackSettings(AbstractToolbarSettings):
     FPS_REFRESH_INTERVAL = 150  # ms
     SEEK_STEP = 1
     BICUBIC_KERNELS = {
-        'Hermite': {'b': 0, 'c': 0.0},
-        'Mitchell': {'b': 1 / 3, 'c': 1 / 3},
-        'Catrom': {'b': 0, 'c': 0.5},
-        'Spline': {'b': 1, 'c': 0.0},
+        'mitchell': {'b': 1 / 3, 'c': 1 / 3},
+        'hermite': {'b': 0, 'c': 0.0},
+        'catrom': {'b': 0, 'c': 0.5},
+        'spline': {'b': 1, 'c': 0.0},
     }
 
     def setup_ui(self) -> None:
@@ -57,7 +57,7 @@ class PlaybackSettings(AbstractToolbarSettings):
     def set_defaults(self) -> None:
         self.buffer_size_spinbox.setValue(MainSettings.get_usable_cpus_count())
         self.dither_type_combobox.setCurrentValue(DitherType.ERROR_DIFFUSION)
-        self.kernel_combobox.setCurrentValue('Mitchell')
+        self.kernel_combobox.setCurrentIndex(0)
 
     @property
     def playback_buffer_size(self) -> int:
@@ -76,10 +76,10 @@ class PlaybackSettings(AbstractToolbarSettings):
         return super().__getstate__() | {
             'playback_buffer_size': self.playback_buffer_size,
             'dither_type': self.dither_type,
-            'resample_kernel_chroma': self.kernel
+            'resample_kernel_chroma': self.kernel_combobox.currentValue()
         }
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'playback_buffer_size', int, self.buffer_size_spinbox.setValue)
         try_load(state, 'dither_type', str, self.dither_type_combobox.setCurrentValue)
-        try_load(state, 'resample_kernel_chroma', str, self.kernel_combobox.setCurrentValue)
+        try_load(state, 'resample_kernel_chroma', str, self.kernel_combobox.setCurrentValue())

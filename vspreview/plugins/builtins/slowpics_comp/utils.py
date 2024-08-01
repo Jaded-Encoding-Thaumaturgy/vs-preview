@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
-from pathlib import Path
 from typing import Final
 from uuid import uuid4
 
 from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
+from vstools import SPath
 
 KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
@@ -17,32 +17,38 @@ MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 __all__ = [
     'KEYWORD_RE', 'MAX_ATTEMPTS_PER_PICTURE_TYPE',
 
-    'get_slowpics_headers',
-    'do_single_slowpics_upload',
+    'get_slowpic_upload_headers',
+    'get_slowpic_headers',
+    'do_single_slowpic_upload',
 
     'clear_filename'
 ]
 
 
-def get_slowpics_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+def get_slowpic_upload_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+    return {
+        'Content-Length': str(content_length),
+        'Content-Type': content_type,
+    } | get_slowpic_headers(sess)
+
+
+def get_slowpic_headers(sess: Session) -> dict[str, str]:
     return {
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'en-US,en;q=0.9',
         'Access-Control-Allow-Origin': '*',
-        'Content-Length': str(content_length),
-        'Content-Type': content_type,
         'Origin': 'https://slow.pics/',
         'Referer': 'https://slow.pics/comparison',
         'User-Agent': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
             '(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
         ),
-        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN')
+        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN', None),
     }
 
 
-def do_single_slowpics_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
+def do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: SPath, browser_id: str) -> None:
     upload_info = MultipartEncoder({
         'collectionUuid': collection,
         'imageUuid': imageUuid,
@@ -54,9 +60,8 @@ def do_single_slowpics_upload(sess: Session, collection: str, imageUuid: str, im
         try:
             req = sess.post(
                 'https://slow.pics/upload/image', data=upload_info.to_string(),
-                headers=get_slowpics_headers(upload_info.len, upload_info.content_type, sess)
+                headers=get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess)
             )
-
             req.raise_for_status()
             break
         except HTTPError as e:

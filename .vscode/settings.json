@@ -18,6 +18,7 @@
     "python.linting.flake8Args": ["--max-line-length=120", "--ignore=None"],
     "python.linting.pydocstyleArgs": ["--ignore=None"],
     "python.analysis.memory.keepLibraryAst": true,
-    "python.formatting.provider": "autopep8"
+    "python.formatting.provider": "autopep8",
+    "python.analysis.typeCheckingMode": "basic"
   }
   

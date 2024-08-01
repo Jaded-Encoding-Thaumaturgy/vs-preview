@@ -16,7 +16,7 @@ from vstools import clip_data_gather, get_prop, remap_frames, vs
 from vspreview.core import PackingType, VideoOutput
 from vspreview.main import MainWindow
 
-from .utils import do_single_slowpics_upload, get_slowpics_headers, clear_filename
+from .utils import clear_filename, do_single_slowpic_upload, get_slowpic_headers, get_slowpic_upload_headers
 
 __all__ = [
     'WorkerConfiguration', 'Worker'
@@ -33,7 +33,7 @@ class WorkerConfiguration(NamedTuple):
     remove_after: str | None
     frames: list[list[int]]
     compression: int
-    path: Path
+    path: SPath
     main: MainWindow
     delete_cache: bool
     frame_type: bool
@@ -88,10 +88,11 @@ class Worker(QObject):
                 curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
 
                 clip = output.prepare_vs_output(
-                    output.source.clip, False, PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
+                    output.source.clip, not hasattr(vs.core, "fpng"),
+                    PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
                 )
 
-                path_images = [curr_filename.format(n) for n in conf.frames[i]]
+                path_images = [SPath(str(curr_filename) % n) for n in conf.frames[i]]
 
                 def _frame_callback(n: int, f: vs.VideoFrame) -> str:
                     if self.isFinished():
@@ -106,9 +107,8 @@ class Worker(QObject):
                     qcomp = (0 if conf.compression == 1 else 100) if conf.compression else 80
 
                     def frame_callback(n: int, f: vs.VideoFrame) -> str:
-                        conf.main.current_output.frame_to_qimage(f).save(
-                            curr_filename.format(n).to_str(), 'PNG', qcomp
-                        )
+                        if not conf.main.current_output.frame_to_qimage(f).save(path_images[n].to_str(), 'PNG', qcomp):
+                            raise StopIteration('There was an error saving the image to disk!')
 
                         return _frame_callback(n, f)
 
@@ -129,6 +129,7 @@ class Worker(QObject):
             raise e
 
         total_images = 0
+        is_comparison = len(all_images) > 1
         fields = dict[str, Any]()
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
@@ -136,8 +137,15 @@ class Worker(QObject):
             for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
-                fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].imageNames[{i}]'] = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+
+                image_name = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+
+                if is_comparison:
+                    fields[f'comparisons[{j}].name'] = str(frame)
+                    fields[f'comparisons[{j}].imageNames[{i}]'] = image_name
+                else:
+                    fields[f'imageNames[{j}]'] = f'{frame} - {image_name}'
+
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
@@ -151,7 +159,7 @@ class Worker(QObject):
                 browser_id = str(uuid4())
                 check_session = False
 
-            base_page = sess.get('https://slow.pics/comparison')
+            base_page = sess.get('https://slow.pics/comparison', headers=get_slowpic_headers(sess))
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
 
@@ -181,8 +189,8 @@ class Worker(QObject):
             files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
             comp_response = sess.post(
-                'https://slow.pics/upload/comparison', data=monitor.to_string(),
-                headers=get_slowpics_headers(monitor.len, monitor.content_type, sess)
+                f'https://slow.pics/upload/{"comparison" if is_comparison else "collection"}', data=monitor.to_string(),
+                headers=get_slowpic_upload_headers(monitor.len, monitor.content_type, sess)
             ).json()
             collection = comp_response['collectionUuid']
             key = comp_response['key']
@@ -211,10 +219,11 @@ class Worker(QObject):
                                         images_done, total_images, uuid=conf.uuid
                                     )
 
+                        imageUuid = image_ids[j][i] if is_comparison else image_ids[0][j]
                         futures.append(
                             executor.submit(
-                                do_single_slowpics_upload,
-                                sess=sess, collection=collection, imageUuid=image_ids[j][i],
+                                do_single_slowpic_upload,
+                                sess=sess, collection=collection, imageUuid=imageUuid,
                                 image=image, browser_id=browser_id
                             )
                         )

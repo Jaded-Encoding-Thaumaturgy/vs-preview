@@ -273,6 +273,18 @@ class VideoOutput(AbstractYAMLObject):
         if self._stateset and assumed_props:
             logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <"{', '.join(assumed_props)}>')
 
+        standard_gamut = {'transfer': Transfer.BT709, 'primaries': self.main.settings.output_primaries_zimg}
+
+        if (
+            not self.main.display_profile
+            or self.main.display_profile.primaries() == QColorSpace.Primaries.SRgb
+        ) and heuristics['primaries_in'] in (
+            Primaries.BT2020, Primaries.ST428, Primaries.ST431_2, Primaries.ST432_1
+        ):
+            standard_gamut = {}
+
+        print(standard_gamut)
+
         resizer_kwargs = KwargsT({
             'format': fallback(fmt, PackingType.CURRENT.vs_format if pack_rgb else PackingType.CURRENT.vs_alpha_format),
             'matrix_in': Matrix.BT709,
@@ -280,10 +292,7 @@ class VideoOutput(AbstractYAMLObject):
             'primaries_in': Primaries.BT709,
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
-        } | heuristics | {
-            'transfer': Transfer.BT709,
-            'primaries': self.main.settings.output_primaries_zimg
-        })
+        } | heuristics | standard_gamut)
 
         if src.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']

@@ -26,12 +26,12 @@ class PlaybackSettings(AbstractToolbarSettings):
     FPS_REFRESH_INTERVAL = 150  # ms
     SEEK_STEP = 1
     BICUBIC_KERNELS = {
-        'Hermite'   :{'b': 0,    'c': 0.0},
-        'Mitchell'  :{'b': 1/3,  'c': 1/3},
-        'Catrom'    :{'b': 0,    'c': 0.5},
-        'Spline'    :{'b': 1,    'c': 0.0},
-        }
-      
+        'Hermite': {'b': 0, 'c': 0.0},
+        'Mitchell': {'b': 1 / 3, 'c': 1 / 3},
+        'Catrom': {'b': 0, 'c': 0.5},
+        'Spline': {'b': 1, 'c': 0.0},
+    }
+
     def setup_ui(self) -> None:
         from ...core import main_window
         super().setup_ui()
@@ -46,7 +46,7 @@ class PlaybackSettings(AbstractToolbarSettings):
             self, model=GeneralModel[str](list(self.BICUBIC_KERNELS.keys())),
             currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
-        
+
         self.dither_type_combobox.currentTextChanged.connect(lambda _: main_window().refresh_video_outputs())
         self.kernel_combobox.currentTextChanged.connect(lambda _: main_window().refresh_video_outputs())
 
@@ -74,7 +74,7 @@ class PlaybackSettings(AbstractToolbarSettings):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return super().__getstate__() | {
-            'playback_buffer_size': self.playback_buffer_size, 
+            'playback_buffer_size': self.playback_buffer_size,
             'dither_type': self.dither_type,
             'Resample kernel (chroma)': self.kernel
         }

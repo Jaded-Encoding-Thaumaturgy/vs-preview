@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if __name__ != '__vspreview__':
+    from vspreview.plugins import FileResolvePluginConfig, FileResolverPlugin, ResolvedScript
+
+    __all__ = [
+        'FileResolveWithVSSource'
+    ]
+
+    class FileResolveWithVSSource(FileResolverPlugin):
+        _config = FileResolvePluginConfig('dev.setsugen.vssource_load', 'VSSource Loader')
+
+        def can_run_file(self, filepath: Path) -> bool:
+            if filepath.is_dir():
+                return True
+
+            try:
+                from vssource import parse_video_filepath, source
+
+                parse_video_filepath(filepath)
+                source(filepath).get_frame(0)
+
+                return True
+            except Exception:
+                ...
+
+            return False
+
+        def resolve_path(self, filepath: Path) -> ResolvedScript:
+            return ResolvedScript(Path(__file__), str(filepath), dict(filepath=filepath), False)
+else:
+    from vssource import parse_video_filepath, source
+    from vstools import set_output
+
+    if TYPE_CHECKING:
+        filepath: Path = Path()
+        pattern: str = ''
+    else:
+        if 'pattern' not in locals():
+            pattern = '*'
+
+    if filepath.is_dir():
+        for file in filepath.glob(pattern):
+            try:
+                parse_video_filepath(file)
+                set_output(source(file), file.name)
+            except Exception:
+                ...
+    else:
+        set_output(source(filepath), filepath.name)

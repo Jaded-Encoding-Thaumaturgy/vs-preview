@@ -12,18 +12,20 @@ from typing import Any, Iterable, Mapping, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QKeyCombination, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
+from vstools import get_prop
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
     GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
-    VBoxLayout, VideoOutput, _monkey_runpy_dicts, dispose_environment, get_current_environment, make_environment
+    VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
+    make_environment
 )
-from ..models import GeneralModel, VideoOutputs
-from ..plugins import Plugins
+from ..models import GeneralModel, VideoOutputs, SceningList
+from ..plugins import FileResolverPlugin, Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -89,16 +91,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     VSP_VERSION = 3.2
     BREAKING_CHANGES_VERSIONS = list[str](['3.0', '3.1'])
 
-    # status bar
-    def STATUS_FRAME_PROP(self, prop: Any) -> str:
-        return 'Type: %s' % (prop['_PictType'].decode('utf-8') if '_PictType' in prop else '?')
-
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    storable_attrs = ('settings', 'toolbars')
+    storable_attrs = ('settings', 'toolbars', 'plugins')
 
     __slots__ = (
-        *storable_attrs, 'app', 'display_scale', 'clipboard',
+        *storable_attrs, 'app', 'clipboard',
         'script_path', 'timeline', 'main_layout', 'autosave_timer',
         'graphics_view', 'script_error_dialog',
         'central_widget', 'statusbar', 'storage_not_found',
@@ -111,6 +109,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     reload_after_signal = pyqtSignal()
     cropValuesChanged = pyqtSignal(CroppingInfo)
 
+    reload_stylesheet_signal = pyqtSignal()
+
     toolbars: Toolbars
     plugins: Plugins
     app_settings: SettingsDialog
@@ -118,12 +118,19 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     autosave_timer: Timer
 
-    def __init__(self, config_dir: Path, no_exit: bool) -> None:
+    no_exit: bool
+    reload_enabled: bool
+
+    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool, force_storage: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
 
         self.no_exit = no_exit
+        self.reload_enabled = reload_enabled
+        self.force_storage = force_storage
+
+        self.resolve_plugins = set[FileResolverPlugin]()
 
         self.settings = MainSettings(MainToolbar)
 
@@ -137,20 +144,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.bound_graphics_views = dict[GraphicsView, set[GraphicsView]]()
 
-        if self.settings.dark_theme_enabled:
-            from ..core import apply_plotting_style
-
-            try:
-                from qdarkstyle import _load_stylesheet  # type: ignore[import]
-            except ImportError:
-                self.settings.dark_theme_enabled = False
-            else:
-                apply_plotting_style()
-                self.app.setStyleSheet(self.patch_dark_stylesheet(_load_stylesheet(qt_api='pyqt6')))
-
-        self.ensurePolished()
-
-        self.display_scale = self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
         self.setWindowTitle('VSPreview')
 
         desktop_size = self.app.primaryScreen().size()
@@ -163,6 +156,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 tuple[int | None, int | None], float | tuple[int, int] | Fraction
             ] | list[Fraction], int | None]
         ]()
+        self.temporary_scenes = list[SceningList]()
         self.norm_timecodes = dict[int, list[float]]()
 
         self.user_output_info = {
@@ -205,6 +199,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.setObjectName('MainWindow')
 
         self.env: vpy.Script | None = None
+
+    @property
+    def display_scale(self) -> float:
+        return self.app.primaryScreen().logicalDotsPerInch() / self.settings.base_ppi
 
     def setup_ui(self) -> None:
         self.central_widget = ExtendedWidget(self)
@@ -259,19 +257,49 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 view.autofit = not view.autofit
                 break
 
-    def patch_dark_stylesheet(self, stylesheet: str) -> str:
-        return stylesheet + 'QGraphicsView { border: 0px; padding: 0px; }'
+    def apply_stylesheet(self) -> None:
+        try:
+            from qdarkstyle import DarkPalette, LightPalette, _load_stylesheet  # type: ignore[import]
+        except ImportError:
+            self.settings.dark_theme_enabled = False
+        else:
+            palette = DarkPalette if self.settings.dark_theme_enabled else LightPalette
+            if self.settings.dark_theme_enabled:
+                apply_plotting_style()
+
+            stylesheet = _load_stylesheet('pyqt6', palette)
+            stylesheet += ' QGraphicsView { border: 0px; padding: 0px; }'
+
+            self.app.setStyleSheet(stylesheet)
+
+        if sys.platform == 'win32':
+            self.app.setStyle("windowsvista")
+
+        self.ensurePolished()
+        self.reload_stylesheet_signal.emit()
+        self.repaint()
 
     def load_script(
         self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
-        start_frame: int | None = None
+        start_frame: int | None = None, display_name: str | None = None,
+        resolve_plugin: FileResolverPlugin | None = None
     ) -> None:
         from random import random
 
+        self.display_name = display_name or script_path
         self.external_args = external_args or []
+        self.start_frame = Frame(start_frame or 0)
+
+        if resolve_plugin:
+            self.resolve_plugins.add(resolve_plugin)
 
         self.toolbars.playback.stop()
-        self.setWindowTitle('VSPreview: %s %s' % (script_path, self.external_args))
+        self.setWindowTitle(
+            f'VSPreview: {self.display_name}' + (
+                f', Arguments({", ".join(f"{k}={v}" for k, v in self.external_args)})'
+                if self.external_args else ''
+            )
+        )
 
         self.statusbar.label.setText('Evaluating')
         self.script_path = script_path
@@ -344,20 +372,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             ).result()
             self.env.module.__dict__['_monkey_runpy'] = random()
             self.env = vpy.script(self.script_path, environment=self.env).result()
-        except vpy.ExecutionFailed as e:
-            from traceback import TracebackException
-
-            logging.error(e.parent_error)
-
-            te = TracebackException.from_exception(e.parent_error)
-            logging.error(''.join(te.format()))
-
-            self.script_exec_failed = True
-            return self.handle_script_error(
-                '\n'.join([
-                    str(e), 'See console output for details.'
-                ]), True
-            )
+        except Exception as e:
+            return self.handle_error(e)
         finally:
             if argv_orig is not None:
                 sys.argv = argv_orig
@@ -384,7 +400,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             if self.storage_not_found or reload_from_error:
                 self.load_storage()
 
-            if not reloading:
+            if not reloading or (self.outputs is None):
                 self.toolbars.main.rescan_outputs()
                 self.toolbars.playback.rescan_outputs()
 
@@ -392,6 +408,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 self.load_storage()
         except Exception as e:
             load_error = e
+
+        self.apply_stylesheet()
+        self.timeline.set_sizes()
 
         with self.env:
             vs.register_on_destroy(self.gc_collect)
@@ -413,6 +432,39 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             return self.handle_script_error(
                 f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.', False
             )
+
+        self.show()
+        self.plugins.setup_ui()
+
+    def handle_error(self, e: Exception) -> None:
+        import logging
+        from traceback import TracebackException
+
+        from vsengine import vpy
+
+        if not isinstance(e, vpy.ExecutionFailed):
+            e = vpy.ExecutionFailed(e)
+
+        self.hide()
+        self.apply_stylesheet()
+
+        te = TracebackException.from_exception(e.parent_error)
+        logging.error(''.join(te.format()))
+
+        if isinstance(e.parent_error, SyntaxError) and (
+            'source code string cannot contain null bytes' in str(
+                e.parent_error).lower()
+        ):
+            logging.error(
+                'If you\'re trying to open a video you first have to install the vssource package and have it working with a source plugin!'
+            )
+
+        self.script_exec_failed = True
+        self.handle_script_error(
+            '\n'.join([
+                str(e), 'See console output for details.'
+            ]), True
+        )
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:
@@ -452,7 +504,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     logging.warning(
                         '\n\tThe storage was created on an old version of VSPreview.'
                         '\n\tSave any scening or other important info and delete it.'
-                        '\n\tIf you want the program to silently delete old storages, go into settings.'
+                        '\n\tIf you want the program to silently delete old storages,'
+                        '\n\tgo into settings or set --force-storage flag.'
                     )
                     sys.exit(1)
 
@@ -540,12 +593,25 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
         data = cast(dict[str, Any], self.__getstate__())
+
         data['_globals'] = {
             'settings': data['settings'],
             'window_settings': data['window_settings']
         }
 
+        plugins = data['plugins'].__getstate__()
+
+        del data['plugins']
+
         data['_globals']['toolbars'] = data['toolbars'].__getstate__()
+        data['_globals']['plugins'] = {
+            'settings': plugins['global_settings']
+        }
+
+        data['plugins'] = {
+            'settings': plugins['local_settings']
+        }
+
         gtoolbars = data['_globals']['toolbars']
 
         for toolbar_name in gtoolbars:
@@ -632,7 +698,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.gc_collect()
 
         try:
-            self.load_script(self.script_path, reloading=True)
+            self.load_script(self.script_path, self.external_args, True, None, self.display_name)
         finally:
             self.clear_monkey_runpy()
 
@@ -681,14 +747,16 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.current_output.last_showed_frame = frame
 
-        self.timeline.set_position(frame)
+        self.timeline.cursor_x = frame
 
         for toolbar in self.toolbars:
             toolbar.on_current_frame_changed(frame)
 
         self.plugins.on_current_frame_changed(frame)
 
-        self.statusbar.frame_props_label.setText(self.STATUS_FRAME_PROP(self.current_output.props))
+        self.statusbar.frame_props_label.setText(
+            f"Type: {get_prop(self.current_output.props, '_PictType', str, None, '?')}"
+        )
 
     def switch_output(self, value: int | VideoOutput) -> None:
         if not self.outputs or len(self.outputs) == 0:
@@ -711,18 +779,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         # current_output relies on outputs_combobox
         self.toolbars.main.on_current_output_changed(index, prev_index)
-        self.timeline.set_end_frame(self.current_output)
 
         self.switch_frame(self.current_output.last_showed_frame)
 
         for graphics_view in self.graphics_views:
-            for item in graphics_view.graphics_scene.graphics_items:
-                item.hide()
-
-            graphics_view.current_scene.show()
-            graphics_view.graphics_scene.setSceneRect(
-                QRectF(graphics_view.current_scene.pixmap().rect())
-            )
+            graphics_view.setup_view()
 
         self.timeline.update_notches()
 
@@ -827,6 +888,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
+    def set_temporary_scenes(self, scenes: SceningList) -> None:
+        self.temporary_scenes = scenes
+
     def update_timecodes_info(
         self, index: int, timecodes: str | Path | dict[
             tuple[int | None, int | None], float | tuple[int, int] | Fraction
@@ -844,7 +908,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.Type.LayoutRequest:
-            self.timeline.full_repaint()
+            self.timeline.update()
 
         return super().event(event)
 
@@ -861,6 +925,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.dump_storage_async()
 
         self.reload_signal.emit()
+
+        for file_resolve_plugin in self.resolve_plugins:
+            file_resolve_plugin.cleanup()
 
     def moveEvent(self, _move_event: QMoveEvent) -> None:
         if self.settings.color_management:

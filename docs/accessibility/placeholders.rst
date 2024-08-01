@@ -17,6 +17,9 @@ like for example the ``Save Frame as`` label.
     * - index
       - Video node number (zero-based)
       - 0
+    * - node_name
+      - Video node name
+      - src
     * - format
       - Video format of clip
       - YUV420P10

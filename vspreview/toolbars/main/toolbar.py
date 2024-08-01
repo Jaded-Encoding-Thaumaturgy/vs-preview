@@ -94,9 +94,10 @@ class MainToolbar(AbstractToolbar):
         self.hlayout.addStretch()
 
     def add_shortcuts(self) -> None:
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.main.reload_script
-        )
+        if self.main.reload_enabled:
+            self.main.add_shortcut(
+                QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.main.reload_script
+            )
 
         for i, key in enumerate(self.num_keys):
             self.add_shortcut(key, partial(self.main.switch_output, i))

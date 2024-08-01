@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import setuptools
 from pathlib import Path
+
+import setuptools
 
 package_name = 'vspreview'
 
@@ -23,19 +24,15 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     zip_safe=False,
     project_urls={
-        'Source Code': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview',
-        'Documentation': 'https://vspreview.encode.moe/en/latest/',
-        'Tracker': 'https://github.com/Irrational-Encoding-Wizardry/vs-preview/issues',
-        'Contact': 'https://discord.gg/qxTxVJGtst'
+        'Source Code': 'https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview',
+        'Contact': 'https://discord.gg/XTpc6Fa9eB'
     },
     install_requires=requirements,
-    python_requires='>=3.10',
+    python_requires='>=3.12',
     packages=setuptools.find_packages('.', ('docs', 'stubs')),
     package_data={
         package_name: ['py.typed'],
-        f'{package_name}.plugins': [
-            file.name for file in (Path(package_name) / 'plugins').glob('*.ppy')
-        ]
+        f'{package_name}.plugins': ['**/*']
     },
     classifiers=[
         'Topic :: Multimedia :: Graphics',

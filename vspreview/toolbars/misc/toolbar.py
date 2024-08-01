@@ -54,7 +54,9 @@ class MiscToolbar(AbstractToolbar):
     def setup_ui(self) -> None:
         super().setup_ui()
 
-        self.reload_script_button = PushButton('Reload Script', self, clicked=self.main.reload_script)
+        self.reload_script_button = PushButton(
+            'Reload Script', self, clicked=self.main.reload_script, hidden=not self.main.reload_enabled
+        )
 
         self.save_storage_button = PushButton(
             'Save Storage', self, clicked=partial(self.main.dump_storage_async, manually=True)
@@ -71,8 +73,9 @@ class MiscToolbar(AbstractToolbar):
             tooltip='''
                 Available placeholders:
                     {format}, {fps_den}, {fps_num}, {frame},
-                    {height}, {index}, {matrix}, {primaries}, {range},
-                    {script_name}, {total_frames}, {transfer}, {width}.
+                    {height}, {index}, {node_name}, {matrix},
+                    {primaries}, {range}, {script_name}, {total_frames},
+                    {transfer}, {width}.
                 Frame props can be accessed as well using their names.
             '''.replace(' ' * 16, ' ').strip()
         )
@@ -87,7 +90,11 @@ class MiscToolbar(AbstractToolbar):
         VBoxLayout(self.hlayout, [
             HBoxLayout([*first_layer, Stretch()]),
             HBoxLayout([
-                self.reload_script_button, self.get_separator(),
+                *(
+                    [self.reload_script_button, self.get_separator()]
+                    if self.main.reload_enabled else
+                    []
+                ),
                 self.save_storage_button, self.get_separator(),
                 self.copy_frame_button, Stretch()
             ]),
@@ -187,6 +194,7 @@ class MiscToolbar(AbstractToolbar):
             'height': self.main.current_output.height,
             'script_name': self.main.script_path.stem,
             'index': self.main.current_output.index,
+            'node_name': self.main.current_output.name,
             'frame': self.main.current_output.last_showed_frame,
             'total_frames': self.main.current_output.total_frames
         }

@@ -6,17 +6,22 @@ from pathlib import Path
 from typing import Iterable
 
 from ..main import MainWindow
+from . import get_installed_plugins
+from .abstract import AbstractPlugin, FileResolverPlugin
 
 BASE_URL = 'https://api.github.com/repos'
-PLUGINS_PATH = 'Irrational-Encoding-Wizardry/vs-preview-plugins'
+REPO_NAME = 'vs-preview-plugins'
+PLUGINS_PATH = f'Jaded-Encoding-Thaumaturgy/{REPO_NAME}'
 BRANCH = 'master'
 
 CONTENT_URL = f'https://raw.githubusercontent.com/{PLUGINS_PATH}/{BRANCH}/{{path}}'
 
-plugins_commands = ('install', 'uninstall', 'update')
+PLUGIN_STRING = ' {:25s}{install_from}{:10s} {:30s} {:s}'
+
+plugins_commands = ('install', 'uninstall', 'update', 'available')
 
 
-def get_plugins() -> dict[str, Iterable[str]]:
+def get_repo_plugins() -> dict[str, Iterable[str]]:
     from requests import get
 
     response = get(f'{BASE_URL}/{PLUGINS_PATH}/git/trees/{BRANCH}?recursive=1')
@@ -51,13 +56,13 @@ def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = Fal
 
     from requests import Session
 
-    existing_plugins = get_plugins()
+    existing_packages = get_repo_plugins()
 
-    found_plugins = set(existing_plugins.keys()).intersection(plugins)
+    found_plugins = set(existing_packages.keys()).intersection(plugins)
 
     not_found_plugins = set(plugins) - found_plugins
     if not_found_plugins:
-        logging.warn(f'Not found the following plugins: "{", ".join(not_found_plugins)}"')
+        logging.warn(f'Could not find the following plugins: "{", ".join(not_found_plugins)}"')
 
     with Session() as s:
         for plugin in found_plugins:
@@ -70,12 +75,12 @@ def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = Fal
 
             logging.info(f'Downloading "{plugin}"...')
 
-            with TemporaryDirectory() as tempdir:
-                tempdir = Path(tempdir)
+            with TemporaryDirectory() as tmpdir:
+                tempdir = Path(tmpdir)
 
                 requirements = list[Path]()
 
-                for file in existing_plugins[plugin]:
+                for file in existing_packages[plugin]:
                     logging.info(f'Collecting "{file}"...')
 
                     temp = tempdir / file
@@ -115,6 +120,67 @@ def uninstall_plugins(plugins: list[str], ignore: bool = False) -> None:
     found_plugins = set(plugins) - not_found_plugins
 
     if not_found_plugins:
-        logging.warn(f'Not found the following plugins: "{", ".join(not_found_plugins)}"')
+        logging.warn(f'Could not find plugins: "{", ".join(not_found_plugins)}"')
 
     logging.info(f'Successfully uninstalled "{", ".join(found_plugins)}"')
+
+
+def print_available_plugins() -> None:
+    existing_packages = set(get_repo_plugins().keys())
+
+    def _header(value: str) -> str:
+        return f'{value}\n{"-" * len(value)}'
+
+    installed_plugins = [
+        (
+            plugin_cls.__module__, kind, plugin_cls._config.display_name,
+            plugin_cls._config.namespace, sys.modules[plugin_cls.__module__].__file__
+        )
+        for kind, plugin_parent in (('Generic', AbstractPlugin), ('Source', FileResolverPlugin))
+        for plugin_cls in [v for _, v in sorted(get_installed_plugins(plugin_parent, True).items(), key=lambda v: v[0])]
+    ]
+
+    preinstalled_packages = set[Path]()
+    installed_packages = set[str](module for module, *_ in installed_plugins)
+
+    plugins_path = Path(__file__).parent
+
+    print(_header('Installed plugins:'))
+    print(PLUGIN_STRING.format('Package', 'Type', 'Name', 'Namespace', install_from=''))
+
+    for *values, module_path in installed_plugins:
+        if not module_path:
+            continue
+
+        install_path = Path(module_path).parent
+
+        if plugins_path == install_path:
+            preinstalled_packages.add(install_path)
+        elif (MainWindow.global_plugins_dir in install_path.parents) or (install_path.parent.stem == REPO_NAME):
+            installed_packages.add(install_path.stem)
+
+    for *values, module_path in installed_plugins:
+        if module_path:
+            pkg_name = Path(module_path).parent
+
+            if pkg_name in preinstalled_packages:
+                install_from = '*'
+            elif pkg_name.stem in existing_packages:
+                install_from = '+'
+            else:
+                install_from = '?'
+        else:
+            install_from = ' '
+
+        print(' ' + PLUGIN_STRING.format(*values, install_from=install_from))
+
+    print('\n * => Pre-installed, + => Installed, ? => Custom\n')
+
+    external_packages = existing_packages - installed_packages
+
+    print(_header('Missing VSPreview Plugins:'))
+
+    if not len(external_packages):
+        print('  None found!')
+    else:
+        print('  ' + ', '.join(external_packages))

@@ -31,6 +31,13 @@ def setup_logger() -> None:
     global _logger_setup
 
     if not _logger_setup:
+        try:
+            from ctypes import windll
+
+            windll.kernel32.SetConsoleMode(windll.kernel32.GetStdHandle(-11), 7)
+        except ImportError:
+            ...
+
         logging.basicConfig(format='{asctime}: {name}: {levelname}: {message}', style='{', level=LOG_LEVEL)
         logging.Formatter.default_msec_format = '%s.%03d'
         if sys.stdout.isatty():

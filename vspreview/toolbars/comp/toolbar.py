@@ -1,24 +1,35 @@
 from __future__ import annotations
 
+import logging
+import random
+import re
+import shutil
+import string
+import unicodedata
+from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import datetime
 from functools import partial
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, Mapping, NamedTuple, cast
+from uuid import uuid4
 
-import vapoursynth as vs
+import requests
 from PyQt6 import QtCore
 from PyQt6.QtCore import QKeyCombination, QObject, Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QLabel
+from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
+from requests import HTTPError, Session
+from requests_toolbelt import MultipartEncoder  # type: ignore
+from requests_toolbelt import MultipartEncoderMonitor
+from stgpytools import ndigits, SPath
+from vstools import get_prop, remap_frames, vs, clip_data_gather
 
 from ...core import (
-    AbstractToolbar, CheckBox, ComboBox, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
-    VideoOutput, main_window
+    AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
+    VideoOutput, main_window, try_load, PackingType
 )
 from ...models import GeneralModel
 from .settings import CompSettings
 
 if TYPE_CHECKING:
-    from requests import Session
-
     from ...main import MainWindow
 
 
@@ -30,46 +41,49 @@ __all__ = [
 _MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 
 
-def _get_slowpic_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+def _get_slowpic_upload_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+    return {        
+        'Content-Length': str(content_length),
+        'Content-Type': content_type,
+    } | _get_slowpic_headers(sess)
+
+def _get_slowpic_headers(sess: Session) -> dict[str, str]:
     return {
-        "Accept": "*/*",
-        "Accept-Encoding": "gzip, deflate",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Access-Control-Allow-Origin": "*",
-        "Content-Length": str(content_length),
-        "Content-Type": content_type,
-        "Origin": "https://slow.pics/",
-        "Referer": "https://slow.pics/comparison",
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Access-Control-Allow-Origin': '*',
+        'Origin': 'https://slow.pics/',
+        'Referer': 'https://slow.pics/comparison',
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
         ),
-        "X-XSRF-TOKEN": sess.cookies.get("XSRF-TOKEN")
+        'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN', None),
     }
 
 
-def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: Path, browser_id: str) -> None:
-    from uuid import uuid4
-
-    from requests_toolbelt import MultipartEncoder  # type: ignore
-
+def _do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: SPath, browser_id: str) -> None:
     upload_info = MultipartEncoder({
-        "collectionUuid": collection,
-        "imageUuid": imageUuid,
-        "file": (image.name, image.read_bytes(), 'image/png'),
+        'collectionUuid': collection,
+        'imageUuid': imageUuid,
+        'file': (image.name, image.read_bytes(), 'image/png'),
         'browserId': browser_id,
     }, str(uuid4()))
 
-    sess.post(
-        'https://slow.pics/upload/image', data=upload_info.to_string(),
-        headers=_get_slowpic_headers(upload_info.len, upload_info.content_type, sess)
-    )
+    while True:
+        try:
+            req = sess.post(
+                'https://slow.pics/upload/image', data=upload_info.to_string(),
+                headers=_get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess)
+            )
+            req.raise_for_status()
+            break
+        except HTTPError as e:
+            logging.debug(e)
 
 
 def clear_filename(filename: str) -> str:
-    import re
-    import unicodedata
-
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']
     reserved = [
         'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
@@ -120,12 +134,13 @@ class WorkerConfiguration(NamedTuple):
     public: bool
     nsfw: bool
     optimise: bool
-    remove_after: int | None
-    frames: list[int]
+    remove_after: str | None
+    frames: list[list[int]]
     compression: int
-    path: Path
+    path: SPath
     main: MainWindow
     delete_cache: bool
+    frame_type: bool
     browser_id: str
     session_id: str
     tmdb: str
@@ -151,15 +166,18 @@ class Worker(QObject):
         return self.is_finished
 
     def run(self, conf: WorkerConfiguration) -> None:
-        import shutil
-        from concurrent.futures import ThreadPoolExecutor
-        from uuid import uuid4
-
-        from requests import Session
-        from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
-
-        all_images = list[list[Path]]()
+        all_images = list[list[SPath]]()
+        all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
+
+        if conf.browser_id and conf.session_id:
+            with Session() as sess:
+                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
+                browser_id = conf.browser_id
+                base_page = sess.get('https://slow.pics/comparison')
+                if base_page.text.find('id="logoutBtn"') == -1:
+                    self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
+                    return
 
         try:
             for i, output in enumerate(conf.outputs):
@@ -171,35 +189,42 @@ class Worker(QObject):
                 path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
 
-                max_num = max(conf.frames)
+                curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
 
-                path_images = [
-                    path_name / (f'{folder_name}_' + f'{f}'.zfill(len("%i" % max_num)) + '.png')
-                    for f in conf.frames
-                ]
+                clip = output.prepare_vs_output(
+                    output.source.clip, not hasattr(vs.core, "fpng"),
+                    PackingType.CURRENT.vs_format.replace(bits_per_sample=8, sample_type=vs.INTEGER)
+                )
 
-                base_clip = output.prepared.clip
+                path_images = [SPath(str(curr_filename) % n) for n in conf.frames[i]]
 
-                if len(conf.frames) < 20:
-                    decimated = vs.core.std.Splice([base_clip[i] for i in conf.frames])
-                else:
-                    decimated = output.prepared.clip.std.BlankClip(length=len(conf.frames))
-                    decimated = decimated.std.FrameEval(lambda n: base_clip[conf.frames[n]])
-
-                for i, f in enumerate(decimated.frames(close=True)):
+                def _frame_callback(n: int, f: vs.VideoFrame) -> str:
                     if self.isFinished():
                         raise StopIteration
 
-                    conf.main.current_output.frame_to_qimage(f).save(
-                        str(path_images[i]), 'PNG', conf.compression
-                    )
+                    return get_prop(f.props, '_PictType', str, None, '?')
 
-                    self._progress_update_func(i + 1, decimated.num_frames, uuid=conf.uuid)
+                if hasattr(vs.core, "fpng"):
+                    clip = vs.core.fpng.Write(clip, filename=curr_filename, compression=conf.compression)
+                    frame_callback = _frame_callback
+                else:
+                    qcomp = (0 if conf.compression == 1 else 100) if conf.compression else 80
+
+                    def frame_callback(n: int, f: vs.VideoFrame) -> str:
+                        if not conf.main.current_output.frame_to_qimage(f).save(path_images[n].to_str(), 'PNG', qcomp):
+                            raise StopIteration('There was an error saving the image to disk!')
+
+                        return _frame_callback(n, f)
+
+                decimated = remap_frames(clip, conf.frames[i])
+
+                image_types = clip_data_gather(decimated, partial(self._progress_update_func, uuid=conf.uuid), frame_callback)
 
                 if self.isFinished():
                     raise StopIteration
 
-                all_images.append(sorted(path_images))
+                all_images.append(path_images)
+                all_image_types.append(image_types)
         except StopIteration:
             return self.finished.emit(conf.uuid)
         except vs.Error as e:
@@ -208,29 +233,37 @@ class Worker(QObject):
             raise e
 
         total_images = 0
+        is_comparison = len(all_images) > 1
         fields = dict[str, Any]()
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
-            for j, (image, frame) in enumerate(zip(images, conf.frames)):
+            for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
-                fields[f'comparisons[{j}].name'] = str(frame)
-                fields[f'comparisons[{j}].imageNames[{i}]'] = output.name
+
+                image_name = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
+
+                if is_comparison:
+                    fields[f'comparisons[{j}].name'] = str(frame)
+                    fields[f'comparisons[{j}].imageNames[{i}]'] = image_name
+                else:
+                    fields[f'imageNames[{j}]'] = f'{frame} - {image_name}'
+
                 total_images += 1
 
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
 
         with Session() as sess:
             if conf.browser_id and conf.session_id:
-                sess.cookies.set("SLPSESSION", conf.session_id, domain="slow.pics")
+                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
                 browser_id = conf.browser_id
                 check_session = True
             else:
                 browser_id = str(uuid4())
                 check_session = False
 
-            base_page = sess.get('https://slow.pics/comparison')
+            base_page = sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
 
@@ -260,20 +293,21 @@ class Worker(QObject):
             files = MultipartEncoder(head_conf | fields, str(uuid4()))
             monitor = MultipartEncoderMonitor(files, _monitor_cb)
             comp_response = sess.post(
-                'https://slow.pics/upload/comparison', data=monitor.to_string(),
-                headers=_get_slowpic_headers(monitor.len, monitor.content_type, sess)
+                f'https://slow.pics/upload/{"comparison" if is_comparison else "collection"}', data=monitor.to_string(),
+                headers=_get_slowpic_upload_headers(monitor.len, monitor.content_type, sess)
             ).json()
-            collection = comp_response["collectionUuid"]
-            key = comp_response["key"]
-            image_ids = comp_response["images"]
+            collection = comp_response['collectionUuid']
+            key = comp_response['key']
+            image_ids = comp_response['images']
             images_done = 0
             self._progress_update_func(0, total_images, uuid=conf.uuid)
             with ThreadPoolExecutor() as executor:
-                futures = []
+                futures = list[Future[None]]()
+
                 for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
                     if self.isFinished():
                         return self.finished.emit(conf.uuid)
-                    for j, (image, frame) in enumerate(zip(images, conf.frames)):
+                    for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                         if self.isFinished():
                             return self.finished.emit(conf.uuid)
                         while len(futures) >= 5:
@@ -289,10 +323,11 @@ class Worker(QObject):
                                         images_done, total_images, uuid=conf.uuid
                                     )
 
+                        imageUuid = image_ids[j][i] if is_comparison else image_ids[0][j]
                         futures.append(
                             executor.submit(
                                 _do_single_slowpic_upload,
-                                sess=sess, collection=collection, imageUuid=image_ids[j][i],
+                                sess=sess, collection=collection, imageUuid=imageUuid,
                                 image=image, browser_id=browser_id
                             )
                         )
@@ -329,10 +364,38 @@ class CompToolbar(AbstractToolbar):
     upload_thread: QThread
     upload_worker: Worker
 
+    pic_type_button_I: CheckBox
+    pic_type_button_P: CheckBox
+    pic_type_button_B: CheckBox
+
+    tag_add_button: PushButton
+    tag_add_custom_button: PushButton
+
+    tag_filter_lineedit: LineEdit
+    tmdb_id_lineedit: LineEdit
+
+    tag_list_combox: ComboBox[str]
+
+    tag_separator: QFrame
+
+    tag_data: dict[str, str]
+    current_tags: list[str]
+
+    tag_data_cache: dict[str, str] | None
+    tag_data_error: bool
+
+    collection_name_cache: str | None
+
     curr_uuid = ''
+    tmdb_data = dict[str, dict[str, Any]]()
+
+    _old_threads_workers = list[Any]()
+
+    KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 
     def __init__(self, main: MainWindow) -> None:
         super().__init__(main, CompSettings(self))
+
         self.setup_ui()
 
         self.set_qobject_names()
@@ -340,8 +403,85 @@ class CompToolbar(AbstractToolbar):
         self.add_shortcuts()
 
         self.tag_data_cache = None
+        self.tag_data_error = False
 
-        self.cache_state = None
+    def _force_clicked(self, self_s: str) -> Callable[[bool], None]:
+        def _on_clicked(is_checked: bool) -> None:
+            if self_s == 'I':
+                el = self.pic_type_button_I
+                oth = (self.pic_type_button_P, self.pic_type_button_B)
+            elif self_s == 'P':
+                el = self.pic_type_button_P
+                oth = (self.pic_type_button_I, self.pic_type_button_B)
+            else:
+                el = self.pic_type_button_B
+                oth = (self.pic_type_button_I, self.pic_type_button_P)
+
+            if not is_checked and not any(o.isChecked() for o in oth):
+                el.click()
+
+        return _on_clicked
+
+    def _select_filter_text(self, text: str) -> None:
+        if text:
+            if text in self.current_tags:
+                self.tag_add_custom_button.setText('Remove Tag')
+            else:
+                self.tag_add_custom_button.setText('Add Tag')
+
+            index = self.tag_list_combox.findText(text, QtCore.Qt.MatchFlag.MatchContains)
+
+            if index < 0:
+                return
+
+            self.tag_list_combox.setCurrentIndex(
+                index
+            )
+
+    def _handle_current_combox_tag(self) -> None:
+        value = self.tag_list_combox.currentValue()
+
+        if value in self.current_tags:
+            self.current_tags.remove(value)
+            self.tag_add_button.setText('Add Tag')
+        else:
+            self.current_tags.append(value)
+            self.tag_add_button.setText('Remove Tag')
+
+    def _handle_current_new_tag(self) -> None:
+        value = self.tag_filter_lineedit.text()
+
+        if value in self.current_tags:
+            self.current_tags.remove(value)
+            self.tag_add_custom_button.setText('Add Tag')
+        else:
+            self.current_tags.append(value)
+            self.tag_add_custom_button.setText('Remove Tag')
+
+    def _handle_tag_index(self, index: int) -> None:
+        value = self.tag_list_combox.currentValue()
+
+        if value in self.current_tags:
+            self.tag_add_button.setText('Remove Tag')
+        else:
+            self.tag_add_button.setText('Add Tag')
+
+    def _public_click(self, is_checked: bool) -> None:
+        self.tag_add_button.setHidden(not is_checked)
+        self.tag_add_custom_button.setHidden(not is_checked)
+        self.tag_filter_lineedit.setHidden(not is_checked)
+        self.tag_list_combox.setHidden(not is_checked)
+        self.tag_separator.setHidden(not is_checked)
+        self.on_public_toggle(is_checked)
+
+    def _handle_collection_name_down(self) -> None:
+        self.collection_name_cache = self.collection_name_lineedit.text()
+        self.collection_name_lineedit.setText(self._handle_collection_generate())
+
+    def _handle_collection_name_up(self) -> None:
+        if self.collection_name_cache is not None:
+            self.collection_name_lineedit.setText(self.collection_name_cache)
+            self.collection_name_cache = None
 
     def setup_ui(self) -> None:
         super().setup_ui()
@@ -349,79 +489,20 @@ class CompToolbar(AbstractToolbar):
         self.collection_name_lineedit = LineEdit('Collection name', self)
 
         self.random_frames_control = FrameEdit(self)
-        # self.bright_frames_control = FrameEdit(self)
-        # self.dark_frames_control = FrameEdit(self)
 
         self.manual_frames_lineedit = LineEdit('Manual frames: frame,frame,frame', self, )
 
         self.current_frame_checkbox = CheckBox('Current frame', self, checked=True)
 
-        def _force_clicked(self_s: str):
-            def _on_clicked(is_checked: bool) -> None:
-                if self_s == 'I':
-                    el = self.pic_type_button_I
-                    oth = (self.pic_type_button_P, self.pic_type_button_B)
-                elif self_s == 'P':
-                    el = self.pic_type_button_P
-                    oth = (self.pic_type_button_I, self.pic_type_button_B)
-                else:
-                    el = self.pic_type_button_B
-                    oth = (self.pic_type_button_I, self.pic_type_button_P)
+        self.collection_name_cache = None
 
-                if not is_checked and not any(o.isChecked() for o in oth):
-                    el.click()
+        self.collection_name_button = PushButton(
+            '🛈', self, pressed=self._handle_collection_name_down, released=self._handle_collection_name_up
+        )
 
-            return _on_clicked
-
-        def _select_filter_text(text: str):
-            if text:
-                if text in self.current_tags:
-                    self.tag_add_custom_button.setText("Remove Tag")
-                else:
-                    self.tag_add_custom_button.setText("Add Tag")
-
-                index = self.tag_list_combox.findText(text, QtCore.Qt.MatchFlag.MatchContains)
-                if index < 0:
-                    return
-                self.tag_list_combox.setCurrentIndex(
-                    index
-                )
-
-        def _handle_current_combox_tag():
-            value = self.tag_list_combox.currentValue()
-            if value in self.current_tags:
-                self.current_tags.remove(value)
-                self.tag_add_button.setText("Add Tag")
-            else:
-                self.current_tags.append(value)
-                self.tag_add_button.setText("Remove Tag")
-
-        def _handle_current_new_tag():
-            value = self.tag_filter_lineedit.text()
-            if value in self.current_tags:
-                self.current_tags.remove(value)
-                self.tag_add_custom_button.setText("Add Tag")
-            else:
-                self.current_tags.append(value)
-                self.tag_add_custom_button.setText("Remove Tag")
-
-        def _handle_tag_index(index):
-            value = self.tag_list_combox.currentValue()
-            if value in self.current_tags:
-                self.tag_add_button.setText("Remove Tag")
-            else:
-                self.tag_add_button.setText("Add Tag")
-
-        def _public_click(is_checked: bool):
-            self.tag_add_button.setHidden(not is_checked)
-            self.tag_add_custom_button.setHidden(not is_checked)
-            self.tag_filter_lineedit.setHidden(not is_checked)
-            self.tag_list_combox.setHidden(not is_checked)
-            self.tag_separator.setHidden(not is_checked)
-
-        self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=_force_clicked('I'))
-        self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=_force_clicked('P'))
-        self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=_force_clicked('B'))
+        self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=self._force_clicked('I'))
+        self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=self._force_clicked('P'))
+        self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=self._force_clicked('B'))
 
         self.tmdb_id_lineedit = LineEdit('TMDB ID', self)
         self.tmdb_id_lineedit.setMaximumWidth(75)
@@ -431,8 +512,8 @@ class CompToolbar(AbstractToolbar):
             currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 
-        self.tag_data = {"Error": "Error"}
-        self.current_tags = []
+        self.tag_data = dict[str, str]()
+        self.current_tags = list[str]()
 
         self.tag_list_combox = ComboBox[str](
             self, currentIndex=0, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
@@ -441,19 +522,19 @@ class CompToolbar(AbstractToolbar):
 
         self.update_tags()
 
-        self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=_select_filter_text)
+        self.tag_filter_lineedit = LineEdit('Tag Selection', self, textChanged=self._select_filter_text)
 
-        self.tag_add_custom_button = PushButton('Add Tag', self, clicked=_handle_current_new_tag)
+        self.tag_add_custom_button = PushButton('Add Tag', self, clicked=self._handle_current_new_tag)
 
-        self.tag_add_button = PushButton('Add Tag', self, clicked=_handle_current_combox_tag)
+        self.tag_add_button = PushButton('Add Tag', self, clicked=self._handle_current_combox_tag)
 
         self.tag_separator = self.get_separator()
 
         self.delete_after_lineedit = LineEdit('Days', self)
         self.delete_after_lineedit.setMaximumWidth(75)
 
-        self.is_public_checkbox = CheckBox('Public', self, checked=False, clicked=_public_click)
-        _public_click(self.is_public_checkbox.isChecked())
+        self.is_public_checkbox = CheckBox('Public', self, checked=False, clicked=self._public_click)
+        self._public_click(self.is_public_checkbox.isChecked())
 
         self.is_nsfw_checkbox = CheckBox('NSFW', self, checked=False)
 
@@ -468,12 +549,15 @@ class CompToolbar(AbstractToolbar):
         self.upload_progressbar = ProgressBar(self, value=0)
         self.upload_progressbar.setGeometry(200, 80, 250, 20)
 
-        self.upload_status_label = QLabel(self, text='Select Frames')
+        self.upload_status_label = QLabel('Select Frames')
 
         self.upload_status_elements = (self.upload_progressbar, self.upload_status_label)
 
         VBoxLayout(self.hlayout, [
-            self.collection_name_lineedit,
+            HBoxLayout([
+                self.collection_name_lineedit,
+                self.collection_name_button,
+            ]),
             self.manual_frames_lineedit,
         ])
 
@@ -482,14 +566,8 @@ class CompToolbar(AbstractToolbar):
         self.hlayout.addWidget(self.get_separator())
 
         VBoxLayout(self.hlayout, [
-            HBoxLayout([
-                self.current_frame_checkbox  # , self.get_separator(),
-                # QLabel('Bright:'), self.bright_frames_control
-            ]),
-            HBoxLayout([
-                QLabel('Random:'), self.random_frames_control,
-                # QLabel('Dark:'), self.dark_frames_control,
-            ])
+            HBoxLayout([self.current_frame_checkbox]),
+            HBoxLayout([QLabel('Random:'), self.random_frames_control])
         ])
 
         self.hlayout.addWidget(self.get_separator())
@@ -544,7 +622,73 @@ class CompToolbar(AbstractToolbar):
             HBoxLayout([*self.upload_status_elements])
         ])
 
-        self.tag_list_combox.currentIndexChanged.connect(_handle_tag_index)
+        self.tag_list_combox.currentIndexChanged.connect(self._handle_tag_index)
+
+    def _get_replace_option(self, key: str) -> str | None:
+        if not self.main.outputs:
+            return ''
+
+        tmdb_id = self.tmdb_id_lineedit.text() or ''
+
+        if 'tmdb_' in key and tmdb_id not in self.tmdb_data:
+            return ''
+
+        data = self.tmdb_data.get(tmdb_id, {"name": "Unknown"})
+
+        match key:
+            case '{tmdb_title}':
+                return data.get('name', data.get('title', ''))
+            case '{tmdb_year}':
+                return str(
+                    datetime.strptime(
+                        data.get('first_air_date', data.get('release_date', '1970-1-1')),
+                        '%Y-%m-%d'
+                    ).year
+                )
+            case '{video_nodes}':
+                return ' vs '.join([video.name for video in self.main.outputs])
+
+        return None
+
+    def _do_tmdb_request(self) -> None:
+        if not (self.settings.tmdb_apikey and self.tmdb_id_lineedit.text()):
+            return
+
+        tmdb_type = self.tmdb_type_combox.currentText().lower()
+        tmdb_id = self.tmdb_id_lineedit.text()
+
+        url = f'https://api.themoviedb.org/3/{tmdb_type}/{self.tmdb_id_lineedit.text()}?language=en-US'
+
+        headers = {
+            'accept': 'application/json',
+            'Authorization': f'Bearer {self.settings.tmdb_apikey}'
+        }
+
+        resp = requests.get(url, headers=headers)
+
+        assert resp.status_code == 200, 'Response isn\'t 200'
+
+        data: dict[str, Any] = resp.json()
+
+        assert data.get('success', True), 'Success is false'
+
+        self.tmdb_data[tmdb_id] = data
+
+        return
+
+    def _handle_collection_generate(self) -> str:
+        self._do_tmdb_request()
+
+        collection_text = self.collection_name_lineedit.text()
+
+        matches = set(re.findall(self.KEYWORD_RE, collection_text))
+
+        for match in matches:
+            replace = self._get_replace_option(match)
+            if replace is not None:
+                collection_text = collection_text.replace(match, replace)
+
+        return collection_text
 
     def add_shortcuts(self) -> None:
         self.main.add_shortcut(
@@ -554,33 +698,28 @@ class CompToolbar(AbstractToolbar):
     def update_tags(self) -> None:
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
 
-    def on_toggle(self, new_state: bool) -> None:
-        if self.tag_data_cache is None or self.cache_state in ["ImportError", "Exception"]:
+    def on_public_toggle(self, new_state: bool) -> None:
+        if not new_state or self.tag_data:
+            return
+
+        if self.tag_data_cache is None or self.tag_data_error:
             try:
-                from requests import Session
-
                 with Session() as sess:
-                    sess.get('https://slow.pics/comparison')
+                    sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
 
-                    api_resp = sess.get("https://slow.pics/api/tags").json()
+                    api_resp = sess.get('https://slow.pics/api/tags', headers=_get_slowpic_headers(sess) | {"Content-Type": "application/json"}).json()
 
-                    self.tag_data = {data["label"]: data["value"] for data in api_resp}
+                    self.tag_data = {data['label']: data['value'] for data in api_resp}
 
                     self.tag_data_cache = self.tag_data
-                    self.cache_state = "Success"
-
-            except ImportError:
-                self.tag_data = {"Missing requests": "Missing requests"}
-                self.cache_state = "ImportError"
+                    self.tag_data_error = False
             except Exception:
-                self.tag_data = {"Network error": "Network error"}
-                self.cache_state = "Exception"
+                self.tag_data = {'Network error': 'Network error'}
+                self.tag_data_error = True
         else:
             self.tag_data = self.tag_data_cache
 
         self.update_tags()
-
-        super().on_toggle(new_state)
 
     def add_current_frame_to_comp(self) -> None:
         frame = str(self.main.current_output.last_showed_frame).strip()
@@ -589,12 +728,14 @@ class CompToolbar(AbstractToolbar):
         if not current_frames:
             self.manual_frames_lineedit.setText(frame)
         else:
-            current_frames = current_frames.split(",")
-            if frame not in current_frames:
-                current_frames.append(frame)
+            current_frames_l = current_frames.split(',')
+
+            if frame not in current_frames_l:
+                current_frames_l.append(frame)
             else:
-                current_frames.remove(frame)
-            self.manual_frames_lineedit.setText(",".join(current_frames))
+                current_frames_l.remove(frame)
+
+            self.manual_frames_lineedit.setText(','.join(current_frames_l))
 
     def on_copy_output_url_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.output_url_lineedit.text())
@@ -603,8 +744,10 @@ class CompToolbar(AbstractToolbar):
     def on_start_upload(self) -> None:
         if self._thread_running:
             return
+
         if not self.upload_to_slowpics():
             return
+
         self.start_upload_button.setVisible(False)
         self.stop_upload_button.setVisible(True)
 
@@ -614,13 +757,14 @@ class CompToolbar(AbstractToolbar):
 
         self.start_upload_button.setVisible(True)
         self.stop_upload_button.setVisible(False)
+
         self._thread_running = False
 
         if forced:
             self.upload_progressbar.setValue(int())
-            self.upload_status_label.setText("Stopped!")
+            self.upload_status_label.setText('Stopped!')
         else:
-            self.upload_status_label.setText("Finished!")
+            self.upload_status_label.setText('Finished!')
 
     def on_stop_upload(self) -> None:
         self.upload_worker.is_finished = True
@@ -644,20 +788,20 @@ class CompToolbar(AbstractToolbar):
         else:
             self.output_url_lineedit.setText(kind)
             self.on_end_upload(self.curr_uuid, False)
+
             return
 
         self.upload_status_label.setText(f'{message}{moreinfo}...')
 
     def _rand_num_frames(self, checked: set[int], rand_func: Callable[[], int]) -> int:
         rnum = rand_func()
+
         while rnum in checked:
             rnum = rand_func()
+
         return rnum
 
-    def _select_samples_ptypes(self, num_frames: int, k: int, picture_types: set[str]) -> list[int]:
-        import logging
-        import random
-
+    def _select_samples_ptypes(self, num_frames: int, k: int, picture_types: set[str]) -> list[Frame]:
         samples = set[int]()
         _max_attempts = 0
         _rnum_checked = set[int]()
@@ -666,16 +810,18 @@ class CompToolbar(AbstractToolbar):
 
         picture_types_b = {p.encode() for p in picture_types}
 
+        interval = num_frames // k
         while len(samples) < k:
             _attempts = 0
             while True:
                 if self.upload_worker.is_finished:
                     raise RuntimeError
 
+                num = len(samples)
                 self.update_status_label(self.curr_uuid, 'search', _attempts, _MAX_ATTEMPTS_PER_PICTURE_TYPE)
                 if len(_rnum_checked) >= num_frames:
                     raise ValueError(f'There aren\'t enough of {picture_types} in these clips')
-                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=0, stop=num_frames))
+                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
                 _rnum_checked.add(rnum)
 
                 if all(
@@ -703,21 +849,43 @@ class CompToolbar(AbstractToolbar):
                 self.upload_progressbar.setValue(int())
                 self.upload_progressbar.setValue(int(100 * len(samples) / k))
 
-        return list(samples)
+        return list(map(Frame, samples))
+
+    def create_slowpics_tags(self) -> list[str]:
+        tags = list[str]()
+
+        with Session() as sess:
+            sess.get('https://slow.pics/comparison', headers=_get_slowpic_headers(sess))
+
+            for tag in self.current_tags:
+                if tag in self.tag_data:
+                    tags.append(self.tag_data[tag])
+                    continue
+
+                api_resp: dict[str, str] = sess.post(
+                    'https://slow.pics/api/tags',
+                    data=tag,
+                    headers=_get_slowpic_upload_headers(len(tag), 'application/json', sess)
+                ).json()
+
+                label, value = api_resp['label'], api_resp['value']
+
+                self.tag_data[label] = value
+
+                tags.append(value)
+
+        self.update_tags()
+
+        return tags
 
     def get_slowpics_conf(self) -> WorkerConfiguration:
-        import logging
-        import random
-        import re
-        import string
-        from uuid import uuid4
-
         assert self.main.outputs
 
         num = int(self.random_frames_control.value())
-        frames = list[int](
-            map(int, filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
+        frames = list[Frame](
+            map(lambda x: Frame(int(x)), filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
+
         picture_types = set[str]()
 
         if self.pic_type_button_I.isChecked():
@@ -736,13 +904,14 @@ class CompToolbar(AbstractToolbar):
 
         lens_n = min(lens)
 
-        path = Path(main_window().current_config_dir) / ''.join(
+        path = SPath(main_window().current_config_dir) / ''.join(
             random.choices(string.ascii_uppercase + string.digits, k=16)
         )
 
         if num:
             if picture_types == {'I', 'P', 'B'}:
-                samples = random.sample(range(lens_n), num)
+                interval = lens_n // num
+                samples = list(map(Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(num))))
             else:
                 logging.info('Making samples according to specified picture types...')
                 samples = self._select_samples_ptypes(lens_n, num, picture_types)
@@ -753,46 +922,51 @@ class CompToolbar(AbstractToolbar):
             samples.extend(frames)
 
         if self.current_frame_checkbox.isChecked():
-            samples.append(int(self.main.current_output.last_showed_frame))
+            samples.append(self.main.current_output.last_showed_frame)
 
-        collection_name = self.collection_name_lineedit.text().strip()
+        collection_name = self._handle_collection_generate().strip()
 
         if not collection_name:
             collection_name = self.settings.DEFAULT_COLLECTION_NAME
 
         if not collection_name:
             raise ValueError('You have to put a collection name!')
-        elif len(collection_name) <= 1:
+
+        if len(collection_name) <= 1:
             raise ValueError('Your collection name is too short!')
 
-        collection_name = collection_name.format(
-            script_name=self.main.script_path.stem
-        )
+        collection_name = collection_name.format(script_name=self.main.script_path.stem)
 
-        sample_frames = list(sorted(set(samples)))
+        sample_frames_current_output = list(sorted(set(samples)))
 
-        check_frame = sample_frames[0] if sample_frames else 0
+        if self.main.timeline.mode == self.main.timeline.Mode.FRAME:
+            sample_frames = [sample_frames_current_output] * len(self.main.outputs)
+        else:
+            sample_timestamps = list(map(self.main.current_output.to_time, sample_frames_current_output))
+            sample_frames = [
+                list(map(output.to_frame, sample_timestamps))
+                for output in self.main.outputs
+            ]
 
-        delete_after = self.delete_after_lineedit.text()
+        delete_after = self.delete_after_lineedit.text() or None
+
         if delete_after and re.match(r'^\d+$', delete_after) is None:
             raise ValueError('Delete after has to be a number!')
-        elif not delete_after:
-            delete_after = None
 
         tmdb_id = self.tmdb_id_lineedit.text()
         if tmdb_id:
             tmdb_type = self.tmdb_type_combox.currentData()
-            if tmdb_type == "TV":
-                suffix = "TV_"
-            elif tmdb_type == "MOVIE":
-                suffix = "MOVIE_"
+            if tmdb_type == 'TV':
+                suffix = 'TV_'
+            elif tmdb_type == 'MOVIE':
+                suffix = 'MOVIE_'
             else:
                 raise ValueError('Unknown TMDB type!')
 
             if not tmdb_id.startswith(suffix):
-                tmdb_id = f"{suffix}{tmdb_id}"
+                tmdb_id = f'{suffix}{tmdb_id}'
 
-        tags = [self.tag_data.get(tag, tag) for tag in self.current_tags]
+        tags = self.create_slowpics_tags()
 
         filtered_outputs = []
         for output in self.main.outputs:
@@ -801,14 +975,15 @@ class CompToolbar(AbstractToolbar):
 
             filtered_outputs.append(output)
 
+        sample_frames_int = sorted([list(map(int, x)) for x in sample_frames])
+
         return WorkerConfiguration(
             str(uuid4()), filtered_outputs, collection_name,
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
-            True, delete_after, sample_frames, -1, path, self.main, self.settings.delete_cache_enabled,
+            True, delete_after, sample_frames_int, self.settings.compression, path,
+            self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
             self.settings.browser_id, self.settings.session_id, tmdb_id, tags
         )
-
-    _old_threads_workers = list[Any]()
 
     def upload_to_slowpics(self) -> bool:
         try:
@@ -829,7 +1004,8 @@ class CompToolbar(AbstractToolbar):
                 config = self.get_slowpics_conf()
             except RuntimeError as e:
                 print(e)
-                return self.on_end_upload('', True)
+                self.on_end_upload('', True)
+                return False
 
             self.curr_uuid = config.uuid
 
@@ -850,3 +1026,12 @@ class CompToolbar(AbstractToolbar):
             self.main.show_message(str(e))
 
         return False
+
+    def __getstate__(self) -> Mapping[str, Any]:
+        return super().__getstate__() | {
+            'collection_format': self.collection_name_lineedit.text()
+        }
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        super().__setstate__(state)
+        try_load(state, 'collection_format', str, self.collection_name_lineedit.setText)

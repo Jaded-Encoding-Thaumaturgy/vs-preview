@@ -4,6 +4,7 @@
 | ------------ | ------------------------------------ | --------- |  
 | script_name  | Script name without extension        | haruhi_01 |
 | index        | Video node number (zero-based)       | 0         |
+| node_name    | Video node name                      | src       |
 | format       | Video format of the clip             | YUV420P10 |
 | frame        | Current frame number (zero-based)    | 55369     |
 | total_frames | Number of frames in clip             | 151008    |

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Mapping, Sequence, TypeAlias, cast, overload
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -34,7 +34,11 @@ __all__ = [
 
     'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
 
-    'NotchProvider', 'AbstractToolbar', 'AbstractToolbarSettings',
+    'NotchProvider',
+
+    'AbstractSettingsWidget',
+
+    'AbstractToolbar', 'AbstractToolbarSettings',
 
     'main_window', 'storage_err_msg', 'try_load',
 ]
@@ -207,7 +211,9 @@ else:
 
 
 class ExtendedItemInit(ExtItemBase):
-    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, hidden: bool = False, **kwargs: Any
+    ) -> None:
         try:
             super().__init__(*args, **kwargs)  # type: ignore
         except TypeError:
@@ -215,6 +221,9 @@ class ExtendedItemInit(ExtItemBase):
 
         if tooltip:
             super().setToolTip(tooltip)
+
+        if hidden:
+            super().hide()
 
 
 class ExtendedItemWithName(ExtendedItemInit):
@@ -301,9 +310,9 @@ class ExtendedWidgetBase(AbstractQItem):
     def add_shortcuts(self) -> None:
         pass
 
-    def get_separator(self) -> QFrame:
+    def get_separator(self, horizontal: bool = False) -> QFrame:
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShape(QFrame.Shape.HLine if horizontal else QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         return separator
 
@@ -320,15 +329,11 @@ class ExtendedTableView(AbstractQItem, QTableView):
     ...
 
 
-class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
+class AbstractSettingsWidget(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
-    _add_to_tab = True
-
-    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
+    def __init__(self) -> None:
         super().__init__()
-
-        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
 
         self.setup_ui()
 
@@ -343,6 +348,15 @@ class AbstractToolbarSettings(ExtendedWidget, QYAMLObjectSingleton):
 
     def __getstate__(self) -> Mapping[str, Any]:
         return {}
+
+
+class AbstractToolbarSettings(AbstractSettingsWidget):
+    _add_to_tab = True
+
+    def __init__(self, parent: type[AbstractToolbar] | AbstractToolbar) -> None:
+        self.parent_toolbar_type = parent if isinstance(parent, type) else parent.__class__
+
+        super().__init__()
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         ...
@@ -447,7 +461,7 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
             self.main.resize(self.main.width(), self.main.height() + self.height() + round(6 * self.main.display_scale))
         if not expanding:
             self.main.resize(self.main.width(), self.main.height() - self.height() - round(6 * self.main.display_scale))
-            self.main.timeline.full_repaint()
+            self.main.timeline.update()
 
     def __get_storable_attr__(self) -> tuple[str, ...]:
         attributes = list(self.class_storable_attrs + self.storable_attrs)
@@ -501,9 +515,27 @@ def storage_err_msg(name: str, level: int = 0) -> str:
     return f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
 
 
+@overload
 def try_load(
     state: Mapping[str, Any], name: str, expected_type: type[T],
-    receiver: T | _OneArgumentFunction | _SetterFunction,
+    receiver: Literal[None] = ...,
+    error_msg: str | None = None, nullable: bool = False
+) -> T:
+    ...
+
+
+@overload
+def try_load(
+    state: Mapping[str, Any], name: str, expected_type: type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction = ...,
+    error_msg: str | None = None, nullable: bool = False
+) -> None:
+    ...
+
+
+def try_load(
+    state: Mapping[str, Any], name: str, expected_type: type[T],
+    receiver: T | _OneArgumentFunction | _SetterFunction | None = None,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:
     import logging
@@ -523,28 +555,54 @@ def try_load(
         if nullable:
             value = None
 
-    func_error = None
+    if receiver is None:
+        return value
 
     if isinstance(receiver, expected_type):
         receiver = value
     elif callable(receiver):
-        try:
-            cast(_SetterFunction, receiver)(name, value)
-        except Exception as e:
-            if 'positional arguments but' not in str(e):
-                func_error = e
+        from inspect import Signature, _ParameterKind
 
+        try:
+            len_params = len([
+                x for x in Signature.from_callable(receiver).parameters.values()
+                if x.kind in (_ParameterKind.POSITIONAL_ONLY, _ParameterKind.POSITIONAL_OR_KEYWORD)
+            ])
+
+            if len_params >= 2:
+                param_tries = [2, 1, 0]
+            elif len_params >= 1:
+                param_tries = [1, 0, 2]
+            else:
+                param_tries = [0, 1, 2]
+        except ValueError:
+            param_tries = [2, 1, 0]
+
+        exceptions = []
+
+        for ptry in param_tries:
             try:
-                cast(_OneArgumentFunction, receiver)(value)
-                func_error = None
-            except Exception as ee:
-                func_error = ee
+                if ptry == 2:
+                    receiver(name, value)
+                elif ptry == 1:
+                    receiver(value)
+                elif ptry == 0:
+                    receiver()
+            except Exception as e:
+                exceptions.append(e)
+            else:
+                exceptions.clear()
+                break
+
+        if exceptions:
+            filtered = [
+                e for e in exceptions if 'positional arguments but' not in str(e)
+            ]
+
+            return main_window().handle_error(filtered[0] if filtered else exceptions[0])
     elif hasattr(receiver, name) and isinstance(getattr(receiver, name), expected_type):
         try:
             receiver.__setattr__(name, value)
         except AttributeError as e:
             logging.error(e)
             logging.warning(error_msg)
-
-    if func_error:
-        raise func_error from None

@@ -34,7 +34,7 @@ class AudioOutput(AbstractYAMLObject):
         self.main = main_window()
 
         with self.main.env:
-            vs_outputs = list(vs.get_outputs().values())
+            vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.AudioNode))
 
         self.index = vs_outputs.index(vs_output)
         self.source_vs_output = vs_output
@@ -90,7 +90,7 @@ class AudioOutput(AbstractYAMLObject):
         if not hasattr(self, 'name'):
             from ...models.outputs import AudioOutputs
 
-            if vs_output in (vs_outputs := list(vs.get_outputs().values())):
+            if vs_output in vs_outputs:
                 self.name = self.info.get('name', 'Track ' + str(self.index))
                 if isinstance(self.main.toolbars.playback.audio_outputs, AudioOutputs):
                     self.main.toolbars.playback.audio_outputs.setData(

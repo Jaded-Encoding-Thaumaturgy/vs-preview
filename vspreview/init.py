@@ -17,14 +17,28 @@ from .core.logger import set_log_level, setup_logger
 # This is so other modules cannot accidentally use and lock us into a different policy.
 from .core.vsenv import set_vsengine_loop
 from .main import MainWindow
-from .plugins.install import install_plugins, plugins_commands, uninstall_plugins
+from .plugins import get_installed_plugins
+from .plugins.abstract import FileResolverPlugin, ResolvedScript
+from .plugins.install import install_plugins, plugins_commands, print_available_plugins, uninstall_plugins
 
 __all__ = [
     'main'
 ]
 
 
-def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
+def get_resolved_script(filepath: Path) -> tuple[ResolvedScript, FileResolverPlugin | None] | int:
+    for plugin in get_installed_plugins(FileResolverPlugin, False).values():
+        if plugin.can_run_file(filepath):
+            return plugin.resolve_path(filepath), plugin
+
+    if not filepath.exists():
+        logging.error('Script or file path is invalid.')
+        return 1
+
+    return ResolvedScript(filepath, str(filepath)), None
+
+
+def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
     from .utils import exit_func
 
     parser = ArgumentParser(prog='VSPreview')
@@ -34,16 +48,13 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
     )
     parser.add_argument(
         'plugins', type=str, nargs='*',
-        help='Plugins to install/uninstall/update'
+        help=f'Plugins to {"/".join(plugins_commands[:-1])} or arguments to pass to the script environment.'
     )
     parser.add_argument(
         '--version', '-v', action='version', version='%(prog)s 0.2b'
     )
     parser.add_argument(
         '--preserve-cwd', '-c', action='store_true', help='do not chdir to script parent directory'
-    )
-    parser.add_argument(
-        '--arg', '-a', type=str, action='append', metavar='key=value', help='Argument to pass to the script environment'
     )
     parser.add_argument('-f', '--frame', type=int, help='Frame to load initially (defaults to 0)')
     parser.add_argument(
@@ -58,6 +69,9 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
     )
     parser.add_argument(
         "--no-deps", help="Ignore downloading dependencies.", action="store_true"
+    )
+    parser.add_argument(
+        "--force-storage", help="Force override or local/global storage.", action="store_true", default=False
     )
 
     args = parser.parse_args(_args)
@@ -84,7 +98,15 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
         logging.error('Script path required.')
         return exit_func(1, no_exit)
 
+    if script_path_or_command.startswith('--') and args.plugins:
+        script_path_or_command = args.plugins.pop()
+        args.plugins = [args.script_path_or_command, *args.plugins]
+
     if (command := script_path_or_command) in plugins_commands:
+        if command == 'available':
+            print_available_plugins()
+            return exit_func(0, no_exit)
+
         if not args.plugins:
             logging.error('You must provide at least one plugin!')
             return exit_func(1, no_exit)
@@ -103,13 +125,15 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
 
         return exit_func(0, no_exit)
 
-    script_path = Path(script_path_or_command).resolve()
-    if not script_path.exists():
-        logging.error('Script path is invalid.')
-        return exit_func(1, no_exit)
+    script_or_err = get_resolved_script(Path(script_path_or_command).resolve())
+
+    if isinstance(script_or_err, int):
+        return exit_func(script_or_err, no_exit)
+
+    script, file_resolve_plugin = script_or_err
 
     if not args.preserve_cwd:
-        os.chdir(script_path.parent)
+        os.chdir(script.path.parent)
 
     first_run = not hasattr(main, 'app')
 
@@ -117,17 +141,37 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> None:
         main.app = QApplication(sys.argv)
         set_vsengine_loop()
     else:
-        from .core.vsenv import make_environment, get_current_environment
+        from .core.vsenv import get_current_environment, make_environment
         make_environment()
         get_current_environment().use()
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    main.main_window = MainWindow(Path(os.getcwd()) if args.preserve_cwd else script_path.parent, no_exit)
-    main.main_window.load_script(
-        script_path, [tuple(a.split('=', maxsplit=1)) for a in args.arg or []], False, args.frame or None
+    arguments = script.arguments.copy()
+
+    def _parse_arg(kv: str) -> tuple[str, str | int | float]:
+        v: str | int | float
+        k, v = kv.split('=', maxsplit=1)
+
+        try:
+            v = int(v)
+        except ValueError:
+            try:
+                v = float(v)
+            except ValueError:
+                ...
+
+        return k.strip('--'), v
+
+    if args.plugins:
+        arguments |= {k: v for k, v in map(_parse_arg, args.plugins)}
+
+    main.main_window = MainWindow(
+        Path(os.getcwd()) if args.preserve_cwd else script.path.parent, no_exit, script.reload_enabled, args.force_storage
     )
-    main.main_window.show()
+    main.main_window.load_script(
+        script.path, list(arguments.items()), False, args.frame or None, script.display_name, file_resolve_plugin
+    )
 
     ret_code = main.app.exec()
 

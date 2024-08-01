@@ -29,6 +29,7 @@ class VideoOutputNode:
 
     def __post_init__(self) -> None:
         self.original_clip = self.clip
+        self.original_alpha = self.alpha
 
         if self.cache:
             from vstools import cache_clip

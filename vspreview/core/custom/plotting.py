@@ -27,7 +27,7 @@ STYLE_DIR = Path(__file__).parent / 'plotting.mplstyle'
 __all__ = [
     'apply_plotting_style',
 
-    'PlottingCanvas',
+    'PlottingCanvas', 'PlottingCanvasDefaultFrame',
 
     'PlotMouseEvent'
 ]
@@ -316,3 +316,14 @@ class PlottingCanvas(FigureCanvasQTAgg):
                 (line._xorig[0] - self.xpad[0], line._xorig[-1] + self.xpad[1]) if self.xpad else xlim,
                 (line._yorig[0] - self.ypad[0], line._yorig[-1] + self.ypad[1]) if self.ypad else ylim
             )
+
+
+class PlottingCanvasDefaultFrame(PlottingCanvas):
+    def render(self, frame: Frame | None = None, set_lims: bool = True) -> None:
+        if not self.main.current_output:
+            return
+
+        if frame is None:
+            frame = self.main.current_output.last_showed_frame
+
+        super().render(frame, set_lims)

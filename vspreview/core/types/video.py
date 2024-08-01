@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import os
+from ctypes import Array
 from fractions import Fraction
 from itertools import count as iter_count
 from typing import TYPE_CHECKING, Any, Mapping, cast
@@ -8,6 +11,7 @@ import vapoursynth as vs
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
+from stgpytools import cachedproperty, classproperty, fallback
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from .misc import CroppingInfo, VideoOutputNode
@@ -15,11 +19,15 @@ from .units import Frame, Time
 
 if TYPE_CHECKING:
     from vstools import VideoFormatT
+
     from ..custom.graphicsview import GraphicsImageItem
 
 __all__ = [
+    'PackingType',
     'VideoOutput'
 ]
+
+_default_props = {}
 
 
 class PackingTypeInfo:
@@ -28,12 +36,21 @@ class PackingTypeInfo:
     def __init__(
         self, name: str, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool, can_playback: bool = True
     ):
+        from ctypes import c_char
+
         self.id = next(self._getid)
         self.name = name
         self.vs_format = vs.core.get_video_format(vs_format)
+        self.vs_alpha_format = vs.core.get_video_format(vs.GRAY8)
         self.qt_format = qt_format
         self.shuffle = shuffle
         self.can_playback = can_playback
+
+        nbps, abps = self.vs_format.bits_per_sample, self.vs_alpha_format.bytes_per_sample
+        self.conv_info: dict[bool, tuple[type[Array[c_char]], QImage.Format]] = {
+            False: (c_char * nbps, self.qt_format),
+            True: (c_char * abps, QImage.Format.Format_Alpha8)
+        }
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PackingTypeInfo):
@@ -44,7 +61,7 @@ class PackingTypeInfo:
         return int(self.id)
 
 
-class PackingType(PackingTypeInfo):
+class PackingType(cachedproperty.baseclass, metaclass=classproperty.metaclass):
     none_8bit = PackingTypeInfo('none-8bit', vs.RGB24, QImage.Format.Format_BGR30, False, False)
     none_10bit = PackingTypeInfo('none-10bit', vs.RGB30, QImage.Format.Format_BGR30, False, False)
     numpy_8bit = PackingTypeInfo('numpy-8bit', vs.RGB24, QImage.Format.Format_BGR30, True)
@@ -54,8 +71,26 @@ class PackingType(PackingTypeInfo):
     akarin_8bit = PackingTypeInfo('akarin-8bit', vs.RGB24, QImage.Format.Format_BGR30, False)
     akarin_10bit = PackingTypeInfo('akarin-10bit', vs.RGB30, QImage.Format.Format_BGR30, False)
 
+    @cachedproperty
+    @classproperty
+    def CURRENT(cls) -> PackingTypeInfo:
+        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30  # type: ignore
 
-PACKING_TYPE: PackingTypeInfo = None  # type: ignore
+        # From fastest to slowest
+        if hasattr(vs.core, 'akarin'):
+            return PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
+
+        if hasattr(vs.core, 'libp2p'):
+            return PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+        else:
+            try:
+                import numpy  # noqa: F401
+
+                return PackingType.numpy_10bit if _default_10bits else PackingType.numpy_8bit
+            except ModuleNotFoundError:
+                ...
+
+        return PackingType.none_10bit if _default_10bits else PackingType.none_8bit
 
 
 class VideoOutput(AbstractYAMLObject):
@@ -76,6 +111,7 @@ class VideoOutput(AbstractYAMLObject):
     last_showed_frame: Frame
     crop_values: CroppingInfo
     _stateset: bool
+    props: vs.FrameProps | None
 
     def clear(self) -> None:
         if self.source:
@@ -85,7 +121,7 @@ class VideoOutput(AbstractYAMLObject):
         if self.props:
             self.props.clear()
         del self.source, self.prepared, self.props
-        self.source = self.prepared = self.props = None
+        self.source = self.prepared = self.props = None  # type: ignore
 
     def __init__(
         self, vs_output: vs.VideoOutputTuple, index: int, new_storage: bool = False
@@ -101,24 +137,30 @@ class VideoOutput(AbstractYAMLObject):
 
         assert self.main.env
 
-        self.set_fmt_values()
-
         with self.main.env:
-            vs_outputs = list(vs.get_outputs().values())
+            vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.VideoOutputTuple))
 
         self.vs_index = index
         self.index = vs_outputs.index(vs_output) if vs_output in vs_outputs else index
 
-        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})  # type: ignore
+        self.info = self.main.user_output_info[vs.VideoNode].get(self.vs_index, {})
 
         self.cached = not not self.info.get('cache', False)
+
+        if vs_output in vs_outputs and not hasattr(self, 'props'):
+            try:
+                self.props = cast(vs.FrameProps, vs_output.clip.get_frame(self.main.start_frame).props.copy())
+            except Exception as e:
+                raise e from None
+
         self.source = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
         self.prepared = VideoOutputNode(vs_output.clip, vs_output.alpha, self.cached)
 
         if self.source.alpha is not None:
-            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, True).std.CopyFrameProps(self.source.alpha)
+            self.prepared.alpha = self.prepare_vs_output(self.source.alpha, False)
 
-        self.prepared.clip = self.prepare_vs_output(self.source.clip).std.CopyFrameProps(self.source.clip)
+        self.prepared.clip = self.prepare_vs_output(self.source.clip, True)
+
         self.width = self.prepared.clip.width
         self.height = self.prepared.clip.height
         self.fps_num = self.prepared.clip.fps.numerator
@@ -131,7 +173,7 @@ class VideoOutput(AbstractYAMLObject):
         if self.main.outputs is not None:
             self.main.outputs.setData(self.main.outputs.index(self.vs_index), self.name)
 
-        self.props = cast(vs.FrameProps, {})
+        self.props = cast(vs.FrameProps, _default_props)
 
         if self.source.alpha:
             self.checkerboard = self._generate_checkerboard()
@@ -190,6 +232,9 @@ class VideoOutput(AbstractYAMLObject):
             else:
                 self.play_fps = Fraction(self.fps_num, self.fps_den)
 
+        if self.fps_num == 0 and self._stateset:
+            self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
+
         if index in self.main.norm_timecodes:
             norm_timecodes = self.main.norm_timecodes[index]  # type: ignore
 
@@ -215,66 +260,46 @@ class VideoOutput(AbstractYAMLObject):
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
-    def set_fmt_values(self) -> None:
-        import os
-        from ctypes import c_char
+    def prepare_vs_output(self, clip: vs.VideoNode, pack_rgb: bool = True, fmt: vs.VideoFormat | None = None) -> vs.VideoNode:
+        from vstools import (
+            ChromaLocation, ColorRange, DitherType, KwargsT, Matrix, Primaries, Transfer, depth, video_heuristics
+        )
 
-        global PACKING_TYPE
+        assert (src := clip).format
 
-        if PACKING_TYPE is not None:
-            if hasattr(self, '_FRAME_CONV_INFO'):
-                return
+        heuristics, assumed_props = video_heuristics(clip, True, assumed_return=True)
+        dither_type = DitherType(self.main.toolbars.playback.settings.dither_type.lower())
 
-            self._NORML_FMT = PACKING_TYPE.vs_format
-            self._ALPHA_FMT = vs.core.get_video_format(vs.GRAY8)
+        if self._stateset and assumed_props:
+            logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <"{', '.join(assumed_props)}>')
 
-            nbps, abps = self._NORML_FMT.bits_per_sample, self._ALPHA_FMT.bytes_per_sample
-            self._FRAME_CONV_INFO = {
-                False: (c_char * nbps, PACKING_TYPE.qt_format),
-                True: (c_char * abps, QImage.Format.Format_Alpha8)
-            }
+        standard_gamut = {'transfer': Transfer.BT709, 'primaries': self.main.settings.output_primaries_zimg}
 
-            return
+        if (
+            not self.main.display_profile
+            or self.main.display_profile.primaries() == QColorSpace.Primaries.SRgb
+        ) and heuristics['primaries_in'] in (
+            Primaries.BT2020, Primaries.ST428, Primaries.ST431_2, Primaries.ST432_1
+        ):
+            standard_gamut = {}
 
-        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30  # type: ignore
-
-        # From fastest to slowest
-        if hasattr(vs.core, 'akarin'):
-            PACKING_TYPE = PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
-        elif hasattr(vs.core, 'libp2p'):
-            PACKING_TYPE = PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
-        else:
-            try:
-                import numpy  # noqa: F401
-                PACKING_TYPE = PackingType.numpy_10bit if _default_10bits else PackingType.numpy_8bit
-            except ModuleNotFoundError:
-                PACKING_TYPE = PackingType.none_10bit if _default_10bits else PackingType.none_8bit
-
-        self.set_fmt_values()
-
-    def prepare_vs_output(self, clip: vs.VideoNode, is_alpha: bool = False) -> vs.VideoNode:
-        from vstools import ChromaLocation, ColorRange, KwargsT, Matrix, Primaries, Transfer, video_heuristics
-
-        assert clip.format
-
-        heuristics = video_heuristics(clip, None)
+        print(standard_gamut)
 
         resizer_kwargs = KwargsT({
-            'format': self._NORML_FMT.id,
+            'format': fallback(fmt, PackingType.CURRENT.vs_format if pack_rgb else PackingType.CURRENT.vs_alpha_format),
             'matrix_in': Matrix.BT709,
             'transfer_in': Transfer.BT709,
             'primaries_in': Primaries.BT709,
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
-        } | heuristics | {
-            'dither_type': self.main.toolbars.playback.settings.dither_type,
+        } | heuristics | standard_gamut | {
             'filter_param_a': self.main.toolbars.playback.settings.kernel['b'],
             'filter_param_b': self.main.toolbars.playback.settings.kernel['c']
         })
 
-        if clip.format.color_family == vs.RGB:
+        if src.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']
-        elif clip.format.color_family == vs.GRAY:
+        elif src.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
 
         if isinstance(resizer_kwargs['range_in'], ColorRange):
@@ -282,34 +307,43 @@ class VideoOutput(AbstractYAMLObject):
 
         assert clip.format
 
-        if is_alpha:
-            if clip.format.id == self._ALPHA_FMT.id:
-                return clip
-            resizer_kwargs['format'] = self._ALPHA_FMT.id
-        elif clip.format.id == vs.GRAY32:
+        if src.format.id == vs.GRAY32:
             return clip
 
-        clip = clip.resize.Bicubic(**resizer_kwargs)
+        to_fmt: vs.VideoFormat = resizer_kwargs.pop('format')
 
-        if is_alpha:
+        if src.format.id == to_fmt:
             return clip
 
-        return self.pack_rgb_clip(clip)
+        if dither_type.is_fmtc:
+            temp_fmt = to_fmt.replace(sample_type=src.format.sample_type, bits_per_sample=src.format.bits_per_sample)
+            clip = clip.resize.Bicubic(**resizer_kwargs, format=temp_fmt.id)
+            clip = depth(clip, to_fmt, dither_type=dither_type)
+        else:
+            clip = clip.resize.Bicubic(**resizer_kwargs, format=to_fmt, dither_type=dither_type.value)
+
+        if not self.cached:
+            clip.std.SetVideoCache(0)
+
+        if pack_rgb:
+            clip = self.pack_rgb_clip(clip)
+
+        return clip.std.CopyFrameProps(src)
 
     def pack_rgb_clip(self, clip: vs.VideoNode) -> vs.VideoNode:
-        if PACKING_TYPE.shuffle:
+        if PackingType.CURRENT.shuffle:
             clip = clip.std.ShufflePlanes([2, 1, 0], vs.RGB)
 
-        shift = 2 ** (10 - PACKING_TYPE.vs_format.bits_per_sample)
+        shift = 2 ** (10 - PackingType.CURRENT.vs_format.bits_per_sample)
         r_shift, g_shift, b_shift = (x * shift for x in (1, 0x400, 0x100000))
         high_bits_mask = 0xc0000000
 
-        if PACKING_TYPE in {
+        if PackingType.CURRENT in {
             PackingType.none_8bit, PackingType.none_10bit, PackingType.numpy_8bit, PackingType.numpy_10bit
         }:
             blank = vs.core.std.BlankClip(clip, None, None, vs.GRAY32, color=high_bits_mask, keep=True)
 
-            if PACKING_TYPE in {PackingType.none_8bit, PackingType.none_10bit}:
+            if PackingType.CURRENT in {PackingType.none_8bit, PackingType.none_10bit}:
                 from functools import partial
                 from multiprocessing.pool import ThreadPool
 
@@ -371,10 +405,10 @@ class VideoOutput(AbstractYAMLObject):
 
             return blank.std.ModifyFrame([blank, clip], _packrgb)
 
-        if PACKING_TYPE in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
+        if PackingType.CURRENT in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
             return vs.core.libp2p.Pack(clip)
 
-        if PACKING_TYPE in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
+        if PackingType.CURRENT in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
             # x, y, z => b, g, r
             # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
             # R stays like it is * shift if it's 8 bits (gets applied to all planes), then G gets shifted
@@ -391,7 +425,7 @@ class VideoOutput(AbstractYAMLObject):
         from ctypes import cast as ccast
 
         width, height, stride = frame.width, frame.height, frame.get_stride(0)
-        point_size, qt_format = self._FRAME_CONV_INFO[is_alpha]
+        point_size, qt_format = PackingType.CURRENT.conv_info[is_alpha]
 
         pointer = cast(
             sip.voidptr, ccast(frame.get_read_ptr(0), POINTER(point_size * stride)).contents
@@ -443,7 +477,12 @@ class VideoOutput(AbstractYAMLObject):
 
         frame = min(max(frame, Frame(0)), self.total_frames - 1)
 
-        vs_frame = vs_frame or self.prepared.clip.get_frame(frame.value)
+        if not vs_frame:
+            try:
+                vs_frame = self.prepared.clip.get_frame(frame.value)
+            except vs.Error as e:
+                self.main.handle_error(e)
+                return QPixmap()
 
         self.props = cast(vs.FrameProps, vs_frame.props.copy())
 

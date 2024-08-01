@@ -27,7 +27,7 @@ Note that these may be unstable!
 
 .. code-block:: bash
 
-    pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git -U
+    pip install git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview.git -U
 
 Updating
 ^^^^^^^^
@@ -44,4 +44,4 @@ Or this command for the nightly build:
 
 .. code-block:: bash
 
-    pip install git+https://github.com/Irrational-Encoding-Wizardry/vs-preview.git -U --force-reinstall
+    pip install git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview.git -U --force-reinstall

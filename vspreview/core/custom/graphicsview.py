@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal, QRectF
 from PyQt6.QtGui import (
     QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPalette, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
@@ -127,7 +127,10 @@ class GraphicsView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.drag_mode = self.dragMode()
 
-        self.setBackgroundBrush(self.main.palette().brush(QPalette.ColorRole.Window))
+        self.main.reload_stylesheet_signal.connect(
+            lambda: self.setBackgroundBrush(self.main.palette().brush(QPalette.ColorRole.Window))
+        )
+
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
@@ -174,6 +177,13 @@ class GraphicsView(QGraphicsView):
             self.setZoom(None)
         else:
             self.setZoom(self.zoom_combobox.currentData())
+
+    def setup_view(self) -> None:
+        for item in self.graphics_scene.graphics_items:
+            item.hide()
+
+        self.current_scene.show()
+        self.graphics_scene.setSceneRect(QRectF(self.current_scene.pixmap().rect()))
 
     def bind_to(self, other_view: GraphicsView, *, mutual: bool = True) -> None:
         self.main.bound_graphics_views[other_view].add(self)

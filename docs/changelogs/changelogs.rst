@@ -2,7 +2,7 @@ Changelogs
 ----------
 
 This page may be outdated,
-but the `releases page <https://github.com/Irrational-Encoding-Wizardry/vs-preview/releases>`_
+but the `releases page <https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview/releases>`_
 on Github
 should always be up-to-date.
 

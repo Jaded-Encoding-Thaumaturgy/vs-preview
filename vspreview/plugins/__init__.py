@@ -232,6 +232,9 @@ class LocalPluginsSettings(AbstractYAMLObjectSingleton):
                 plugin.settings.local = self.state[plugin._config.namespace]
                 plugin.settings.__setstate__(False)
 
+        if 'gui' in self.state:
+            Plugins.instance[0].gui_settings.local = self.state['gui']
+
 
 class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
     def __init__(self, state: dict[str, Mapping[str, Any]]) -> None:
@@ -254,6 +257,9 @@ class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
                 plugin.settings.globals = self.state[plugin._config.namespace]
                 plugin.settings.__setstate__(True)
 
+        if 'gui' in self.state:
+            Plugins.instance[0].gui_settings.globals = self.state['gui']
+
 
 class Plugins(AbstractYAMLObjectSingleton):
     __slots__ = ()
@@ -271,6 +277,7 @@ class Plugins(AbstractYAMLObjectSingleton):
 
         self.main = main
         self.settings = {}
+        self.gui_settings = SettingsNamespace({'local': SettingsNamespace(), 'globals': SettingsNamespace()})
         self.plugins_tab = main.plugins_tab
         self.main.main_split.setSizes([0, 0])
         self.main.reload_before_signal.connect(self.reset_last_reload)
@@ -390,6 +397,8 @@ class Plugins(AbstractYAMLObjectSingleton):
             } | {
                 plugin._config.namespace: plugin.settings.globals
                 for plugin in self
+            } | {
+                'gui': self.gui_settings.globals
             }),
             'local_settings': LocalPluginsSettings({
                 k: v.local
@@ -397,5 +406,7 @@ class Plugins(AbstractYAMLObjectSingleton):
             } | {
                 plugin._config.namespace: plugin.settings.local
                 for plugin in self
+            } | {
+                'gui': self.gui_settings.local
             })
         }

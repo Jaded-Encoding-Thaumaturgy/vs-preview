@@ -292,7 +292,10 @@ class VideoOutput(AbstractYAMLObject):
             'primaries_in': Primaries.BT709,
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
-        } | heuristics | standard_gamut)
+        } | heuristics | standard_gamut | {
+            'filter_param_a': self.main.toolbars.playback.settings.kernel['b'],
+            'filter_param_b': self.main.toolbars.playback.settings.kernel['c']
+        })
 
         if src.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']

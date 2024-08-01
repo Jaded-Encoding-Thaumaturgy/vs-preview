@@ -76,10 +76,10 @@ class PlaybackSettings(AbstractToolbarSettings):
         return super().__getstate__() | {
             'playback_buffer_size': self.playback_buffer_size,
             'dither_type': self.dither_type,
-            'Resample kernel (chroma)': self.kernel
+            'resample_kernel_chroma': self.kernel
         }
 
     def _setstate_(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'playback_buffer_size', int, self.buffer_size_spinbox.setValue)
         try_load(state, 'dither_type', str, self.dither_type_combobox.setCurrentValue)
-        try_load(state, 'Resample kernel (chroma)', str, self.kernel_combobox.setCurrentValue)
+        try_load(state, 'resample_kernel_chroma', str, self.kernel_combobox.setCurrentValue)

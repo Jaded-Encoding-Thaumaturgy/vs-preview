@@ -203,9 +203,9 @@ def get_installed_plugins(
                 continue
 
             if ret_class:
-                plugins[plugin._config.namespace] = plugin  # type: ignore
+                plugins[plugin._config.namespace] = plugin
             else:
-                plugins[plugin._config.namespace] = pl = plugin(*args, **kwargs)  # type: ignore
+                plugins[plugin._config.namespace] = pl = plugin(*args, **kwargs)
                 pl.settings = plugin._config.settings_type(plugins[plugin._config.namespace])
 
     return plugins
@@ -276,7 +276,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         main.plugins = self
 
         self.main = main
-        self.settings = {}
+        self.settings = SettingsNamespace()
         self.gui_settings = SettingsNamespace({'local': SettingsNamespace(), 'globals': SettingsNamespace()})
         self.plugins_tab = main.plugins_tab
         self.main.main_split.setSizes([0, 0])

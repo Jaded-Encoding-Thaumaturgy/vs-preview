@@ -28,7 +28,8 @@ class MainSettings(AbstractToolbarSettings):
         'png_compressing_spinbox', 'statusbar_timeout_control',
         'timeline_notches_margin_spinbox', 'usable_cpus_spinbox',
         'zoom_levels_combobox', 'zoom_levels_lineedit', 'zoom_level_default_combobox',
-        'azerty_keyboard_checkbox', 'dragnavigator_timeout_spinbox', 'color_management_checkbox'
+        'azerty_keyboard_checkbox', 'dragnavigator_timeout_spinbox', 'color_management_checkbox',
+        'plugins_save_position_combobox'
     )
 
     INSTANT_FRAME_UPDATE = False
@@ -83,6 +84,8 @@ class MainSettings(AbstractToolbarSettings):
 
         self.color_management_checkbox = CheckBox('Color management', self)
 
+        self.plugins_save_position_combobox = ComboBox[str](model=GeneralModel[str](['no', 'global', 'local']))
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
@@ -119,6 +122,8 @@ class MainSettings(AbstractToolbarSettings):
         HBoxLayout(self.vlayout, [QLabel('Drag Navigator Timeout (ms)'), self.dragnavigator_timeout_spinbox])
 
         HBoxLayout(self.vlayout, [QLabel('Output Primaries'), self.primaries_combobox])
+
+        HBoxLayout(self.vlayout, [QLabel('Save Plugins Bar Position'), self.plugins_save_position_combobox])
 
         if sys.platform == 'win32':
             HBoxLayout(self.vlayout, [self.color_management_checkbox])
@@ -292,6 +297,10 @@ class MainSettings(AbstractToolbarSettings):
         return Primaries([1, 12][self.primaries_combobox.currentIndex()])
 
     @property
+    def plugins_bar_save_behaviour(self) -> int:
+        return self.plugins_save_position_combobox.currentIndex()
+
+    @property
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
 
@@ -310,6 +319,7 @@ class MainSettings(AbstractToolbarSettings):
             'zoom_default_index': self.zoom_default_index,
             'output_primaries_index': self.primaries_combobox.currentIndex(),
             'dragnavigator_timeout': self.dragnavigator_timeout,
+            'plugins_bar_save_behaviour_index': self.plugins_bar_save_behaviour,
             'color_management': self.color_management
         }
 
@@ -327,6 +337,7 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
         try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)
         try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
+        try_load(state, 'plugins_bar_save_behaviour_index', int, self.plugins_save_position_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
 
 

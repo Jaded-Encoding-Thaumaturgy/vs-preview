@@ -433,6 +433,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             )
 
         self.show()
+        self.plugins.setup_ui()
 
     def handle_error(self, e: Exception) -> None:
         import logging

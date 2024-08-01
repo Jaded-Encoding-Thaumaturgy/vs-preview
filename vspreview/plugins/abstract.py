@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, Mapping, Nam
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QSizePolicy, QWidget
-from stgpytools import CustomRuntimeError
 from vstools import SPath, T
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject, try_load

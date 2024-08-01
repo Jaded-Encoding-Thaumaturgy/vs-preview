@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import sys
 import traceback
 from functools import lru_cache
@@ -11,11 +10,10 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Mapping, Typ
 
 from PyQt6.QtWidgets import QWidget
 
-from ..core import AbstractYAMLObjectSingleton, Frame, storage_err_msg, try_load
+from ..core import AbstractYAMLObjectSingleton, Frame
 from . import utils
 from .abstract import (
-    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, PluginSettings, ResolvedScript,
-    _BasePluginT, SettingsNamespace
+    AbstractPlugin, FileResolvePluginConfig, FileResolverPlugin, PluginConfig, ResolvedScript, _BasePluginT
 )
 from .utils import *  # noqa: F401,F403
 
@@ -145,7 +143,7 @@ def _import_warning_once(path: Path, message: str) -> None:
         print(ImportWarning(message))
 
 
-def get_clean_trace():
+def get_clean_trace() -> str:
     return traceback.format_exc().split('_call_with_frames_removed\n')[1]
 
 

@@ -28,8 +28,8 @@ class MainSettings(AbstractToolbarSettings):
         'png_compressing_spinbox', 'statusbar_timeout_control',
         'timeline_notches_margin_spinbox', 'usable_cpus_spinbox',
         'zoom_levels_combobox', 'zoom_levels_lineedit', 'zoom_level_default_combobox',
-        'azerty_keyboard_checkbox', 'dragnavigator_timeout_spinbox', 'color_management_checkbox',
-        'plugins_save_position_combobox'
+        'azerty_keyboard_checkbox', 'dragnavigator_timeout_spinbox', 'dragtimeline_timeout_spinbox',
+        'color_management_checkbox', 'plugins_save_position_combobox'
     )
 
     INSTANT_FRAME_UPDATE = False
@@ -75,6 +75,7 @@ class MainSettings(AbstractToolbarSettings):
         self.zoom_level_default_combobox = ComboBox[int]()
 
         self.dragnavigator_timeout_spinbox = SpinBox(self, 0, 1000 * 60 * 5)
+        self.dragtimeline_timeout_spinbox = SpinBox(self, 0, 500)
 
         self.primaries_combobox = ComboBox[str](
             model=GeneralModel[str]([
@@ -121,6 +122,8 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Drag Navigator Timeout (ms)'), self.dragnavigator_timeout_spinbox])
 
+        HBoxLayout(self.vlayout, [QLabel('Drag Timeline Timeout (ms)'), self.dragtimeline_timeout_spinbox])
+
         HBoxLayout(self.vlayout, [QLabel('Output Primaries'), self.primaries_combobox])
 
         HBoxLayout(self.vlayout, [QLabel('Save Plugins Bar Position'), self.plugins_save_position_combobox])
@@ -141,6 +144,7 @@ class MainSettings(AbstractToolbarSettings):
         self.azerty_keyboard_checkbox.setChecked(False)
         self.usable_cpus_spinbox.setValue(self.get_usable_cpus_count())
         self.dragnavigator_timeout_spinbox.setValue(250)
+        self.dragtimeline_timeout_spinbox.setValue(40)
 
         self.zoom_levels = [
             25, 50, 68, 75, 85, 100, 150, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 2000, 3200
@@ -256,6 +260,10 @@ class MainSettings(AbstractToolbarSettings):
     def dragnavigator_timeout(self) -> int:
         return self.dragnavigator_timeout_spinbox.value()
 
+    @property
+    def dragtimeline_timeout(self) -> int:
+        return self.dragtimeline_timeout_spinbox.value()
+
     def zoom_levels_combobox_on_add(self) -> None:
         try:
             new_value = int(self.zoom_levels_lineedit.text())
@@ -319,6 +327,7 @@ class MainSettings(AbstractToolbarSettings):
             'zoom_default_index': self.zoom_default_index,
             'output_primaries_index': self.primaries_combobox.currentIndex(),
             'dragnavigator_timeout': self.dragnavigator_timeout,
+            'dragtimeline_timeout': self.dragtimeline_timeout,
             'plugins_bar_save_behaviour_index': self.plugins_bar_save_behaviour,
             'color_management': self.color_management
         }
@@ -336,6 +345,7 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'zoom_levels', list, self)
         try_load(state, 'zoom_default_index', int, self.zoom_level_default_combobox.setCurrentIndex)
         try_load(state, 'dragnavigator_timeout', int, self.dragnavigator_timeout_spinbox.setValue)
+        try_load(state, 'dragtimeline_timeout', int, self.dragtimeline_timeout_spinbox.setValue)
         try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'plugins_bar_save_behaviour_index', int, self.plugins_save_position_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)

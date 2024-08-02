@@ -583,11 +583,11 @@ class SceningToolbar(AbstractToolbar):
 
     def import_ogm_chapters(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
         '''
-        Imports chapters as signle-frame scenes.
+        Imports chapters as single-frame scenes.
         Uses NAME for scene label.
         '''
         pattern = re.compile(
-            r'(CHAPTER\d+)=(\d{2}):(\d{2}):(\d{2}(?:\.\d{3})?)\n\1NAME=(.*)',
+            r'(CHAPTER\d+)=(\d+):(\d+):(\d+(?:\.\d+)?)\n\1NAME=(.*)',
             re.RegexFlag.MULTILINE
         )
         for match in pattern.finditer(path.read_text('utf8')):

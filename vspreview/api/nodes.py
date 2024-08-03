@@ -64,8 +64,8 @@ def set_scening(
 
     main_window().set_temporary_scenes([
         SceningList(
-            ('Keyframes' if isinstance(scenes[i], Keyframes) else 'Temporary Scene') + f' - {name}', True,
-            node.num_frames, scene
+            ('Keyframes' if isinstance(scenes[i], Keyframes) else 'Temporary Scene') + f' - {name}',
+            node.num_frames, scene, temporary=True
         ) for i, scene in enumerate(mapped_scenes)
     ])
 

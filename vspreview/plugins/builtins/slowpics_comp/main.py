@@ -217,10 +217,12 @@ class CompUploadWidget(ExtendedWidget):
         self.delete_after_lineedit = LineEdit('Days', self)
         self.delete_after_lineedit.setMaximumWidth(75)
 
-        self.is_public_checkbox = CheckBox('Public', self, checked=False, clicked=self._public_click)
+        self.is_public_checkbox = CheckBox(
+            'Public', self, checked=self.settings.default_public, clicked=self._public_click
+        )
         self._public_click(self.is_public_checkbox.isChecked())
 
-        self.is_nsfw_checkbox = CheckBox('NSFW', self, checked=False)
+        self.is_nsfw_checkbox = CheckBox('NSFW', self, checked=self.settings.default_nsfw)
 
         self.output_url_lineedit = LineEdit('https://slow.pics/c/', self, enabled=False)
 

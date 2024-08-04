@@ -30,6 +30,9 @@ class CompSettings(AbstractSettingsWidget):
 
         self.frame_type_checkbox = CheckBox('Include frametype in image name')
 
+        self.default_public_checkbox = CheckBox('Default Public Flag')
+        self.default_nsfw_checkbox = CheckBox('Default NSFW Flag')
+
         self.login_browser_id_edit = LineEdit('Browser ID')
         self.login_session_edit = LineEdit('Session ID')
 
@@ -70,6 +73,11 @@ class CompSettings(AbstractSettingsWidget):
             ])
         )
 
+        HBoxLayout(self.vlayout, [
+            self.default_public_checkbox,
+            self.default_nsfw_checkbox
+        ])
+
     def set_defaults(self) -> None:
         self.delete_cache_checkbox.setChecked(True)
         self.frame_type_checkbox.setChecked(True)
@@ -100,6 +108,14 @@ class CompSettings(AbstractSettingsWidget):
     def compression(self) -> int:
         return self.compression_combobox.currentIndex()
 
+    @property
+    def default_public(self) -> bool:
+        return self.default_public_checkbox.isChecked()
+
+    @property
+    def default_nsfw(self) -> bool:
+        return self.default_nsfw_checkbox.isChecked()
+
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'delete_cache_enabled': self.delete_cache_enabled,
@@ -107,12 +123,16 @@ class CompSettings(AbstractSettingsWidget):
             'browser_id': self.browser_id,
             'session_id': self.session_id,
             'tmdb_apikey': self.tmdb_apikey,
-            'compression': self.compression
+            'compression': self.compression,
+            'default_public': self.default_public,
+            'default_nsfw': self.default_nsfw,
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'delete_cache_enabled', bool, self.delete_cache_checkbox.setChecked)
         try_load(state, 'frame_type_enabled', bool, self.frame_type_checkbox.setChecked)
+        try_load(state, 'default_public', bool, self.default_public_checkbox.setChecked)
+        try_load(state, 'default_nsfw', bool, self.default_nsfw_checkbox.setChecked)
         try_load(state, 'browser_id', str, self.login_browser_id_edit.setText)
         try_load(state, 'session_id', str, self.login_session_edit.setText)
         try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)

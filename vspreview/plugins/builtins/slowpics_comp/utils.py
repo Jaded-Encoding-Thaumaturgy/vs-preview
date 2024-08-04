@@ -12,6 +12,7 @@ from vstools import SPath
 
 KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
+MAX_ATTEMPTS_PER_BRIGHT_TYPE: Final[int] = 100
 
 
 __all__ = [

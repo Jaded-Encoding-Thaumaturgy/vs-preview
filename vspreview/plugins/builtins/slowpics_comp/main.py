@@ -15,16 +15,17 @@ from PyQt6.QtCore import QKeyCombination, Qt, QThread
 from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import Session
 from stgpytools import SPath
-from vstools import vs
+from vstools import vs, get_prop
 
 from vspreview.core import (
     CheckBox, ComboBox, ExtendedWidget, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
     main_window, try_load
 )
 from vspreview.models import GeneralModel
+from vspreview.core import PackingType
 
 from .settings import CompSettings
-from .utils import KEYWORD_RE, MAX_ATTEMPTS_PER_PICTURE_TYPE, get_slowpic_upload_headers, get_slowpic_headers
+from .utils import KEYWORD_RE, MAX_ATTEMPTS_PER_PICTURE_TYPE, MAX_ATTEMPTS_PER_BRIGHT_TYPE, get_slowpic_upload_headers, get_slowpic_headers
 from .workers import Worker, WorkerConfiguration
 
 __all__ = [
@@ -39,7 +40,8 @@ class CompUploadWidget(ExtendedWidget):
         'random_frames_control', 'manual_frames_lineedit', 'output_url_lineedit',
         'current_frame_checkbox', 'is_public_checkbox', 'is_nsfw_checkbox',
         'output_url_copy_button', 'start_upload_button', 'stop_upload_button',
-        'upload_progressbar', 'upload_status_label', 'upload_status_elements'
+        'upload_progressbar', 'upload_status_label', 'upload_status_elements',
+        'random_dark_frame_edit', 'random_light_frame_edit'
     )
 
     settings: CompSettings
@@ -189,6 +191,9 @@ class CompUploadWidget(ExtendedWidget):
         self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=self._force_clicked('P'))
         self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=self._force_clicked('B'))
 
+        self.random_dark_frame_edit = FrameEdit(self)
+        self.random_light_frame_edit = FrameEdit(self)
+
         self.tmdb_id_lineedit = LineEdit('TMDB ID', self)
         self.tmdb_id_lineedit.setMaximumWidth(75)
 
@@ -266,6 +271,17 @@ class CompUploadWidget(ExtendedWidget):
                     self.pic_type_button_P,
                     self.pic_type_button_B
                 ])
+            ]),
+            self.get_separator(False),
+            VBoxLayout([
+                HBoxLayout([
+                    QLabel('Dark Frames:'),
+                    self.random_dark_frame_edit
+                ]),
+                HBoxLayout([
+                    QLabel('Light Frames:'),
+                    self.random_light_frame_edit
+                ]),
             ]),
             self.get_separator(False),
             VBoxLayout([
@@ -545,6 +561,65 @@ class CompUploadWidget(ExtendedWidget):
                 self.upload_progressbar.setValue(int(100 * len(samples) / k))
 
         return list(map(Frame, samples))
+    
+    def _select_samples_bright(self, num_frames: int, dark_frames:int, light_frames:int) -> list[Frame]:
+        dark = set[int]()
+        light = set[int]()
+        _max_attempts = 0
+        _rnum_checked = set[int]()
+
+        assert self.main.outputs
+
+        req_frame_count = max(dark_frames, light_frames)
+        frames_needed = dark_frames + light_frames
+        interval = num_frames // frames_needed
+        while (len(light) + len(dark)) < frames_needed:
+            _attempts = 0
+            while True:
+                if self.upload_worker.is_finished:
+                    raise RuntimeError
+
+                num = len(light) + len(dark)
+                self.update_status_label(self.curr_uuid, 'search', _attempts, MAX_ATTEMPTS_PER_PICTURE_TYPE)
+                if len(_rnum_checked) >= num_frames:
+                    raise ValueError(f'There aren\'t enough of dark/light in these clips')
+                rnum = self._rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
+                _rnum_checked.add(rnum)
+
+
+                output = self.main.outputs[0]
+                clip = output.source.clip[rnum]
+                stats = clip.std.PlaneStats() 
+
+                avg = get_prop(stats, "PlaneStatsAverage", float, None, 0)
+                if 0.062746 <= avg <= 0.380000:
+                    if len(dark) < dark_frames:
+                        dark.add(rnum)
+                        break
+                elif 0.450000 <= avg <= 0.800000:
+                    if len(light) < light_frames:
+                        light.add(rnum)
+                        break
+
+                _attempts += 1
+                _max_attempts += 1
+
+                if _attempts > MAX_ATTEMPTS_PER_BRIGHT_TYPE:
+                    logging.warning(
+                        f'{MAX_ATTEMPTS_PER_BRIGHT_TYPE} attempts were made for sample {len(light) + len(dark)} '
+                        f'and no match found for dark/light; stopping iteration...')
+                    break
+
+            if _max_attempts > (curr_max_att := MAX_ATTEMPTS_PER_BRIGHT_TYPE * req_frame_count):
+                raise RecursionError(f'Comp: attempts max of {curr_max_att} has been reached!')
+
+            if _attempts < MAX_ATTEMPTS_PER_BRIGHT_TYPE:
+                self.upload_progressbar.setValue(int())
+                self.upload_progressbar.setValue(int(100 * (len(light) + len(dark)) / frames_needed))
+
+        print(dark)
+        print(light)
+        return list(map(Frame, dark | light))
 
     def create_slowpics_tags(self) -> list[str]:
         tags = list[str]()
@@ -578,6 +653,8 @@ class CompUploadWidget(ExtendedWidget):
         assert self.main.outputs
 
         num = int(self.random_frames_control.value())
+        dark_num = int(self.random_dark_frame_edit.value())
+        light_num = int(self.random_light_frame_edit.value())
         frames = list[Frame](
             map(lambda x: Frame(int(x)), filter(None, [x.strip() for x in self.manual_frames_lineedit.text().split(',')]))
         )
@@ -613,6 +690,10 @@ class CompUploadWidget(ExtendedWidget):
                 samples = self._select_samples_ptypes(lens_n, num, picture_types)
         else:
             samples = []
+
+        if dark_num or light_num:
+            logging.info('Making samples according to specified brightness levels...')
+            samples.extend(self._select_samples_bright(lens_n, dark_num, light_num))
 
         if len(frames):
             samples.extend(frames)

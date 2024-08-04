@@ -24,15 +24,15 @@ class SceningList(QAbstractTableModel, QYAMLObject):
     LABEL_COLUMN = 4
     COLUMN_COUNT = 5
 
-    def __init__(self, name: str = '', temporary: bool = False, max_value: Frame | None = None, items: list[Scene] | None = None) -> None:
-        self.setValue(name, max_value, items)
-        self.temporary = temporary
+    def __init__(self, name: str = '', max_value: Frame | None = None, items: list[Scene] | None = None, *, temporary: bool = False) -> None:
+        self.setValue(name, max_value, items, temporary=temporary)
 
-    def setValue(self, name: str = '', max_value: Frame | None = None, items: list[Scene] | None = None) -> None:
+    def setValue(self, name: str = '', max_value: Frame | None = None, items: list[Scene] | None = None, *, temporary: bool = False) -> None:
         super().__init__()
         self.name = name
         self.max_value = max_value if max_value is not None else Frame(2**31)
         self.items = items if items is not None else []
+        self.temporary = temporary
 
         self.main = main_window()
 

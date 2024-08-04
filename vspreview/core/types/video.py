@@ -14,7 +14,7 @@ from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
 from stgpytools import cachedproperty, classproperty, fallback
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
-from .misc import CroppingInfo, VideoOutputNode
+from .misc import ArInfo, CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ class PackingType(cachedproperty.baseclass, metaclass=classproperty.metaclass):
 
 class VideoOutput(AbstractYAMLObject):
     storable_attrs = (
-        'name', 'last_showed_frame', 'play_fps', 'crop_values'
+        'name', 'last_showed_frame', 'play_fps', 'crop_values', 'ar_values'
     )
 
     __slots__ = (
@@ -110,6 +110,7 @@ class VideoOutput(AbstractYAMLObject):
     name: str
     last_showed_frame: Frame
     crop_values: CroppingInfo
+    ar_values: ArInfo
     _stateset: bool
     props: vs.FrameProps | None
 
@@ -260,6 +261,9 @@ class VideoOutput(AbstractYAMLObject):
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)
 
+        if not hasattr(self, 'ar_values'):
+            self.ar_values = ArInfo(1, 1)
+
     def prepare_vs_output(self, clip: vs.VideoNode, pack_rgb: bool = True, fmt: vs.VideoFormat | None = None) -> vs.VideoNode:
         from vstools import (
             ChromaLocation, ColorRange, DitherType, KwargsT, Matrix, Primaries, Transfer, depth, video_heuristics
@@ -283,8 +287,6 @@ class VideoOutput(AbstractYAMLObject):
         ):
             standard_gamut = {}
 
-        print(standard_gamut)
-
         resizer_kwargs = KwargsT({
             'format': fallback(fmt, PackingType.CURRENT.vs_format if pack_rgb else PackingType.CURRENT.vs_alpha_format),
             'matrix_in': Matrix.BT709,
@@ -292,7 +294,10 @@ class VideoOutput(AbstractYAMLObject):
             'primaries_in': Primaries.BT709,
             'range_in': ColorRange.LIMITED,
             'chromaloc_in': ChromaLocation.LEFT
-        } | heuristics | standard_gamut)
+        } | heuristics | standard_gamut | {
+            'filter_param_a': self.main.toolbars.playback.settings.kernel['b'],
+            'filter_param_b': self.main.toolbars.playback.settings.kernel['c']
+        })
 
         if src.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']
@@ -441,25 +446,37 @@ class VideoOutput(AbstractYAMLObject):
         return None
 
     def update_graphic_item(
-        self, pixmap: QPixmap | None = None, crop_values: CroppingInfo | None | bool = None,
+        self, pixmap: QPixmap | None = None,
+        crop_values: CroppingInfo | None | bool = None,
+        ar_values: ArInfo | None | bool = None,
         graphics_scene_item: GraphicsImageItem | None = None
     ) -> QPixmap | None:
         from vstools import complex_hash
 
         old_crop = complex_hash.hash(self.crop_values)
+        old_ar = complex_hash.hash(self.ar_values)
 
         if isinstance(crop_values, bool):
             self.crop_values.active = crop_values
         elif crop_values is not None:
             self.crop_values = crop_values
 
+        if isinstance(ar_values, bool):
+            self.ar_values.active = ar_values
+        elif ar_values is not None:
+            self.ar_values = ar_values
+
         new_crop = complex_hash.hash(self.crop_values)
+        new_ar = complex_hash.hash(self.ar_values)
 
         if graphics_scene_item:
-            graphics_scene_item.setPixmap(pixmap, self.crop_values)
+            graphics_scene_item.setPixmap(pixmap, self.crop_values, self.ar_values)
 
         if old_crop != new_crop:
             self.main.cropValuesChanged.emit(self.crop_values)
+
+        if old_ar != new_ar:
+            self.main.arValuesChanged.emit(self.ar_values)
 
         return pixmap
 
@@ -606,5 +623,6 @@ class VideoOutput(AbstractYAMLObject):
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', Fraction, self.__setattr__)
         try_load(state, 'crop_values', CroppingInfo, self.__setattr__)
+        try_load(state, 'ar_values', ArInfo, self.__setattr__)
 
         self._stateset = True

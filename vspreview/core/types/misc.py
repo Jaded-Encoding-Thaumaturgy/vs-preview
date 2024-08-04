@@ -6,6 +6,7 @@ import vapoursynth as vs
 
 __all__ = [
     'CroppingInfo',
+    'ArInfo',
     'VideoOutputNode',
     'Stretch'
 ]
@@ -19,6 +20,25 @@ class CroppingInfo:
     height: int
     active: bool = True
     is_absolute: bool = False
+
+
+_arinfo_active = False
+
+
+@dataclass
+class ArInfo:
+    sarnum: int
+    sarden: int
+
+    @property
+    def active(self) -> bool:
+        return _arinfo_active
+
+    @active.setter
+    def active(self, active: bool) -> None:
+        global _arinfo_active
+
+        _arinfo_active = active
 
 
 @dataclass

@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from math import floor
 from typing import Any, Iterable, Sequence, cast
+from time import perf_counter_ns
 
 from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
@@ -53,6 +54,9 @@ class Timeline(QWidget):
         self.setMouseTracking(True)
 
         self.main.reload_before_signal.connect(lambda: self.__setattr__('_after_reload', True))
+
+        self.mousepressed = False
+        self.lastpaint = perf_counter_ns()
 
     @property
     def cursor_x(self) -> int:
@@ -222,17 +226,28 @@ class Timeline(QWidget):
         super().moveEvent(event)
         self.update()
 
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.mousepressed = False
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         super().mousePressEvent(event)
 
-        pos = event.pos().toPointF()
-
-        if self.notches_cache[self.mode][1][0].contains(pos):
-            self.cursor_x = int(pos.x())
-            self.clicked.emit(self.x_to_f(self.cursor_x), self.x_to_t(self.cursor_x))
+        self.mousepressed = True
+        self.mouseMoveEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         super().mouseMoveEvent(event)
+
+        if self.mousepressed and (
+            (perf_counter_ns() - self.lastpaint) / 100000 > self.main.settings.dragtimeline_timeout
+        ):
+            pos = event.pos().toPointF()
+            pos.setY(self.notches_cache[self.mode][1][0].top() + 1)
+
+            if self.notches_cache[self.mode][1][0].contains(pos):
+                self.cursor_x = int(pos.x())
+                self.clicked.emit(self.x_to_f(self.cursor_x), self.x_to_t(self.cursor_x))
+                self.lastpaint = perf_counter_ns()
 
         for provider, notches in self.notches.items():
             if not provider.is_notches_visible:

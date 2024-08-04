@@ -10,7 +10,6 @@ from .playback import PlaybackToolbar
 if TYPE_CHECKING:
     from ..main import MainWindow
     from .benchmark import BenchmarkToolbar
-    from .comp import CompToolbar
     from .debug import DebugToolbar
     from .misc import MiscToolbar
     from .pipette import PipetteToolbar
@@ -33,7 +32,6 @@ class Toolbars(AbstractYAMLObjectSingleton):
     pipette: PipetteToolbar
     benchmark: BenchmarkToolbar
     misc: MiscToolbar
-    comp: CompToolbar
     debug: DebugToolbar
 
     _closure = {**globals()}
@@ -50,7 +48,7 @@ class Toolbars(AbstractYAMLObjectSingleton):
         self.playback = PlaybackToolbar(main_window)
 
         self.toolbar_names = [
-            'debug', 'scening', 'pipette', 'benchmark', 'misc', 'comp'
+            'debug', 'scening', 'pipette', 'benchmark', 'misc'
         ]
 
         self.toolbars = dict(main=self.main, playback=self.playback) | {

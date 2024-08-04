@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from PyQt6.QtWidgets import QTabWidget
+
+from vspreview.plugins import AbstractPlugin, PluginConfig
+from vspreview.main import MainWindow
+
+from .slowpics_comp.main import CompUploadWidget
+from .slowpics_comp.settings import CompSettings
+
+__all__ = [
+    'CompPlugin'
+]
+
+
+class CompPlugin(AbstractPlugin, QTabWidget):
+    _config = PluginConfig('dev.setsugen.comp', 'SlowPics Comps')
+
+    def __init__(self, main: MainWindow) -> None:
+        super().__init__(main)
+
+        self.settings_tab = CompSettings(self)
+
+    def setup_ui(self) -> None:
+        self.main_tab = CompUploadWidget(self.settings_tab)
+
+        self.setUsesScrollButtons(False)
+
+        self.addTab(self.main_tab, 'Upload')
+        self.addTab(self.settings_tab, 'Settings')
+
+        self.settings.globals.settings = self.settings_tab

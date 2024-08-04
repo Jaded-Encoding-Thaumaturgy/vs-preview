@@ -4,25 +4,36 @@ from typing import Any, Mapping
 
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, CheckBox, ComboBox, HBoxLayout, LineEdit, VBoxLayout, try_load
-from ...models import GeneralModel
+from vspreview.core import AbstractSettingsWidget, CheckBox, ComboBox, HBoxLayout, LineEdit, VBoxLayout, try_load
+from vspreview.models import GeneralModel
+from vspreview.plugins import AbstractPlugin
 
 __all__ = [
     'CompSettings'
 ]
 
 
-class CompSettings(AbstractToolbarSettings):
+class CompSettings(AbstractSettingsWidget):
     __slots__ = ('delete_cache_checkbox', 'frame_type_checkbox', 'login_browser_id_edit', 'login_session_edit', 'tmdb_apikey_edit')
 
     DEFAULT_COLLECTION_NAME = 'Unknown'
 
+    def __init__(self, plugin: AbstractPlugin) -> None:
+        super().__init__()
+
+        self.plugin = plugin
+
     def setup_ui(self) -> None:
         super().setup_ui()
+
+        self.collection_name_template_edit = LineEdit('Collection Name Template')
 
         self.delete_cache_checkbox = CheckBox('Delete images cache after upload')
 
         self.frame_type_checkbox = CheckBox('Include frametype in image name')
+
+        self.default_public_checkbox = CheckBox('Default Public Flag')
+        self.default_nsfw_checkbox = CheckBox('Default NSFW Flag')
 
         self.login_browser_id_edit = LineEdit('Browser ID')
         self.login_session_edit = LineEdit('Session ID')
@@ -39,6 +50,11 @@ class CompSettings(AbstractToolbarSettings):
         label.setMaximumHeight(50)
         label.setMinimumWidth(400)
         label.setWordWrap(True)
+
+        VBoxLayout(self.vlayout, [
+            self.collection_name_template_edit,
+            QLabel('Available replaces: {tmdb_title}, {video_nodes}, {tmdb_year}')
+        ])
 
         HBoxLayout(
             self.vlayout, [
@@ -64,9 +80,16 @@ class CompSettings(AbstractToolbarSettings):
             ])
         )
 
+        HBoxLayout(self.vlayout, [
+            self.default_public_checkbox,
+            self.default_nsfw_checkbox
+        ])
+
     def set_defaults(self) -> None:
         self.delete_cache_checkbox.setChecked(True)
         self.frame_type_checkbox.setChecked(True)
+        # https://github.com/Radarr/Radarr/blob/29ba6fe5563e737f0f87919e48f556e39284e6bb/src/NzbDrone.Common/Cloud/RadarrCloudRequestBuilder.cs#L31
+        self.tmdb_apikey_edit.setText('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxYTczNzMzMDE5NjFkMDNmOTdmODUzYTg3NmRkMTIxMiIsInN1YiI6IjU4NjRmNTkyYzNhMzY4MGFiNjAxNzUzNCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.gh1BwogCCKOda6xj9FRMgAAj_RYKMMPC3oNlcBtlmwk')  # noqa
 
     @property
     def delete_cache_enabled(self) -> bool:
@@ -92,6 +115,18 @@ class CompSettings(AbstractToolbarSettings):
     def compression(self) -> int:
         return self.compression_combobox.currentIndex()
 
+    @property
+    def default_public(self) -> bool:
+        return self.default_public_checkbox.isChecked()
+
+    @property
+    def default_nsfw(self) -> bool:
+        return self.default_nsfw_checkbox.isChecked()
+
+    @property
+    def collection_name_template(self) -> str:
+        return self.collection_name_template_edit.text()
+
     def __getstate__(self) -> Mapping[str, Any]:
         return {
             'delete_cache_enabled': self.delete_cache_enabled,
@@ -99,12 +134,18 @@ class CompSettings(AbstractToolbarSettings):
             'browser_id': self.browser_id,
             'session_id': self.session_id,
             'tmdb_apikey': self.tmdb_apikey,
-            'compression': self.compression
+            'compression': self.compression,
+            'default_public': self.default_public,
+            'default_nsfw': self.default_nsfw,
+            'collection_name_template': self.collection_name_template
         }
 
-    def _setstate_(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'delete_cache_enabled', bool, self.delete_cache_checkbox.setChecked)
         try_load(state, 'frame_type_enabled', bool, self.frame_type_checkbox.setChecked)
+        try_load(state, 'default_public', bool, self.default_public_checkbox.setChecked)
+        try_load(state, 'default_nsfw', bool, self.default_nsfw_checkbox.setChecked)
+        try_load(state, 'collection_name_template', str, self.collection_name_template_edit.setText)
         try_load(state, 'browser_id', str, self.login_browser_id_edit.setText)
         try_load(state, 'session_id', str, self.login_session_edit.setText)
         try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)

@@ -349,24 +349,26 @@ class CompUploadWidget(ExtendedWidget):
         tmdb_type = self.tmdb_type_combox.currentText().lower()
         tmdb_id = self.tmdb_id_lineedit.text()
 
+        api_key = self.settings.tmdb_apikey
         url = f'https://api.themoviedb.org/3/{tmdb_type}/{self.tmdb_id_lineedit.text()}?language=en-US'
-
         headers = {
-            'accept': 'application/json',
-            'Authorization': f'Bearer {self.settings.tmdb_apikey}'
+            'accept': 'application/json'
         }
+
+        if len(api_key) == 32:
+            url += f'&api_key={api_key}'
+        else:
+            headers['Authorization'] = f'Bearer {api_key}'
 
         resp = requests.get(url, headers=headers)
 
-        assert resp.status_code == 200, 'Response isn\'t 200'
+        if resp.status_code != 200:
+            logging.error(f'Error connecting to TMDB: {resp} ({resp.status_code})')
+            return
 
         data: dict[str, Any] = resp.json()
 
-        assert data.get('success', True), 'Success is false'
-
         self.tmdb_data[tmdb_id] = data
-
-        return
 
     def _handle_collection_generate(self) -> str:
         self._do_tmdb_request()

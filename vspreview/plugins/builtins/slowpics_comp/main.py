@@ -24,7 +24,7 @@ from vspreview.core import (
 from vspreview.models import GeneralModel
 
 from .settings import CompSettings
-from .utils import KEYWORD_RE, MAX_ATTEMPTS_PER_PICTURE_TYPE, get_slowpics_headers
+from .utils import KEYWORD_RE, MAX_ATTEMPTS_PER_PICTURE_TYPE, get_slowpic_upload_headers
 from .workers import Worker, WorkerConfiguration
 
 __all__ = [
@@ -554,7 +554,7 @@ class CompUploadWidget(ExtendedWidget):
                 api_resp: dict[str, str] = sess.post(
                     'https://slow.pics/api/tags',
                     data=tag,
-                    headers=get_slowpics_headers(len(tag), 'application/json', sess)
+                    headers=get_slowpic_upload_headers(len(tag), 'application/json', sess)
                 ).json()
 
                 label, value = api_resp['label'], api_resp['value']

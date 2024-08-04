@@ -358,18 +358,6 @@ class AbstractToolbarSettings(AbstractSettingsWidget):
 
         super().__init__()
 
-    def _setstate_(self, state: Mapping[str, Any]) -> None:
-        ...
-
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        if main_window().toolbars.should_set_state(self.__class__):
-            self._setstate_(state)
-
-            try:
-                super().__setstate__(state)  # type: ignore
-            except AttributeError:
-                ...
-
 
 class NotchProvider(QABC):
     notches_changed = pyqtSignal(ExtendedWidget)

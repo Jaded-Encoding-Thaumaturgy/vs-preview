@@ -24,7 +24,7 @@ from vspreview.core import (
 from vspreview.models import GeneralModel
 
 from .settings import CompSettings
-from .utils import KEYWORD_RE, MAX_ATTEMPTS_PER_PICTURE_TYPE, get_slowpic_upload_headers
+from .utils import KEYWORD_RE, MAX_ATTEMPTS_PER_PICTURE_TYPE, get_slowpic_upload_headers, get_slowpic_headers
 from .workers import Worker, WorkerConfiguration
 
 __all__ = [
@@ -399,6 +399,7 @@ class CompUploadWidget(ExtendedWidget):
         if self.tag_data_cache is None or self.tag_data_error:
             try:
                 with Session() as sess:
+                    sess.headers.update(get_slowpic_headers(sess))
                     sess.get('https://slow.pics/comparison')
 
                     api_resp = sess.get('https://slow.pics/api/tags').json()
@@ -549,6 +550,7 @@ class CompUploadWidget(ExtendedWidget):
         tags = list[str]()
 
         with Session() as sess:
+            sess.headers.update(get_slowpic_headers(sess))
             sess.get('https://slow.pics/comparison')
 
             for tag in self.current_tags:

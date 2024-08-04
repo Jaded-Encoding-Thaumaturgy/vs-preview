@@ -108,7 +108,7 @@ class CompSettings(AbstractSettingsWidget):
             'compression': self.compression
         }
 
-    def _setstate_(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
         try_load(state, 'delete_cache_enabled', bool, self.delete_cache_checkbox.setChecked)
         try_load(state, 'frame_type_enabled', bool, self.frame_type_checkbox.setChecked)
         try_load(state, 'browser_id', str, self.login_browser_id_edit.setText)

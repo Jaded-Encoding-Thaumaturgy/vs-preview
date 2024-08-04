@@ -73,6 +73,8 @@ class CompSettings(AbstractSettingsWidget):
     def set_defaults(self) -> None:
         self.delete_cache_checkbox.setChecked(True)
         self.frame_type_checkbox.setChecked(True)
+        # https://github.com/xbmc/xbmc/blob/69d56147ada20460ed48a4a21987e2e8369780ef/xbmc/utils/test/CXBMCTinyXML-test.xml#L4
+        self.tmdb_apikey_edit.setText('57983e31fb435df4df77afb854740ea9')
 
     @property
     def delete_cache_enabled(self) -> bool:

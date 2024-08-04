@@ -617,8 +617,6 @@ class CompUploadWidget(ExtendedWidget):
                 self.upload_progressbar.setValue(int())
                 self.upload_progressbar.setValue(int(100 * (len(light) + len(dark)) / frames_needed))
 
-        print(dark)
-        print(light)
         return list(map(Frame, dark | light))
 
     def create_slowpics_tags(self) -> list[str]:

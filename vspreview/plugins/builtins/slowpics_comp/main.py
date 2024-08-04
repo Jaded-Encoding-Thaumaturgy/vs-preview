@@ -171,6 +171,7 @@ class CompUploadWidget(ExtendedWidget):
         super().setup_ui()
 
         self.collection_name_lineedit = LineEdit('Collection name', self)
+        self.collection_name_lineedit.setText(self.settings.collection_name_template)
 
         self.random_frames_control = FrameEdit(self)
 

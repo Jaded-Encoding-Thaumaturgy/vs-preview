@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
-from typing import Final
+from typing import Callable, Final
 from uuid import uuid4
 
 from requests import HTTPError, Session
@@ -12,6 +12,7 @@ from vstools import SPath
 
 KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
+MAX_ATTEMPTS_PER_BRIGHT_TYPE: Final[int] = 100
 
 
 __all__ = [
@@ -21,7 +22,9 @@ __all__ = [
     'get_slowpic_headers',
     'do_single_slowpic_upload',
 
-    'clear_filename'
+    'clear_filename',
+
+    'rand_num_frames'
 ]
 
 
@@ -110,3 +113,12 @@ def clear_filename(filename: str) -> str:
         filename = filename.rstrip('. ')
 
     return filename
+
+
+def rand_num_frames(checked: set[int], rand_func: Callable[[], int]) -> int:
+    rnum = rand_func()
+
+    while rnum in checked:
+        rnum = rand_func()
+
+    return rnum

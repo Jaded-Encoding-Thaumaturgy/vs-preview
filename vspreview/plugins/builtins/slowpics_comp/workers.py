@@ -336,6 +336,8 @@ class FindFramesWorker(QObject):
         _max_attempts = 0
         _rnum_checked = set[int]()
 
+        stats = conf.current_output.source.clip.std.PlaneStats()
+
         req_frame_count = max(conf.dark_frames, conf.light_frames)
         frames_needed = conf.dark_frames + conf.light_frames
         interval = conf.num_frames // frames_needed
@@ -352,10 +354,7 @@ class FindFramesWorker(QObject):
                 rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
                 _rnum_checked.add(rnum)
 
-                clip = conf.current_output.source.clip[rnum]
-                stats = clip.std.PlaneStats()
-
-                avg = get_prop(stats, "PlaneStatsAverage", float, None, 0)
+                avg = get_prop(stats.get_frame(rnum), "PlaneStatsAverage", float, None, 0)
                 if 0.062746 <= avg <= 0.380000:
                     if len(dark) < conf.dark_frames:
                         dark.add(rnum)

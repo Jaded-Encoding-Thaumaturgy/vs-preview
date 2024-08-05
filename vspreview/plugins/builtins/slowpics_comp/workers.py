@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import random
 import shutil
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from functools import partial
 from typing import Any, NamedTuple, cast
 from uuid import uuid4
@@ -151,7 +151,7 @@ class Worker(QObject):
                 if conf.main.timeline.mode == conf.main.timeline.Mode.FRAME:
                     frame_time = str(frame)
                 else:
-                    frame_time = output.to_time(frame).to_str_minimal(output.to_time(max_value))
+                    frame_time = f'{frame} - {output.to_time(frame).to_str_minimal(output.to_time(max_value))}'
 
                 if is_comparison:
                     fields[f'comparisons[{j}].name'] = frame_time
@@ -208,7 +208,6 @@ class Worker(QObject):
             collection = comp_response['collectionUuid']
             key = comp_response['key']
             image_ids = comp_response['images']
-            images_done = 0
             self._progress_update_func(0, total_images, uuid=conf.uuid)
             with ThreadPoolExecutor() as executor:
                 futures = list[Future[None]]()
@@ -219,19 +218,6 @@ class Worker(QObject):
                     for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                         if self.isFinished():
                             return self.finished.emit(conf.uuid)
-                        while len(futures) >= 5:
-                            if self.isFinished():
-                                return self.finished.emit(conf.uuid)
-                            for future in futures.copy():
-                                if self.isFinished():
-                                    return self.finished.emit(conf.uuid)
-                                if future.done():
-                                    futures.remove(future)
-                                    images_done += 1
-                                    self._progress_update_func(
-                                        images_done, total_images, uuid=conf.uuid
-                                    )
-
                         imageUuid = image_ids[j][i] if is_comparison else image_ids[0][j]
                         futures.append(
                             executor.submit(
@@ -240,6 +226,13 @@ class Worker(QObject):
                                 image=image, browser_id=browser_id
                             )
                         )
+                images_done = 0
+                for future in as_completed(futures):
+                    if self.isFinished():
+                        return self.finished.emit(conf.uuid)
+                    images_done += 1
+                    self._progress_update_func(images_done, total_images, uuid=conf.uuid)
+
             self._progress_update_func(total_images, total_images, uuid=conf.uuid)
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)

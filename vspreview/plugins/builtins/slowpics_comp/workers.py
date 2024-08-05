@@ -294,13 +294,15 @@ class FindFramesWorker(QObject):
         while len(samples) < conf.ptype_num:
             _attempts = 0
             while True:
-                if self.is_finished:
-                    raise RuntimeError
+                if self.isFinished():
+                    raise StopIteration
 
                 num = len(samples)
                 self.progress_status.emit(conf.uuid, 'search', _attempts, MAX_ATTEMPTS_PER_PICTURE_TYPE)
                 if len(_rnum_checked) >= conf.num_frames:
-                    raise ValueError(f'There aren\'t enough of {conf.picture_types} in these clips')
+                    logging.warning(f'There aren\'t enough of {conf.picture_types} in these clips')
+                    raise StopIteration
+
                 rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
                 _rnum_checked.add(rnum)
 
@@ -317,12 +319,14 @@ class FindFramesWorker(QObject):
 
                 if _attempts > MAX_ATTEMPTS_PER_PICTURE_TYPE:
                     logging.warning(
-                        f'{MAX_ATTEMPTS_PER_PICTURE_TYPE} attempts were made for sample {len(samples)} '
-                        f'and no match found for {conf.picture_types}; stopping iteration...')
+                        f'{MAX_ATTEMPTS_PER_PICTURE_TYPE} attempts were made and only found {len(samples)} samples '
+                        f'and no match found for {conf.picture_types}; stopping iteration...'
+                    )
                     break
 
             if _max_attempts > (curr_max_att := MAX_ATTEMPTS_PER_PICTURE_TYPE * conf.ptype_num):
-                raise RecursionError(f'Comp: attempts max of {curr_max_att} has been reached!')
+                logging.warning(f'Comp: attempts max of {curr_max_att} has been reached!')
+                raise StopIteration
 
             if _attempts < MAX_ATTEMPTS_PER_PICTURE_TYPE:
                 samples.add(rnum)
@@ -341,16 +345,19 @@ class FindFramesWorker(QObject):
         req_frame_count = max(conf.dark_frames, conf.light_frames)
         frames_needed = conf.dark_frames + conf.light_frames
         interval = conf.num_frames // frames_needed
+
         while (len(light) + len(dark)) < frames_needed:
             _attempts = 0
             while True:
-                if self.is_finished:
-                    raise RuntimeError
+                if self.isFinished():
+                    raise StopIteration
 
                 num = len(light) + len(dark)
                 self.progress_status.emit(conf.uuid, 'search', _attempts, MAX_ATTEMPTS_PER_BRIGHT_TYPE)
                 if len(_rnum_checked) >= conf.num_frames:
-                    raise ValueError('There aren\'t enough of dark/light in these clips')
+                    logging.warning('There aren\'t enough of dark/light in these clips')
+                    raise StopIteration
+
                 rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
                 _rnum_checked.add(rnum)
 
@@ -369,12 +376,14 @@ class FindFramesWorker(QObject):
 
                 if _attempts > MAX_ATTEMPTS_PER_BRIGHT_TYPE:
                     logging.warning(
-                        f'{MAX_ATTEMPTS_PER_BRIGHT_TYPE} attempts were made for sample {len(light) + len(dark)} '
+                        f'{MAX_ATTEMPTS_PER_BRIGHT_TYPE} attempts were made and only found '
+                        f'{len(light) + len(dark)} samples '
                         f'and no match found for dark/light; stopping iteration...')
                     break
 
             if _max_attempts > (curr_max_att := MAX_ATTEMPTS_PER_BRIGHT_TYPE * req_frame_count):
-                raise RecursionError(f'Comp: attempts max of {curr_max_att} has been reached!')
+                logging.warning(f'Comp: attempts max of {curr_max_att} has been reached!')
+                raise StopIteration
 
             if _attempts < MAX_ATTEMPTS_PER_BRIGHT_TYPE:
                 self._progress_update_func(len(light) + len(dark), frames_needed, uuid=conf.uuid)
@@ -382,21 +391,29 @@ class FindFramesWorker(QObject):
         return list(map(Frame, dark | light))
 
     def run(self, conf: FindFramesWorkerConfiguration) -> None:  # type: ignore
-        if conf.ptype_num:
-            if conf.picture_types == {'I', 'P', 'B'}:
-                interval = conf.num_frames // conf.ptype_num
-                samples = list(map(
-                    Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(conf.ptype_num))
-                ))
-            else:
-                logging.info('Making samples according to specified picture types...')
-                samples = self._select_samples_ptypes(conf)
-        else:
-            samples = []
+        samples = []
 
-        if conf.dark_frames or conf.light_frames:
-            logging.info('Making samples according to specified brightness levels...')
-            samples.extend(self._find_dark_light(conf))
+        try:
+            if conf.ptype_num:
+                if conf.picture_types == {'I', 'P', 'B'}:
+                    interval = conf.num_frames // conf.ptype_num
+                    samples = list(map(
+                        Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(conf.ptype_num))
+                    ))
+                else:
+                    logging.info('Making samples according to specified picture types...')
+                    samples = self._select_samples_ptypes(conf)
+
+            if conf.dark_frames or conf.light_frames:
+                logging.info('Making samples according to specified brightness levels...')
+                samples.extend(self._find_dark_light(conf))
+
+        except StopIteration:
+            return self.finished.emit(conf.uuid)
+        except vs.Error as e:
+            if 'raise StopIteration' in str(e):
+                return self.finished.emit(conf.uuid)
+            raise e
 
         conf.samples.extend(samples)
 

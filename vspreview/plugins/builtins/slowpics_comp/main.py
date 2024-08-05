@@ -681,7 +681,6 @@ class CompUploadWidget(ExtendedWidget):
             self.curr_uuid = config.uuid
 
             self.search_thread.started.connect(partial(self.search_worker.run, config))
-            self.search_worker.finished.connect(print)
             self.search_worker.finished.connect(partial(self.on_end_search, conf=config))
 
             self.search_worker.progress_bar.connect(

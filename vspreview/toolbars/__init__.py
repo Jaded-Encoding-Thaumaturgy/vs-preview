@@ -93,14 +93,6 @@ class Toolbars(AbstractYAMLObjectSingleton):
         def __iter__(self) -> Iterator[AbstractToolbar]:
             ...
 
-    def should_set_state(self, cls: type[AbstractToolbar] | type[AbstractToolbarSettings]) -> bool:
-        if issubclass(cls, AbstractToolbarSettings):
-            name = cls.__name__[:-8]
-        else:
-            name = cls.__name__[:-7]
-
-        return name.lower() in self.toolbars
-
     def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
         return {
             toolbar_name: getattr(self, toolbar_name).__getstate__()

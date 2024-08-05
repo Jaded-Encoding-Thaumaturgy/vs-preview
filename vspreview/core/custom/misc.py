@@ -124,14 +124,14 @@ class TableModel(QAbstractTableModel):
         return len(self._data) and len(self._data[0])
 
     def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
                 if isinstance(self._columns, bool):
                     if self._columns:
                         return super().headerData(section, orientation, role)
                 else:
                     return str(self._columns[section])
 
-            if orientation == Qt.Vertical:
+            if orientation == Qt.Orientation.Vertical:
                 if self._rows:
                     return super().headerData(section, orientation, role)

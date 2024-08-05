@@ -151,7 +151,7 @@ class Worker(QObject):
                 if conf.main.timeline.mode == conf.main.timeline.Mode.FRAME:
                     frame_time = str(frame)
                 else:
-                    frame_time = output.to_time(frame, ).to_str_minimal()
+                    frame_time = output.to_time(frame).to_str_minimal(output.to_time(max_value))
 
                 if is_comparison:
                     fields[f'comparisons[{j}].name'] = frame_time

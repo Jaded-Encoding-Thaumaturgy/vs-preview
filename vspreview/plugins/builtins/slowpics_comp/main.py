@@ -18,7 +18,7 @@ from stgpytools import SPath
 
 from vspreview.core import (
     CheckBox, ComboBox, ExtendedWidget, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,
-    VideoOutput, main_window, try_load
+    VideoOutput, main_window, try_load, Stretch
 )
 from vspreview.models import GeneralModel
 
@@ -178,6 +178,9 @@ class CompUploadWidget(ExtendedWidget):
 
         self.random_frames_control = FrameEdit(self)
 
+        self.start_rando_frames_control = FrameEdit(self)
+        self.end_rando_frames_control = FrameEdit(self)
+
         self.manual_frames_lineedit = LineEdit('Manual frames: frame,frame,frame', self, )
 
         self.current_frame_checkbox = CheckBox('Current frame', self, checked=True)
@@ -297,8 +300,20 @@ class CompUploadWidget(ExtendedWidget):
         self.vlayout.addWidget(self.get_separator(True))
 
         HBoxLayout(self.vlayout, [
-            self.tmdb_id_lineedit,
-            self.tmdb_type_combox,
+            VBoxLayout([
+                QLabel('Start frame:'),
+                self.start_rando_frames_control
+            ]),
+            VBoxLayout([
+                QLabel('End frame:'),
+                self.end_rando_frames_control
+            ]),
+            self.get_separator(),
+            VBoxLayout([
+                self.tmdb_id_lineedit,
+                self.tmdb_type_combox,
+            ]),
+            Stretch()
         ])
 
         self.vlayout.addWidget(self.tag_separator)
@@ -406,6 +421,23 @@ class CompUploadWidget(ExtendedWidget):
     def update_tags(self) -> None:
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))
 
+    def on_current_output_changed(self, index: int, prev_index: int) -> None:
+        assert self.main.outputs
+
+        if not self._thread_running:
+            old_start, old_end = self.start_rando_frames_control.value(), self.end_rando_frames_control.value()
+
+            self.start_rando_frames_control.setMaximum(self.main.current_output.total_frames - 1)
+            self.end_rando_frames_control.setMaximum(self.main.current_output.total_frames)
+
+            if (
+                (old_start, old_end) == (Frame(0), Frame(0))
+            ) or (
+                (old_start, old_end) == (Frame(0), self.main.outputs[prev_index].total_frames)
+            ):
+                self.start_rando_frames_control.setValue(Frame(0))
+                self.end_rando_frames_control.setValue(self.main.current_output.total_frames)
+
     def on_public_toggle(self, new_state: bool) -> None:
         if not new_state or self.tag_data:
             return
@@ -484,6 +516,9 @@ class CompUploadWidget(ExtendedWidget):
         self.stop_upload_button.setVisible(False)
 
         self._thread_running = False
+
+        self.start_rando_frames_control.setEnabled(True)
+        self.end_rando_frames_control.setEnabled(True)
 
         if forced:
             self.upload_progressbar.setValue(int())
@@ -669,8 +704,13 @@ class CompUploadWidget(ExtendedWidget):
                 if self.current_frame_checkbox.isChecked():
                     samples.append(self.main.current_output.last_showed_frame)
 
+                start_frame = int(self.start_rando_frames_control.value())
+                end_frame = int(self.end_rando_frames_control.value())
+
                 config = FindFramesWorkerConfiguration(
-                    uuid, self.main.current_output, self.outputs, self.main, lens_n, dark_num, light_num,
+                    uuid, self.main.current_output, self.outputs, self.main,
+                    start_frame, end_frame,
+                    min(lens_n, end_frame - start_frame), dark_num, light_num,
                     num, picture_types, samples
                 )
             except RuntimeError as e:
@@ -691,6 +731,9 @@ class CompUploadWidget(ExtendedWidget):
             self.search_thread.start()
 
             self._thread_running = True
+
+            self.start_rando_frames_control.setEnabled(False)
+            self.end_rando_frames_control.setEnabled(False)
 
             return True
         except BaseException as e:

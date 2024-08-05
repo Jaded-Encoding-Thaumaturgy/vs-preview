@@ -263,6 +263,8 @@ class FindFramesWorkerConfiguration(NamedTuple):
     current_output: VideoOutput
     outputs: list[VideoOutput]
     main: MainWindow
+    start_frame: int
+    end_frame: int
     num_frames: int
     dark_frames: int
     light_frames: int
@@ -309,7 +311,9 @@ class FindFramesWorker(QObject):
                     logging.warning(f'There aren\'t enough of {conf.picture_types} in these clips')
                     raise StopIteration
 
-                rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
+                rnum = conf.start_frame + rand_num_frames(
+                    _rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1)
+                )
                 _rnum_checked.add(rnum)
 
                 if all(
@@ -364,7 +368,9 @@ class FindFramesWorker(QObject):
                     logging.warning('There aren\'t enough of dark/light in these clips')
                     raise StopIteration
 
-                rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
+                rnum = conf.start_frame + rand_num_frames(
+                    _rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1)
+                )
                 _rnum_checked.add(rnum)
 
                 avg = get_prop(stats.get_frame(rnum), "PlaneStatsAverage", float, None, 0)
@@ -402,10 +408,16 @@ class FindFramesWorker(QObject):
         try:
             if conf.ptype_num:
                 if conf.picture_types == {'I', 'P', 'B'}:
-                    interval = conf.num_frames // conf.ptype_num
-                    samples = list(map(
-                        Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(conf.ptype_num))
-                    ))
+                    interval = (conf.end_frame - conf.start_frame) // conf.ptype_num
+                    samples = list(
+                        map(
+                            Frame,
+                            list(
+                                conf.start_frame + random.randrange(interval * i, (interval * (i + 1)) - 1)
+                                for i in range(conf.ptype_num)
+                            )
+                        )
+                    )
                 else:
                     logging.info('Making samples according to specified picture types...')
                     samples = self._select_samples_ptypes(conf)

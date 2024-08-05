@@ -30,3 +30,6 @@ class CompPlugin(AbstractPlugin, QTabWidget):
         self.addTab(self.settings_tab, 'Settings')
 
         self.settings.globals.settings = self.settings_tab
+
+    def on_current_output_changed(self, index: int, prev_index: int) -> None:
+        self.main_tab.on_current_output_changed(index, prev_index)

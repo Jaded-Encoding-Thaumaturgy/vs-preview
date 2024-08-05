@@ -73,7 +73,7 @@ class CompUploadWidget(ExtendedWidget):
     collection_name_cache: str | None
 
     curr_uuid = ''
-    tmdb_data = dict[str, dict[str, Any]]()
+    tmdb_data = dict[str, dict[str, str]]()
 
     _old_threads_workers = list[Any]()
 
@@ -343,7 +343,7 @@ class CompUploadWidget(ExtendedWidget):
 
         match key:
             case '{tmdb_title}':
-                return data.get('name', data.get('title', ''))
+                return data.get('name', data.get('title', '')) or ''
             case '{tmdb_year}':
                 return str(
                     datetime.strptime(

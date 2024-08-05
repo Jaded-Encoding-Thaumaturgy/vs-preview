@@ -141,17 +141,23 @@ class Worker(QObject):
         for i, (output, images) in enumerate(zip(conf.outputs, all_images)):
             if self.isFinished():
                 return self.finished.emit(conf.uuid)
+            max_value = max(conf.frames[i])
             for j, (image, frame) in enumerate(zip(images, conf.frames[i])):
                 if self.isFinished():
                     return self.finished.emit(conf.uuid)
 
                 image_name = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
 
+                if conf.main.timeline.mode == conf.main.timeline.Mode.FRAME:
+                    frame_time = str(frame)
+                else:
+                    frame_time = output.to_time(frame, ).to_str_minimal()
+
                 if is_comparison:
-                    fields[f'comparisons[{j}].name'] = str(frame)
+                    fields[f'comparisons[{j}].name'] = frame_time
                     fields[f'comparisons[{j}].imageNames[{i}]'] = image_name
                 else:
-                    fields[f'imageNames[{j}]'] = f'{frame} - {image_name}'
+                    fields[f'imageNames[{j}]'] = f'{frame_time} - {image_name}'
 
                 total_images += 1
 

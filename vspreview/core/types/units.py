@@ -148,6 +148,21 @@ class Time(YAMLObjectWrapper):
 
         return strfdelta(self, '%h:%M:%S.%Z')
 
+    def to_str_minimal(self, max_value: Time | None = None) -> str:
+        from ...utils import strfdelta
+
+        max_value = (max_value or self).value
+
+        fmt = ''
+
+        if max_value.seconds > 3600:
+            fmt += '%h:'
+
+        if max_value.seconds > 60:
+            fmt += '%M:'
+
+        return strfdelta(self, f'{fmt}%S.%Z')
+
     def __float__(self) -> float:
         return cast(float, self.value.total_seconds())
 

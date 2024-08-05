@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
-from typing import Final
+from typing import Callable, Final
 from uuid import uuid4
 
 from requests import HTTPError, Session
@@ -22,7 +22,9 @@ __all__ = [
     'get_slowpic_headers',
     'do_single_slowpic_upload',
 
-    'clear_filename'
+    'clear_filename',
+
+    'rand_num_frames'
 ]
 
 
@@ -111,3 +113,12 @@ def clear_filename(filename: str) -> str:
         filename = filename.rstrip('. ')
 
     return filename
+
+
+def rand_num_frames(checked: set[int], rand_func: Callable[[], int]) -> int:
+    rnum = rand_func()
+
+    while rnum in checked:
+        rnum = rand_func()
+
+    return rnum

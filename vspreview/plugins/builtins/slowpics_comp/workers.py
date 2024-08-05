@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
+import random
 import shutil
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import partial
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 from uuid import uuid4
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -13,13 +15,18 @@ from requests_toolbelt import MultipartEncoderMonitor
 from stgpytools import SPath, ndigits
 from vstools import clip_data_gather, get_prop, remap_frames, vs
 
-from vspreview.core import PackingType, VideoOutput
+from vspreview.core import Frame, PackingType, VideoOutput
 from vspreview.main import MainWindow
 
-from .utils import clear_filename, do_single_slowpic_upload, get_slowpic_headers, get_slowpic_upload_headers
+from .utils import (
+    MAX_ATTEMPTS_PER_BRIGHT_TYPE, MAX_ATTEMPTS_PER_PICTURE_TYPE, clear_filename, do_single_slowpic_upload,
+    get_slowpic_headers, get_slowpic_upload_headers, rand_num_frames
+)
 
 __all__ = [
-    'WorkerConfiguration', 'Worker'
+    'WorkerConfiguration', 'Worker',
+
+    'FindFramesWorkerConfiguration', 'FindFramesWorker'
 ]
 
 
@@ -112,7 +119,7 @@ class Worker(QObject):
 
                         return _frame_callback(n, f)
 
-                decimated = remap_frames(clip, conf.frames[i])
+                decimated = remap_frames(clip, conf.frames[i])  # type: ignore
 
                 image_types = clip_data_gather(decimated, partial(self._progress_update_func, uuid=conf.uuid), frame_callback)
 
@@ -243,3 +250,156 @@ class Worker(QObject):
         url_out.write_text(f'[InternetShortcut]\nURL={url}')
 
         self.finished.emit(conf.uuid)
+
+
+class FindFramesWorkerConfiguration(NamedTuple):
+    uuid: str
+    current_output: VideoOutput
+    outputs: list[VideoOutput]
+    main: MainWindow
+    num_frames: int
+    dark_frames: int
+    light_frames: int
+    ptype_num: int
+    picture_types: set[str]
+    samples: list[Frame]
+
+
+class FindFramesWorker(QObject):
+    finished = pyqtSignal(str)
+    progress_bar = pyqtSignal(str, int)
+    progress_status = pyqtSignal(str, str, int, int)
+
+    is_finished = False
+
+    def _progress_update_func(self, value: int, endvalue: int, *, uuid: str) -> None:
+        if value == 0:
+            self.progress_bar.emit(uuid, 0)
+        else:
+            self.progress_bar.emit(uuid, int(100 * value / endvalue))
+
+    def isFinished(self) -> bool:
+        if self.is_finished:
+            self.deleteLater()
+        return self.is_finished
+
+    def _select_samples_ptypes(self, conf: FindFramesWorkerConfiguration) -> list[Frame]:
+        samples = set[int]()
+        _max_attempts = 0
+        _rnum_checked = set[int]()
+
+        picture_types_b = {p.encode() for p in conf.picture_types}
+
+        interval = conf.num_frames // conf.ptype_num
+        while len(samples) < conf.ptype_num:
+            _attempts = 0
+            while True:
+                if self.is_finished:
+                    raise RuntimeError
+
+                num = len(samples)
+                self.progress_status.emit(conf.uuid, 'search', _attempts, MAX_ATTEMPTS_PER_PICTURE_TYPE)
+                if len(_rnum_checked) >= conf.num_frames:
+                    raise ValueError(f'There aren\'t enough of {conf.picture_types} in these clips')
+                rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
+                _rnum_checked.add(rnum)
+
+                if all(
+                    cast(bytes, f.props['_PictType']) in picture_types_b
+                    for f in vs.core.std.Splice(
+                        [out.prepared.clip[rnum] for out in conf.outputs], True
+                    ).frames(close=True)
+                ):
+                    break
+
+                _attempts += 1
+                _max_attempts += 1
+
+                if _attempts > MAX_ATTEMPTS_PER_PICTURE_TYPE:
+                    logging.warning(
+                        f'{MAX_ATTEMPTS_PER_PICTURE_TYPE} attempts were made for sample {len(samples)} '
+                        f'and no match found for {conf.picture_types}; stopping iteration...')
+                    break
+
+            if _max_attempts > (curr_max_att := MAX_ATTEMPTS_PER_PICTURE_TYPE * conf.ptype_num):
+                raise RecursionError(f'Comp: attempts max of {curr_max_att} has been reached!')
+
+            if _attempts < MAX_ATTEMPTS_PER_PICTURE_TYPE:
+                samples.add(rnum)
+                self._progress_update_func(len(samples), conf.ptype_num, uuid=conf.uuid)
+
+        return list(map(Frame, samples))
+
+    def _find_dark_light(self, conf: FindFramesWorkerConfiguration) -> list[Frame]:
+        dark = set[int]()
+        light = set[int]()
+        _max_attempts = 0
+        _rnum_checked = set[int]()
+
+        req_frame_count = max(conf.dark_frames, conf.light_frames)
+        frames_needed = conf.dark_frames + conf.light_frames
+        interval = conf.num_frames // frames_needed
+        while (len(light) + len(dark)) < frames_needed:
+            _attempts = 0
+            while True:
+                if self.is_finished:
+                    raise RuntimeError
+
+                num = len(light) + len(dark)
+                self.progress_status.emit(conf.uuid, 'search', _attempts, MAX_ATTEMPTS_PER_BRIGHT_TYPE)
+                if len(_rnum_checked) >= conf.num_frames:
+                    raise ValueError('There aren\'t enough of dark/light in these clips')
+                rnum = rand_num_frames(_rnum_checked, partial(random.randrange, start=interval * num, stop=(interval * (num + 1)) - 1))
+                _rnum_checked.add(rnum)
+
+                clip = conf.current_output.source.clip[rnum]
+                stats = clip.std.PlaneStats()
+
+                avg = get_prop(stats, "PlaneStatsAverage", float, None, 0)
+                if 0.062746 <= avg <= 0.380000:
+                    if len(dark) < conf.dark_frames:
+                        dark.add(rnum)
+                        break
+                elif 0.450000 <= avg <= 0.800000:
+                    if len(light) < conf.light_frames:
+                        light.add(rnum)
+                        break
+
+                _attempts += 1
+                _max_attempts += 1
+
+                if _attempts > MAX_ATTEMPTS_PER_BRIGHT_TYPE:
+                    logging.warning(
+                        f'{MAX_ATTEMPTS_PER_BRIGHT_TYPE} attempts were made for sample {len(light) + len(dark)} '
+                        f'and no match found for dark/light; stopping iteration...')
+                    break
+
+            if _max_attempts > (curr_max_att := MAX_ATTEMPTS_PER_BRIGHT_TYPE * req_frame_count):
+                raise RecursionError(f'Comp: attempts max of {curr_max_att} has been reached!')
+
+            if _attempts < MAX_ATTEMPTS_PER_BRIGHT_TYPE:
+                self._progress_update_func(len(light) + len(dark), frames_needed, uuid=conf.uuid)
+
+        return list(map(Frame, dark | light))
+
+    def run(self, conf: FindFramesWorkerConfiguration) -> None:  # type: ignore
+        if conf.ptype_num:
+            if conf.picture_types == {'I', 'P', 'B'}:
+                interval = conf.num_frames // conf.ptype_num
+                samples = list(map(
+                    Frame, list(random.randrange(interval * i, (interval * (i + 1)) - 1) for i in range(conf.ptype_num))
+                ))
+            else:
+                logging.info('Making samples according to specified picture types...')
+                samples = self._select_samples_ptypes(conf)
+        else:
+            samples = []
+
+        if conf.dark_frames or conf.light_frames:
+            logging.info('Making samples according to specified brightness levels...')
+            samples.extend(self._find_dark_light(conf))
+
+        conf.samples.extend(samples)
+
+        self.finished.emit(conf.uuid)
+        self.deleteLater()

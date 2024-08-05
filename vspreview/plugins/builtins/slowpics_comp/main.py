@@ -612,7 +612,7 @@ class CompUploadWidget(ExtendedWidget):
 
         tags = self.create_slowpics_tags()
 
-        sample_frames_int = sorted([list(map(int, x)) for x in sample_frames])
+        sample_frames_int = [list(map(int, x)) for x in sample_frames]
 
         return WorkerConfiguration(
             uuid, self.outputs, collection_name,

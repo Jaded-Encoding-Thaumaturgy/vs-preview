@@ -16,7 +16,7 @@ from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
-from vstools import get_prop
+from vstools import PackageStorage, get_prop
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
@@ -24,7 +24,7 @@ from ..core import (
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
-from ..models import GeneralModel, VideoOutputs, SceningList
+from ..models import GeneralModel, SceningList, VideoOutputs
 from ..plugins import FileResolverPlugin, Plugins
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
@@ -135,7 +135,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.settings = MainSettings(MainToolbar)
 
-        self.current_config_dir = config_dir / self.VSP_DIR_NAME
+        self.current_config_dir = PackageStorage(config_dir).folder
         self.global_plugins_dir.mkdir(parents=True, exist_ok=True)
 
         self.app = cast(QApplication, QApplication.instance())

@@ -105,5 +105,6 @@ venv.bak/
 
 # vscode
 .vscode/
-# vs-preview
-.vspreview/
+
+# vsjet
+.vsjet

@@ -20,7 +20,7 @@ from vspreview.main import MainWindow
 
 from .utils import (
     MAX_ATTEMPTS_PER_BRIGHT_TYPE, MAX_ATTEMPTS_PER_PICTURE_TYPE, clear_filename, do_single_slowpic_upload,
-    get_slowpic_headers, get_slowpic_upload_headers, rand_num_frames
+    get_slowpic_headers, get_slowpic_upload_headers, rand_num_frames, get_frame_time
 )
 
 __all__ = [
@@ -148,10 +148,7 @@ class Worker(QObject):
 
                 image_name = (f'({all_image_types[i][j]}) ' if conf.frame_type else '') + f'{output.name}'
 
-                if conf.main.timeline.mode == conf.main.timeline.Mode.FRAME:
-                    frame_time = str(frame)
-                else:
-                    frame_time = output.to_time(frame).to_str_minimal(output.to_time(max_value))
+                frame_time = get_frame_time(conf.main, output, frame, max_value)
 
                 if is_comparison:
                     fields[f'comparisons[{j}].name'] = frame_time

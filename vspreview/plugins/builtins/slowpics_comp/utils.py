@@ -10,6 +10,9 @@ from requests import HTTPError, Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from vstools import SPath
 
+from vspreview.core import VideoOutput
+from vspreview.main import MainWindow
+
 KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
 MAX_ATTEMPTS_PER_BRIGHT_TYPE: Final[int] = 100
@@ -24,7 +27,9 @@ __all__ = [
 
     'clear_filename',
 
-    'rand_num_frames'
+    'rand_num_frames',
+
+    'get_frame_time'
 ]
 
 
@@ -122,3 +127,21 @@ def rand_num_frames(checked: set[int], rand_func: Callable[[], int]) -> int:
         rnum = rand_func()
 
     return rnum
+
+
+def get_frame_time(main: MainWindow, output: VideoOutput, frame: int, max_value: int) -> str:
+    frame_type: str = main.plugins['dev.setsugen.comp'].settings.globals.settings.frame_ntype
+
+    frame_str = str(frame)
+    time_str = output.to_time(frame).to_str_minimal(output.to_time(max_value))  # type: ignore
+
+    if frame_type == 'timeline':
+        return frame_str if main.timeline.mode == main.timeline.Mode.FRAME else time_str
+
+    if frame_type == 'frame':
+        return frame_str
+
+    if frame_type == 'time':
+        return time_str
+
+    return f'{time_str} / {frame_str}'

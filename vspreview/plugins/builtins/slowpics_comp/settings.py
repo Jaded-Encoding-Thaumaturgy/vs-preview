@@ -40,6 +40,9 @@ class CompSettings(AbstractSettingsWidget):
 
         self.compression_combobox = ComboBox[str](model=GeneralModel[str](['fast', 'slow', 'uncompressed']))
 
+        self.frame_ntype_combobox = ComboBox[str](model=GeneralModel[str](['timeline', 'frame', 'time', 'both']))
+        self.frame_ntype_combobox.setCurrentValue('both')
+
         self.tmdb_apikey_edit = LineEdit('API Key')
 
         label = QLabel(
@@ -69,6 +72,11 @@ class CompSettings(AbstractSettingsWidget):
                 ])
             ]
         )
+
+        HBoxLayout(self.vlayout, [
+            QLabel('Include frame position type:'),
+            self.frame_ntype_combobox
+        ])
 
         HBoxLayout(
             self.vlayout,
@@ -116,6 +124,10 @@ class CompSettings(AbstractSettingsWidget):
         return self.compression_combobox.currentIndex()
 
     @property
+    def frame_ntype(self) -> str:
+        return self.frame_ntype_combobox.currentValue()
+
+    @property
     def default_public(self) -> bool:
         return self.default_public_checkbox.isChecked()
 
@@ -137,7 +149,8 @@ class CompSettings(AbstractSettingsWidget):
             'compression': self.compression,
             'default_public': self.default_public,
             'default_nsfw': self.default_nsfw,
-            'collection_name_template': self.collection_name_template
+            'collection_name_template': self.collection_name_template,
+            'frame_ntype': self.frame_ntype
         }
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -150,3 +163,4 @@ class CompSettings(AbstractSettingsWidget):
         try_load(state, 'session_id', str, self.login_session_edit.setText)
         try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)
         try_load(state, 'compression', int, self.compression_combobox.setCurrentIndex)
+        try_load(state, 'frame_ntype', str, self.frame_ntype_combobox.setCurrentValue)

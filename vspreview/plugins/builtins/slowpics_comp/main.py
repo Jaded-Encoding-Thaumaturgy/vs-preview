@@ -39,7 +39,7 @@ class CompUploadWidget(ExtendedWidget):
         'current_frame_checkbox', 'is_public_checkbox', 'is_nsfw_checkbox',
         'output_url_copy_button', 'start_upload_button', 'stop_upload_button',
         'upload_progressbar', 'upload_status_label', 'upload_status_elements',
-        'random_dark_frame_edit', 'random_light_frame_edit'
+        'random_dark_frame_edit', 'random_light_frame_edit', 'random_seed_control'
     )
 
     settings: CompSettings
@@ -177,6 +177,9 @@ class CompUploadWidget(ExtendedWidget):
         self.collection_name_lineedit.setText(self.settings.collection_name_template)
 
         self.random_frames_control = FrameEdit(self)
+        self.random_frames_control.setMaximumWidth(150)
+        self.random_seed_control = LineEdit("Seed", self)
+        self.random_seed_control.setMaximumWidth(75)
 
         self.start_rando_frames_control = FrameEdit(self)
         self.end_rando_frames_control = FrameEdit(self)
@@ -266,7 +269,13 @@ class CompUploadWidget(ExtendedWidget):
         self.vlayout.addWidget(self.get_separator(True))
 
         HBoxLayout(self.vlayout, [
-            VBoxLayout([QLabel('Random:'), self.random_frames_control]),
+            VBoxLayout([
+                QLabel('Random:'),
+                HBoxLayout([
+                    self.random_frames_control,
+                    self.random_seed_control
+                ]),
+            ]),
             self.get_separator(False),
             VBoxLayout([
                 QLabel('Picture types:'),
@@ -682,6 +691,7 @@ class CompUploadWidget(ExtendedWidget):
 
                 lens_n = min(lens)
                 num = int(self.random_frames_control.value())
+                seed = int(x) if (x := (self.random_seed_control.text())) else None
                 dark_num = int(self.random_dark_frame_edit.value())
                 light_num = int(self.random_light_frame_edit.value())
 
@@ -719,6 +729,9 @@ class CompUploadWidget(ExtendedWidget):
                 return False
 
             self.curr_uuid = config.uuid
+
+            if seed is not None:
+                random.seed(seed)
 
             self.search_thread.started.connect(partial(self.search_worker.run, config))
             self.search_worker.finished.connect(partial(self.on_end_search, conf=config))

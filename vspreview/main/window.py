@@ -892,7 +892,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.statusbar.fps_label.setText(f'VFR {output.fps_num}/{output.fps_den} fps ')
 
-    def set_temporary_scenes(self, scenes: SceningList) -> None:
+    def set_temporary_scenes(self, scenes: list[SceningList]) -> None:
         self.temporary_scenes = scenes
 
     def update_timecodes_info(

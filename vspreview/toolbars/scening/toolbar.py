@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import re
-from copy import deepcopy
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
@@ -17,6 +16,7 @@ from ...core import (
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
 from .dialog import SceningListDialog
+from .import_files import supported_file_types
 from .settings import SceningSettings
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class SceningToolbar(AbstractToolbar):
     __slots__ = (
         *storable_attrs[1:],
         'export_template_pattern', 'export_template_scenes_pattern',
-        'scening_list_dialog', 'supported_file_types',
+        'scening_list_dialog',
         'add_list_button', 'remove_list_button', 'view_list_button',
         'toggle_first_frame_button', 'toggle_second_frame_button',
         'add_single_frame_button',
@@ -62,26 +62,6 @@ class SceningToolbar(AbstractToolbar):
         self.items_combobox.setModel(self.lists)
         self.scening_update_status_label()
         self.scening_list_dialog = SceningListDialog(self.main)
-
-        self.supported_file_types = {
-            'Aegisub Project (*.ass)': self.import_ass,
-            'AvsP Session (*.ses)': self.import_ses,
-            'CUE Sheet (*.cue)': self.import_cue,
-            'DGIndex Project (*.dgi)': self.import_dgi,
-            'IfoEdit Celltimes (*.txt)': self.import_celltimes,
-            'L-SMASH Works Index (*.lwi)': self.import_lwi,
-            'Matroska Timestamps v1 (*.txt)': self.import_matroska_timestamps_v1,
-            'Matroska Timestamps v2 (*.txt)': self.import_matroska_timestamps_v2,
-            'Matroska Timestamps v3 (*.txt)': self.import_matroska_timestamps_v3,
-            'Matroska XML Chapters (*.xml)': self.import_matroska_xml_chapters,
-            'OGM Chapters (*.txt)': self.import_ogm_chapters,
-            'TFM Log (*.txt)': self.import_tfm,
-            'VSEdit Bookmarks (*.bookmarks)': self.import_vsedit,
-            'x264/x265 2 Pass Log (*.log)': self.import_x264_2pass_log,
-            'x264/x265 QP File (*.qp *.txt)': self.import_qp,
-            'XviD Log (*.txt)': self.import_xvid,
-            'Generic Mappings (*.txt)': self.import_generic,
-        }
 
         self.items_combobox.valueChanged.connect(self.on_current_list_changed)
         self.add_list_button.clicked.connect(self.on_add_list_clicked)
@@ -177,7 +157,6 @@ class SceningToolbar(AbstractToolbar):
             self.export_multiline_button
         ]).addStretch(2)
 
-        # statusbar label
         self.status_label = QLabel(self)
         self.status_label.setVisible(False)
         self.main.statusbar.addPermanentWidget(self.status_label)
@@ -230,8 +209,10 @@ class SceningToolbar(AbstractToolbar):
 
     def get_notches(self) -> Notches:
         marks = Notches()
+
         if self.current_list is None:
             return marks
+
         for scene in self.current_list:
             marks.add(scene, cast(QColor, Qt.GlobalColor.green))
 
@@ -255,7 +236,6 @@ class SceningToolbar(AbstractToolbar):
     def is_notches_visible(self) -> bool:
         return self.always_show_scene_marks_checkbox.isChecked() or self.toggle_button.isChecked()
 
-    # list management
     def on_add_list_clicked(self, checked: bool | None = None) -> None:
         _, self.current_list_index = self.lists.add()
 
@@ -302,7 +282,6 @@ class SceningToolbar(AbstractToolbar):
         except IndexError:
             pass
 
-    # seeking
     def on_seek_to_prev_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
@@ -321,7 +300,6 @@ class SceningToolbar(AbstractToolbar):
             return
         self.main.switch_frame(new_pos)
 
-    # scene management
     def on_add_single_frame_clicked(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             self.on_add_list_clicked()
@@ -393,24 +371,22 @@ class SceningToolbar(AbstractToolbar):
         elif self.remove_at_current_frame_button.isEnabled():
             self.remove_at_current_frame_button.click()
 
-    # import
     def on_import_file_clicked(self, checked: bool | None = None) -> None:
-        filter_str = ';;'.join(self.supported_file_types.keys())
+        filter_str = ';;'.join(supported_file_types.keys())
         path_strs, file_type = QFileDialog.getOpenFileNames(
             self.main, caption='Open chapters file', filter=filter_str
         )
 
         paths = [Path(path_str) for path_str in path_strs]
         for path in paths:
-            self.import_file(self.supported_file_types[file_type], path)
+            self.import_file(supported_file_types[file_type], path)
 
     @fire_and_forget
     @set_status_label('Importing scening list')
-    def import_file(self, import_func: Callable[[Path, SceningList, int], None], path: Path) -> None:
-        out_of_range_count = 0
+    def import_file(self, import_func: Callable[[Path, SceningList], int], path: Path) -> None:
         scening_list, scening_list_index = self.lists.add(path.stem)
 
-        import_func(path, scening_list, out_of_range_count)
+        out_of_range_count = import_func(path, scening_list)
 
         if out_of_range_count > 0:
             logging.warning(
@@ -421,417 +397,6 @@ class SceningToolbar(AbstractToolbar):
         else:
             self.current_list_index = scening_list_index
 
-    def import_ass(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports lines as scenes.
-        Text is ignored.
-        '''
-        try:
-            from pysubs2 import load as pysubs2_load  # type: ignore[import]
-        except ModuleNotFoundError:
-            raise RuntimeError(
-                'vspreview: Can\'t import scenes from ass file, you\'re missing the `pysubs2` package!'
-            )
-
-        subs = pysubs2_load(str(path))
-        for line in subs:
-            t_start = Time(milliseconds=line.start)
-            t_end = Time(milliseconds=line.end)
-            try:
-                scening_list.add(Frame(t_start), Frame(t_end))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_celltimes(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports cell times as single-frame scenes
-        '''
-
-        for line in path.read_text('utf8').splitlines():
-            try:
-                scening_list.add(Frame(int(line)))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_cue(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports tracks as scenes.
-        Uses TITLE for scene label.
-        '''
-        try:
-            from cueparser import CueSheet  # type: ignore[import]
-        except ModuleNotFoundError:
-            raise RuntimeError(
-                'vspreview: Can\'t import scenes from cue file, you\'re missing the `cueparser` package!'
-            )
-
-        def offset_to_time(offset: str) -> Time | None:
-            pattern = re.compile(r'(\d{1,2}):(\d{1,2}):(\d{1,2})')
-            match = pattern.match(offset)
-            if match is None:
-                return None
-            return Time(minutes=int(match[1]), seconds=int(match[2]), milliseconds=int(match[3]) / 75 * 1000)
-
-        cue_sheet = CueSheet()
-        cue_sheet.setOutputFormat('')
-        cue_sheet.setData(path.read_text('utf8'))
-        cue_sheet.parse()
-
-        for track in cue_sheet.tracks:
-            if track.offset is None:
-                continue
-            offset = offset_to_time(track.offset)
-            if offset is None:
-                logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't supported.")
-                continue
-            start = Frame(offset)
-
-            end = None
-            if track.duration is not None:
-                end = Frame(offset + Time(track.duration))
-
-            label = ''
-            if track.title is not None:
-                label = track.title
-
-            try:
-                scening_list.add(start, end, label)
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_dgi(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports IDR frames as single-frame scenes.
-        '''
-        pattern = re.compile(r'IDR\s\d+\n(\d+):FRM', re.RegexFlag.MULTILINE)
-        for match in pattern.findall(path.read_text('utf8')):
-            try:
-                scening_list.add(Frame(match))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_lwi(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports Key=1 frames as single-frame scenes.
-        Ignores everything besides Index=0 video stream.
-        '''
-        AV_CODEC_ID_FIRST_AUDIO = 0x10000
-        STREAM_INDEX = 0
-        IS_KEY = 1
-
-        pattern = re.compile(r'Index={}.*?Codec=(\d+).*?\n.*?Key=(\d)'.format(
-            STREAM_INDEX
-        ))
-
-        frame = Frame(0)
-        for match in pattern.finditer(path.read_text('utf8'), re.RegexFlag.MULTILINE):
-            if int(match[1]) >= AV_CODEC_ID_FIRST_AUDIO:
-                frame += Frame(1)
-                continue
-
-            if not int(match[2]) == IS_KEY:
-                frame += Frame(1)
-                continue
-
-            try:
-                scening_list.add(deepcopy(frame))
-            except ValueError:
-                out_of_range_count += 1
-
-            frame += Frame(1)
-
-    def import_matroska_xml_chapters(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports chapters as scenes.
-        Preserve end time and text if they're present.
-        '''
-        from xml.etree import ElementTree
-
-        timestamp_pattern = re.compile(r'(\d{2}):(\d{2}):(\d{2}(?:\.\d{3})?)')
-
-        try:
-            root = ElementTree.parse(str(path)).getroot()
-        except ElementTree.ParseError as exc:
-            logging.warning(f"Scening import: error occurred while parsing '{path.name}':")
-            logging.warning(exc.msg)
-            return
-        for chapter in root.iter('ChapterAtom'):
-            start_element = chapter.find('ChapterTimeStart')
-            if start_element is None or start_element.text is None:
-                continue
-            match = timestamp_pattern.match(start_element.text)
-            if match is None:
-                continue
-            start = Frame(Time(hours=int(match[1]), minutes=int(match[2]), seconds=float(match[3])))
-
-            end = None
-            end_element = chapter.find('ChapterTimeEnd')
-            if end_element is not None and end_element.text is not None:
-                match = timestamp_pattern.match(end_element.text)
-                if match is not None:
-                    end = Frame(Time(hours=int(match[1]), minutes=int(match[2]), seconds=float(match[3])))
-
-            label = ''
-            label_element = chapter.find('ChapterDisplay/ChapterString')
-            if label_element is not None and label_element.text is not None:
-                label = label_element.text
-
-            try:
-                scening_list.add(start, end, label)
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_ogm_chapters(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports chapters as single-frame scenes.
-        Uses NAME for scene label.
-        '''
-        pattern = re.compile(
-            r'(CHAPTER\d+)=(\d+):(\d+):(\d+(?:\.\d+)?)\n\1NAME=(.*)',
-            re.RegexFlag.MULTILINE
-        )
-        for match in pattern.finditer(path.read_text('utf8')):
-            time = Time(hours=int(match[2]), minutes=int(match[3]), seconds=float(match[4]))
-            try:
-                scening_list.add(Frame(time), label=match[5])
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_qp(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports I- and K-frames as single-frame scenes.
-        '''
-        pattern = re.compile(r'(\d+)\sI|K')
-        for match in pattern.findall(path.read_text('utf8')):
-            try:
-                scening_list.add(Frame(int(match)))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_ses(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports bookmarks as single-frame scenes
-        '''
-        import pickle
-
-        with path.open('rb') as f:
-            try:
-                session = pickle.load(f)
-            except pickle.UnpicklingError:
-                logging.warning('Scening import: failed to load .ses file.')
-                return
-        if 'bookmarks' not in session:
-            return
-
-        for bookmark in session['bookmarks']:
-            try:
-                scening_list.add(Frame(bookmark[0]))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_matroska_timestamps_v1(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports listed scenes.
-        Uses FPS for scene label.
-        '''
-        pattern = re.compile(r'(\d+),(\d+),(\d+(?:\.\d+)?)')
-
-        for match in pattern.finditer(path.read_text('utf8')):
-            try:
-                scening_list.add(
-                    Frame(int(match[1])), Frame(int(match[2])), '{:.3f} fps'.format(float(match[3]))
-                )
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_matroska_timestamps_v2(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports intervals of constant FPS as scenes.
-        Uses FPS for scene label.
-        '''
-        timestamps = list[Time]()
-        for line in path.read_text('utf8').splitlines():
-            try:
-                timestamps.append(Time(milliseconds=float(line)))
-            except ValueError:
-                continue
-
-        if len(timestamps) < 2:
-            logging.warning(
-                "Scening import: timestamps file contains less than 2 timestamps, so there's nothing to import."
-            )
-            return
-
-        deltas = [
-            timestamps[i] - timestamps[i - 1]
-            for i in range(1, len(timestamps))
-        ]
-        scene_delta = deltas[0]
-        scene_start = Frame(0)
-        scene_end: Frame | None = None
-        for i in range(1, len(deltas)):
-            if abs(round(float(deltas[i] - scene_delta), 6)) <= 0.000_001:
-                continue
-            # TODO: investigate, why offset by -1 is necessary here
-            scene_end = Frame(i - 1)
-            try:
-                scening_list.add(scene_start, scene_end, '{:.3f} fps'.format(1 / float(scene_delta)))
-            except ValueError:
-                out_of_range_count += 1
-            scene_start = Frame(i)
-            scene_end = None
-            scene_delta = deltas[i]
-
-        if scene_end is None:
-            try:
-                scening_list.add(
-                    scene_start, Frame(len(timestamps) - 1),
-                    '{:.3f} fps'.format(1 / float(scene_delta))
-                )
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_matroska_timestamps_v3(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports listed scenes, ignoring gaps.
-        Uses FPS for scene label.
-        '''
-        pattern = re.compile(
-            r'^((?:\d+(?:\.\d+)?)|gap)(?:,\s?(\d+(?:\.\d+)?))?',
-            re.RegexFlag.MULTILINE
-        )
-
-        assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
-        if len(mmatch := assume_pattern.findall(path.read_text('utf8'))) > 0:
-            default_fps = float(mmatch[0])
-        else:
-            logging.warning('Scening import: "assume" entry not found.')
-            return
-
-        pos = Time()
-        for match in pattern.finditer(path.read_text('utf8')):
-            if match[1] == 'gap':
-                pos += Time(seconds=float(match[2]))
-                continue
-
-            interval = Time(seconds=float(match[1]))
-            fps = float(match[2]) if (match.lastindex or 0) >= 2 else default_fps
-
-            try:
-                scening_list.add(Frame(pos), Frame(pos + interval), '{:.3f} fps'.format(fps))
-            except ValueError:
-                out_of_range_count += 1
-
-            pos += interval
-
-    def import_tfm(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports TFM's 'OVR HELP INFORMATION'.
-        Single combed frames are put into single-frame scenes.
-        Frame groups are put into regular scenes.
-        Combed probability is used for label.
-        '''
-        class TFMFrame(Frame):
-            mic: int | None
-
-        tfm_frame_pattern = re.compile(r'(\d+)\s\((\d+)\)')
-        tfm_group_pattern = re.compile(r'(\d+),(\d+)\s\((\d+(?:\.\d+)%)\)')
-
-        log = path.read_text('utf8')
-
-        start_pos = log.find('OVR HELP INFORMATION')
-        if start_pos == -1:
-            logging.warning("Scening import: TFM log doesn't contain OVR Help Information.")
-            return
-        log = log[start_pos:]
-
-        tfm_frames = set[TFMFrame]()
-        for match in tfm_frame_pattern.finditer(log):
-            tfm_frame = TFMFrame(int(match[1]))
-            tfm_frame.mic = int(match[2])
-            tfm_frames.add(tfm_frame)
-
-        for match in tfm_group_pattern.finditer(log):
-            try:
-                scene = scening_list.add(Frame(int(match[1])), Frame(int(match[2])), f'{match[3]} combed')
-            except ValueError:
-                out_of_range_count += 1
-                continue
-
-            tfm_frames -= set(range(int(scene.start), int(scene.end) + 1))
-
-        for tfm_frame in tfm_frames:
-            try:
-                scening_list.add(tfm_frame, label=str(tfm_frame.mic))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_vsedit(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports bookmarks as single-frame scenes
-        '''
-
-        frames = []
-
-        for bookmark in path.read_text('utf8').split(', '):
-            try:
-                frames.append(int(bookmark))
-            except ValueError:
-                out_of_range_count += 1
-
-        ranges = list[list[int]]()
-        prev_x: int
-        for x in frames:
-            if not ranges:
-                ranges.append([x])
-            elif x - prev_x == 1:
-                ranges[-1].append(x)
-            else:
-                ranges.append([x])
-            prev_x = int(x)
-
-        for rang in ranges:
-            scening_list.add(
-                Frame(rang[0]),
-                Frame(rang[-1]) if len(rang) > 1 else None
-            )
-
-    def import_x264_2pass_log(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports I- and K-frames as single-frame scenes.
-        '''
-        pattern = re.compile(r'in:(\d+).*type:I|K')
-        for match in pattern.findall(path.read_text('utf8')):
-            try:
-                scening_list.add(Frame(int(match)))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_xvid(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Imports I-frames as single-frame scenes.
-        '''
-        for i, line in enumerate(path.read_text('utf8').splitlines()):
-            if not line.startswith('i'):
-                continue
-            try:
-                scening_list.add(Frame(i - 3))
-            except ValueError:
-                out_of_range_count += 1
-
-    def import_generic(self, path: Path, scening_list: SceningList, out_of_range_count: int) -> None:
-        '''
-        Import generic (rfs style) frame mappings: {start end}
-
-        '''
-        for line in path.read_text('utf8').splitlines():
-            try:
-                fnumbers = [int(n) for n in line.split()]
-                scening_list.add(Frame(fnumbers[0]), Frame(fnumbers[1]))
-            except ValueError:
-                out_of_range_count += 1
-
-    # export
     def export_multiline(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
@@ -849,10 +414,11 @@ class SceningToolbar(AbstractToolbar):
             self.main.show_message('Export template contains invalid placeholders.')
             return
 
-        self.main.clipboard.setText(export_str)
+        if self.main.clipboard:
+            self.main.clipboard.setText(export_str)
+
         self.main.show_message('Scening data exported to the clipboard')
 
-    # misc
     def check_add_to_list_possibility(self) -> None:
         self.add_to_list_button.setEnabled(False)
 
@@ -909,7 +475,7 @@ class SceningToolbar(AbstractToolbar):
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
 
         always_show_scene_marks = None
-        try_load(state, 'always_show_scene_marks', bool, always_show_scene_marks, nullable=True)
+        try_load(state, 'always_show_scene_marks', bool, always_show_scene_marks)
         if always_show_scene_marks is None:
             always_show_scene_marks = self.settings.always_show_scene_marks
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from functools import partial
 from multiprocessing import cpu_count
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QShortcut
@@ -312,7 +312,7 @@ class MainSettings(AbstractToolbarSettings):
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return {
             'autosave_interval': self.autosave_interval,
             'base_ppi': self.base_ppi,
@@ -332,7 +332,7 @@ class MainSettings(AbstractToolbarSettings):
             'color_management': self.color_management
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'autosave_interval', Time, self.autosave_control.setValue)
         try_load(state, 'base_ppi', int, self.base_ppi_spinbox.setValue)
         try_load(state, 'dark_theme', bool, self.dark_theme_checkbox.setChecked)
@@ -356,7 +356,7 @@ class WindowSettings(QYAMLObjectSingleton):
         'timeline_mode', 'window_geometry', 'window_state', 'zoom_index', 'x_pos', 'y_pos'
     )
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         main = main_window()
 
         return {
@@ -368,7 +368,7 @@ class WindowSettings(QYAMLObjectSingleton):
             'y_pos': main.graphics_view.verticalScrollBar().value(),
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'timeline_mode', str, self.__setattr__)
         try_load(state, 'window_geometry', bytes, self.__setattr__)
         try_load(state, 'window_state', bytes, self.__setattr__)

@@ -6,7 +6,7 @@ import re
 import string
 from datetime import datetime
 from functools import partial
-from typing import Any, Callable, Mapping
+from typing import Any, Callable
 from uuid import uuid4
 
 import requests
@@ -796,11 +796,11 @@ class CompUploadWidget(ExtendedWidget):
 
         return False
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'collection_format': self.collection_name_lineedit.text()
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         super().__setstate__(state)
         try_load(state, 'collection_format', str, self.collection_name_lineedit.setText)

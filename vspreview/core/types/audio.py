@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from array import array
 from math import floor
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 import vapoursynth as vs
 from PyQt6.QtCore import QIODevice
@@ -132,5 +132,5 @@ class AudioOutput(AbstractYAMLObject):
     def to_time(self, frame: Frame) -> Time:
         return Time(seconds=self._calculate_seconds(int(frame)))
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'name', str, self.__setattr__)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QLabel
@@ -72,14 +72,14 @@ class PlaybackSettings(AbstractToolbarSettings):
         selected_kernel = self.kernel_combobox.currentValue()
         return self.BICUBIC_KERNELS[selected_kernel]
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'playback_buffer_size': self.playback_buffer_size,
             'dither_type': self.dither_type,
             'resample_kernel_chroma': self.kernel_combobox.currentValue()
         }
 
-    def _setstate_(self, state: Mapping[str, Any]) -> None:
+    def _setstate_(self, state: dict[str, Any]) -> None:
         try_load(state, 'playback_buffer_size', int, self.buffer_size_spinbox.setValue)
         try_load(state, 'dither_type', str, self.dither_type_combobox.setCurrentValue)
         try_load(state, 'resample_kernel_chroma', str, self.kernel_combobox.setCurrentValue)

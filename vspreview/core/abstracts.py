@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Mapping, Sequence, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Sequence, TypeAlias, cast, overload
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
@@ -286,7 +286,7 @@ class AbstractQItem:
     def __get_storable_attr__(self) -> tuple[str, ...]:
         return self.storable_attrs
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return {
             attr_name: getattr(self, attr_name)
             for attr_name in self.__get_storable_attr__()
@@ -346,7 +346,7 @@ class AbstractSettingsWidget(ExtendedWidget, QYAMLObjectSingleton):
     def set_defaults(self) -> None:
         pass
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return {}
 
 
@@ -459,7 +459,7 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
 
         return tuple(attributes)
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         if not self._no_visibility_choice:
             try_load(state, 'visibility', bool, self.on_toggle)
         try_load(state, 'settings', AbstractToolbarSettings, self.__setattr__)
@@ -505,7 +505,7 @@ def storage_err_msg(name: str, level: int = 0) -> str:
 
 @overload
 def try_load(
-    state: Mapping[str, Any], name: str, expected_type: type[T],
+    state: dict[str, Any], name: str, expected_type: type[T],
     receiver: Literal[None] = ...,
     error_msg: str | None = None, nullable: bool = False
 ) -> T:
@@ -514,7 +514,7 @@ def try_load(
 
 @overload
 def try_load(
-    state: Mapping[str, Any], name: str, expected_type: type[T],
+    state: dict[str, Any], name: str, expected_type: type[T],
     receiver: T | _OneArgumentFunction | _SetterFunction = ...,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:
@@ -522,7 +522,7 @@ def try_load(
 
 
 def try_load(
-    state: Mapping[str, Any], name: str, expected_type: type[T],
+    state: dict[str, Any], name: str, expected_type: type[T],
     receiver: T | _OneArgumentFunction | _SetterFunction | None = None,
     error_msg: str | None = None, nullable: bool = False
 ) -> None:

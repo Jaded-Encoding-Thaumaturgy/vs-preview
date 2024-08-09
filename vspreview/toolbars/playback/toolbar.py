@@ -6,7 +6,7 @@ from fractions import Fraction
 from functools import partial
 from math import floor
 from time import perf_counter_ns
-from typing import TYPE_CHECKING, Any, Mapping, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import vapoursynth as vs
 from PyQt6.QtCore import QKeyCombination, Qt
@@ -611,13 +611,13 @@ class PlaybackToolbar(AbstractToolbar):
         if updateGui:
             qt_silent_call(self.audio_volume_slider.setValue, self.volume)
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'seek_interval_frame': self.seek_frame_control.value(),
             'current_audio_output_index': self.audio_outputs_combobox.currentIndex()
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'seek_interval_frame', Frame, self.seek_frame_control.setValue)
         try_load(state, 'audio_outputs', AudioOutputs, self.rescan_outputs)
         try_load(state, 'current_audio_output_index', int, self.audio_outputs_combobox.setCurrentIndex)

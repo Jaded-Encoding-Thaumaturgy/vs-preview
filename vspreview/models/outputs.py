@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Iterator, Mapping, OrderedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Iterator, OrderedDict, TypeVar
 
 import vapoursynth as vs
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
@@ -31,10 +31,10 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
     main: MainWindow
 
-    def __init__(self, main: MainWindow, local_storage: Mapping[str, T] | None = None) -> None:
+    def __init__(self, main: MainWindow, local_storage: dict[str, T] | None = None) -> None:
         self.setValue(main, local_storage)
 
-    def setValue(self, main: MainWindow, local_storage: Mapping[str, T] | None = None) -> None:
+    def setValue(self, main: MainWindow, local_storage: dict[str, T] | None = None) -> None:
         super().__init__()
 
         self.items = []
@@ -128,10 +128,10 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
 
         return True
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return dict(zip([str(x.index) for x in self.items], self.items), type=self.out_type.__name__)
 
-    def __setstate__(self, state: Mapping[str, T]) -> None:
+    def __setstate__(self, state: dict[str, T]) -> None:
         type_string = ''
         try_load(state, 'type', str, type_string)
 

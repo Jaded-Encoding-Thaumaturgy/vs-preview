@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from copy import deepcopy
-from typing import Any, Iterator, Mapping
+from typing import Any, Iterator
 
 from PyQt6.QtCore import QAbstractListModel, QAbstractTableModel, QModelIndex, Qt
 
@@ -245,11 +245,11 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         return result
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return {name: getattr(self, name)
                 for name in self.__slots__}
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try:
             max_value = state['max_value']
             if not isinstance(max_value, Frame):
@@ -382,7 +382,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
         else:
             raise IndexError
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         self.clean_items()
 
         return {
@@ -390,7 +390,7 @@ class SceningLists(QAbstractListModel, QYAMLObject):
             for name in self.__slots__
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try:
             items = state['items']
             if not isinstance(items, list):

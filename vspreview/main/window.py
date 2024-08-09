@@ -8,7 +8,7 @@ from functools import partial
 from importlib import reload as reload_module
 from pathlib import Path
 from time import time
-from typing import Any, Iterable, Mapping, cast
+from typing import Any, Iterable, cast
 
 import vapoursynth as vs
 from PyQt6 import QtCore
@@ -957,7 +957,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if playback_active:
             self.toolbars.playback.play()
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'window_settings': self.window_settings
         }

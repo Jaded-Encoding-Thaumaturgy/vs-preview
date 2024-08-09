@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
@@ -446,13 +446,13 @@ class MiscToolbar(AbstractToolbar):
 
         self.main.clipboard.setText(text)
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'save_file_name_template': self.save_template_lineedit.text(),
             'show_debug': hasattr(self, 'show_debug_checkbox') and self.show_debug_checkbox.isChecked()
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'save_file_name_template', str, self.save_template_lineedit.setText)
 
         if hasattr(self, 'show_debug_checkbox'):

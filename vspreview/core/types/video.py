@@ -5,7 +5,7 @@ import os
 from ctypes import Array
 from fractions import Fraction
 from itertools import count as iter_count
-from typing import TYPE_CHECKING, Any, Mapping, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import vapoursynth as vs
 from PyQt6 import sip
@@ -618,7 +618,7 @@ class VideoOutput(AbstractYAMLObject):
 
         return new_output
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'name', str, self.__setattr__)
         try_load(state, 'last_showed_frame', Frame, self.__setattr__)
         try_load(state, 'play_fps', Fraction, self.__setattr__)

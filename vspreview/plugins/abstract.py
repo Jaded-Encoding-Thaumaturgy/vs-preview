@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, Mapping, NamedTuple
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, NamedTuple
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QSizePolicy, QWidget
@@ -30,7 +30,7 @@ class SettingsNamespace(dict[str, Any]):
     def __delattr__(self, __key: str) -> None:
         return self.__delitem__(__key)
 
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+    def __setstate__(self, state: dict[str, dict[str, Any]]) -> None:
         self.update(state)
 
 
@@ -41,7 +41,7 @@ class PluginSettings(QYAMLObject):
         self.globals = SettingsNamespace()
         self.fired_events = [False, False]
 
-    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+    def __getstate__(self) -> dict[str, dict[str, Any]]:
         return {'local': self.local, 'globals': self.globals}
 
     def __setstate__(self, isglobal: bool) -> None:

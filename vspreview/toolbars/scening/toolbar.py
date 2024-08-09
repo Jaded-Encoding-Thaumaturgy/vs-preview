@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Mapping, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from PyQt6.QtCore import QKeyCombination, QModelIndex, Qt
 from PyQt6.QtGui import QColor
@@ -881,14 +881,14 @@ class SceningToolbar(AbstractToolbar):
         second_frame_text = str(self.second_frame) if self.second_frame is not None else ''
         self.status_label.setText(f'Scening: {first_frame_text} - {second_frame_text} ')
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'label': self.label_lineedit.text(),
             'scening_export_template': self.export_template_lineedit.text(),
             'always_show_scene_marks': self.always_show_scene_marks_checkbox.isChecked(),
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'lists', SceningLists, self.__setattr__)
         try_load(state, 'current_list_index', int, self.current_list_index)
         try_load(state, 'first_frame', Frame, self.__setattr__, nullable=True)

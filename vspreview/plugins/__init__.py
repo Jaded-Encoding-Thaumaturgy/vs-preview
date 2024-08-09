@@ -6,7 +6,7 @@ from functools import lru_cache
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Mapping, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, TypeVar, overload
 
 from PyQt6.QtWidgets import QWidget
 from stgpytools import KwargsT
@@ -213,13 +213,13 @@ def get_installed_plugins(
 
 
 class LocalPluginsSettings(AbstractYAMLObjectSingleton):
-    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+    def __getstate__(self) -> dict[str, dict[str, Any]]:
         return self.state | {
             plugin._config.namespace: plugin.settings.local
             for plugin in Plugins.instance[0]
         }
 
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+    def __setstate__(self, state: dict[str, dict[str, Any]]) -> None:
         if not hasattr(self, 'state'):
             self.state = {}
 
@@ -237,13 +237,13 @@ class LocalPluginsSettings(AbstractYAMLObjectSingleton):
 
 
 class GlobalPluginsSettings(AbstractYAMLObjectSingleton):
-    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+    def __getstate__(self) -> dict[str, dict[str, Any]]:
         return self.state | {
             plugin._config.namespace: plugin.settings.globals
             for plugin in Plugins.instance[0]
         }
 
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+    def __setstate__(self, state: dict[str, dict[str, Any]]) -> None:
         if not hasattr(self, 'state'):
             self.state = {}
 
@@ -428,7 +428,7 @@ class Plugins(AbstractYAMLObjectSingleton):
         def __iter__(self) -> Iterator[AbstractPlugin]:
             ...
 
-    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+    def __getstate__(self) -> dict[str, dict[str, Any]]:
         GlobalPluginsSettings().state = (
             {
                 k: v.globals

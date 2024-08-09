@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Iterator, Mapping, cast, overload
 
-from ..core import AbstractToolbar, AbstractToolbarSettings, AbstractYAMLObjectSingleton, storage_err_msg
+from ..core import AbstractToolbar, AbstractYAMLObjectSingleton, storage_err_msg
 from .main import MainToolbar
 from .playback import PlaybackToolbar
 
@@ -93,13 +93,13 @@ class Toolbars(AbstractYAMLObjectSingleton):
         def __iter__(self) -> Iterator[AbstractToolbar]:
             ...
 
-    def __getstate__(self) -> Mapping[str, Mapping[str, Any]]:
+    def __getstate__(self) -> dict[str, dict[str, Any]]:
         return {
             toolbar_name: getattr(self, toolbar_name).__getstate__()
             for toolbar_name in self.toolbars
         }
 
-    def __setstate__(self, state: Mapping[str, Mapping[str, Any]]) -> None:
+    def __setstate__(self, state: dict[str, dict[str, Any]]) -> None:
         for toolbar_name in self.toolbars:
             try:
                 storage = state[toolbar_name]

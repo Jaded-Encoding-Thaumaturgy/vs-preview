@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any
 
 from .units import Frame
 from .yaml import YAMLObjectWrapper
@@ -69,7 +69,7 @@ class Scene(YAMLObjectWrapper):
     def __contains__(self, frame: Frame) -> bool:
         return self.start <= frame <= self.end
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try:
             if not isinstance(state['start'], Frame):
                 raise TypeError("Start frame of Scene is not a Frame. It's most probably corrupted.")

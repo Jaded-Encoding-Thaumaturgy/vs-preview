@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox
@@ -166,13 +166,13 @@ class MainToolbar(AbstractToolbar):
         elif self.main.timeline.mode == self.main.timeline.Mode.FRAME:
             self.main.timeline.mode = self.main.timeline.Mode.TIME
 
-    def __getstate__(self) -> Mapping[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
             'current_output_index': self.outputs_combobox.currentIndex(),
             'sync_outputs': self.sync_outputs_checkbox.isChecked()
         }
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'outputs', VideoOutputs, self.rescan_outputs)
         try_load(state, 'current_output_index', int, self.main.switch_output)
         try_load(state, 'sync_outputs', bool, self.sync_outputs_checkbox.setChecked)

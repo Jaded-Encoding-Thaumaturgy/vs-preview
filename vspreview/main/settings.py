@@ -189,7 +189,7 @@ class MainSettings(AbstractToolbarSettings):
         return main_window().force_storage or self.force_old_storages_removal_checkbox.isChecked()
 
     @property
-    def azerty_keybinds(self) -> int:
+    def azerty_keybinds(self) -> bool:
         return self.azerty_keyboard_checkbox.isChecked()
 
     @property
@@ -329,7 +329,8 @@ class MainSettings(AbstractToolbarSettings):
             'dragnavigator_timeout': self.dragnavigator_timeout,
             'dragtimeline_timeout': self.dragtimeline_timeout,
             'plugins_bar_save_behaviour_index': self.plugins_bar_save_behaviour,
-            'color_management': self.color_management
+            'color_management': self.color_management,
+            'azerty_keybinds': self.azerty_keybinds,
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
@@ -349,6 +350,7 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'plugins_bar_save_behaviour_index', int, self.plugins_save_position_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
+        try_load(state, 'azerty_keybinds', bool, self.azerty_keyboard_checkbox.setChecked)
 
 
 class WindowSettings(QYAMLObjectSingleton):

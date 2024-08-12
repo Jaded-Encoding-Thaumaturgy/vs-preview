@@ -256,7 +256,7 @@ class VideoOutput(AbstractYAMLObject):
                 self._timecodes_frame_to_time.append(round(acc, 3))
             self.total_time = Time(seconds=acc)
         else:
-            self.total_time = self.to_time(self.total_frames - Frame(1))
+            self.total_time = self.to_time(self.total_frames)
 
         if not hasattr(self, 'crop_values'):
             self.crop_values = CroppingInfo(0, 0, self.width, self.height, False, False)

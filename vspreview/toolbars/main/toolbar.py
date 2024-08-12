@@ -145,7 +145,7 @@ class MainToolbar(AbstractToolbar):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.outputs_combobox.setCurrentIndex, index)
         qt_silent_call(self.frame_control.setMaximum, self.main.current_output.total_frames - 1)
-        qt_silent_call(self.time_control.setMaximum, self.main.current_output.total_time - Frame(1))
+        qt_silent_call(self.time_control.setMaximum, self.main.current_output.total_time)
 
     def rescan_outputs(self, outputs: VideoOutputs | None = None) -> None:
         self.outputs = outputs if isinstance(outputs, VideoOutputs) else VideoOutputs(self.main)

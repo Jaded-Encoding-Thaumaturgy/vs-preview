@@ -83,7 +83,7 @@ class AudioOutput(AbstractYAMLObject):
         self.fps_den = self.SAMPLES_PER_FRAME
         self.fps = self.fps_num / self.fps_den
         self.total_frames = Frame(self.vs_output.num_frames)
-        self.total_time = self.to_time(self.total_frames - Frame(1))
+        self.total_time = self.to_time(self.total_frames)
 
         self.audio_buffer = array(self.arrayType, [0] * self.SAMPLES_PER_FRAME * (self.vs_output.bytes_per_sample // 2))
 

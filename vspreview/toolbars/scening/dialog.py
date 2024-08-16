@@ -113,8 +113,8 @@ class SceningListDialog(ExtendedDialog):
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         self.start_frame_control.setMaximum(self.main.current_output.total_frames - 1)
         self.end_frame_control.setMaximum(self.main.current_output.total_frames - 1)
-        self.start_time_control.setMaximum(self.main.current_output.total_time - Frame(1))
-        self.end_time_control.setMaximum(self.main.current_output.total_time - Frame(1))
+        self.start_time_control.setMaximum(self.main.current_output.total_time)
+        self.end_time_control.setMaximum(self.main.current_output.total_time)
 
     def on_delete_clicked(self, checked: bool | None = None) -> None:
         for model_index in self.tableview.selectionModel().selectedRows():

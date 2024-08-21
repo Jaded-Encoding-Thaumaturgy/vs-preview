@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QTableView
+from PyQt6.QtWidgets import QLabel, QSizePolicy, QTableView, QWidget
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
-from vspreview.core import Frame, TableModel
+from vspreview.core import Frame, HBoxLayout, Stretch, Switch, TableModel, VBoxLayout
 from vspreview.plugins import AbstractPlugin, PluginConfig
 
 __all__ = [
@@ -71,13 +71,28 @@ _frame_props_lut = {
 ])
 
 
-class FramePropsPlugin(AbstractPlugin, QTableView):
+class FramePropsPlugin(AbstractPlugin, QWidget):
     _config = PluginConfig('dev.setsugen.frame_props', 'Frame Props')
 
     def setup_ui(self) -> None:
-        self.verticalHeader().hide()
+        self.table = QTableView()
+        self.table._model = TableModel([], ['Name', 'Data'], False)
+        self.table.verticalHeader().hide()
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setFirstSectionMovable(False)
 
-        self._model = TableModel([], ['Name', 'Data'], False)
+        def _update_prettify(clicked: bool) -> None:
+            self.settings.local.prettify = clicked
+            self.on_current_frame_changed(None)
+
+        self.prettify = Switch(10, 24, clicked=_update_prettify, tooltip='Pretty')
+        if 'prettify' not in self.settings.local or self.settings.local.prettify:
+            self.prettify.click()
+
+        VBoxLayout(self, [
+            HBoxLayout([QLabel('Prettify output:'), self.prettify, Stretch()]),
+            self.table
+        ])
 
     def on_current_frame_changed(self, frame: Frame) -> None:
         if (props := self.main.current_output.props) is None:
@@ -86,24 +101,28 @@ class FramePropsPlugin(AbstractPlugin, QTableView):
         self.update_frame_props(props)
 
     def update_frame_props(self, props: FrameProps) -> None:
-        self._model._data = []
+        self.table._model._data = []
 
-        for key in sorted(props.keys()):
-            if key in _frame_props_excluded_keys:
-                continue
+        if self.prettify.isChecked():
+            for key in sorted(props.keys()):
+                if key in _frame_props_excluded_keys:
+                    continue
 
-            if key in _frame_props_lut:
-                title = next(iter(_frame_props_lut[key].keys()))
-                value_str = _frame_props_lut[key][title][props[key]]  # type: ignore
-            else:
-                title = key[1:] if key.startswith('_') else key
-                value_str = str(props[key])
+                if key in _frame_props_lut:
+                    title = next(iter(_frame_props_lut[key].keys()))
+                    value_str = _frame_props_lut[key][title][props[key]]  # type: ignore
+                else:
+                    title = key[1:] if key.startswith('_') else key
+                    value_str = str(props[key])
 
-            if value_str is not None:
-                self._model._data.append([title, value_str])
+                if value_str is not None:
+                    self.table._model._data.append([title, value_str])
 
-        if '_SARNum' in props and '_SARDen' in props:
-            self._model._data.append(['Pixel aspect ratio', f"{props['_SARNum']}/{props['_SARDen']}"])
+            if '_SARNum' in props and '_SARDen' in props:
+                self.table._model._data.append(['Pixel aspect ratio', f"{props['_SARNum']}/{props['_SARDen']}"])
+        else:
+            for key, value in props.items():
+                self.table._model._data.append([key, str(value)])
 
-        self.setModel(self._model)
-        self._model.layoutChanged.emit()
+        self.table.setModel(self.table._model)
+        self.table._model.layoutChanged.emit()

@@ -498,7 +498,9 @@ def storage_err_msg(name: str, level: int = 0) -> str:
     import inspect
 
     pretty_name = name.replace('current_', ' ').replace('_enabled', ' ').replace('_', ' ').strip()
-    caller_name = inspect.stack()[level + 1][0].f_locals['self'].__class__.__name__
+    frame = inspect.stack()[level + 1]
+    caller_name = frame[0].f_locals['self'].__class__.__name__
+    frame = None
 
     return f'Storage loading ({caller_name}): failed to parse {pretty_name}. Using default.'
 

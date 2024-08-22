@@ -25,6 +25,8 @@ def set_output(
     scenes: Keyframes | list[tuple[int, int]] | list[Keyframes | list[tuple[int, int]]] | None = None,
     **kwargs: Any
 ) -> None:
+    from .info import is_preview
+
     index = len(get_outputs())
 
     ref_id = str(id(node))
@@ -49,7 +51,12 @@ def set_output(
                 name = vname
                 break
 
+        current_frame = None
+
     node.set_output(index, alpha)
+
+    if not is_preview():
+        return
 
     update_node_info(node_type, index, cache=cache, disable_comp=disable_comp, **kwargs)
 

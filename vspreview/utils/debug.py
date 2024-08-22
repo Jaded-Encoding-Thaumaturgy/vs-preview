@@ -37,6 +37,7 @@ def print_var(var: Any) -> None:
     s = inspect.getframeinfo(frame.f_back).code_context
     assert s
     r = re.search(r"\((.*)\)", s[0])
+    s = frame = None
     assert r
     logging.debug(f'{r.group(1)}: {var}')
 

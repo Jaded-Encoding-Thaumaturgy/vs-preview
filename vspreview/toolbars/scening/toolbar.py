@@ -104,7 +104,10 @@ class SceningToolbar(AbstractToolbar):
 
         self.seek_to_next_button = PushButton('⏩', enabled=False)
 
-        self.always_show_scene_marks_checkbox = CheckBox('Always show scene marks in the timeline', checked=False)
+        self.always_show_scene_marks_checkbox = CheckBox(
+            'Always show scene marks in the timeline',
+            checked=self.settings.always_show_scene_marks
+        )
 
         self.add_single_frame_button = PushButton('🆎', tooltip='Add Single Frame Scene')
 
@@ -473,13 +476,8 @@ class SceningToolbar(AbstractToolbar):
         self.items_combobox.setModel(self.lists)
 
         try_load(state, 'scening_export_template', str, self.export_template_lineedit.setText)
+        try_load(state, 'always_show_scene_marks', bool, self.always_show_scene_marks_checkbox.setChecked)
 
-        always_show_scene_marks = None
-        try_load(state, 'always_show_scene_marks', bool, always_show_scene_marks)
-        if always_show_scene_marks is None:
-            always_show_scene_marks = self.settings.always_show_scene_marks
-
-        self.always_show_scene_marks_checkbox.setChecked(always_show_scene_marks)
-        self.status_label.setVisible(always_show_scene_marks)
+        self.status_label.setVisible(self.always_show_scene_marks_checkbox.isChecked())
 
         super().__setstate__(state)

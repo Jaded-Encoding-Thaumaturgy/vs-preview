@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit
+from ...core import AbstractToolbarSettings, CheckBox, HBoxLayout, LineEdit, try_load
 
 __all__ = [
     'SceningSettings'
@@ -34,3 +36,13 @@ class SceningSettings(AbstractToolbarSettings):
     @property
     def always_show_scene_marks(self) -> bool:
         return self.always_show_scene_marks_checkbox.isChecked()
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'default_export_template': self.default_export_template,
+            'always_show_scene_marks': self.always_show_scene_marks,
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'default_export_template', str, self.export_template_lineedit.setText)
+        try_load(state, 'always_show_scene_marks', bool, self.always_show_scene_marks_checkbox.setChecked)

@@ -79,7 +79,7 @@ class PlaybackSettings(AbstractToolbarSettings):
             'resample_kernel_chroma': self.kernel_combobox.currentValue()
         }
 
-    def _setstate_(self, state: dict[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'playback_buffer_size', int, self.buffer_size_spinbox.setValue)
         try_load(state, 'dither_type', str, self.dither_type_combobox.setCurrentValue)
         try_load(state, 'resample_kernel_chroma', str, self.kernel_combobox.setCurrentValue)

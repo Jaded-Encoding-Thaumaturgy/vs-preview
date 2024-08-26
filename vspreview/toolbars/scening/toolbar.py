@@ -39,7 +39,7 @@ class SceningToolbar(AbstractToolbar):
         'toggle_first_frame_button', 'toggle_second_frame_button',
         'add_single_frame_button',
         'add_to_list_button', 'remove_last_from_list_button',
-        'export_multiline_button', 'export_template_lineedit',
+        'export_button', 'export_template_lineedit',
         'always_show_scene_marks_checkbox',
         'status_label', 'import_file_button', 'items_combobox',
         'remove_at_current_frame_button',
@@ -78,7 +78,7 @@ class SceningToolbar(AbstractToolbar):
         self.remove_last_from_list_button.clicked.connect(self.on_remove_last_from_list_clicked)
         self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
         self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)
-        self.export_multiline_button.clicked.connect(self.export_multiline)
+        self.export_button.clicked.connect(self.export)
 
         self.add_shortcuts()
 
@@ -133,7 +133,7 @@ class SceningToolbar(AbstractToolbar):
             )
         )
 
-        self.export_multiline_button = PushButton('Export Multiline', enabled=False)
+        self.export_button = PushButton('Export', enabled=False)
 
         HBoxLayout(self.vlayout, [
             self.items_combobox,
@@ -157,7 +157,7 @@ class SceningToolbar(AbstractToolbar):
             self.remove_at_current_frame_button,
             self.get_separator(),
             self.export_template_lineedit,
-            self.export_multiline_button
+            self.export_button
         ]).addStretch(2)
 
         self.status_label = QLabel(self)
@@ -400,7 +400,7 @@ class SceningToolbar(AbstractToolbar):
         else:
             self.current_list_index = scening_list_index
 
-    def export_multiline(self, checked: bool | None = None) -> None:
+    def export(self, checked: bool | None = None) -> None:
         if self.current_list is None:
             return
 
@@ -411,7 +411,7 @@ class SceningToolbar(AbstractToolbar):
             for scene in self.current_list:
                 export_str += template.format(
                     start=scene.start, end=scene.end, label=scene.label, script_name=self.main.script_path.stem
-                ) + '\n'
+                ) + ('\n' if self.settings.export_multiline else '')
         except KeyError:
             logging.warning('Scening: export template contains invalid placeholders.')
             self.main.show_message('Export template contains invalid placeholders.')
@@ -443,7 +443,7 @@ class SceningToolbar(AbstractToolbar):
         self.remove_at_current_frame_button.setEnabled(is_enabled)
 
         is_enabled = self.export_template_pattern.fullmatch(self.export_template_lineedit.text()) is not None
-        self.export_multiline_button.setEnabled(is_enabled)
+        self.export_button.setEnabled(is_enabled)
 
     def scening_update_status_label(self) -> None:
         first_frame_text = str(self.first_frame) if self.first_frame is not None else ''

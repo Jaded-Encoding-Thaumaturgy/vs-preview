@@ -30,6 +30,8 @@ __all__ = [
 
     'SpinBox', 'PushButton', 'LineEdit', 'CheckBox', 'Timer', 'ProgressBar', 'DoubleSpinBox',
 
+    'Shortcut',
+
     'AbstractQItem', 'AbstractYAMLObject',
 
     'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
@@ -259,6 +261,15 @@ class ProgressBar(ExtendedItemInit, QProgressBar):
 
 class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
     ...
+
+
+class Shortcut(QShortcut):
+    def __init__(
+        self, key: QKeySequence | QKeySequence.StandardKey | str | int | None,
+        parent: QObject | None, handler: Callable[[], None]
+    ) -> None:
+        super().__init__(key, parent)
+        self.activated.connect(handler)
 
 
 class AbstractQItem:

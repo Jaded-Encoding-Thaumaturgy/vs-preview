@@ -28,7 +28,7 @@ class MainSettings(AbstractToolbarSettings):
         'png_compressing_spinbox', 'statusbar_timeout_control',
         'timeline_notches_margin_spinbox', 'usable_cpus_spinbox',
         'zoom_levels_combobox', 'zoom_levels_lineedit', 'zoom_level_default_combobox',
-        'azerty_keyboard_checkbox', 'dragnavigator_timeout_spinbox', 'dragtimeline_timeout_spinbox',
+        'dragnavigator_timeout_spinbox', 'dragtimeline_timeout_spinbox',
         'color_management_checkbox', 'plugins_save_position_combobox'
     )
 
@@ -61,8 +61,6 @@ class MainSettings(AbstractToolbarSettings):
 
         self.usable_cpus_spinbox = SpinBox(self, 1, self.get_usable_cpus_count())
 
-        self.azerty_keyboard_checkbox = CheckBox('AZERTY Keyboard', self)
-
         self.zoom_levels_combobox = ComboBox[int](editable=True, insertPolicy=QComboBox.InsertPolicy.NoInsert)
         self.zoom_levels_lineedit = self.zoom_levels_combobox.lineEdit()
 
@@ -91,10 +89,8 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
 
-        HBoxLayout(self.vlayout, [
-            VBoxLayout([self.dark_theme_checkbox, self.opengl_rendering_checkbox]),
-            VBoxLayout([self.force_old_storages_removal_checkbox, self.azerty_keyboard_checkbox])
-        ])
+        HBoxLayout(self.vlayout, [self.dark_theme_checkbox, self.force_old_storages_removal_checkbox])
+        HBoxLayout(self.vlayout, [self.opengl_rendering_checkbox])
 
         HBoxLayout(self.vlayout, [QLabel('Default output index'), self.output_index_spinbox])
 
@@ -141,7 +137,6 @@ class MainSettings(AbstractToolbarSettings):
         self.statusbar_timeout_control.setValue(Time(seconds=2.5))
         self.timeline_notches_margin_spinbox.setValue(20)
         self.force_old_storages_removal_checkbox.setChecked(False)
-        self.azerty_keyboard_checkbox.setChecked(False)
         self.usable_cpus_spinbox.setValue(self.get_usable_cpus_count())
         self.dragnavigator_timeout_spinbox.setValue(250)
         self.dragtimeline_timeout_spinbox.setValue(40)
@@ -186,10 +181,6 @@ class MainSettings(AbstractToolbarSettings):
     @property
     def force_old_storages_removal(self) -> int:
         return main_window().force_storage or self.force_old_storages_removal_checkbox.isChecked()
-
-    @property
-    def azerty_keybinds(self) -> bool:
-        return self.azerty_keyboard_checkbox.isChecked()
 
     @property
     def usable_cpus_count(self) -> int:
@@ -329,7 +320,6 @@ class MainSettings(AbstractToolbarSettings):
             'dragtimeline_timeout': self.dragtimeline_timeout,
             'plugins_bar_save_behaviour_index': self.plugins_bar_save_behaviour,
             'color_management': self.color_management,
-            'azerty_keybinds': self.azerty_keybinds,
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
@@ -349,7 +339,6 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'plugins_bar_save_behaviour_index', int, self.plugins_save_position_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
-        try_load(state, 'azerty_keybinds', bool, self.azerty_keyboard_checkbox.setChecked)
 
 
 class WindowSettings(QYAMLObjectSingleton):

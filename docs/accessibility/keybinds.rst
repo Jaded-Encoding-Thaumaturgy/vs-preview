@@ -97,9 +97,9 @@ Toolbars
       - Description
     * - Ctrl + Space
       - Add current frame as single frame scene
-    * - Q (AZERTY layout: A)
+    * - Q
       - Toggle whether current frame is first frame
-    * - W (AZERTY layout: Z)
+    * - W
       - Toggle whether current frame is last frame
     * - E
       - Add current A-B selection to current scene list

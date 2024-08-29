@@ -198,7 +198,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.app_settings.tab_widget.setUsesScrollButtons(False)
         self.app_settings.setMinimumWidth(
-            int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
+            int((len(self.toolbars) + 1) * 1.15 * self.app_settings.tab_widget.geometry().width() / 2)
         )
 
         self.shortcuts = ShortCutsSettings(self)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import logging
 import sys
+
 from fractions import Fraction
 from functools import partial
 from importlib import reload as reload_module
@@ -10,6 +11,7 @@ from time import time
 from typing import Any, Iterable, cast
 
 import vapoursynth as vs
+
 from PyQt6 import QtCore
 from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
@@ -18,13 +20,15 @@ from vsengine import vpy  # type: ignore
 from vstools import PackageStorage, SPath, get_prop
 
 from ..core import (
-    PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
-    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, PushButton, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
-    VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
+    PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame,
+    GraphicsImageItem, GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, PushButton,
+    QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
+    _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
 from ..models import GeneralModel, SceningList, VideoOutputs
 from ..plugins import FileResolverPlugin, Plugins
+from ..shortcuts import ShortCutsSettings
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -34,6 +38,7 @@ from .timeline import Timeline
 if sys.platform == 'win32':
     try:
         import win32gui  # type: ignore[import]
+
         from PIL import _imagingcms  # type: ignore[attr-defined]
     except ImportError:
         _imagingcms = None
@@ -42,8 +47,9 @@ if sys.platform == 'win32':
 else:
     from os.path import expanduser
 
-from ..core.bases import yaml_Loader, yaml_Dumper
 from yaml import MarkedYAMLError, YAMLError
+
+from ..core.bases import yaml_Dumper, yaml_Loader
 
 __all__ = [
     'MainWindow'
@@ -86,7 +92,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    storable_attrs = ('settings', 'toolbars', 'plugins')
+    storable_attrs = ('settings', 'toolbars', 'plugins', 'shortcuts')
 
     __slots__ = (
         *storable_attrs, 'app', 'clipboard',
@@ -109,6 +115,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     plugins: Plugins
     app_settings: SettingsDialog
     window_settings = WindowSettings()
+    shortcuts: ShortCutsSettings
 
     autosave_timer: Timer
 
@@ -193,6 +200,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.app_settings.setMinimumWidth(
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
         )
+
+        self.shortcuts = ShortCutsSettings(self)
 
         self.set_qobject_names()
         self.setObjectName('MainWindow')
@@ -423,6 +432,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         except Exception as e:
             load_error = e
 
+        if not reloading:
+            self.shortcuts.setup_shortcuts()
         self.apply_stylesheet()
         self.timeline.set_sizes()
 
@@ -452,6 +463,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     def handle_error(self, e: Exception) -> None:
         import logging
+
         from traceback import TracebackException
 
         from vsengine import vpy
@@ -640,7 +652,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         # but i'm referencing settings objects before in the dict
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
-        data = cast(dict[str, Any], self.__getstate__())
+        data = self.__getstate__()
 
         data['_globals'] = {
             'settings': data['settings'],
@@ -670,6 +682,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         for i, toolbar_name in enumerate(gtoolbars.keys()):
             data['_toolbars_settings'][i] = gtoolbars[toolbar_name]
         data['_toolbars_settings'][-1] = data['_globals']['window_settings']
+
+        data['_globals']['shortcuts'] = data['shortcuts']
 
         return data
 

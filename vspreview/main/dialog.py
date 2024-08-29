@@ -50,9 +50,10 @@ class ScriptErrorDialog(ExtendedDialog):
 
     def setup_shortcuts(self) -> None:
         if self.main.reload_enabled:
-            self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.reload_button.click)
+            # TODO: reload_script_default will be in misc
+            self.reload_button.setShortcut(self.main.shortcuts.sections["main"].reload_script_default)
 
-        self.add_shortcut(Qt.Key.Key_Escape, self.exit_button.click)
+        self.exit_button.setShortcut(Qt.Key.Key_Escape)
 
     def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()

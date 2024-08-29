@@ -28,6 +28,7 @@ class MainToolbar(AbstractToolbar):
         *storable_attrs,
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button',
+        'sync_outputs_checkbox',
         'switch_timeline_mode_button', 'settings_button'
     )
 

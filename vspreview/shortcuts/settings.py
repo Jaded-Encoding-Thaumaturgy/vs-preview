@@ -10,7 +10,7 @@ from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QLabel
 from vstools import cachedproperty
 
-from ..core import AbstractSettingsWidget, ComboBox, Shortcut, storage_err_msg, try_load
+from ..core import AbstractSettingsScrollArea, ComboBox, Shortcut, storage_err_msg, try_load
 from .abstract import AbtractShortcutSection, Modifier, ModifierModel, ShortCutLineEdit
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-class ShortCutsSettings(AbstractSettingsWidget):
+class ShortCutsSettings(AbstractSettingsScrollArea):
     main: MainWindow
     sections: dict[str, AbtractShortcutSection]
 
@@ -42,17 +42,24 @@ class ShortCutsSettings(AbstractSettingsWidget):
 
     def setup_ui(self) -> None:
         super().setup_ui()
-        # Title
-        self.vlayout.addWidget(QLabel("Toolbars :"))
-        # Toolbar main
-        self.vlayout.addWidget(QLabel("Main :"))
+
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        self.vlayout.addWidget(TitleLabel("Graphics view"))
+        self.sections["graphics_view"].setup_ui()
+
+        self.vlayout.addWidget(TitleLabel("Toolbars"))
+
+        self.vlayout.addWidget(TitleLabel("Main", "###"))
         self.sections["main"].setup_ui()
 
-        # HBoxLayout(self.vlayout, [QLabel("Playback :")])
+        self.vlayout.addWidget(TitleLabel("Playback", "###"))
+        self.vlayout.addWidget(TitleLabel("Scening", "###"))
+        self.vlayout.addWidget(TitleLabel("Misc", "###"))
 
-        # HBoxLayout(self.vlayout, [QLabel("Misc :")])
-
-        # HBoxLayout(self.vlayout, [QLabel("Scening :")])
+        self.vlayout.addWidget(TitleLabel("Script error dialog"))
+        self.sections["script_error"].setup_ui()
 
         self.main.app_settings.addTab(self, "Shortcuts")
 

@@ -64,8 +64,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.main.app_settings.addTab(self, "Shortcuts")
 
     def set_defaults(self) -> None:
-        for section in self.sections.values():
-            section.set_defaults()
+        pass
 
     def setup_shortcuts(self) -> None:
         for section in self.sections.values():
@@ -110,9 +109,6 @@ class GraphicsViewSection(AbtractShortcutSection):
 
         self.setup_ui_shortcut("Auto-fit :", self.auto_fit_lineedit, self.auto_fit_default)
         self.setup_ui_shortcut("Auto-fit :", self.pop_out_plugins_lineedit, self.pop_out_plugins_default)
-
-    def set_defaults(self) -> None:
-        self.auto_fit_lineedit.setText(self.auto_fit_default.toString())
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -182,20 +178,6 @@ class ToolbarMainSection(AbtractShortcutSection):
         self.setup_ui_shortcut("View previous output node :", self.switch_output_previous_lineedit, self.switch_output_previous_default)
         self.setup_ui_shortcut("Toggle whether output nodes are synced :", self.sync_ouputs_lineedit, self.sync_ouputs_default)
         self.setup_ui_shortcut("Copy current frame number to clipboard :", self.copy_frame_lineedit, self.copy_frame_default)
-
-    def set_defaults(self) -> None:
-        # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        self.reload_script_lineedit.setText(self.reload_script_default.toString())
-
-        for le, num_key in zip(self.switch_output_lineedit, self.switch_output_default):
-            le.setText(num_key.toString())
-
-        self.switch_output_modifier_combobox.setCurrentIndex(0)
-
-        self.switch_output_next_lineedit.setText(self.switch_output_next_default.toString())
-        self.switch_output_previous_lineedit.setText(self.switch_output_previous_default.toString())
-        self.sync_ouputs_lineedit.setText(self.sync_ouputs_default.toString())
-        self.copy_frame_lineedit.setText(self.copy_frame_default.toString())
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -315,10 +297,6 @@ class ScriptErrorDialogSection(AbtractShortcutSection):
 
         self.reload_lineedit.setDisabled(True)
         self.exit_lineedit.setDisabled(True)
-
-    def set_defaults(self) -> None:
-        self.reload_lineedit.setText(self.reload_default.toString())
-        self.exit_lineedit.setText(self.exit_default.toString())
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main

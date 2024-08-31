@@ -130,14 +130,12 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
             button = HiddenResetPushButton()
         elif isinstance(widget, ShortCutLineEdit):
             button = ResetPushButton("Reset", self.parent, clicked=lambda: widget.setText(default.toString()))
+            widget.setText(default.toString())
         else:
             button = widget
 
         childrens.append(button)
         HBoxLayout(self.parent.vlayout, childrens)
-
-    def set_defaults(self) -> None:
-        ...
 
     def setup_shortcuts(self) -> None:
         ...

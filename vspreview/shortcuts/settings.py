@@ -32,7 +32,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.sections = {
             "graphics_view": GraphicsViewSection(self),
             "main": ToolbarMainSection(self),
-            # "playback": None,
+            "playback": ToolbarPlaybackSection(self),
             # "misc": None,
             # "scening": None,
             "script_error": ScriptErrorDialogSection(self),
@@ -55,6 +55,8 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.sections["main"].setup_ui()
 
         self.vlayout.addWidget(TitleLabel("Playback", "###"))
+        self.sections["playback"].setup_ui()
+
         self.vlayout.addWidget(TitleLabel("Scening", "###"))
         self.vlayout.addWidget(TitleLabel("Misc", "###"))
 
@@ -275,6 +277,135 @@ class ToolbarMainSection(AbtractShortcutSection):
         
         for i, so in enumerate(self.switch_output_lineedit):
             try_load(state, f'switch_output_{i}', str, so.setText)
+
+
+class ToolbarPlaybackSection(AbtractShortcutSection):
+    __slots__ = (
+        'play_pause_lineedit',
+        'seek_to_prev_lineedit', 'seek_to_next_lineedit',
+        'seek_n_frames_b_lineedit', 'seek_n_frames_f_lineedit',
+        'seek_to_start_lineedit', 'seek_to_end_lineedit',
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings) -> None:
+        self.parent = parent
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        self.play_pause_lineedit = ShortCutLineEdit()
+
+        self.seek_to_prev_lineedit = ShortCutLineEdit()
+        self.seek_to_next_lineedit = ShortCutLineEdit()
+
+        self.seek_n_frames_b_lineedit = (ShortCutLineEdit(), ShortCutLineEdit())
+        self.seek_n_frames_f_lineedit = (ShortCutLineEdit(), ShortCutLineEdit())
+        
+        self.seek_to_start_lineedit = ShortCutLineEdit()
+        self.seek_to_end_lineedit = ShortCutLineEdit()
+
+        self.setup_ui_shortcut("Play/Pause :", self.play_pause_lineedit, self.play_pause_default)
+
+        self.setup_ui_shortcut("Seek to previous frame :", self.seek_to_prev_lineedit, self.seek_to_prev_default)
+        self.setup_ui_shortcut("Seek to next frame :", self.seek_to_next_lineedit, self.seek_to_next_default)
+
+        self.setup_ui_shortcut("Seek back n frames :", self.seek_n_frames_b_lineedit[0], self.seek_n_frames_b_default[0])
+        self.setup_ui_shortcut("", self.seek_n_frames_b_lineedit[1], self.seek_n_frames_b_default[1])
+        self.setup_ui_shortcut("Seek forward n frames :", self.seek_n_frames_f_lineedit[0], self.seek_n_frames_f_default[0])
+        self.setup_ui_shortcut("", self.seek_n_frames_f_lineedit[1], self.seek_n_frames_f_default[1])
+
+        self.setup_ui_shortcut("Seek to first frame :", self.seek_to_start_lineedit, self.seek_to_start_default)
+        self.setup_ui_shortcut("Seek to last frame :", self.seek_to_end_lineedit, self.seek_to_end_default)
+
+    def setup_shortcuts(self) -> None:
+        main = self.parent.main
+        playback_toolbar = main.toolbars.playback
+
+        Shortcut(self.play_pause_lineedit.text(), playback_toolbar, playback_toolbar.play_pause_button.click)
+
+        Shortcut(self.seek_to_prev_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_prev_button.click)
+        Shortcut(self.seek_to_next_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_next_button.click)
+
+        for le in self.seek_n_frames_b_lineedit:
+            Shortcut(le.text(), playback_toolbar, playback_toolbar.seek_n_frames_b_button.click)
+        for le in self.seek_n_frames_f_lineedit:
+            Shortcut(le.text(), playback_toolbar, playback_toolbar.seek_n_frames_f_button.click)
+
+        Shortcut(self.seek_to_start_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_start_button.click)
+        Shortcut(self.seek_to_end_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_end_button.click)
+
+    @property
+    def seek_n_frames_b(self) -> tuple[str, str]:
+        return tuple[str, str](le.text() for le in self.seek_n_frames_b_lineedit)  # type: ignore[arg-type]
+
+    @seek_n_frames_b.setter
+    def seek_n_frames_b(self, value: tuple[str, str]) -> None:
+        for v, le in zip(value, self.seek_n_frames_b_lineedit):
+            le.setText(v)
+
+    @property
+    def seek_n_frames_f(self) -> tuple[str, str]:
+        return tuple[str, str](le.text() for le in self.seek_n_frames_f_lineedit)  # type: ignore[arg-type]
+
+    @seek_n_frames_f.setter
+    def seek_n_frames_f(self, value: tuple[str, str]) -> None:
+        for v, le in zip(value, self.seek_n_frames_f_lineedit):
+            le.setText(v)
+
+    @property
+    def play_pause_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Space)
+
+    @property
+    def seek_to_prev_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Left)
+
+    @property
+    def seek_to_next_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Right)
+
+    @property
+    def seek_n_frames_b_default(self) -> tuple[QKeySequence, QKeySequence]:
+        return (
+            QKeySequence(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Left).toCombined()),
+            QKeySequence(Qt.Key.Key_PageUp),
+        )
+
+    @property
+    def seek_n_frames_f_default(self) -> tuple[QKeySequence, QKeySequence]:
+        return (
+            QKeySequence(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Right).toCombined()),
+            QKeySequence(Qt.Key.Key_PageDown),
+        )
+
+    @property
+    def seek_to_start_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Home)
+
+    @property
+    def seek_to_end_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_End)
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'play_pause': self.play_pause_lineedit.text(),
+            'seek_to_prev': self.seek_to_prev_lineedit.text(),
+            'seek_to_next': self.seek_to_next_lineedit.text(),
+            'seek_n_frames_b': tuple(le.text() for le in self.seek_n_frames_b_lineedit),
+            'seek_n_frames_f': tuple(le.text() for le in self.seek_n_frames_f_lineedit),
+            'seek_to_start': self.seek_to_start_lineedit.text(),
+            'seek_to_end': self.seek_to_end_lineedit.text(),
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'play_pause', str, self.play_pause_lineedit.setText)
+        try_load(state, 'seek_to_prev', str, self.seek_to_prev_lineedit.setText)
+        try_load(state, 'seek_to_next', str, self.seek_to_next_lineedit.setText)
+        try_load(state, 'seek_n_frames_b', tuple, self)
+        try_load(state, 'seek_n_frames_f', tuple, self)
+        try_load(state, 'seek_to_start', str, self.seek_to_start_lineedit.setText)
+        try_load(state, 'seek_to_end', str, self.seek_to_end_lineedit.setText)
 
 
 class ScriptErrorDialogSection(AbtractShortcutSection):

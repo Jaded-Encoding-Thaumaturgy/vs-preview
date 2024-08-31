@@ -1,14 +1,11 @@
 from enum import Flag
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QKeyCombination, QObject, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QKeyEvent, QKeySequence, QShortcut
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import QKeyCombination, Qt, pyqtSignal
+from PyQt6.QtGui import QKeyEvent, QKeySequence, QMouseEvent
+from PyQt6.QtWidgets import QBoxLayout, QLabel, QWidget
 
-from ..core import (
-    AbstractSettingsWidget, AbstractYAMLObjectSingleton, CheckBox, ComboBox, HBoxLayout, LineEdit,
-    PushButton, Shortcut, VBoxLayout, YAMLObjectWrapper, try_load
-)
+from ..core import AbstractSettingsWidget, AbstractYAMLObjectSingleton, HBoxLayout, LineEdit, PushButton
 from ..models import GeneralModel
 
 if TYPE_CHECKING:
@@ -20,7 +17,10 @@ else:
 
 __all__ = [
     'AbtractShortcutSection',
-    'ShortCutLineEdit', 'ResetPushButton', 'Modifier', 'ModifierModel'
+    'ShortCutLineEdit',
+    'ResetPushButton', 'HiddenResetPushButton',
+    'TitleLabel',
+    'Modifier', 'ModifierModel'
 ]
 
 
@@ -30,6 +30,10 @@ MODIFIERS_KEYS = (
     Qt.Key.Key_Shift,
     Qt.Key.Key_Meta,
 )
+
+
+MAX_WIDTH_LINE_EDIT = 90
+
 
 class ShortCutLineEdit(LineEdit):
     keyPressed = pyqtSignal(str)
@@ -43,7 +47,8 @@ class ShortCutLineEdit(LineEdit):
         self.allow_modifiers = allow_modifiers
 
         self.keyPressed.connect(self.setText)
-        self.setMaximumWidth(75)
+
+        self.setMaximumWidth(MAX_WIDTH_LINE_EDIT)
 
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         if not a0:
@@ -63,11 +68,32 @@ class ShortCutLineEdit(LineEdit):
 
         self.keyPressed.emit(keyname)
 
+    def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
+        if not a0:
+            return None
+
+        self.setText(None)
+
 
 class ResetPushButton(PushButton):
-    def __init__(self, *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
-        super().__init__("Reset", *args, tooltip=tooltip, **kwargs)
+    def __init__(self, name: str = "Reset", *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
+        super().__init__(name, *args, tooltip=tooltip, **kwargs)
         self.setMaximumWidth(55)
+
+
+class HiddenResetPushButton(ResetPushButton):
+    def __init__(self) -> None:
+        super().__init__("")
+        self.setFlat(True)
+        self.setEnabled(False)
+
+
+class TitleLabel(QLabel):
+    def __init__(self, text: str, md_header: str = "##") -> None:
+        super().__init__()
+        self.setTextFormat(Qt.TextFormat.MarkdownText)
+        self.setText(f"{md_header} {text}")
+        self.updateGeometry()
 
 
 # Has to make this because the yaml serializer was writing 
@@ -96,13 +122,19 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
     def setup_ui(self) -> None:
         ...
 
-    def setup_ui_shortcut(self, label: str, widget: QWidget, default: QKeySequence | None = None) -> None:
+    def setup_ui_shortcut(self, label: str, widget: QWidget, default: QKeySequence | None = None, hide_reset: bool = False) -> None:
         childrens: list[QWidget] = [QLabel(label), widget]
 
-        if default and isinstance(widget, ShortCutLineEdit):
-            childrens.append(ResetPushButton(self.parent, clicked=lambda: widget.setText(default.toString())))
+        button: QWidget
+        if hide_reset or not default:
+            button = HiddenResetPushButton()
+        elif isinstance(widget, ShortCutLineEdit):
+            button = ResetPushButton("Reset", self.parent, clicked=lambda: widget.setText(default.toString()))
+        else:
+            button = widget
 
-        HBoxLayout(self.parent.vlayout, childrens, alignment=Qt.AlignmentFlag.AlignLeft)
+        childrens.append(button)
+        HBoxLayout(self.parent.vlayout, childrens)
 
     def set_defaults(self) -> None:
         ...

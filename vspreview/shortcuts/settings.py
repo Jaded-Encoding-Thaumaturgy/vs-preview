@@ -1,17 +1,15 @@
 # from __future__ import annotations
 
-from functools import partial
 import logging
 
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QLabel
-from vstools import cachedproperty
 
 from ..core import AbstractSettingsScrollArea, ComboBox, Shortcut, storage_err_msg, try_load
-from .abstract import AbtractShortcutSection, Modifier, ModifierModel, ShortCutLineEdit
+from .abstract import MAX_WIDTH_LINE_EDIT, AbtractShortcutSection, Modifier, ModifierModel, ShortCutLineEdit, TitleLabel
 
 if TYPE_CHECKING:
     from ..main import MainWindow
@@ -114,9 +112,9 @@ class ToolbarMainSection(AbtractShortcutSection):
             self.reload_script_lineedit.setDisabled(True)
 
         self.switch_output_lineedit = [ShortCutLineEdit(allow_modifiers=False) for _ in range(len(self.switch_output_default))]
+
         self.switch_output_modifier_combobox = ComboBox[Modifier](model=ModifierModel([Modifier.CTRL, Modifier.SHIFT, Modifier.ALT]))
-        # TODO: The combobox is too small from the get go and I dont know why. It was fine iirc until I decided to use `setup_ui_shortcut`
-        self.switch_output_modifier_combobox.setMinimumWidth(100)
+        self.switch_output_modifier_combobox.setMaximumWidth(MAX_WIDTH_LINE_EDIT)
 
         self.switch_output_next_lineedit = ShortCutLineEdit()
         self.switch_output_previous_lineedit = ShortCutLineEdit()
@@ -131,7 +129,7 @@ class ToolbarMainSection(AbtractShortcutSection):
         for i, (le, num_key) in enumerate(zip(self.switch_output_lineedit, self.switch_output_default)):
             self.setup_ui_shortcut(f"View output node {i} :", le, num_key)
 
-        self.setup_ui_shortcut("View output node from last index modifier :", self.switch_output_modifier_combobox)
+        self.setup_ui_shortcut("View output node last index modifier :", self.switch_output_modifier_combobox)
 
         self.setup_ui_shortcut("View next output node :", self.switch_output_next_lineedit, self.switch_output_next_default)
         self.setup_ui_shortcut("View previous output node :", self.switch_output_previous_lineedit, self.switch_output_previous_default)
@@ -161,6 +159,8 @@ class ToolbarMainSection(AbtractShortcutSection):
             Shortcut(self.reload_script_lineedit.text(), main, main.toolbars.misc.reload_script_button.click)
 
         for i, le in enumerate(self.switch_output_lineedit):
+            if not le.text():
+                continue
             Shortcut(le.text(), main, partial(main.switch_output, i))
             Shortcut(
                 QKeySequence(QKeyCombination(

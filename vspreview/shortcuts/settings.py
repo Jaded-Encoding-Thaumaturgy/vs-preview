@@ -30,6 +30,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.main = main_window
 
         self.sections = {
+            "graphics_view": GraphicsViewSection(self),
             "main": ToolbarMainSection(self),
             # "playback": None,
             # "misc": None,
@@ -89,6 +90,51 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
                 logging.warning(storage_err_msg(name))
             else:
                 section.__setstate__(storage)
+
+
+class GraphicsViewSection(AbtractShortcutSection):
+    __slots__ = (
+        'auto_fit_lineedit',
+        'pop_out_plugins_lineedit'
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings) -> None:
+        self.parent = parent
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        self.auto_fit_lineedit = ShortCutLineEdit()
+        self.pop_out_plugins_lineedit = ShortCutLineEdit()
+
+        self.setup_ui_shortcut("Auto-fit :", self.auto_fit_lineedit, self.auto_fit_default)
+        self.setup_ui_shortcut("Auto-fit :", self.pop_out_plugins_lineedit, self.pop_out_plugins_default)
+
+    def set_defaults(self) -> None:
+        self.auto_fit_lineedit.setText(self.auto_fit_default.toString())
+
+    def setup_shortcuts(self) -> None:
+        main = self.parent.main
+
+        Shortcut(self.auto_fit_lineedit.text(), main, main.auto_fit_keyswitch)
+        Shortcut(self.pop_out_plugins_lineedit.text(), main, main.pop_out_plugins)
+
+    @property
+    def auto_fit_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_A).toCombined())
+
+    @property
+    def pop_out_plugins_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_P).toCombined())
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'auto_fit': self.auto_fit_lineedit.text(),
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'auto_fit', str, self.auto_fit_lineedit.setText)
 
 
 class ToolbarMainSection(AbtractShortcutSection):

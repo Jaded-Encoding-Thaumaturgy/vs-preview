@@ -13,8 +13,8 @@ from typing import Any, Iterable, cast
 import vapoursynth as vs
 
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
+from PyQt6.QtCore import QEvent, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
 from vstools import PackageStorage, SPath, get_prop
@@ -250,15 +250,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.autosave_timer = Timer(timeout=self.dump_storage_async)
         self.reload_signal.connect(self.autosave_timer.stop)
 
-        QShortcut(
-            QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_A).toCombined()),
-            self, activated=self.auto_fit_keyswitch
-        )
-
     def auto_fit_keyswitch(self) -> None:
         for view in self.graphics_views:
             if view.underMouse():
-                view.autofit = not view.autofit
+                view.auto_fit_button.click()
                 break
 
     def apply_stylesheet(self) -> None:

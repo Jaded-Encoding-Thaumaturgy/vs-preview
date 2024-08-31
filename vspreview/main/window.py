@@ -591,12 +591,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.current_screen = self.app.primaryScreen()
             self.update_display_profile()
 
+    @set_status_label('Saving storage...', 'Storage saved successfully!')
     @fire_and_forget
-    @set_status_label('Saving...')
     def dump_storage_async(self) -> None:
         self.dump_storage()
 
-    def dump_storage(self, manually: bool = False) -> None:
+    def dump_storage(self) -> None:
         from itertools import count
 
         if self.script_exec_failed:
@@ -633,9 +633,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     f'# Global setting (storage/plugins) saved at path: {self.global_config_dir}'
                 ] + storage_dump[idx:])
             )
-
-        if manually:
-            self.show_message('Saved successfully')
 
     def _serialize_data(self) -> Any:
         # idk how to explain how this work,
@@ -914,6 +911,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.switch_frame(self.current_output.last_showed_frame)
 
     def show_message(self, message: str) -> None:
+        self.statusbar.clearMessage()
         self.statusbar.showMessage(
             message, round(float(self.settings.statusbar_message_timeout) * 1000)
         )
@@ -922,6 +920,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         output = output or self.current_output
         fmt = output.source.clip.format
         assert fmt
+
+        self.statusbar.clearMessage()
 
         self.statusbar.total_frames_label.setText(f'{output.total_frames} frames ')
         self.statusbar.duration_label.setText(f'{output.total_time} ')

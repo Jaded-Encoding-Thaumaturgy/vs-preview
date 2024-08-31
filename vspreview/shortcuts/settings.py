@@ -34,6 +34,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
             # "playback": None,
             # "misc": None,
             # "scening": None,
+            "script_error": ScriptErrorDialogSection(self),
             # other + plugins ?
         }
         super().__init__()
@@ -246,3 +247,53 @@ class ToolbarMainSection(AbtractShortcutSection):
         
         for i, so in enumerate(self.switch_output_lineedit):
             try_load(state, f'switch_output_{i}', str, so.setText)
+
+
+class ScriptErrorDialogSection(AbtractShortcutSection):
+    __slots__ = (
+        'reload_lineedit', 'exit_lineedit'
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings) -> None:
+        self.parent = parent
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        self.reload_lineedit = ShortCutLineEdit()
+        self.exit_lineedit = ShortCutLineEdit()
+
+        self.setup_ui_shortcut("Reload :", self.reload_lineedit, self.reload_default, hide_reset=True)
+        self.setup_ui_shortcut("Exit :", self.exit_lineedit, self.exit_default, hide_reset=True)
+
+        self.reload_lineedit.setDisabled(True)
+        self.exit_lineedit.setDisabled(True)
+
+    def set_defaults(self) -> None:
+        self.reload_lineedit.setText(self.reload_default.toString())
+        self.exit_lineedit.setText(self.exit_default.toString())
+
+    def setup_shortcuts(self) -> None:
+        main = self.parent.main
+
+        Shortcut(self.reload_lineedit.text(), main.script_error_dialog, main.script_error_dialog.reload_button.click)
+        Shortcut(self.exit_lineedit.text(), main.script_error_dialog, main.script_error_dialog.exit_button.click)
+
+    @property
+    def reload_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined())
+
+    @property
+    def exit_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Escape)
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'reload': self.reload_lineedit.text(),
+            'exit': self.exit_lineedit.text(),
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'reload', str, self.reload_lineedit.setText)
+        try_load(state, 'exit', str, self.exit_lineedit.setText)

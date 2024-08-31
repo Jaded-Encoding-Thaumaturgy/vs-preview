@@ -62,7 +62,7 @@ class MiscToolbar(AbstractToolbar):
         )
 
         self.save_storage_button = PushButton(
-            'Save Storage', self, clicked=partial(self.main.dump_storage_async, manually=True)
+            'Save Storage', self, clicked=partial(self.main.dump_storage_async)
         )
 
         self.autosave_checkbox = CheckBox('Autosave', self, checked=True)

@@ -82,7 +82,7 @@ def fire_and_forget(f: F) -> F:
     return wrapped  # type: ignore
 
 
-def set_status_label(label: str) -> Callable[[F], F]:
+def set_status_label(label_before: str, label_after: str = 'Ready') -> Callable[[F], F]:
     from ..core import main_window
 
     def _decorator(func: Callable[..., T]) -> Any:
@@ -90,11 +90,11 @@ def set_status_label(label: str) -> Callable[[F], F]:
         def _wrapped(*args: Any, **kwargs: Any) -> T:
             main = main_window()
 
-            main.statusbar.label.setText(label)
+            main.show_message(label_before)
 
             ret = func(*args, **kwargs)
 
-            main.statusbar.label.setText('Ready')
+            main.show_message(label_after)
 
             return ret
         return _wrapped

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QKeySequence
 
-from ..core import AbstractSettingsScrollArea, ComboBox, Shortcut, storage_err_msg, try_load
+from ..core import AbstractSettingsScrollArea, ComboBox, storage_err_msg, try_load
 from .abstract import MAX_WIDTH_LINE_EDIT, AbtractShortcutSection, Modifier, ModifierModel, ShortCutLineEdit, TitleLabel
 
 if TYPE_CHECKING:
@@ -115,8 +115,8 @@ class GraphicsViewSection(AbtractShortcutSection):
     def setup_shortcuts(self) -> None:
         main = self.parent.main
 
-        Shortcut(self.auto_fit_lineedit.text(), main, main.auto_fit_keyswitch)
-        Shortcut(self.pop_out_plugins_lineedit.text(), main, main.pop_out_plugins)
+        self.create_shortcut(self.auto_fit_lineedit.text(), main, main.auto_fit_keyswitch)
+        self.create_shortcut(self.pop_out_plugins_lineedit.text(), main, main.pop_out_plugins)
 
     @property
     def auto_fit_default(self) -> QKeySequence:
@@ -187,13 +187,13 @@ class ToolbarMainSection(AbtractShortcutSection):
 
         if main.reload_enabled:
             # TODO: Move this to ToolbarMiscSection
-            Shortcut(self.reload_script_lineedit.text(), main, main.toolbars.misc.reload_script_button.click)
+            self.create_shortcut(self.reload_script_lineedit.text(), main, main.toolbars.misc.reload_script_button.click)
 
         for i, le in enumerate(self.switch_output_lineedit):
             if not le.text():
                 continue
-            Shortcut(le.text(), main, partial(main.switch_output, i))
-            Shortcut(
+            self.create_shortcut(le.text(), main, partial(main.switch_output, i))
+            self.create_shortcut(
                 QKeySequence(QKeyCombination(
                     self.switch_output_modifier_combobox.currentValue().modifier,
                     QKeySequence(le.text())[0].key()).toCombined()
@@ -202,24 +202,24 @@ class ToolbarMainSection(AbtractShortcutSection):
                 partial(main.switch_output, -(i + 1))
             )
 
-        Shortcut(
+        self.create_shortcut(
             self.switch_output_next_lineedit.text(), main_toolbar,
             lambda: main.switch_output(
                 main_toolbar.outputs_combobox.currentIndex() + 1
             )
         )
-        Shortcut(
+        self.create_shortcut(
             self.switch_output_previous_lineedit.text(), main_toolbar,
             lambda: main.switch_output(
                 main_toolbar.outputs_combobox.currentIndex() - 1
             )
         )
-        Shortcut(
+        self.create_shortcut(
             self.sync_ouputs_lineedit.text(), main_toolbar,
             main_toolbar.sync_outputs_checkbox.click
         )
 
-        Shortcut(
+        self.create_shortcut(
             self.copy_frame_lineedit.text(), main_toolbar,
             main_toolbar.on_copy_frame_button_clicked
         )
@@ -322,18 +322,18 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
         main = self.parent.main
         playback_toolbar = main.toolbars.playback
 
-        Shortcut(self.play_pause_lineedit.text(), playback_toolbar, playback_toolbar.play_pause_button.click)
+        self.create_shortcut(self.play_pause_lineedit.text(), playback_toolbar, playback_toolbar.play_pause_button.click)
 
-        Shortcut(self.seek_to_prev_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_prev_button.click)
-        Shortcut(self.seek_to_next_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_next_button.click)
+        self.create_shortcut(self.seek_to_prev_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_prev_button.click)
+        self.create_shortcut(self.seek_to_next_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_next_button.click)
 
         for le in self.seek_n_frames_b_lineedit:
-            Shortcut(le.text(), playback_toolbar, playback_toolbar.seek_n_frames_b_button.click)
+            self.create_shortcut(le.text(), playback_toolbar, playback_toolbar.seek_n_frames_b_button.click)
         for le in self.seek_n_frames_f_lineedit:
-            Shortcut(le.text(), playback_toolbar, playback_toolbar.seek_n_frames_f_button.click)
+            self.create_shortcut(le.text(), playback_toolbar, playback_toolbar.seek_n_frames_f_button.click)
 
-        Shortcut(self.seek_to_start_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_start_button.click)
-        Shortcut(self.seek_to_end_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_end_button.click)
+        self.create_shortcut(self.seek_to_start_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_start_button.click)
+        self.create_shortcut(self.seek_to_end_lineedit.text(), playback_toolbar, playback_toolbar.seek_to_end_button.click)
 
     @property
     def seek_n_frames_b(self) -> tuple[str, str]:
@@ -432,8 +432,8 @@ class ScriptErrorDialogSection(AbtractShortcutSection):
     def setup_shortcuts(self) -> None:
         main = self.parent.main
 
-        Shortcut(self.reload_lineedit.text(), main.script_error_dialog, main.script_error_dialog.reload_button.click)
-        Shortcut(self.exit_lineedit.text(), main.script_error_dialog, main.script_error_dialog.exit_button.click)
+        self.create_shortcut(self.reload_lineedit.text(), main.script_error_dialog, main.script_error_dialog.reload_button.click)
+        self.create_shortcut(self.exit_lineedit.text(), main.script_error_dialog, main.script_error_dialog.exit_button.click)
 
     @property
     def reload_default(self) -> QKeySequence:

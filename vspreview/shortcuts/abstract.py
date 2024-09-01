@@ -1,11 +1,11 @@
 from enum import Flag
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
-from PyQt6.QtCore import QKeyCombination, Qt, pyqtSignal
+from PyQt6.QtCore import QKeyCombination, Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QKeyEvent, QKeySequence, QMouseEvent
 from PyQt6.QtWidgets import QBoxLayout, QLabel, QWidget
 
-from ..core import AbstractSettingsWidget, AbstractYAMLObjectSingleton, HBoxLayout, LineEdit, PushButton
+from ..core import AbstractSettingsWidget, AbstractYAMLObjectSingleton, HBoxLayout, LineEdit, PushButton, Shortcut
 from ..models import GeneralModel
 
 if TYPE_CHECKING:
@@ -139,6 +139,14 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
 
     def setup_shortcuts(self) -> None:
         ...
+
+    def create_shortcut(
+        self, key: QKeySequence | QKeySequence.StandardKey | str | int | None,
+        parent: QObject | None, handler: Callable[[], None]
+    ) -> None:
+        if isinstance(key, str) and not key:
+            return None
+        Shortcut(key, parent, handler)
 
     def __getstate__(self) -> dict[str, Any]:
         return {}

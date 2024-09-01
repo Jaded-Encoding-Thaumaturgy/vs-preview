@@ -33,8 +33,8 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
             "graphics_view": GraphicsViewSection(self),
             "main": ToolbarMainSection(self),
             "playback": ToolbarPlaybackSection(self),
+            "scening": ToolbarSceningSection(self),
             # "misc": None,
-            # "scening": None,
             "script_error": ScriptErrorDialogSection(self),
             # other + plugins ?
         }
@@ -58,7 +58,10 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.sections["playback"].setup_ui()
 
         self.vlayout.addWidget(TitleLabel("Scening", "###"))
+        self.sections["scening"].setup_ui()
+
         self.vlayout.addWidget(TitleLabel("Misc", "###"))
+        # self.sections["misc"].setup_ui()
 
         self.vlayout.addWidget(TitleLabel("Script error dialog"))
         self.sections["script_error"].setup_ui()
@@ -406,6 +409,158 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
         try_load(state, 'seek_n_frames_f', tuple, self)
         try_load(state, 'seek_to_start', str, self.seek_to_start_lineedit.setText)
         try_load(state, 'seek_to_end', str, self.seek_to_end_lineedit.setText)
+
+class ToolbarSceningSection(AbtractShortcutSection):
+    __slots__ = (
+        'add_frame_scene_lineedit', 'toggle_first_frame_lineedit', 'toggle_second_frame_lineedit',
+        'add_to_list_lineedit', 'remove_last_from_list_lineedit', 'remove_scene_at_current_frame_lineedit',
+        'switch_list_lineedit',
+        'seek_to_prev_scene_start_lineedit', 'seek_to_next_scene_start_lineedit',
+        'paste_frame_scening_model_lineedit'
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings) -> None:
+        self.parent = parent
+        super().__init__()
+
+    def setup_ui(self) -> None:
+
+        self.add_frame_scene_lineedit = ShortCutLineEdit()
+        self.toggle_first_frame_lineedit = ShortCutLineEdit()
+        self.toggle_second_frame_lineedit = ShortCutLineEdit()
+
+        self.add_to_list_lineedit = ShortCutLineEdit()
+        self.remove_last_from_list_lineedit = ShortCutLineEdit()
+        self.remove_scene_at_current_frame_lineedit = ShortCutLineEdit()
+
+        self.switch_list_lineedit = [ShortCutLineEdit() for _ in range(len(self.switch_list_default))]
+
+        self.seek_to_prev_scene_start_lineedit = ShortCutLineEdit()
+        self.seek_to_next_scene_start_lineedit = ShortCutLineEdit()
+
+        self.paste_frame_scening_model_lineedit = ShortCutLineEdit()
+
+        self.setup_ui_shortcut("Add current frame as single frame scene", self.add_frame_scene_lineedit, self.add_frame_scene_default)
+        self.setup_ui_shortcut("Toggle whether current frame is first frame", self.toggle_first_frame_lineedit, self.toggle_first_frame_default)
+        self.setup_ui_shortcut("Toggle whether current frame is last frame", self.toggle_second_frame_lineedit, self.toggle_second_frame_default)
+
+        self.setup_ui_shortcut("Add A-B selection to current scene list", self.add_to_list_lineedit, self.add_to_list_default)
+        self.setup_ui_shortcut("Remove last scene from current scene list", self.remove_last_from_list_lineedit, self.remove_last_from_list_default)
+        self.setup_ui_shortcut("Remove scene at current frame", self.remove_scene_at_current_frame_lineedit, self.remove_scene_at_current_frame_default)
+
+        for i, (le, num_key) in enumerate(zip(self.switch_list_lineedit, self.switch_list_default)):
+            self.setup_ui_shortcut(f"Switch to scene list {i}", le, num_key)
+
+        self.setup_ui_shortcut("Seek to previous scene start", self.seek_to_prev_scene_start_lineedit, self.seek_to_prev_scene_start_default)
+        self.setup_ui_shortcut("Seek to next scene start", self.seek_to_next_scene_start_lineedit, self.seek_to_next_scene_start_default)
+
+        self.parent.vlayout.addWidget(TitleLabel("Scening List Dialog", "####"))
+        self.setup_ui_shortcut(
+            "Paste current frame number\ninto active scening model",
+            self.paste_frame_scening_model_lineedit,
+            self.paste_frame_scening_model_default
+        )
+
+    def setup_shortcuts(self) -> None:
+        main = self.parent.main
+        scening_toolbar = main.toolbars.scening
+
+        self.create_shortcut(self.add_frame_scene_lineedit.text(), scening_toolbar, scening_toolbar.on_toggle_single_frame)
+        self.create_shortcut(self.toggle_first_frame_lineedit.text(), scening_toolbar, scening_toolbar.toggle_first_frame_button.click)
+        self.create_shortcut(self.toggle_second_frame_lineedit.text(), scening_toolbar, scening_toolbar.toggle_second_frame_button.click)
+
+        self.create_shortcut(self.add_to_list_lineedit.text(), scening_toolbar, scening_toolbar.add_to_list_button.click)
+        self.create_shortcut(self.remove_last_from_list_lineedit.text(), scening_toolbar, scening_toolbar.remove_last_from_list_button.click)
+        self.create_shortcut(self.remove_scene_at_current_frame_lineedit.text(), scening_toolbar, scening_toolbar.remove_at_current_frame_button.click)
+
+        for i, le in enumerate(self.switch_list_lineedit):
+            self.create_shortcut(le.text(), scening_toolbar, partial(scening_toolbar.switch_list, i))
+
+        self.create_shortcut(self.seek_to_prev_scene_start_lineedit.text(), scening_toolbar, scening_toolbar.seek_to_prev_button.click)
+        self.create_shortcut(self.seek_to_next_scene_start_lineedit.text(), scening_toolbar, scening_toolbar.seek_to_next_button.click)
+
+        self.create_shortcut(
+            self.paste_frame_scening_model_lineedit.text(), scening_toolbar,
+            lambda: scening_toolbar.scening_list_dialog.label_lineedit.setText(
+                str(main.current_output.last_showed_frame)
+            )
+        )
+
+    @property
+    def add_frame_scene_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined())
+
+    @property
+    def toggle_first_frame_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Q)
+
+    @property
+    def toggle_second_frame_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_W)
+
+    @property
+    def add_to_list_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_E)
+
+    @property
+    def remove_last_from_list_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_R)
+
+    @property
+    def remove_scene_at_current_frame_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_R).toCombined())
+
+    @property
+    def switch_list_default(self) -> list[QKeySequence]:
+        return [QKeySequence(QKeyCombination(Qt.Modifier.SHIFT, k).toCombined()) for k in [
+            Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4,
+            Qt.Key.Key_5, Qt.Key.Key_6, Qt.Key.Key_7, Qt.Key.Key_8,
+            Qt.Key.Key_9, Qt.Key.Key_0
+        ]]
+
+    @property
+    def seek_to_prev_scene_start_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Left).toCombined())
+
+    @property
+    def seek_to_next_scene_start_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Right).toCombined())
+
+    @property
+    def paste_frame_scening_model_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_B)
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'add_frame_scene': self.add_frame_scene_lineedit.text(),
+            'toggle_first_frame': self.toggle_first_frame_lineedit.text(),
+            'toggle_second_frame': self.toggle_second_frame_lineedit.text(),
+            'add_to_list': self.add_to_list_lineedit.text(),
+            'remove_last_from_list': self.remove_last_from_list_lineedit.text(),
+            'remove_scene_at_current_frame': self.remove_scene_at_current_frame_lineedit.text(),
+            'seek_to_prev_scene_start': self.seek_to_prev_scene_start_lineedit.text(),
+            'seek_to_next_scene_start': self.seek_to_next_scene_start_lineedit.text(),
+            'paste_frame_scening_model': self.paste_frame_scening_model_lineedit.text(),
+        } | {
+            f'switch_list_{i}': so.text()
+            for i, so in enumerate(self.switch_list_lineedit)
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'add_frame_scene', str, self.add_frame_scene_lineedit.setText)
+        try_load(state, 'toggle_first_frame', str, self.toggle_first_frame_lineedit.setText)
+        try_load(state, 'toggle_second_frame', str, self.toggle_second_frame_lineedit.setText)
+        try_load(state, 'add_to_list', str, self.add_to_list_lineedit.setText)
+        try_load(state, 'remove_last_from_list', str, self.remove_last_from_list_lineedit.setText)
+        try_load(state, 'remove_scene_at_current_frame', str, self.remove_scene_at_current_frame_lineedit.setText)
+        try_load(state, 'seek_to_prev_scene_start', str, self.seek_to_prev_scene_start_lineedit.setText)
+        try_load(state, 'seek_to_next_scene_start', str, self.seek_to_next_scene_start_lineedit.setText)
+        try_load(state, 'paste_frame_scening_model', str, self.paste_frame_scening_model_lineedit.setText)
+
+        for i, le in enumerate(self.switch_list_lineedit):
+            try_load(state, f'switch_list_{i}', str, le.setText)
 
 
 class ScriptErrorDialogSection(AbtractShortcutSection):

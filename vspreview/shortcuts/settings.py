@@ -109,7 +109,7 @@ class GraphicsViewSection(AbtractShortcutSection):
         self.auto_fit_lineedit = ShortCutLineEdit()
         self.pop_out_plugins_lineedit = ShortCutLineEdit()
 
-        self.setup_ui_shortcut("Auto-fit :", self.auto_fit_lineedit, self.auto_fit_default)
+        self.setup_ui_shortcut("Auto-fit:", self.auto_fit_lineedit, self.auto_fit_default)
         self.setup_ui_shortcut("Auto-fit :", self.pop_out_plugins_lineedit, self.pop_out_plugins_default)
 
     def setup_shortcuts(self) -> None:
@@ -169,17 +169,17 @@ class ToolbarMainSection(AbtractShortcutSection):
         self.copy_frame_lineedit = ShortCutLineEdit()
 
         # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        self.setup_ui_shortcut("Reload script :", self.reload_script_lineedit, self.reload_script_default)
+        self.setup_ui_shortcut("Reload script:", self.reload_script_lineedit, self.reload_script_default)
 
         for i, (le, num_key) in enumerate(zip(self.switch_output_lineedit, self.switch_output_default)):
-            self.setup_ui_shortcut(f"View output node {i} :", le, num_key)
+            self.setup_ui_shortcut(f"View output node {i}:", le, num_key)
 
-        self.setup_ui_shortcut("View output node last index modifier :", self.switch_output_modifier_combobox)
+        self.setup_ui_shortcut("View output node last index modifier:", self.switch_output_modifier_combobox)
 
-        self.setup_ui_shortcut("View next output node :", self.switch_output_next_lineedit, self.switch_output_next_default)
-        self.setup_ui_shortcut("View previous output node :", self.switch_output_previous_lineedit, self.switch_output_previous_default)
-        self.setup_ui_shortcut("Toggle whether output nodes are synced :", self.sync_ouputs_lineedit, self.sync_ouputs_default)
-        self.setup_ui_shortcut("Copy current frame number to clipboard :", self.copy_frame_lineedit, self.copy_frame_default)
+        self.setup_ui_shortcut("View next output node:", self.switch_output_next_lineedit, self.switch_output_next_default)
+        self.setup_ui_shortcut("View previous output node:", self.switch_output_previous_lineedit, self.switch_output_previous_default)
+        self.setup_ui_shortcut("Toggle whether output nodes are synced:", self.sync_ouputs_lineedit, self.sync_ouputs_default)
+        self.setup_ui_shortcut("Copy current frame number to clipboard:", self.copy_frame_lineedit, self.copy_frame_default)
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -243,7 +243,7 @@ class ToolbarMainSection(AbtractShortcutSection):
     @property
     def switch_output_previous_default(self) -> QKeySequence:
         return QKeySequence(QKeyCombination(Qt.Modifier.CTRL | Qt.Modifier.SHIFT, Qt.Key.Key_Tab).toCombined())
-    
+
     @property
     def sync_ouputs_default(self) -> QKeySequence:
         return QKeySequence(Qt.Key.Key_S)
@@ -274,7 +274,7 @@ class ToolbarMainSection(AbtractShortcutSection):
         try_load(state, 'switch_output_previous', str, self.switch_output_previous_lineedit.setText)
         try_load(state, 'sync_ouputs', str, self.sync_ouputs_lineedit.setText)
         try_load(state, 'copy_frame', str, self.copy_frame_lineedit.setText)
-        
+
         for i, so in enumerate(self.switch_output_lineedit):
             try_load(state, f'switch_output_{i}', str, so.setText)
 
@@ -301,22 +301,22 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
 
         self.seek_n_frames_b_lineedit = (ShortCutLineEdit(), ShortCutLineEdit())
         self.seek_n_frames_f_lineedit = (ShortCutLineEdit(), ShortCutLineEdit())
-        
+
         self.seek_to_start_lineedit = ShortCutLineEdit()
         self.seek_to_end_lineedit = ShortCutLineEdit()
 
-        self.setup_ui_shortcut("Play/Pause :", self.play_pause_lineedit, self.play_pause_default)
+        self.setup_ui_shortcut("Play/Pause:", self.play_pause_lineedit, self.play_pause_default)
 
-        self.setup_ui_shortcut("Seek to previous frame :", self.seek_to_prev_lineedit, self.seek_to_prev_default)
-        self.setup_ui_shortcut("Seek to next frame :", self.seek_to_next_lineedit, self.seek_to_next_default)
+        self.setup_ui_shortcut("Seek to previous frame:", self.seek_to_prev_lineedit, self.seek_to_prev_default)
+        self.setup_ui_shortcut("Seek to next frame:", self.seek_to_next_lineedit, self.seek_to_next_default)
 
-        self.setup_ui_shortcut("Seek back n frames :", self.seek_n_frames_b_lineedit[0], self.seek_n_frames_b_default[0])
+        self.setup_ui_shortcut("Seek back n frames:", self.seek_n_frames_b_lineedit[0], self.seek_n_frames_b_default[0])
         self.setup_ui_shortcut("", self.seek_n_frames_b_lineedit[1], self.seek_n_frames_b_default[1])
-        self.setup_ui_shortcut("Seek forward n frames :", self.seek_n_frames_f_lineedit[0], self.seek_n_frames_f_default[0])
+        self.setup_ui_shortcut("Seek forward n frames:", self.seek_n_frames_f_lineedit[0], self.seek_n_frames_f_default[0])
         self.setup_ui_shortcut("", self.seek_n_frames_f_lineedit[1], self.seek_n_frames_f_default[1])
 
-        self.setup_ui_shortcut("Seek to first frame :", self.seek_to_start_lineedit, self.seek_to_start_default)
-        self.setup_ui_shortcut("Seek to last frame :", self.seek_to_end_lineedit, self.seek_to_end_default)
+        self.setup_ui_shortcut("Seek to first frame:", self.seek_to_start_lineedit, self.seek_to_start_default)
+        self.setup_ui_shortcut("Seek to last frame:", self.seek_to_end_lineedit, self.seek_to_end_default)
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -423,8 +423,8 @@ class ScriptErrorDialogSection(AbtractShortcutSection):
         self.reload_lineedit = ShortCutLineEdit()
         self.exit_lineedit = ShortCutLineEdit()
 
-        self.setup_ui_shortcut("Reload :", self.reload_lineedit, self.reload_default, hide_reset=True)
-        self.setup_ui_shortcut("Exit :", self.exit_lineedit, self.exit_default, hide_reset=True)
+        self.setup_ui_shortcut("Reload:", self.reload_lineedit, self.reload_default, hide_reset=True)
+        self.setup_ui_shortcut("Exit:", self.exit_lineedit, self.exit_default, hide_reset=True)
 
         self.reload_lineedit.setDisabled(True)
         self.exit_lineedit.setDisabled(True)

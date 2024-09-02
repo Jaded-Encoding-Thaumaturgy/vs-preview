@@ -126,7 +126,7 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
         childrens: list[QWidget] = [QLabel(label), widget]
 
         button: QWidget
-        if hide_reset or not default:
+        if hide_reset or default is None:
             button = HiddenResetPushButton()
         elif isinstance(widget, ShortCutLineEdit):
             button = ResetPushButton("Reset", self.parent, clicked=lambda: widget.setText(default.toString()))
@@ -141,11 +141,13 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
         ...
 
     def create_shortcut(
-        self, key: QKeySequence | QKeySequence.StandardKey | str | int | None,
+        self, key: ShortCutLineEdit | QKeySequence | QKeySequence.StandardKey | str | int | None,
         parent: QObject | None, handler: Callable[[], None]
     ) -> None:
         if isinstance(key, str) and not key:
             return None
+        if isinstance(key, ShortCutLineEdit):
+            key = key.text()
         Shortcut(key, parent, handler)
 
     @property

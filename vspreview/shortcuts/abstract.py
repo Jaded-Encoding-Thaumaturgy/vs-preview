@@ -148,6 +148,10 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
             return None
         Shortcut(key, parent, handler)
 
+    @property
+    def unassigned_default(self) -> QKeySequence:
+        return QKeySequence()
+
     def __getstate__(self) -> dict[str, Any]:
         return {}
 

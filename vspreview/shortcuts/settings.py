@@ -98,6 +98,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
 
 class GraphicsViewSection(AbtractShortcutSection):
     __slots__ = (
+        'zoom_levels_lineedit',
         'auto_fit_lineedit',
         'pop_out_plugins_lineedit'
     )
@@ -109,9 +110,14 @@ class GraphicsViewSection(AbtractShortcutSection):
         super().__init__()
 
     def setup_ui(self) -> None:
+        self.zoom_levels_lineedit = ShortCutLineEdit()
+        self.zoom_levels_lineedit.setText("Ctrl+Scroll")
+        self.zoom_levels_lineedit.setDisabled(True)
+
         self.auto_fit_lineedit = ShortCutLineEdit()
         self.pop_out_plugins_lineedit = ShortCutLineEdit()
 
+        self.setup_ui_shortcut("Cycle through zoom levels", self.zoom_levels_lineedit, hide_reset=True)
         self.setup_ui_shortcut("Auto-fit", self.auto_fit_lineedit, self.auto_fit_default)
         self.setup_ui_shortcut("Pop-out plugins :", self.pop_out_plugins_lineedit, self.pop_out_plugins_default)
 
@@ -141,10 +147,12 @@ class GraphicsViewSection(AbtractShortcutSection):
 class ToolbarMainSection(AbtractShortcutSection):
     __slots__ = (
         # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        'reload_script_lineedit', 'switch_output_lineedit',
-        'switch_output_modifier_combobox',
+        'reload_script_lineedit',
+        'switch_output_lineedit', 'switch_output_modifier_combobox',
         'switch_output_next_lineedit', 'switch_output_previous_lineedit',
-        'sync_ouputs_lineedit', 'copy_frame_lineedit'
+        'copy_frame_lineedit', 'copy_timestamp_lineedit',
+        'sync_ouputs_lineedit',
+        'switch_timeline_mode_lineedit', 'settings_lineedit'
     )
 
     parent: ShortCutsSettings
@@ -167,9 +175,13 @@ class ToolbarMainSection(AbtractShortcutSection):
         self.switch_output_next_lineedit = ShortCutLineEdit()
         self.switch_output_previous_lineedit = ShortCutLineEdit()
 
+        self.copy_frame_lineedit = ShortCutLineEdit()
+        self.copy_timestamp_lineedit = ShortCutLineEdit()
+
         self.sync_ouputs_lineedit = ShortCutLineEdit()
 
-        self.copy_frame_lineedit = ShortCutLineEdit()
+        self.switch_timeline_mode_lineedit = ShortCutLineEdit()
+        self.settings_lineedit = ShortCutLineEdit()
 
         # TODO: Move reload_script_lineedit to ToolbarMiscSection
         self.setup_ui_shortcut("Reload script", self.reload_script_lineedit, self.reload_script_default)
@@ -181,8 +193,14 @@ class ToolbarMainSection(AbtractShortcutSection):
 
         self.setup_ui_shortcut("View next output node", self.switch_output_next_lineedit, self.switch_output_next_default)
         self.setup_ui_shortcut("View previous output node", self.switch_output_previous_lineedit, self.switch_output_previous_default)
-        self.setup_ui_shortcut("Toggle whether output nodes are synced", self.sync_ouputs_lineedit, self.sync_ouputs_default)
+
         self.setup_ui_shortcut("Copy current frame number to clipboard", self.copy_frame_lineedit, self.copy_frame_default)
+        self.setup_ui_shortcut("Copy current timestamp to clipboard", self.copy_timestamp_lineedit, self.unassigned_default)
+
+        self.setup_ui_shortcut("Toggle whether output nodes are synced", self.sync_ouputs_lineedit, self.sync_ouputs_default)
+
+        self.setup_ui_shortcut("Switch timeline mode", self.switch_timeline_mode_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Open settings window", self.settings_lineedit, self.unassigned_default)
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -218,14 +236,21 @@ class ToolbarMainSection(AbtractShortcutSection):
             )
         )
         self.create_shortcut(
+            self.copy_frame_lineedit.text(), main_toolbar,
+            main_toolbar.on_copy_frame_button_clicked
+        )
+        self.create_shortcut(
+            self.copy_timestamp_lineedit.text(), main_toolbar,
+            main_toolbar.on_copy_timestamp_button_clicked
+        )
+
+        self.create_shortcut(
             self.sync_ouputs_lineedit.text(), main_toolbar,
             main_toolbar.sync_outputs_checkbox.click
         )
 
-        self.create_shortcut(
-            self.copy_frame_lineedit.text(), main_toolbar,
-            main_toolbar.on_copy_frame_button_clicked
-        )
+        self.create_shortcut(self.switch_timeline_mode_lineedit.text(), main, main_toolbar.switch_timeline_mode_button.click)
+        self.create_shortcut(self.settings_lineedit.text(), main, main_toolbar.settings_button.click)
 
     @property
     def reload_script_default(self) -> QKeySequence:
@@ -264,6 +289,8 @@ class ToolbarMainSection(AbtractShortcutSection):
             'switch_output_previous': self.switch_output_previous_lineedit.text(),
             'sync_ouputs': self.sync_ouputs_lineedit.text(),
             'copy_frame': self.copy_frame_lineedit.text(),
+            'switch_timeline_mode': self.switch_timeline_mode_lineedit.text(),
+            'settings': self.settings_lineedit.text(),
         } | {
             f'switch_output_{i}': so.text()
             for i, so in enumerate(self.switch_output_lineedit)
@@ -277,6 +304,8 @@ class ToolbarMainSection(AbtractShortcutSection):
         try_load(state, 'switch_output_previous', str, self.switch_output_previous_lineedit.setText)
         try_load(state, 'sync_ouputs', str, self.sync_ouputs_lineedit.setText)
         try_load(state, 'copy_frame', str, self.copy_frame_lineedit.setText)
+        try_load(state, 'switch_timeline_mode', str, self.switch_timeline_mode_lineedit.setText)
+        try_load(state, 'settings', str, self.settings_lineedit.setText)
 
         for i, so in enumerate(self.switch_output_lineedit):
             try_load(state, f'switch_output_{i}', str, so.setText)

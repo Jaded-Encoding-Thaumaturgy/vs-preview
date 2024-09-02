@@ -2,6 +2,7 @@
 
 import logging
 
+from bisect import bisect_left, bisect_right
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
@@ -317,6 +318,10 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
         'seek_to_prev_lineedit', 'seek_to_next_lineedit',
         'seek_n_frames_b_lineedit', 'seek_n_frames_f_lineedit',
         'seek_to_start_lineedit', 'seek_to_end_lineedit',
+        'play_n_frames_lineedit',
+        'reset_fps_lineedit', 'unlimited_fps_lineedit', 'variable_fps_lineedit',
+        'mute_lineedit',
+        'decrease_volume_lineedit', 'increase_volume_lineedit',
     )
 
     parent: ShortCutsSettings
@@ -337,6 +342,16 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
         self.seek_to_start_lineedit = ShortCutLineEdit()
         self.seek_to_end_lineedit = ShortCutLineEdit()
 
+        self.play_n_frames_lineedit = ShortCutLineEdit()
+
+        self.reset_fps_lineedit = ShortCutLineEdit()
+        self.unlimited_fps_lineedit = ShortCutLineEdit()
+        self.variable_fps_lineedit = ShortCutLineEdit()
+
+        self.mute_lineedit = ShortCutLineEdit()
+        self.decrease_volume_lineedit = ShortCutLineEdit()
+        self.increase_volume_lineedit = ShortCutLineEdit()
+
         self.setup_ui_shortcut("Play/Pause", self.play_pause_lineedit, self.play_pause_default)
 
         self.setup_ui_shortcut("Seek to previous frame", self.seek_to_prev_lineedit, self.seek_to_prev_default)
@@ -349,6 +364,16 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
 
         self.setup_ui_shortcut("Seek to first frame", self.seek_to_start_lineedit, self.seek_to_start_default)
         self.setup_ui_shortcut("Seek to last frame", self.seek_to_end_lineedit, self.seek_to_end_default)
+
+        self.setup_ui_shortcut("Play n frames", self.play_n_frames_lineedit, self.unassigned_default)
+
+        self.setup_ui_shortcut("Reset FPS", self.reset_fps_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Toggle unlimited FPS", self.unlimited_fps_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Toggle variable FPS", self.variable_fps_lineedit, self.unassigned_default)
+
+        self.setup_ui_shortcut("Toggle audio mute", self.mute_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Decrease volume", self.decrease_volume_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Increase volume", self.increase_volume_lineedit, self.unassigned_default)
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -366,6 +391,31 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
 
         self.create_shortcut(self.seek_to_start_lineedit, playback_toolbar, playback_toolbar.seek_to_start_button.click)
         self.create_shortcut(self.seek_to_end_lineedit, playback_toolbar, playback_toolbar.seek_to_end_button.click)
+
+        self.create_shortcut(self.play_n_frames_lineedit, playback_toolbar, playback_toolbar.play_n_frames_button.click)
+
+        self.create_shortcut(self.reset_fps_lineedit, playback_toolbar, playback_toolbar.fps_reset_button.click)
+        self.create_shortcut(self.unlimited_fps_lineedit, playback_toolbar, playback_toolbar.fps_unlimited_checkbox.click)
+        self.create_shortcut(self.variable_fps_lineedit, playback_toolbar, playback_toolbar.fps_variable_checkbox.click)
+        self.create_shortcut(self.mute_lineedit, playback_toolbar, playback_toolbar.mute_button.click)
+
+        volume_steps = [x * 10 for x in range(11)]
+        volume_slider = playback_toolbar.audio_volume_slider
+
+        self.create_shortcut(
+            self.decrease_volume_lineedit, playback_toolbar,
+            lambda: playback_toolbar.setVolume(
+                volume_steps[bisect_left(volume_steps, volume_slider.value() - 10)],
+                updateGui=True
+            )
+        )
+        self.create_shortcut(
+            self.increase_volume_lineedit, playback_toolbar,
+            lambda: playback_toolbar.setVolume(
+                volume_steps[bisect_right(volume_steps, volume_slider.value() + 10) - 1],
+                updateGui=True
+            )
+        )
 
     @property
     def seek_n_frames_b(self) -> tuple[str, str]:
@@ -428,6 +478,13 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
             'seek_n_frames_f': tuple(le.text() for le in self.seek_n_frames_f_lineedit),
             'seek_to_start': self.seek_to_start_lineedit.text(),
             'seek_to_end': self.seek_to_end_lineedit.text(),
+            'play_n_frames': self.play_n_frames_lineedit.text(),
+            'reset_fps': self.reset_fps_lineedit.text(),
+            'unlimited_fps': self.unlimited_fps_lineedit.text(),
+            'variable_fps': self.variable_fps_lineedit.text(),
+            'mute': self.mute_lineedit.text(),
+            'decrease_volume': self.decrease_volume_lineedit.text(),
+            'increase_volume': self.increase_volume_lineedit.text(),
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
@@ -438,6 +495,14 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
         try_load(state, 'seek_n_frames_f', tuple, self)
         try_load(state, 'seek_to_start', str, self.seek_to_start_lineedit.setText)
         try_load(state, 'seek_to_end', str, self.seek_to_end_lineedit.setText)
+        try_load(state, 'play_n_frames', str, self.play_n_frames_lineedit.setText)
+        try_load(state, 'reset_fps', str, self.reset_fps_lineedit.setText)
+        try_load(state, 'unlimited_fps', str, self.unlimited_fps_lineedit.setText)
+        try_load(state, 'variable_fps', str, self.variable_fps_lineedit.setText)
+        try_load(state, 'mute', str, self.mute_lineedit.setText)
+        try_load(state, 'decrease_volume', str, self.decrease_volume_lineedit.setText)
+        try_load(state, 'increase_volume', str, self.increase_volume_lineedit.setText)
+
 
 class ToolbarSceningSection(AbtractShortcutSection):
     __slots__ = (

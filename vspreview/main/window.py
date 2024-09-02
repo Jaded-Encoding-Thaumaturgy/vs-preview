@@ -268,6 +268,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
             stylesheet = _load_stylesheet('pyqt6', palette)
             stylesheet += ' QGraphicsView { border: 0px; padding: 0px; }'
+            stylesheet += ' QLineEdit[conflictShortcut="true"] { border: 1px solid red; }'
 
             self.app.setStyleSheet(stylesheet)
 

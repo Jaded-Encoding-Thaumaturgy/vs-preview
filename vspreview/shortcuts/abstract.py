@@ -1,7 +1,10 @@
+from __future__ import annotations
+
+from collections import defaultdict
 from enum import Flag
 from typing import TYPE_CHECKING, Any, Callable
 
-from PyQt6.QtCore import QKeyCombination, Qt, pyqtSignal, QObject
+from PyQt6.QtCore import QKeyCombination, QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent, QKeySequence, QMouseEvent
 from PyQt6.QtWidgets import QBoxLayout, QLabel, QWidget
 
@@ -37,18 +40,47 @@ MAX_WIDTH_LINE_EDIT = 90
 
 class ShortCutLineEdit(LineEdit):
     keyPressed = pyqtSignal(str)
+    _shortcuts: defaultdict[str, set[ShortCutLineEdit]] = defaultdict(set)
 
     def __init__(
         self, *args: QWidget | QBoxLayout | Stretch, placeholder: str = "", tooltip: str | None = None,
-        allow_modifiers: bool = True, **kwargs: Any
+        allow_modifiers: bool = True, conflictable: bool = True, **kwargs: Any
     ) -> None:
         super().__init__(placeholder, *args, tooltip=tooltip, **kwargs)
 
         self.allow_modifiers = allow_modifiers
+        self._conflictable = conflictable
 
         self.keyPressed.connect(self.setText)
+        self.textChanged.connect(self.highlight_conflits)
 
         self.setMaximumWidth(MAX_WIDTH_LINE_EDIT)
+
+        self._old_text = self.text()
+
+    def highlight_conflits(self, text: str | None) -> None:
+        if text is None:
+            return
+
+        if text and self._conflictable:
+            self.setProperty("conflictShortcut", False)
+            self.repolish()
+
+            self._shortcuts[self._old_text].discard(self)
+
+            if len(shorcuts := self._shortcuts[self._old_text]) <= 1:
+                for sc in shorcuts:
+                    sc.setProperty("conflictShortcut", False)
+                    sc.repolish()
+
+            self._shortcuts[text].add(self)
+
+            if len(conflicts := self._shortcuts[text]) > 1:
+                for c in conflicts:
+                    c.setProperty("conflictShortcut", True)
+                    c.repolish()
+
+        self._old_text = text
 
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         if not a0:
@@ -73,6 +105,11 @@ class ShortCutLineEdit(LineEdit):
             return None
 
         self.setText(None)
+
+    def repolish(self) -> None:
+        if style := self.style():
+            style.unpolish(self)
+            style.polish(self)
 
 
 class ResetPushButton(PushButton):

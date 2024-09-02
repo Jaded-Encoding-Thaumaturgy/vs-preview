@@ -669,8 +669,8 @@ class ScriptErrorDialogSection(AbtractShortcutSection):
         super().__init__()
 
     def setup_ui(self) -> None:
-        self.reload_lineedit = ShortCutLineEdit()
-        self.exit_lineedit = ShortCutLineEdit()
+        self.reload_lineedit = ShortCutLineEdit(conflictable=False)
+        self.exit_lineedit = ShortCutLineEdit(conflictable=False)
 
         self.setup_ui_shortcut("Reload", self.reload_lineedit, self.reload_default, hide_reset=True)
         self.setup_ui_shortcut("Exit", self.exit_lineedit, self.exit_default, hide_reset=True)

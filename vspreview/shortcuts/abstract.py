@@ -133,7 +133,7 @@ class TitleLabel(QLabel):
         self.updateGeometry()
 
 
-# Has to make this because the yaml serializer was writing 
+# Has to make this because the yaml serializer was writing
 # !!python/object/apply:PyQt6.QtCore.Modifier
 # And thus raise this error:
 # (while constructing a Python object cannot find 'Modifier' in the module 'PyQt6.QtCore')
@@ -163,6 +163,7 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
         childrens: list[QWidget] = [QLabel(label), widget]
 
         button: QWidget
+
         if hide_reset or default is None:
             button = HiddenResetPushButton()
         elif isinstance(widget, ShortCutLineEdit):
@@ -172,6 +173,7 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
             button = widget
 
         childrens.append(button)
+
         HBoxLayout(self.parent.vlayout, childrens)
 
     def setup_shortcuts(self) -> None:
@@ -183,8 +185,10 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
     ) -> None:
         if isinstance(key, str) and not key:
             return None
+
         if isinstance(key, ShortCutLineEdit):
             key = key.text()
+
         Shortcut(key, parent, handler)
 
     @property

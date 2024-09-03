@@ -339,7 +339,7 @@ class ExtendedScrollArea(ExtendedWidgetBase, QScrollArea):
 
     def setup_ui(self) -> None:
         self.setWidgetResizable(True)
-        
+
         self.frame = QFrame(self)
 
         super().setup_ui()

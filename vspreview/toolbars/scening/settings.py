@@ -23,7 +23,7 @@ class SceningSettings(AbstractToolbarSettings):
         self.export_template_lineedit = LineEdit('Export Template')
 
         self.always_show_scene_marks_checkbox = CheckBox('Always show scene marks')
-        
+
         self.export_multiline_checkbox = CheckBox('Export as multiple lines')
 
         HBoxLayout(self.vlayout, [QLabel('Default Export Template'), self.export_template_lineedit])

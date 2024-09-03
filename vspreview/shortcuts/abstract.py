@@ -12,18 +12,18 @@ from ..core import AbstractSettingsWidget, AbstractYAMLObjectSingleton, HBoxLayo
 from ..models import GeneralModel
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QBoxLayout, QWidget
-
     from ..core import Stretch
 else:
-    Stretch, QWidget, QBoxLayout = Any, Any, Any
+    Stretch = Any
 
 __all__ = [
-    'AbtractShortcutSection',
-    'ShortCutLineEdit',
-    'ResetPushButton', 'HiddenResetPushButton',
-    'TitleLabel',
-    'Modifier', 'ModifierModel'
+    "AbtractShortcutSection",
+    "ShortCutLineEdit",
+    "ResetPushButton",
+    "HiddenResetPushButton",
+    "TitleLabel",
+    "Modifier",
+    "ModifierModel",
 ]
 
 
@@ -43,8 +43,13 @@ class ShortCutLineEdit(LineEdit):
     _shortcuts: defaultdict[str, set[ShortCutLineEdit]] = defaultdict(set)
 
     def __init__(
-        self, *args: QWidget | QBoxLayout | Stretch, placeholder: str = "", tooltip: str | None = None,
-        allow_modifiers: bool = True, conflictable: bool = True, **kwargs: Any
+        self,
+        *args: QWidget | QBoxLayout | Stretch,
+        placeholder: str = "",
+        tooltip: str | None = None,
+        allow_modifiers: bool = True,
+        conflictable: bool = True,
+        **kwargs: Any,
     ) -> None:
         super().__init__(placeholder, *args, tooltip=tooltip, **kwargs)
 
@@ -92,9 +97,7 @@ class ShortCutLineEdit(LineEdit):
         if key in MODIFIERS_KEYS:
             keyname = self.text()
         elif self.allow_modifiers:
-            keyname = QKeySequence(
-                QKeyCombination(modifiers, key).toCombined()
-            ).toString()
+            keyname = QKeySequence(QKeyCombination(modifiers, key).toCombined()).toString()
         else:
             keyname = QKeySequence(key).toString()
 
@@ -113,7 +116,9 @@ class ShortCutLineEdit(LineEdit):
 
 
 class ResetPushButton(PushButton):
-    def __init__(self, name: str = "Reset", *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, name: str = "Reset", *args: QWidget | QBoxLayout | Stretch, tooltip: str | None = None, **kwargs: Any
+    ) -> None:
         super().__init__(name, *args, tooltip=tooltip, **kwargs)
         self.setMaximumWidth(55)
 
@@ -156,10 +161,11 @@ class ModifierModel(GeneralModel[Modifier]):
 class AbtractShortcutSection(AbstractYAMLObjectSingleton):
     parent: AbstractSettingsWidget
 
-    def setup_ui(self) -> None:
-        ...
+    def setup_ui(self) -> None: ...
 
-    def setup_ui_shortcut(self, label: str, widget: QWidget, default: QKeySequence | None = None, hide_reset: bool = False) -> None:
+    def setup_ui_shortcut(
+        self, label: str, widget: QWidget, default: QKeySequence | None = None, hide_reset: bool = False
+    ) -> None:
         childrens: list[QWidget] = [QLabel(label), widget]
 
         button: QWidget
@@ -176,12 +182,13 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
 
         HBoxLayout(self.parent.vlayout, childrens)
 
-    def setup_shortcuts(self) -> None:
-        ...
+    def setup_shortcuts(self) -> None: ...
 
     def create_shortcut(
-        self, key: ShortCutLineEdit | QKeySequence | QKeySequence.StandardKey | str | int | None,
-        parent: QObject | None, handler: Callable[[], None]
+        self,
+        key: ShortCutLineEdit | QKeySequence | QKeySequence.StandardKey | str | int | None,
+        parent: QObject | None,
+        handler: Callable[[], None],
     ) -> None:
         if isinstance(key, str) and not key:
             return None
@@ -198,5 +205,4 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
     def __getstate__(self) -> dict[str, Any]:
         return {}
 
-    def __setstate__(self, state: dict[str, Any]) -> None:
-        ...
+    def __setstate__(self, state: dict[str, Any]) -> None: ...

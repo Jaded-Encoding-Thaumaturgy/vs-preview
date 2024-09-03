@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import logging
 import re
-from functools import partial
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from PyQt6.QtCore import QKeyCombination, QModelIndex, Qt
+from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFileDialog, QLabel
 
 from ...core import (
-    AbstractToolbar, CheckBox, ComboBox, Frame, HBoxLayout, LineEdit, Notches, PushButton, Time, try_load
+    AbstractToolbar, CheckBox, ComboBox, Frame, HBoxLayout, LineEdit, Notches, PushButton, Time,
+    try_load
 )
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
@@ -221,6 +222,10 @@ class SceningToolbar(AbstractToolbar):
         else:
             self.remove_list_button.setEnabled(False)
             self.view_list_button.setEnabled(False)
+
+        self.scening_list_dialog.setMinimumSize(self.scening_list_dialog.sizeHint())
+        self.scening_list_dialog.setMaximumSize(self.scening_list_dialog.sizeHint())
+        self.scening_list_dialog.updateGeometry()
 
         if old_value is not None:
             try:

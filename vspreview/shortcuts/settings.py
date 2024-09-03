@@ -35,6 +35,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
             "main": ToolbarMainSection(self),
             "playback": ToolbarPlaybackSection(self),
             "scening": ToolbarSceningSection(self),
+            "pipette": ToolbarPipetteSection(self),
             "misc": ToolbarMiscSection(self),
             "script_error": ScriptErrorDialogSection(self),
             # other + plugins ?
@@ -60,6 +61,9 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
 
         self.vlayout.addWidget(TitleLabel("Scening", "###"))
         self.sections["scening"].setup_ui()
+
+        self.vlayout.addWidget(TitleLabel("Pipette", "###"))
+        self.sections["pipette"].setup_ui()
 
         self.vlayout.addWidget(TitleLabel("Misc", "###"))
         self.sections["misc"].setup_ui()
@@ -147,8 +151,6 @@ class GraphicsViewSection(AbtractShortcutSection):
 
 class ToolbarMainSection(AbtractShortcutSection):
     __slots__ = (
-        # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        'reload_script_lineedit',
         'switch_output_lineedit', 'switch_output_modifier_combobox',
         'switch_output_next_lineedit', 'switch_output_previous_lineedit',
         'copy_frame_lineedit', 'copy_timestamp_lineedit',
@@ -163,11 +165,6 @@ class ToolbarMainSection(AbtractShortcutSection):
         super().__init__()
 
     def setup_ui(self) -> None:
-        # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        self.reload_script_lineedit = ShortCutLineEdit()
-        if not self.parent.main.reload_enabled:
-            self.reload_script_lineedit.setDisabled(True)
-
         self.switch_output_lineedit = [ShortCutLineEdit(allow_modifiers=False) for _ in range(len(self.switch_output_default))]
 
         self.switch_output_modifier_combobox = ComboBox[Modifier](model=ModifierModel([Modifier.CTRL, Modifier.SHIFT, Modifier.ALT]))
@@ -183,9 +180,6 @@ class ToolbarMainSection(AbtractShortcutSection):
 
         self.switch_timeline_mode_lineedit = ShortCutLineEdit()
         self.settings_lineedit = ShortCutLineEdit()
-
-        # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        self.setup_ui_shortcut("Reload script", self.reload_script_lineedit, self.reload_script_default)
 
         for i, (le, num_key) in enumerate(zip(self.switch_output_lineedit, self.switch_output_default)):
             self.setup_ui_shortcut(f"View output node {i}", le, num_key)
@@ -206,10 +200,6 @@ class ToolbarMainSection(AbtractShortcutSection):
     def setup_shortcuts(self) -> None:
         main = self.parent.main
         main_toolbar = main.toolbars.main
-
-        if main.reload_enabled:
-            # TODO: Move this to ToolbarMiscSection
-            self.create_shortcut(self.reload_script_lineedit, main, main.toolbars.misc.reload_script_button.click)
 
         for i, le in enumerate(self.switch_output_lineedit):
             if not le.text():
@@ -254,10 +244,6 @@ class ToolbarMainSection(AbtractShortcutSection):
         self.create_shortcut(self.settings_lineedit, main, main_toolbar.settings_button.click)
 
     @property
-    def reload_script_default(self) -> QKeySequence:
-        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined())
-
-    @property
     def switch_output_default(self) -> list[QKeySequence]:
         return [QKeySequence(k) for k in [
             Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4,
@@ -283,8 +269,6 @@ class ToolbarMainSection(AbtractShortcutSection):
 
     def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
-            # TODO: Move reload_script_lineedit to ToolbarMiscSection
-            'reload_script': self.reload_script_lineedit.text(),
             'switch_output_modifier': self.switch_output_modifier_combobox.currentValue(),
             'switch_output_next': self.switch_output_next_lineedit.text(),
             'switch_output_previous': self.switch_output_previous_lineedit.text(),
@@ -298,8 +282,6 @@ class ToolbarMainSection(AbtractShortcutSection):
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        # TODO: Move reload_script_lineedit to ToolbarMiscSection
-        try_load(state, 'reload_script', str, self.reload_script_lineedit.setText)
         try_load(state, 'switch_output_modifier', Modifier, self.switch_output_modifier_combobox.setCurrentValue)
         try_load(state, 'switch_output_next', str, self.switch_output_next_lineedit.setText)
         try_load(state, 'switch_output_previous', str, self.switch_output_previous_lineedit.setText)
@@ -656,6 +638,36 @@ class ToolbarSceningSection(AbtractShortcutSection):
         for i, le in enumerate(self.switch_list_lineedit):
             try_load(state, f'switch_list_{i}', str, le.setText)
 
+
+class ToolbarPipetteSection(AbtractShortcutSection):
+    __slots__ = (
+        'copy_position_lineedit',
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings) -> None:
+        self.parent = parent
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        self.copy_position_lineedit = ShortCutLineEdit()
+
+        self.setup_ui_shortcut("Copy coordinates of pixel position", self.copy_position_lineedit, self.unassigned_default)
+
+    def setup_shortcuts(self) -> None:
+        main = self.parent.main
+        toolbar_pipette = main.toolbars.pipette
+
+        self.create_shortcut(self.copy_position_lineedit, toolbar_pipette, toolbar_pipette.copy_position_button.click)
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'copy_position': self.copy_position_lineedit.text(),
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'copy_position', str, self.copy_position_lineedit.setText)
 
 
 class ToolbarMiscSection(AbtractShortcutSection):

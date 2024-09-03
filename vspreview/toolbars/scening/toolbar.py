@@ -80,8 +80,6 @@ class SceningToolbar(AbstractToolbar):
         self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)
         self.export_button.clicked.connect(self.export)
 
-        self.add_shortcuts()
-
         # FIXME: get rid of workaround
         self._on_list_items_changed = lambda *arg: self.on_list_items_changed(*arg)
 

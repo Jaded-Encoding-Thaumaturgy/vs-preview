@@ -47,7 +47,6 @@ class SceningListDialog(ExtendedDialog):
         self.tableview.doubleClicked.connect(self.on_tableview_clicked)
         self.delete_button.clicked.connect(self.on_delete_clicked)
 
-        self.tableview.add_shortcut(Qt.Key.Key_Delete, self.delete_button.click)
         self.set_qobject_names()
 
     def setup_ui(self) -> None:

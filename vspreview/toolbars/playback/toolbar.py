@@ -87,8 +87,6 @@ class PlaybackToolbar(AbstractToolbar):
 
         self.main.timeline.clicked.connect(self.on_timeline_clicked)
 
-        self.add_shortcuts()
-
         self.set_qobject_names()
 
     def setup_ui(self) -> None:

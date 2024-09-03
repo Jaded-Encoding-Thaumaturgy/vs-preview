@@ -276,11 +276,6 @@ class AbstractQItem:
     __slots__: tuple[str, ...]
     storable_attrs: ClassVar[tuple[str, ...]] = ()
 
-    def add_shortcut(self, key: int, handler: Callable[[], None], description: str = "") -> None:
-        QShortcut(QKeySequence(key), self, activated=handler)  # type: ignore
-        import logging
-        logging.info(QKeySequence(key).toString() + " " + str(self))
-
     def set_qobject_names(self) -> None:
         if not hasattr(self, '__slots__'):
             return
@@ -319,9 +314,6 @@ class ExtendedWidgetBase(AbstractQItem):
     def setup_ui(self) -> None:
         self.vlayout = VBoxLayout(self)
         self.hlayout = HBoxLayout(self.vlayout)
-
-    def add_shortcuts(self) -> None:
-        pass
 
     def get_separator(self, horizontal: bool = False) -> QFrame:
         separator = QFrame(self)

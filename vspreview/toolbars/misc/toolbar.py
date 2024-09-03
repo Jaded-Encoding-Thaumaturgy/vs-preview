@@ -50,8 +50,6 @@ class MiscToolbar(AbstractToolbar):
 
         self.main.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
-        self.add_shortcuts()
-
         self.set_qobject_names()
 
     def setup_ui(self) -> None:

@@ -261,6 +261,7 @@ class PipetteToolbar(AbstractToolbar):
 
     def on_copy_position_clicked(self, checked: bool | None = None) -> None:
         self.main.clipboard.setText(self.position.text().strip())
+        self.main.show_message('Coordinates successfully copied to clipboard')
 
     def on_toggle(self, new_state: bool) -> None:
         super().on_toggle(new_state)

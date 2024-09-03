@@ -5,7 +5,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 from vstools import FramePropError, get_prop
 

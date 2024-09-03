@@ -160,17 +160,6 @@ class MiscToolbar(AbstractToolbar):
             ])
         ])
 
-    def add_shortcuts(self) -> None:
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined(), self.save_storage_button.click
-        )
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined(), self.copy_frame_button.click
-        )
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click
-        )
-
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(self.main.current_scene.pixmap())
         self.main.show_message('Current frame successfully copied to clipboard')

@@ -35,7 +35,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
             "main": ToolbarMainSection(self),
             "playback": ToolbarPlaybackSection(self),
             "scening": ToolbarSceningSection(self),
-            # "misc": None,
+            "misc": ToolbarMiscSection(self),
             "script_error": ScriptErrorDialogSection(self),
             # other + plugins ?
         }
@@ -62,7 +62,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.sections["scening"].setup_ui()
 
         self.vlayout.addWidget(TitleLabel("Misc", "###"))
-        # self.sections["misc"].setup_ui()
+        self.sections["misc"].setup_ui()
 
         self.vlayout.addWidget(TitleLabel("Script error dialog"))
         self.sections["script_error"].setup_ui()
@@ -655,6 +655,112 @@ class ToolbarSceningSection(AbtractShortcutSection):
 
         for i, le in enumerate(self.switch_list_lineedit):
             try_load(state, f'switch_list_{i}', str, le.setText)
+
+
+
+class ToolbarMiscSection(AbtractShortcutSection):
+    __slots__ = (
+        'autosave_lineedit',
+        'reload_script_lineedit',
+        'save_storage_lineedit',
+        'copy_frame_lineedit',
+        'save_frame_as_lineedit',
+        'toggle_sar_lineedit',
+        'enable_crop_lineedit',
+        'copy_crop_command_lineedit',
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings) -> None:
+        self.parent = parent
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        self.autosave_lineedit = ShortCutLineEdit()
+
+        self.reload_script_lineedit = ShortCutLineEdit()
+        if not self.parent.main.reload_enabled:
+            self.reload_script_lineedit.setDisabled(True)
+
+        self.save_storage_lineedit = ShortCutLineEdit()
+        self.copy_frame_lineedit = ShortCutLineEdit()
+
+        self.save_frame_as_lineedit = ShortCutLineEdit()
+
+        self.toggle_sar_lineedit = ShortCutLineEdit()
+        self.enable_crop_lineedit = ShortCutLineEdit()
+        self.copy_crop_command_lineedit = ShortCutLineEdit()
+
+        self.setup_ui_shortcut("Toggle whether autosave is enabled", self.autosave_lineedit, self.unassigned_default)
+
+        self.setup_ui_shortcut("Reload script", self.reload_script_lineedit, self.reload_script_default)
+        self.setup_ui_shortcut("Manually save storage", self.save_storage_lineedit, self.save_storage_default)
+        self.setup_ui_shortcut("Copy current frame to clipboard", self.copy_frame_lineedit, self.copy_frame_default)
+
+        self.setup_ui_shortcut("Save current frame as", self.save_frame_as_lineedit, self.save_frame_as_default)
+
+        self.parent.vlayout.addWidget(TitleLabel("Cropping assistant", "####"))
+        self.setup_ui_shortcut("Toggle whether SAR props are respected", self.toggle_sar_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Toggle crop assistant", self.enable_crop_lineedit, self.unassigned_default)
+        self.setup_ui_shortcut("Copy crop command", self.copy_crop_command_lineedit, self.unassigned_default)
+
+    def setup_shortcuts(self) -> None:
+        main = self.parent.main
+        misc_toolbar = main.toolbars.misc
+
+        self.create_shortcut(self.autosave_lineedit, misc_toolbar, misc_toolbar.autosave_checkbox.click)
+
+        if main.reload_enabled:
+            self.create_shortcut(self.reload_script_lineedit, main, misc_toolbar.reload_script_button.click)
+
+        self.create_shortcut(self.save_storage_lineedit, misc_toolbar, misc_toolbar.save_storage_button.click)
+        self.create_shortcut(self.copy_frame_lineedit, misc_toolbar, misc_toolbar.copy_frame_button.click)
+
+        self.create_shortcut(self.save_frame_as_lineedit, misc_toolbar, misc_toolbar.save_frame_as_button.click)
+
+        self.create_shortcut(self.toggle_sar_lineedit, misc_toolbar, misc_toolbar.ar_active_switch.click)
+        self.create_shortcut(self.enable_crop_lineedit, misc_toolbar, misc_toolbar.crop_active_switch.click)
+        self.create_shortcut(self.copy_crop_command_lineedit, misc_toolbar, misc_toolbar.crop_copycommand_button.click)
+
+    @property
+    def reload_script_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined())
+
+    @property
+    def save_storage_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined())
+
+    @property
+    def copy_frame_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined())
+
+    @property
+    def save_frame_as_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined())
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'autosave': self.autosave_lineedit.text(),
+            'reload_script': self.reload_script_lineedit.text(),
+            'save_storage': self.save_storage_lineedit.text(),
+            'copy_frame': self.copy_frame_lineedit.text(),
+            'save_frame_as': self.save_frame_as_lineedit.text(),
+            'toggle_sar': self.toggle_sar_lineedit.text(),
+            'enable_crop': self.enable_crop_lineedit.text(),
+            'copy_crop_command': self.copy_crop_command_lineedit.text(),
+
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'autosave', str, self.autosave_lineedit.setText)
+        try_load(state, 'reload_script', str, self.reload_script_lineedit.setText)
+        try_load(state, 'save_storage', str, self.save_storage_lineedit.setText)
+        try_load(state, 'copy_frame', str, self.copy_frame_lineedit.setText)
+        try_load(state, 'save_frame_as', str, self.save_frame_as_lineedit.setText)
+        try_load(state, 'toggle_sar', str, self.toggle_sar_lineedit.setText)
+        try_load(state, 'enable_crop', str, self.enable_crop_lineedit.setText)
+        try_load(state, 'copy_crop_command', str, self.copy_crop_command_lineedit.setText)
 
 
 class ScriptErrorDialogSection(AbtractShortcutSection):

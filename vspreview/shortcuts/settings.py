@@ -492,7 +492,7 @@ class ToolbarSceningSection(AbtractShortcutSection):
         'add_to_list_lineedit', 'remove_last_from_list_lineedit', 'remove_scene_at_current_frame_lineedit',
         'switch_list_lineedit',
         'seek_to_prev_scene_start_lineedit', 'seek_to_next_scene_start_lineedit',
-        'paste_frame_scening_model_lineedit'
+        'paste_frame_scening_model_lineedit', 'delete_scene_lineedit'
     )
 
     parent: ShortCutsSettings
@@ -517,6 +517,7 @@ class ToolbarSceningSection(AbtractShortcutSection):
         self.seek_to_next_scene_start_lineedit = ShortCutLineEdit()
 
         self.paste_frame_scening_model_lineedit = ShortCutLineEdit()
+        self.delete_scene_lineedit = ShortCutLineEdit()
 
         self.setup_ui_shortcut("Add current frame as single frame scene", self.add_frame_scene_lineedit, self.add_frame_scene_default)
         self.setup_ui_shortcut("Toggle whether current frame is first frame", self.toggle_first_frame_lineedit, self.toggle_first_frame_default)
@@ -538,6 +539,7 @@ class ToolbarSceningSection(AbtractShortcutSection):
             self.paste_frame_scening_model_lineedit,
             self.paste_frame_scening_model_default
         )
+        self.setup_ui_shortcut("Delete selected scene", self.delete_scene_lineedit, self.delete_scene_default)
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
@@ -558,10 +560,15 @@ class ToolbarSceningSection(AbtractShortcutSection):
         self.create_shortcut(self.seek_to_next_scene_start_lineedit, scening_toolbar, scening_toolbar.seek_to_next_button.click)
 
         self.create_shortcut(
-            self.paste_frame_scening_model_lineedit, scening_toolbar,
+            self.paste_frame_scening_model_lineedit, scening_toolbar.scening_list_dialog,
             lambda: scening_toolbar.scening_list_dialog.label_lineedit.setText(
                 str(main.current_output.last_showed_frame)
             )
+        )
+        self.create_shortcut(
+            self.delete_scene_lineedit,
+            scening_toolbar.scening_list_dialog,
+            scening_toolbar.scening_list_dialog.delete_button.click
         )
 
     @property
@@ -607,6 +614,10 @@ class ToolbarSceningSection(AbtractShortcutSection):
     @property
     def paste_frame_scening_model_default(self) -> QKeySequence:
         return QKeySequence(Qt.Key.Key_B)
+
+    @property
+    def delete_scene_default(self) -> QKeySequence:
+        return QKeySequence(Qt.Key.Key_Delete)
 
     def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {
@@ -761,7 +772,6 @@ class ToolbarMiscSection(AbtractShortcutSection):
             'toggle_sar': self.toggle_sar_lineedit.text(),
             'enable_crop': self.enable_crop_lineedit.text(),
             'copy_crop_command': self.copy_crop_command_lineedit.text(),
-
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:

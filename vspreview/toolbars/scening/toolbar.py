@@ -224,9 +224,7 @@ class SceningToolbar(AbstractToolbar):
             self.remove_list_button.setEnabled(False)
             self.view_list_button.setEnabled(False)
 
-        self.scening_list_dialog.setMinimumSize(self.scening_list_dialog.sizeHint())
-        self.scening_list_dialog.setMaximumSize(self.scening_list_dialog.sizeHint())
-        self.scening_list_dialog.updateGeometry()
+        self.scening_list_dialog.adjustSize()
 
         if old_value is not None:
             try:
@@ -251,6 +249,7 @@ class SceningToolbar(AbstractToolbar):
             self.view_list_button.setEnabled(False)
 
     def on_view_list_clicked(self, checked: bool | None = None) -> None:
+        self.scening_list_dialog.adjustSize()
         self.scening_list_dialog.show()
 
     def switch_list(self, index: int) -> None:

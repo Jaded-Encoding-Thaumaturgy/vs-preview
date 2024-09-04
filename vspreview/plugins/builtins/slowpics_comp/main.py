@@ -87,8 +87,6 @@ class CompUploadWidget(ExtendedWidget):
 
         self.set_qobject_names()
 
-        self.add_shortcuts()
-
         self.tag_data_cache = None
         self.tag_data_error = False
 
@@ -421,11 +419,6 @@ class CompUploadWidget(ExtendedWidget):
                 collection_text = collection_text.replace(match, replace)
 
         return collection_text
-
-    def add_shortcuts(self) -> None:
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.add_current_frame_to_comp
-        )
 
     def update_tags(self) -> None:
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))

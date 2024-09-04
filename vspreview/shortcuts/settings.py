@@ -4,7 +4,7 @@ import logging
 
 from bisect import bisect_left, bisect_right
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QKeySequence
@@ -17,8 +17,9 @@ from .abstract import (
 
 if TYPE_CHECKING:
     from ..main import MainWindow
+    from ..plugins.abstract import AbstractPlugin, PluginShortcut
 else:
-    MainWindow = Any
+    MainWindow, PluginShortcut, AbstractPlugin = Any, Any, Any
 
 
 __all__ = ["ShortCutsSettings"]
@@ -27,6 +28,7 @@ __all__ = ["ShortCutsSettings"]
 class ShortCutsSettings(AbstractSettingsScrollArea):
     main: MainWindow
     sections: dict[str, AbtractShortcutSection]
+    sections_plugins: dict[str, "PluginSection"]
 
     def __init__(self, main_window: MainWindow) -> None:
         self.main = main_window
@@ -39,8 +41,8 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
             "pipette": ToolbarPipetteSection(self),
             "misc": ToolbarMiscSection(self),
             "script_error": ScriptErrorDialogSection(self),
-            # other + plugins ?
         }
+        self.sections_plugins = {ns: PluginSection(self, plugin) for ns, plugin in self.main.plugins.plugins.items()}
         super().__init__()
 
     def setup_ui(self) -> None:
@@ -72,6 +74,10 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         self.vlayout.addWidget(TitleLabel("Script error dialog"))
         self.sections["script_error"].setup_ui()
 
+        self.vlayout.addWidget(TitleLabel("Plugins"))
+        for section in self.sections_plugins.values():
+            section.setup_ui()
+
         self.main.app_settings.addTab(self, "Shortcuts")
 
     def set_defaults(self) -> None:
@@ -84,13 +90,13 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
     def __getstate__(self) -> dict[str, Any]:
         state = super().__getstate__()
 
-        for name, section in self.sections.items():
+        for name, section in (self.sections | self.sections_plugins).items():
             state[name] = section.__getstate__()
 
         return state
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        for name, section in self.sections.items():
+        for name, section in (self.sections | self.sections_plugins).items():
             try:
                 storage = state[name]
                 if not isinstance(storage, dict):
@@ -918,3 +924,51 @@ class ScriptErrorDialogSection(AbtractShortcutSectionYAMLObjectSingleton):
     def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, "reload", str, self.reload_lineedit.setText)
         try_load(state, "exit", str, self.exit_lineedit.setText)
+
+
+class _PluginShortcutSettings(NamedTuple):
+    lineedit: ShortCutLineEdit
+    plugin_shortcut: PluginShortcut
+
+
+class PluginSection(AbtractShortcutSectionQYAMLObject):
+    __slots__ = (
+        "plugin_shortcut_settings",
+    )
+
+    parent: ShortCutsSettings
+
+    def __init__(self, parent: ShortCutsSettings, plugin: AbstractPlugin) -> None:
+        self.parent = parent
+        self.plugin = plugin
+        self.plugin_shortcut_settings = dict[str, _PluginShortcutSettings]()
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        if not self.plugin.shortcuts:
+            return
+
+        self.label = TitleLabel(self.plugin._config.display_name, "###")
+        self.parent.vlayout.addWidget(self.label)
+
+        for shortcut in self.plugin.shortcuts:
+            le = ShortCutLineEdit()
+            self.plugin_shortcut_settings[shortcut.name] = _PluginShortcutSettings(le, shortcut)
+            self.setup_ui_shortcut(shortcut.description or shortcut.name, le, shortcut.key)
+
+    def setup_shortcuts(self) -> None:
+        for sett in self.plugin_shortcut_settings.values():
+            plsh = sett.plugin_shortcut
+
+            self.create_shortcut(
+                sett.lineedit,
+                eval(plsh.parent.replace("self.", "self.plugin.")) if isinstance(plsh.parent, str) else plsh.parent,
+                eval(plsh.handler.replace("self.", "self.plugin.")) if isinstance(plsh.handler, str) else plsh.handler,
+            )
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {n: sett.lineedit.text() for n, sett in self.plugin_shortcut_settings.items()}
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        for n, sett in self.plugin_shortcut_settings.items():
+            try_load(state, n, str, sett.lineedit.setText)

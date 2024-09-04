@@ -8,7 +8,10 @@ from PyQt6.QtCore import QKeyCombination, QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent, QKeySequence, QMouseEvent
 from PyQt6.QtWidgets import QBoxLayout, QLabel, QWidget
 
-from ..core import AbstractSettingsWidget, AbstractYAMLObjectSingleton, HBoxLayout, LineEdit, PushButton, Shortcut
+from ..core import (
+    AbstractSettingsScrollArea, HBoxLayout, LineEdit, PushButton, QAbstractYAMLObjectSingleton,
+    QYAMLObject, Shortcut
+)
 from ..models import GeneralModel
 
 if TYPE_CHECKING:
@@ -18,6 +21,8 @@ else:
 
 __all__ = [
     "AbtractShortcutSection",
+    "AbtractShortcutSectionYAMLObjectSingleton",
+    "AbtractShortcutSectionQYAMLObject",
     "ShortCutLineEdit",
     "ResetPushButton",
     "HiddenResetPushButton",
@@ -158,8 +163,8 @@ class ModifierModel(GeneralModel[Modifier]):
         return QKeySequence(value.value).toString()[:-1]
 
 
-class AbtractShortcutSection(AbstractYAMLObjectSingleton):
-    parent: AbstractSettingsWidget
+class AbtractShortcutSection:
+    parent: AbstractSettingsScrollArea
 
     def setup_ui(self) -> None: ...
 
@@ -206,3 +211,9 @@ class AbtractShortcutSection(AbstractYAMLObjectSingleton):
         return {}
 
     def __setstate__(self, state: dict[str, Any]) -> None: ...
+
+
+class AbtractShortcutSectionYAMLObjectSingleton(AbtractShortcutSection, QAbstractYAMLObjectSingleton): ...
+
+
+class AbtractShortcutSectionQYAMLObject(AbtractShortcutSection, QYAMLObject): ...

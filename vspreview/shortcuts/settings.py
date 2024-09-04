@@ -10,7 +10,10 @@ from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtGui import QKeySequence
 
 from ..core import AbstractSettingsScrollArea, ComboBox, storage_err_msg, try_load
-from .abstract import MAX_WIDTH_LINE_EDIT, AbtractShortcutSection, Modifier, ModifierModel, ShortCutLineEdit, TitleLabel
+from .abstract import (
+    MAX_WIDTH_LINE_EDIT, AbtractShortcutSection, AbtractShortcutSectionQYAMLObject,
+    AbtractShortcutSectionYAMLObjectSingleton, Modifier, ModifierModel, ShortCutLineEdit, TitleLabel
+)
 
 if TYPE_CHECKING:
     from ..main import MainWindow
@@ -99,7 +102,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
                 section.__setstate__(storage)
 
 
-class GraphicsViewSection(AbtractShortcutSection):
+class GraphicsViewSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = (
         "zoom_levels_lineedit",
         "auto_fit_lineedit",
@@ -147,7 +150,7 @@ class GraphicsViewSection(AbtractShortcutSection):
         try_load(state, "auto_fit", str, self.auto_fit_lineedit.setText)
 
 
-class ToolbarMainSection(AbtractShortcutSection):
+class ToolbarMainSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = (
         "switch_output_lineedit",
         "switch_output_modifier_combobox",
@@ -311,7 +314,7 @@ class ToolbarMainSection(AbtractShortcutSection):
             try_load(state, f"switch_output_{i}", str, so.setText)
 
 
-class ToolbarPlaybackSection(AbtractShortcutSection):
+class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = (
         "play_pause_lineedit",
         "seek_to_prev_lineedit",
@@ -513,7 +516,7 @@ class ToolbarPlaybackSection(AbtractShortcutSection):
         try_load(state, "increase_volume", str, self.increase_volume_lineedit.setText)
 
 
-class ToolbarSceningSection(AbtractShortcutSection):
+class ToolbarSceningSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = (
         "add_frame_scene_lineedit",
         "toggle_first_frame_lineedit",
@@ -734,7 +737,7 @@ class ToolbarSceningSection(AbtractShortcutSection):
             try_load(state, f"switch_list_{i}", str, le.setText)
 
 
-class ToolbarPipetteSection(AbtractShortcutSection):
+class ToolbarPipetteSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = ("copy_position_lineedit",)
 
     parent: ShortCutsSettings
@@ -765,7 +768,7 @@ class ToolbarPipetteSection(AbtractShortcutSection):
         try_load(state, "copy_position", str, self.copy_position_lineedit.setText)
 
 
-class ToolbarMiscSection(AbtractShortcutSection):
+class ToolbarMiscSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = (
         "autosave_lineedit",
         "reload_script_lineedit",
@@ -871,7 +874,7 @@ class ToolbarMiscSection(AbtractShortcutSection):
         try_load(state, "copy_crop_command", str, self.copy_crop_command_lineedit.setText)
 
 
-class ScriptErrorDialogSection(AbtractShortcutSection):
+class ScriptErrorDialogSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = ("reload_lineedit", "exit_lineedit")
 
     parent: ShortCutsSettings

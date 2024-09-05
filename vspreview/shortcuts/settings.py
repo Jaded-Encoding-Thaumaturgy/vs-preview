@@ -724,6 +724,7 @@ class ToolbarSceningSection(AbtractShortcutSectionYAMLObjectSingleton):
                 "seek_to_prev_scene_start": self.seek_to_prev_scene_start_lineedit.text(),
                 "seek_to_next_scene_start": self.seek_to_next_scene_start_lineedit.text(),
                 "paste_frame_scening_model": self.paste_frame_scening_model_lineedit.text(),
+                "delete_scene": self.delete_scene_lineedit.text(),
             }
             | {f"switch_list_{i}": so.text() for i, so in enumerate(self.switch_list_lineedit)}
         )
@@ -738,6 +739,7 @@ class ToolbarSceningSection(AbtractShortcutSectionYAMLObjectSingleton):
         try_load(state, "seek_to_prev_scene_start", str, self.seek_to_prev_scene_start_lineedit.setText)
         try_load(state, "seek_to_next_scene_start", str, self.seek_to_next_scene_start_lineedit.setText)
         try_load(state, "paste_frame_scening_model", str, self.paste_frame_scening_model_lineedit.setText)
+        try_load(state, "delete_scene", str, self.delete_scene_lineedit.setText)
 
         for i, le in enumerate(self.switch_list_lineedit):
             try_load(state, f"switch_list_{i}", str, le.setText)

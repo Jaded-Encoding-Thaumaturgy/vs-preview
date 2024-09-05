@@ -83,7 +83,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         set_log_level(logging.DEBUG, logging.DEBUG)
         VSDebug(use_logging=True)
     else:
-        set_log_level(logging.INFO)
+        set_log_level(logging.WARNING)
 
     if args.vscode_setup is not None:
         from .api.other import install_vscode_launch

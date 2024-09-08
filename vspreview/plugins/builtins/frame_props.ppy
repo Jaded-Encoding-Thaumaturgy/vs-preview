@@ -23,7 +23,7 @@ def _create_enum_props_lut(enum: type[PropEnum], pretty_name: str) -> tuple[str,
 
 
 # Table categories
-_frame_props_categories = {
+_frame_props_categories: dict[str, list[str]] = {
     'Video': [
         # Colorimetry
         '_Matrix', '_Transfer', '_Primaries',
@@ -47,12 +47,12 @@ _frame_props_categories = {
 }
 
 # Property prefixes for table categorization
-_frame_props_prefix_lut = {
+_frame_props_prefix_lut: dict[str, str] = {
     ('VFM', 'VDecimate', 'TFM', 'TDecimate', 'wobbly_'): 'Fields',
     ('PlaneStats', 'psm', 'dgi_', 'AutoBalance', 'SceneGrain'): 'Metrics',
 }
 
-_frame_props_excluded_keys = {
+_frame_props_excluded_keys: dict[str, str] = {
     # vs internals
     '_AbsoluteTime', '_DurationNum', '_DurationDen', '_PictType', '_Alpha',
     # Handled separately
@@ -64,7 +64,7 @@ _frame_props_excluded_keys = {
 }
 
 
-_frame_props_lut = {
+_frame_props_lut: dict[str, dict[str, list[str]]] = {
     '_Combed': {
         'Is Combed': [
             'No',

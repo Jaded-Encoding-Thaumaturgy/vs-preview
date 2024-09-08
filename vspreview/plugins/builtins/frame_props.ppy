@@ -223,11 +223,16 @@ class FramePropsPlugin(AbstractPlugin, QWidget):
     def populate_prettified_tables(self, props: FrameProps) -> None:
         """Populate tables with prettified frame properties."""
 
-        for key in self.sort_props(props):
+        stripped_props = {
+            k.strip(): v.strip() if isinstance(v, str) else v
+            for k, v in props.items()
+        }
+
+        for key in self.sort_props(stripped_props):
             if key in _frame_props_excluded_keys:
                 continue
 
-            title, value_str = self.get_prettified_prop(key, props[key])
+            title, value_str = self.get_prettified_prop(key, stripped_props[key])
 
             if value_str is None:
                 continue
@@ -236,7 +241,7 @@ class FramePropsPlugin(AbstractPlugin, QWidget):
 
             self.category_tables[category]._model._data.append([title, value_str])
 
-        self.add_pixel_aspect_ratio(props)
+        self.add_pixel_aspect_ratio(stripped_props)
 
     def get_property_category(self, key: str) -> str:
         """Determine the category for a given property key."""

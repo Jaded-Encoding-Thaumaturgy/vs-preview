@@ -39,7 +39,7 @@ _frame_props_categories: dict[str, list[str]] = {
         # Scene detection
         '_SceneChangeNext', '_SceneChangePrev', 'SceneChange',
     ],
-    'Fields': [
+    'Field': [
         '_Combed', '_Field', '_FieldBased',
     ],
     # Props that don't fit into other categories or haven't been sorted
@@ -48,7 +48,7 @@ _frame_props_categories: dict[str, list[str]] = {
 
 # Property prefixes for table categorization
 _frame_props_prefix_lut: dict[str, str] = {
-    ('VFM', 'VDecimate', 'TFM', 'TDecimate', 'wobbly_'): 'Fields',
+    ('VFM', 'VDecimate', 'TFM', 'TDecimate', 'wobbly_'): 'Field',
     ('PlaneStats', 'psm', 'dgi_', 'AutoBalance', 'SceneGrain'): 'Metrics',
 }
 

@@ -10,8 +10,7 @@ from uuid import uuid4
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from requests import Session
-from requests_toolbelt import MultipartEncoder  # type: ignore
-from requests_toolbelt import MultipartEncoderMonitor
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor  # type: ignore
 from stgpytools import SPath, ndigits
 from vstools import clip_data_gather, get_prop, remap_frames, vs
 
@@ -19,8 +18,8 @@ from vspreview.core import Frame, PackingType, VideoOutput
 from vspreview.main import MainWindow
 
 from .utils import (
-    MAX_ATTEMPTS_PER_BRIGHT_TYPE, MAX_ATTEMPTS_PER_PICTURE_TYPE, clear_filename, do_single_slowpic_upload,
-    get_slowpic_headers, get_slowpic_upload_headers, rand_num_frames, get_frame_time
+    MAX_ATTEMPTS_PER_BRIGHT_TYPE, MAX_ATTEMPTS_PER_PICTURE_TYPE, do_single_slowpic_upload, get_frame_time,
+    get_slowpic_headers, get_slowpic_upload_headers, rand_num_frames, sanitize_filename
 )
 
 __all__ = [
@@ -241,7 +240,7 @@ class Worker(QObject):
         self.progress_status.emit(conf.uuid, url, 0, 0)
 
         url_out = (
-            conf.path.parent / 'Old Comps' / clear_filename(f'{conf.collection_name} - {key}')
+            conf.path.parent / 'Old Comps' / sanitize_filename(f'{conf.collection_name} - {key}')
         ).with_suffix('.url')
         url_out.parent.mkdir(parents=True, exist_ok=True)
         url_out.touch(exist_ok=True)

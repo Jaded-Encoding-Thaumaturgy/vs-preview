@@ -49,7 +49,7 @@ _frame_props_categories = {
 # Property prefixes for table categorization
 _frame_props_prefix_lut = {
     ('VFM', 'VDecimate', 'TFM', 'TDecimate', 'wobbly_'): 'Fields',
-    ('PlaneStats', 'psm', 'AutoBalance', 'SceneGrain'): 'Metrics',
+    ('PlaneStats', 'psm', 'dgi_', 'AutoBalance', 'SceneGrain'): 'Metrics',
 }
 
 _frame_props_excluded_keys = {

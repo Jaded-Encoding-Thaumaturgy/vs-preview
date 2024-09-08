@@ -159,7 +159,7 @@ class FramePropsPlugin(AbstractPlugin, QWidget):
             self.settings.local.raw_data = clicked
             self.on_current_frame_changed(None)
 
-        self.raw_data = Switch(10, 24, clicked=_update_raw_data, tooltip='Raw Data')
+        self.raw_data = Switch(10, 24, clicked=_update_raw_data, tooltip='Display the raw frame properties')
 
         if 'raw_data' not in self.settings.local:
             self.settings.local.raw_data = False

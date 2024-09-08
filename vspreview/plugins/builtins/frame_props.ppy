@@ -33,7 +33,7 @@ _frame_props_categories = {
         '_SARNum', '_SARDen',
         '_FieldBased',
         # Other
-        '_FrameNumber', '_Alpha', 'Name',
+        '_FrameNumber', '_Alpha', 'Name', 'idx_filepath',
     ],
     'Metrics': [
         # Scene detection

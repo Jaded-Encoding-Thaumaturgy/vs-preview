@@ -51,7 +51,7 @@ _frame_props_categories: dict[str, list[str]] = {
 # Property prefixes for table categorization
 _frame_props_prefix_lut: dict[str, str] = {
     ('VFM', 'VDecimate', 'TFM', 'TDecimate', 'wobbly_'): 'Field',
-    ('PlaneStats', 'psm', 'dgi_', 'AutoBalance', 'SceneGrain'): 'Metrics',
+    ('PlaneStats', 'psm', 'dgi_', 'AutoBalance', 'SceneGrain', 'pkt_'): 'Metrics',
 }
 
 _frame_props_excluded_keys: dict[str, str] = {

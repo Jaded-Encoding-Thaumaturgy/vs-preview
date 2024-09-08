@@ -1,6 +1,7 @@
 from __future__ import annotations
+from typing import Any
 
-from PyQt6.QtWidgets import QLabel, QSizePolicy, QTableView, QWidget
+from PyQt6.QtWidgets import QLabel, QTableView, QWidget, QHeaderView
 from vapoursynth import FrameProps
 from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
@@ -20,6 +21,36 @@ def _create_enum_props_lut(enum: type[PropEnum], pretty_name: str) -> tuple[str,
         }
     }
 
+
+# Table categories
+_frame_props_categories = {
+    'Video': [
+        # Colorimetry
+        '_Matrix', '_Transfer', '_Primaries',
+        '_ChromaLocation', '_ColorRange',
+        # Frame Properties
+        '_DurationNum', '_DurationDen', '_AbsoluteTime',
+        '_SARNum', '_SARDen',
+        '_FieldBased',
+        # Other
+        '_FrameNumber', '_Alpha', 'Name',
+    ],
+    'Metrics': [
+        # Scene detection
+        '_SceneChangeNext', '_SceneChangePrev', 'SceneChange',
+    ],
+    'Fields': [
+        '_Combed', '_Field', '_FieldBased',
+    ],
+    # Props that don't fit into other categories or haven't been sorted
+    'Other': []
+}
+
+# Property prefixes for table categorization
+_frame_props_prefix_lut = {
+    ('VFM', 'VDecimate', 'TFM', 'TDecimate', 'wobbly_'): 'Fields',
+    ('PlaneStats', 'psm', 'AutoBalance', 'SceneGrain'): 'Metrics',
+}
 
 _frame_props_excluded_keys = {
     # vs internals
@@ -72,57 +103,196 @@ _frame_props_lut = {
 
 
 class FramePropsPlugin(AbstractPlugin, QWidget):
+    """
+    A plugin for displaying and managing frame properties in VSPreview.
+
+    This plugin provides a user interface for viewing frame properties of video clips.
+    It supports both prettified and raw data views of frame properties,
+    organized into categories for easy navigation.
+    """
+
     _config = PluginConfig('dev.setsugen.frame_props', 'Frame Props')
 
     def setup_ui(self) -> None:
-        self.table = QTableView()
-        self.table._model = TableModel([], ['Name', 'Data'], False)
-        self.table.verticalHeader().hide()
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setFirstSectionMovable(False)
+        """Set up the user interface components."""
 
-        def _update_prettify(clicked: bool) -> None:
-            self.settings.local.prettify = clicked
+        self.setup_tables()
+        self.setup_raw_data_switch()
+        self.setup_labels()
+        self.setup_layout()
+
+    def setup_tables(self) -> None:
+        """Initialize and set up the table views."""
+
+        self.category_tables = {category: self.create_table_view(category) for category in _frame_props_categories}
+        self.raw_data_table = self.create_table_view('raw_data')
+
+        self.raw_data_table.hide()
+
+    def create_table_view(self, category: str) -> QTableView:
+        """Create and configure a QTableView."""
+
+        table = QTableView()
+        table._model = TableModel([], ['Name', 'Data'], False)
+
+        table.verticalHeader().hide()
+        table.horizontalHeader().setStretchLastSection(True)
+        table.horizontalHeader().setFirstSectionMovable(False)
+
+        if category != 'Other':
+            table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        else:
+            table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
+        return table
+
+    def setup_raw_data_switch(self) -> None:
+        """Set up the raw data switch."""
+
+        def _update_raw_data(clicked: bool) -> None:
+            self.settings.local.raw_data = clicked
             self.on_current_frame_changed(None)
 
-        self.prettify = Switch(10, 24, clicked=_update_prettify, tooltip='Pretty')
-        if 'prettify' not in self.settings.local or self.settings.local.prettify:
-            self.prettify.click()
+        self.raw_data = Switch(10, 24, clicked=_update_raw_data, tooltip='Raw Data')
 
-        VBoxLayout(self, [
-            HBoxLayout([QLabel('Prettify output:'), self.prettify, Stretch()]),
-            self.table
+        if 'raw_data' not in self.settings.local:
+            self.settings.local.raw_data = False
+
+    def setup_labels(self) -> None:
+        """Set up the labels for different sections."""
+
+        self.category_labels = {category: QLabel(f'{category} Properties:') for category in _frame_props_categories}
+
+    def setup_layout(self) -> None:
+        """Set up the layout of the widget."""
+
+        layout_items = [HBoxLayout([QLabel('Raw data:'), self.raw_data, Stretch()])]
+
+        for category in _frame_props_categories:
+            layout_items.extend([
+                self.category_labels[category],
+                self.category_tables[category]
+            ])
+
+        layout_items.extend([
+            self.raw_data_table
         ])
 
+        VBoxLayout(self, layout_items)
+
     def on_current_frame_changed(self, frame: Frame) -> None:
+        """Handle the event when the current frame changes."""
+
         if (props := self.main.current_output.props) is None:
             return
 
         self.update_frame_props(props)
 
     def update_frame_props(self, props: FrameProps) -> None:
-        self.table._model._data = []
+        """Update the frame properties display."""
 
-        if self.prettify.isChecked():
-            for key in sorted(props.keys()):
-                if key in _frame_props_excluded_keys:
-                    continue
+        self.clear_table_data()
 
-                if key in _frame_props_lut:
-                    title = next(iter(_frame_props_lut[key].keys()))
-                    value_str = _frame_props_lut[key][title][props[key]]  # type: ignore
-                else:
-                    title = key[1:] if key.startswith('_') else key
-                    value_str = str(props[key])
-
-                if value_str is not None:
-                    self.table._model._data.append([title, value_str])
-
-            if '_SARNum' in props and '_SARDen' in props:
-                self.table._model._data.append(['Pixel aspect ratio', f"{props['_SARNum']}/{props['_SARDen']}"])
+        if self.raw_data.isChecked():
+            self.populate_raw_table(props)
         else:
-            for key, value in props.items():
-                self.table._model._data.append([key, str(value)])
+            self.populate_prettified_tables(props)
 
-        self.table.setModel(self.table._model)
-        self.table._model.layoutChanged.emit()
+        self.update_table_models()
+        self.toggle_table_visibility()
+
+    def clear_table_data(self) -> None:
+        """Clear the data in all tables."""
+
+        for table in list(self.category_tables.values()) + [self.raw_data_table]:
+            table._model._data = []
+
+    def populate_raw_table(self, props: FrameProps) -> None:
+        """Populate the raw data table with all frame properties."""
+
+        for key in self.sort_props(props):
+            value = props[key]
+            self.raw_data_table._model._data.append([key, str(value)])
+
+    def populate_prettified_tables(self, props: FrameProps) -> None:
+        """Populate tables with prettified frame properties."""
+
+        for key in self.sort_props(props):
+            if key in _frame_props_excluded_keys:
+                continue
+
+            title, value_str = self.get_prettified_prop(key, props[key])
+
+            if value_str is None:
+                continue
+
+            category = self.get_property_category(key)
+
+            self.category_tables[category]._model._data.append([title, value_str])
+
+        self.add_pixel_aspect_ratio(props)
+
+    def get_property_category(self, key: str) -> str:
+        """Determine the category for a given property key."""
+
+        for prefixes, category in _frame_props_prefix_lut.items():
+            if key.startswith(prefixes):
+                return category
+
+        for category, props in _frame_props_categories.items():
+            if key in props:
+                return category
+
+        return 'Other'
+
+    def get_prettified_prop(self, key: str, value: Any) -> tuple[str, str | None]:
+        """Get a prettified version of a property."""
+
+        if key in _frame_props_lut:
+            title = next(iter(_frame_props_lut[key].keys()))
+            value_str = _frame_props_lut[key][title][value]
+        else:
+            title = key[1:] if key.startswith('_') else key
+            value_str = str(value)
+
+        return title, value_str
+
+    def add_pixel_aspect_ratio(self, props: FrameProps) -> None:
+        """Add pixel aspect ratio to the video properties table if available."""
+
+        sar_num, sar_den = props.get('_SARNum'), props.get('_SARDen')
+
+        if sar_num is None or sar_den is None:
+            return
+
+        self.category_tables['Video']._model._data.append(
+            ['Sample aspect ratio', f"{sar_num}/{sar_den}"]
+        )
+
+    def sort_props(self, props: FrameProps) -> list[str]:
+        """Sort properties with underscore-prefixed keys first."""
+
+        return sorted(props.keys(), key=lambda x: (not x.startswith('_'), x))
+
+    def update_table_models(self) -> None:
+        """Update the models of all tables."""
+
+        for table in list(self.category_tables.values()) + [self.raw_data_table]:
+            table.setModel(table._model)
+            table._model.layoutChanged.emit()
+
+    def toggle_table_visibility(self) -> None:
+        """Toggle the visibility of tables based on raw data mode."""
+
+        is_raw = self.raw_data.isChecked()
+
+        for category, table in self.category_tables.items():
+            is_visible = not is_raw and len(table._model._data) > 0
+            table.setVisible(is_visible)
+
+            if hasattr(self, 'category_labels'):
+                self.category_labels[category].setVisible(is_visible)
+
+        self.raw_data_table.setVisible(is_raw)

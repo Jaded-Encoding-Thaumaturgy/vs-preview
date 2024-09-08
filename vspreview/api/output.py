@@ -2,69 +2,219 @@
 from __future__ import annotations
 
 import inspect
+import logging
+
 from fractions import Fraction
-from pathlib import Path
-from typing import Any
+from os import PathLike
+from typing import Any, Iterable, Sequence, overload
 
-from vapoursynth import AudioNode, RawNode, VideoNode, get_outputs
-from vstools import Keyframes
+from vstools import Keyframes, KwargsT, flatten, to_arr, vs
 
+from .info import is_preview
 from .nodes import set_scening, set_timecodes, update_node_info
 
 __all__ = [
     'set_output'
 ]
 
+TimecodesT = str | PathLike[str] | dict[tuple[int | None, int | None], float | tuple[int, int] | Fraction] | list[Fraction] | None
+ScenesT = Keyframes | list[tuple[int, int]] | list[Keyframes | list[tuple[int, int]]] | None
 
+
+# VideoNode signature
+@overload
 def set_output(
-    node: RawNode, name: str | bool | None = None, alpha: VideoNode | None = None,
-    *, cache: bool = True, disable_comp: bool = False,
-    timecodes: str | Path | dict[
-        tuple[int | None, int | None], float | tuple[int, int] | Fraction
-    ] | list[Fraction] | None = None, denominator: int = 1001,
-    scenes: Keyframes | list[tuple[int, int]] | list[Keyframes | list[tuple[int, int]]] | None = None,
+    node: vs.VideoNode,
+    index: int = ...,
+    /,
+    *,
+    alpha: vs.VideoNode | None = ...,
+    timecodes: TimecodesT = None, denominator: int = 1001, scenes: ScenesT = None,
     **kwargs: Any
 ) -> None:
-    from .info import is_preview
+    ...
 
-    index = len(get_outputs())
 
-    ref_id = str(id(node))
+@overload
+def set_output(
+    node: vs.VideoNode,
+    name: str | bool | None = ...,
+    /,
+    *,
+    alpha: vs.VideoNode | None = ...,
+    timecodes: TimecodesT = None, denominator: int = 1001, scenes: ScenesT = None,
+    **kwargs: Any
+) -> None:
+    ...
 
-    if isinstance(node, VideoNode):
-        title, node_type = 'Clip', VideoNode
-    elif isinstance(node, AudioNode):
-        title, node_type = 'Audio', AudioNode
-    else:
-        title, node_type = 'Node', RawNode
 
-    if (not name and name is not False) or name is True:
-        name = f"{title} {index}"
+@overload
+def set_output(
+    node: vs.VideoNode,
+    index: int = ..., name: str | bool | None = ...,
+    /,
+    alpha: vs.VideoNode | None = ...,
+    *,
+    timecodes: TimecodesT = None, denominator: int = 1001, scenes: ScenesT = None,
+    **kwargs: Any
+) -> None:
+    ...
 
-        current_frame = inspect.currentframe()
 
-        assert current_frame
-        assert current_frame.f_back
+# AudioNode signature
+@overload
+def set_output(
+    node: vs.AudioNode,
+    index: int = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
 
-        for vname, val in reversed(current_frame.f_back.f_locals.items()):
-            if (str(id(val)) == ref_id):
-                name = vname
-                break
+@overload
+def set_output(
+    node: vs.AudioNode,
+    name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
 
-        current_frame = None
+@overload
+def set_output(
+    node: vs.AudioNode,
+    index: int = ..., name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
 
-    node.set_output(index, alpha)
 
+# Iterable of VideoNode signature
+@overload
+def set_output(
+    node: Iterable[vs.VideoNode | Iterable[vs.VideoNode | Iterable[vs.VideoNode]]],
+    index: int | Sequence[int] = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+
+@overload
+def set_output(
+    node: Iterable[vs.VideoNode | Iterable[vs.VideoNode | Iterable[vs.VideoNode]]],
+    name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+
+@overload
+def set_output(
+    node: Iterable[vs.VideoNode | Iterable[vs.VideoNode | Iterable[vs.VideoNode]]],
+    index: int | Sequence[int] = ..., name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+# Iterable of AudioNode signature
+@overload
+def set_output(
+    node: Iterable[vs.AudioNode | Iterable[vs.AudioNode | Iterable[vs.AudioNode]]],
+    index: int | Sequence[int] = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+
+@overload
+def set_output(
+    node: Iterable[vs.AudioNode | Iterable[vs.AudioNode | Iterable[vs.AudioNode]]],
+    name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+
+@overload
+def set_output(
+    node: Iterable[vs.AudioNode | Iterable[vs.AudioNode | Iterable[vs.AudioNode]]],
+    index: int | Sequence[int] = ..., name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+
+def set_output(
+    node: vs.RawNode | Iterable[vs.RawNode | Iterable[vs.RawNode | Iterable[vs.RawNode]]],
+    index_or_name: int | Sequence[int] | str | bool | None = None, name: str | bool | None = None,
+    /,
+    alpha: vs.VideoNode | None = None,
+    *,
+    timecodes: TimecodesT = None, denominator: int = 1001, scenes: ScenesT = None,
+    **kwargs: Any
+) -> None:
     if not is_preview():
-        return
+        return None
 
-    update_node_info(node_type, index, cache=cache, disable_comp=disable_comp, **kwargs)
+    if isinstance(index_or_name, (str, bool)):
+        index = None
+        # Backward compatible with older api
+        if isinstance(name, vs.VideoNode):
+            alpha = name  # type: ignore[unreachable]
+        name = index_or_name
+    else:
+        index = index_or_name
 
-    if name:
-        update_node_info(node_type, index, name=name)
+    ouputs = vs.get_outputs()
+    nodes = list(flatten(node))
 
-    if timecodes:
-        set_timecodes(index, timecodes, node, denominator)
+    index = to_arr(index) if index is not None else [max(ouputs, default=-1) + 1]
 
-    if scenes and node_type is VideoNode:
-        set_scening(scenes, node, name or f'Clip {index}')
+    while len(index) < len(nodes):
+        index.append(index[-1] + 1)
+
+    for i, n in zip(index[:len(nodes)], nodes):
+        if i in ouputs:
+            logging.warn(f"Index n° {i} has been already used!")
+        if isinstance(n, vs.VideoNode):
+            n.set_output(i, alpha)
+            title = 'Clip'
+        else:
+            n.set_output(i)
+            title = 'Audio' if isinstance(n, vs.AudioNode) else 'Node'
+
+        if (not name and name is not False) or name is True:
+            name = f"{title} {i}"
+
+            current_frame = inspect.currentframe()
+
+            assert current_frame
+            assert current_frame.f_back
+
+            ref_id = str(id(n))
+            for vname, val in reversed(current_frame.f_back.f_locals.items()):
+                if (str(id(val)) == ref_id):
+                    name = vname
+                    break
+
+            del current_frame
+
+        update_node_info(
+            type(n), i,
+            **KwargsT(cache=True, disable_comp=False) | (KwargsT(name=name) if name else {}) | kwargs
+        )
+
+        if isinstance(n, vs.VideoNode):
+            if timecodes:
+                timecodes = str(timecodes) if not isinstance(timecodes, (dict, list)) else timecodes
+                set_timecodes(i, timecodes, n, denominator)
+
+            if scenes:
+                set_scening(scenes, n, name or f'Clip {i}')

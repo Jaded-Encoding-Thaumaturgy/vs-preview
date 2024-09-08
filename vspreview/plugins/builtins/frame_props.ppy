@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 from typing import Any
 
-from PyQt6.QtWidgets import QLabel, QTableView, QWidget, QHeaderView
-from vapoursynth import FrameProps
-from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtWidgets import QApplication, QHeaderView, QLabel, QTableView, QWidget
 
+from vapoursynth import FrameProps
 from vspreview.core import Frame, HBoxLayout, Stretch, Switch, TableModel, VBoxLayout
 from vspreview.plugins import AbstractPlugin, PluginConfig
+from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
 __all__ = [
     'FramePropsPlugin'
@@ -145,6 +147,8 @@ class FramePropsPlugin(AbstractPlugin, QWidget):
         else:
             table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
             table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
+        table.doubleClicked.connect(self.copy_value_to_clipboard)
 
         return table
 
@@ -296,3 +300,10 @@ class FramePropsPlugin(AbstractPlugin, QWidget):
                 self.category_labels[category].setVisible(is_visible)
 
         self.raw_data_table.setVisible(is_raw)
+
+    def copy_value_to_clipboard(self, index: QModelIndex) -> None:
+        """Copy the value of the clicked cell to the clipboard."""
+
+        value = index.sibling(index.row(), 1).data()
+
+        QApplication.clipboard().setText(value)

@@ -22,6 +22,7 @@ def _create_enum_props_lut(enum: type[PropEnum], pretty_name: str) -> tuple[str,
 def _handle_na(value: int) -> str:
     return "N/A" if value < 0 else str(value)
 
+
 def _handle_nan(value: Any) -> str:
     if isinstance(value, float) and math.isnan(value):
         return 'NaN'

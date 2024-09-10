@@ -18,8 +18,6 @@ video_props: list[str] = [
 """Properties related to video colorimetry, frame characteristics, and other video-specific information."""
 
 metrics_props: list[str] = [
-    # PlaneStats
-    'PlaneStats', 'psm',
     # Scene detection
     '_SceneChangeNext', '_SceneChangePrev', 'SceneChange',
     # DMetrics

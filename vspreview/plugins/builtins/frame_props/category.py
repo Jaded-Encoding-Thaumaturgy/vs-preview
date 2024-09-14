@@ -13,7 +13,7 @@ video_props: list[str] = [
     '_SARNum', '_SARDen',
     '_FieldBased',
     # Other
-    '_FrameNumber', '_Alpha', 'Name', 'idx_filepath',
+    '_FrameNumber', '_Alpha', 'Name', 'IdxFilePath',
 ]
 """Properties related to video colorimetry, frame characteristics, and other video-specific information."""
 
@@ -47,13 +47,13 @@ frame_props_category_prefix_lut: dict[str, str] = {
             # PlaneStats
             'PlaneStats', 'psm', 'VFMPlaneStats',
             # DGIndex (via vssource)
-            'dgi_',
+            'Dgi',
             # Auto-balancing (via stgfunc)
             'AutoBalance',
             # Scene-based graining (via lvsfunc)
             'SceneGrain',
             # Packet sizes (via lvsfunc)
-            'pkt_',
+            'Pkt',
             # VMAF
             'ciede2000', 'psnr_',
             # SSIMULACRA2

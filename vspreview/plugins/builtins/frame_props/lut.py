@@ -55,9 +55,6 @@ basic_frame_props_lut: dict[str, dict[str, list[str] | Callable[[Any], str]]] = 
             'Start of Scene'
         ]
     },
-    'idx_filepath': {
-        'Path to File': lambda filepath: SPath(filepath).as_posix()
-    }
 }
 
 # VIVTC-related properties
@@ -126,17 +123,34 @@ dmetrics_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
 
 # Packet size properties
 packet_size_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
-    'pkt_size': {
+    'PktSize': {
         'Packet Size': lambda size: _handle_na(size)
     },
-    'pkt_scene_avg_size': {
+    'PktSceneAvgSize': {
         'Packet Scene Average Size': lambda size: _handle_na(size)
     },
-    'pkt_scene_min_size': {
+    'PktSceneMinSize': {
         'Packet Scene Minimum Size': lambda size: _handle_na(size)
     },
-    'pkt_scene_max_size': {
+    'PktSceneMaxSize': {
         'Packet Scene Maximum Size': lambda size: _handle_na(size)
+    },
+}
+
+# vssource properties
+vssource_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
+    'IdxFilePath': {
+        'Path to File': lambda filepath: SPath(filepath).as_posix()
+    },
+    # DGIndex(NV)
+    'DgiFieldOp': {
+        'DGIndex Field Operation': lambda dgi: str(dgi)
+    },
+    'DgiOrder': {
+        'DGIndex Field Order': lambda dgi: str(dgi)
+    },
+    'DgiFilm': {
+        'DGIndex FILM': lambda dgi: str(dgi) + '%'
     },
 }
 
@@ -235,6 +249,7 @@ enum_props_lut = dict([
 # Combine all the LUTs
 frame_props_lut = dict[str, Any](
     **basic_frame_props_lut,
+    **vssource_props_lut,
     **vivtc_props_lut,
     **tivtc_props_lut,
     **dmetrics_props_lut,

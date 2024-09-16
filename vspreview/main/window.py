@@ -6,7 +6,6 @@ import sys
 from fractions import Fraction
 from functools import partial
 from importlib import reload as reload_module
-from pathlib import Path
 from time import time
 from typing import Any, Iterable, cast
 
@@ -16,7 +15,7 @@ from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
-from vstools import PackageStorage, get_prop
+from vstools import PackageStorage, SPath, get_prop
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
@@ -79,8 +78,8 @@ class CentralSplitter(QSplitter):
 
 
 class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
-    VSP_DIR_NAME = '.vspreview'
-    VSP_GLOBAL_DIR_NAME = Path(
+    VSP_DIR_NAME = 'vspreview'
+    VSP_GLOBAL_DIR_NAME = SPath(
         expandvars('%APPDATA%') if sys.platform == "win32" else expanduser('~/.config')  # type: ignore
     )
 
@@ -122,10 +121,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     no_exit: bool
     reload_enabled: bool
 
-    def __init__(self, config_dir: Path, no_exit: bool, reload_enabled: bool, force_storage: bool) -> None:
+    def __init__(self, config_dir: SPath, no_exit: bool, reload_enabled: bool, force_storage: bool) -> None:
         from ..toolbars import MainToolbar
 
         super().__init__()
+
+        self.move_legacy_vspdir()
 
         self.no_exit = no_exit
         self.reload_enabled = reload_enabled
@@ -153,7 +154,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.setup_ui()
         self.storage_not_found = False
         self.timecodes = dict[
-            int, tuple[str | Path | dict[
+            int, tuple[str | SPath | dict[
                 tuple[int | None, int | None], float | tuple[int, int] | Fraction
             ] | list[Fraction], int | None]
         ]()
@@ -169,9 +170,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         # global
         self.clipboard = self.app.clipboard()
         self.external_args = list[tuple[str, str]]()
-        self.script_path = Path()
+        self.script_path = SPath()
         self.script_exec_failed = False
-        self.current_storage_path = Path()
+        self.current_storage_path = SPath()
 
         # timeline
         self.timeline.clicked.connect(self.on_timeline_clicked)
@@ -281,7 +282,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.repaint()
 
     def load_script(
-        self, script_path: Path, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
+        self, script_path: SPath, external_args: list[tuple[str, str]] | None = None, reloading: bool = False,
         start_frame: int | None = None, display_name: str | None = None,
         resolve_plugin: FileResolverPlugin | None = None
     ) -> None:
@@ -317,7 +318,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         try:
             if reloading:
-                std_path_lib = Path(logging.__file__).parent.parent
+                std_path_lib = SPath(logging.__file__).parent.parent
                 std_path_dlls = std_path_lib.parent / 'DLLs'
 
                 check_reloaded = set[str]()
@@ -331,7 +332,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     if main_mod in check_reloaded:
                         continue
 
-                    mod_file = Path(module.__file__)
+                    mod_file = SPath(module.__file__)
 
                     if 'vspreview' in mod_file.parts:
                         continue
@@ -352,7 +353,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
                     for mod_name in all_submodules:
                         try:
-                            if Path(sys.modules[mod_name].__file__).stat().st_mtime > self.last_reload_time:
+                            if SPath(sys.modules[mod_name].__file__).stat().st_mtime > self.last_reload_time:
                                 break
                         except Exception:
                             ...
@@ -457,7 +458,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 e.parent_error).lower()
         ):
             logging.error(
-                'If you\'re trying to open a video you first have to install the vssource package and have it working with a source plugin!'
+                'If you\'re trying to open a video you first have to install '
+                'the vssource package and have it working with a source plugin!'
             )
 
         self.script_exec_failed = True
@@ -466,6 +468,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 str(e), 'See console output for details.'
             ]), True
         )
+
+    def move_legacy_vspdir(self) -> None:
+        legacy_vspdir = self.VSP_GLOBAL_DIR_NAME / '.vspreview'
+
+        if not legacy_vspdir.exists():
+            return
+
+        logging.warning(f'Moving legacy vspreview directory from \'{legacy_vspdir}\' to \'{self.global_config_dir}\'!')
+
+        legacy_vspdir.move_dir(self.global_config_dir)
+        # TODO: Reload plugins
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:
@@ -896,7 +909,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.temporary_scenes = scenes
 
     def update_timecodes_info(
-        self, index: int, timecodes: str | Path | dict[
+        self, index: int, timecodes: str | SPath | dict[
             tuple[int | None, int | None], float | tuple[int, int] | Fraction
         ] | list[Fraction], den: int | None = None
     ) -> None:

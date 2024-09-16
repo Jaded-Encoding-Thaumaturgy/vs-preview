@@ -33,7 +33,7 @@ we'll create a "launch" file.
 2. Press F1 and search for ``Preferences: Open Keyboard Shortcuts (JSON)``
 3. Paste the following code in the file, within the curly braces:
 
-.. code-block:: json
+.. code-block:: json5
 
     // Binding for previewing a VapourSynth filterchain using vs-preview
     {

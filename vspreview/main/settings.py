@@ -98,7 +98,7 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Default output index'), self.output_index_spinbox])
 
-        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 for max)'), self.png_compressing_spinbox])
+        HBoxLayout(self.vlayout, [QLabel('PNG compression level (0 (max) - 100 (min))'), self.png_compressing_spinbox])
 
         HBoxLayout(self.vlayout, [QLabel('Status bar message timeout'), self.statusbar_timeout_control])
 
@@ -146,11 +146,10 @@ class MainSettings(AbstractToolbarSettings):
         self.dragnavigator_timeout_spinbox.setValue(250)
         self.dragtimeline_timeout_spinbox.setValue(40)
 
-        self.zoom_levels = [
-            25, 50, 68, 75, 85, 100, 150, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 2000, 3200
-        ]
-        self.zoom_level_default_combobox.setCurrentIndex(5)
+        self.zoom_levels = [50 * (2 ** i) for i in range(8)]
+        self.zoom_level_default_combobox.setCurrentIndex(1)
         self.color_management_checkbox.setChecked(self.color_management_checkbox.isVisible())
+        self.plugins_save_position_combobox.setCurrentIndex(2)
 
     @property
     def autosave_interval(self) -> Time:

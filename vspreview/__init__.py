@@ -1,3 +1,5 @@
+import vapoursynth  # noqa: F401
+
 from . import qt_patch  # noqa: F401
 
 from .api import *  # noqa: F401, F403

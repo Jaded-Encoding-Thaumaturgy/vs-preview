@@ -19,7 +19,7 @@ from vstools import PackageStorage, SPath, get_prop
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
-    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
+    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, PushButton, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
@@ -191,6 +191,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.toolbars.main.layout().addWidget(toolbar.toggle_button)
 
         Plugins(self)
+
+        def pop_out_plugins():
+            left, right = self.main_split.sizes()
+            if right:
+                new_sizes = [left + right, 0]
+            else:
+                min_right = int((left + right) * 0.2)
+                new_sizes = [min(left, left + right - min_right), max(right, min_right)]
+            self.main_split.setSizes(new_sizes)
+
+        self.toolbars.main.layout().addWidget(PushButton("Plugins", clicked=pop_out_plugins))
 
         self.app_settings.tab_widget.setUsesScrollButtons(False)
         self.app_settings.setMinimumWidth(

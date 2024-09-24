@@ -6,6 +6,7 @@ import logging
 
 from fractions import Fraction
 from os import PathLike
+from types import FrameType
 from typing import Any, Iterable, Sequence, overload
 
 from vstools import Keyframes, KwargsT, flatten, to_arr, vs
@@ -188,6 +189,15 @@ def set_output(
 
     index = to_arr(index) if index is not None else [max(ouputs, default=-1) + 1]
 
+    def _get_frame_type(frame: FrameType) -> FrameType:
+        f_back: int = kwargs.pop("f_back", 1)
+
+        for _ in range(f_back):
+            assert frame.f_back
+            frame = frame.f_back
+
+        return frame
+
     while len(index) < len(nodes):
         index.append(index[-1] + 1)
 
@@ -205,16 +215,17 @@ def set_output(
             name = f"{title} {i}"
 
             current_frame = inspect.currentframe()
-
             assert current_frame
-            assert current_frame.f_back
+
+            frame_type = _get_frame_type(current_frame)
 
             ref_id = str(id(n))
-            for vname, val in reversed(current_frame.f_back.f_locals.items()):
+            for vname, val in reversed(frame_type.f_locals.items()):
                 if (str(id(val)) == ref_id):
                     name = vname
                     break
 
+            del frame_type
             del current_frame
 
         update_node_info(

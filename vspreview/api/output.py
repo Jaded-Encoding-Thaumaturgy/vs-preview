@@ -151,6 +151,17 @@ def set_output(
     ...
 
 
+# General
+@overload
+def set_output(
+    node: vs.RawNode | Iterable[vs.RawNode | Iterable[vs.RawNode | Iterable[vs.RawNode]]],
+    index: int | Sequence[int] = ..., name: str | bool | None = ...,
+    /,
+    **kwargs: Any
+) -> None:
+    ...
+
+
 def set_output(
     node: vs.RawNode | Iterable[vs.RawNode | Iterable[vs.RawNode | Iterable[vs.RawNode]]],
     index_or_name: int | Sequence[int] | str | bool | None = None, name: str | bool | None = None,

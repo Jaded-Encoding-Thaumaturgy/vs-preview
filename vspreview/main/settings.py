@@ -91,6 +91,7 @@ class MainSettings(AbstractToolbarSettings):
 
         self.install_mode_combobox = QComboBox()
         self.install_mode_combobox.addItems([mode.name.capitalize() for mode in InstallModeEnum])
+        self.install_mode_combobox.currentIndexChanged.connect(self.apply_dependency_install_mode)
 
         self.install_mode_combobox.setToolTip(
             "Choose how to handle missing dependencies:\n\n"
@@ -332,6 +333,11 @@ class MainSettings(AbstractToolbarSettings):
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
 
+    def apply_dependency_install_mode(self) -> None:
+        from vstools.dependencies.enums import InstallModeEnum
+        from vstools.dependencies.registry import dependency_registry
+        dependency_registry.install_mode = InstallModeEnum(self.install_mode_combobox.currentIndex())
+
     def __getstate__(self) -> dict[str, Any]:
         return {
             'autosave_interval': self.autosave_interval,
@@ -373,6 +379,8 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'dependency_install_mode', int, self.install_mode_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
         try_load(state, 'azerty_keybinds', bool, self.azerty_keyboard_checkbox.setChecked)
+
+        self.apply_dependency_install_mode()
 
 
 class WindowSettings(QYAMLObjectSingleton):

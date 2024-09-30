@@ -324,6 +324,11 @@ class MainSettings(AbstractToolbarSettings):
         return self.plugins_save_position_combobox.currentIndex()
 
     @property
+    def dependency_install_mode(self) -> int:
+        from vstools.dependencies.enums import InstallModeEnum
+        return InstallModeEnum[InstallModeEnum(self.install_mode_combobox.currentIndex()).name]
+
+    @property
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
 
@@ -344,6 +349,7 @@ class MainSettings(AbstractToolbarSettings):
             'dragnavigator_timeout': self.dragnavigator_timeout,
             'dragtimeline_timeout': self.dragtimeline_timeout,
             'plugins_bar_save_behaviour_index': self.plugins_bar_save_behaviour,
+            'dependency_install_mode': self.install_mode_combobox.currentIndex(),
             'color_management': self.color_management,
             'azerty_keybinds': self.azerty_keybinds,
         }
@@ -364,6 +370,7 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'dragtimeline_timeout', int, self.dragtimeline_timeout_spinbox.setValue)
         try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'plugins_bar_save_behaviour_index', int, self.plugins_save_position_combobox.setCurrentIndex)
+        try_load(state, 'dependency_install_mode', int, self.install_mode_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
         try_load(state, 'azerty_keybinds', bool, self.azerty_keyboard_checkbox.setChecked)
 

@@ -87,6 +87,19 @@ class MainSettings(AbstractToolbarSettings):
 
         self.plugins_save_position_combobox = ComboBox[str](model=GeneralModel[str](['no', 'global', 'local']))
 
+        from vstools.dependencies.enums import InstallModeEnum
+
+        self.install_mode_combobox = QComboBox()
+        self.install_mode_combobox.addItems([mode.name.capitalize() for mode in InstallModeEnum])
+
+        self.install_mode_combobox.setToolTip(
+            "Choose how to handle missing dependencies:\n\n"
+            "• Auto: Automatically install when possible\n"
+            "• Prompt: Ask before installing\n"
+            "• Manual: Never install automatically\n\n"
+            "Note: This feature is only supported by certain packages."
+        )
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
@@ -128,6 +141,8 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Save Plugins Bar Position'), self.plugins_save_position_combobox])
 
+        HBoxLayout(self.vlayout, [QLabel('Dependency Install Mode'), self.install_mode_combobox])
+
         if sys.platform == 'win32':
             HBoxLayout(self.vlayout, [self.color_management_checkbox])
 
@@ -150,6 +165,7 @@ class MainSettings(AbstractToolbarSettings):
         self.zoom_level_default_combobox.setCurrentIndex(1)
         self.color_management_checkbox.setChecked(self.color_management_checkbox.isVisible())
         self.plugins_save_position_combobox.setCurrentIndex(2)
+        self.install_mode_combobox.setCurrentIndex(1)
 
     @property
     def autosave_interval(self) -> Time:

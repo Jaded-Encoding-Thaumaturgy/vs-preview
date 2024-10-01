@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtWidgets import QLabel
 
-from ...core import AbstractToolbar, LineEdit, PushButton, Switch
+from ...core import AbstractToolbar, LineEdit, PushButton, Switch, try_load
 from .settings import DebugSettings
 
 if TYPE_CHECKING:
@@ -83,3 +83,13 @@ class DebugToolbar(AbstractToolbar):
         logging.getLogger().setLevel(logging.DEBUG if checked else logging.INFO)
 
         logging.info(f"Debug logging {'enabled' if checked else 'disabled'}")
+
+    def __getstate__(self) -> dict[str, Any]:
+        return super().__getstate__() | {
+            'debug_logging_enabled': self.debug_logging_enabled
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'debug_logging_enabled', bool, self.debug_logging_switch.setChecked)
+
+        super().__setstate__(state)

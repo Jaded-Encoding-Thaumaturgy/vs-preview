@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
-from ...core import AbstractToolbar, LineEdit, PushButton
+from PyQt6.QtWidgets import QLabel
+
+from ...core import AbstractToolbar, LineEdit, PushButton, Switch
 from .settings import DebugSettings
 
 if TYPE_CHECKING:
     from ...main import MainWindow
-
 
 __all__ = [
     'DebugToolbar'
@@ -15,7 +17,7 @@ __all__ = [
 
 
 class DebugToolbar(AbstractToolbar):
-    __slots__ = ('exec_lineedit', )
+    __slots__ = ('exec_lineedit', 'debug_logging_enabled', 'debug_logging_switch')
 
     _no_visibility_choice = True
 
@@ -26,6 +28,7 @@ class DebugToolbar(AbstractToolbar):
 
         super().__init__(main, DebugSettings(self))
 
+        self.debug_logging_enabled = False
         self.setup_ui()
 
         if self.settings.DEBUG_TOOLBAR_BUTTONS_PRINT_STATE:
@@ -55,6 +58,12 @@ class DebugToolbar(AbstractToolbar):
 
         self.hlayout.addStretch()
 
+        debug_logging_label = QLabel("Debug Logging")
+        self.hlayout.addWidget(debug_logging_label)
+
+        self.debug_logging_switch = Switch(10, 22, checked=self.debug_logging_enabled, clicked=self.toggle_debug_logging)
+        self.hlayout.addWidget(self.debug_logging_switch)
+
     def test_button_clicked(self, checked: bool | None = None) -> None:
         from vstools.utils.vs_proxy import clear_cache
         clear_cache()
@@ -63,9 +72,14 @@ class DebugToolbar(AbstractToolbar):
         try:
             exec(self.exec_lineedit.text())
         except BaseException as e:
-            import logging
-
             logging.error(e)
 
     def break_button_clicked(self, checked: bool | None = None) -> None:
         breakpoint()
+
+    def toggle_debug_logging(self, checked: bool) -> None:
+        self.debug_logging_enabled = checked
+
+        logging.getLogger().setLevel(logging.DEBUG if checked else logging.INFO)
+
+        logging.info(f"Debug logging {'enabled' if checked else 'disabled'}")

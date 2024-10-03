@@ -84,7 +84,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     )
 
     global_config_dir = VSP_GLOBAL_DIR_NAME / VSP_DIR_NAME
-    global_storage_path = global_config_dir / '.global.yml'
+    global_storage_path = global_config_dir / 'global.yml'
     global_plugins_dir = global_config_dir / 'plugins'
 
     VSP_VERSION = 3.2
@@ -127,6 +127,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         super().__init__()
 
         self.move_legacy_vspdir()
+        self.move_legacy_global_storage()
 
         self.no_exit = no_exit
         self.reload_enabled = reload_enabled
@@ -479,6 +480,19 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         legacy_vspdir.move_dir(self.global_config_dir)
         # TODO: Reload plugins
+
+    def move_legacy_global_storage(self) -> None:
+        legacy_global_storage = self.global_config_dir / '.global.yml'
+
+        if not legacy_global_storage.exists():
+            return
+
+        logging.warning(f'Moving legacy global storage file from \'{legacy_global_storage}\' to \'{self.global_storage_path}\'!')
+
+        try:
+            legacy_global_storage.rename(self.global_storage_path)
+        except:
+            logging.error(f'Failed to move global storage file.')
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

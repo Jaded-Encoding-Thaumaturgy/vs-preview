@@ -520,6 +520,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                         '\n\tSave any scening or other important info and delete it.'
                         '\n\tIf you want the program to silently delete old storages,'
                         '\n\tgo into settings or set --force-storage flag.'
+                        '\n\t'
+                        '\n\tStorage file location:'
+                        '\n\t\t' + str(storage_path)
                     )
                     sys.exit(1)
 
@@ -537,11 +540,17 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     if not isglobal:
                         line -= global_length
                     logging.warning(
-                        'Storage ({}) parsing failed on line {} column {}. \n({})\n Exiting...'
+                        'Storage ({}) parsing failed on line {} column {}. \n({})\n'
+                        'Failed to parse storage; it may be corrupted or from an old version of VSPreview.\n'
+                        'Manually fix the file(s) or save any scening and other important info and delete them.\n'
+                        '\n'
+                        'Storage file locations:\n'
+                        '{}'
                         .format(
                             'Global' if isglobal else 'Local',
                             line, exc.problem_mark.column + 1,
-                            str(exc).partition('in "<unicode string>"')[0].strip()
+                            str(exc).partition('in "<unicode string>"')[0].strip(),
+                            '\n'.join(str(p) for p in storage_paths)
                         )
                     )
                     sys.exit(1)

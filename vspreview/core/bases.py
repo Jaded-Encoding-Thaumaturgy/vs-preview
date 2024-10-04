@@ -69,6 +69,10 @@ class SafeYAMLObjectMetaclass(YAMLObjectMetaclass):
         super(SafeYAMLObjectMetaclass, cls).__init__(name, bases, dct)   # type: ignore
         yaml_Loader.add_constructor(f'tag:yaml.org,2002:python/object:{cls.__module__}.{cls.__name__}', cls.from_yaml)
 
+# Fallback constructor for python/object tags that just returns None rather than raising an Error,
+# so that invalid or outdated config files can still be parsed.
+yaml_Loader.add_multi_constructor(f'tag:yaml.org,2002:python/object', lambda self, suffix, node: None)
+
 
 class SafeYAMLObject(YAMLObject, metaclass=SafeYAMLObjectMetaclass):
     pass

@@ -42,13 +42,7 @@ if sys.platform == 'win32':
 else:
     from os.path import expanduser
 
-try:
-    from yaml import CDumper as yaml_Dumper
-    from yaml import CLoader as yaml_Loader
-except ImportError:
-    from yaml import Dumper as yaml_Dumper  # type: ignore
-    from yaml import Loader as yaml_Loader  # type: ignore
-
+from ..core.bases import yaml_Loader, yaml_Dumper
 from yaml import MarkedYAMLError, YAMLError
 
 __all__ = [

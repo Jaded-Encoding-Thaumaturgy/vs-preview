@@ -14,6 +14,7 @@ from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
 from stgpytools import cachedproperty, classproperty, fallback
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
+from ..bases import yaml_Loader
 from .misc import ArInfo, CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 
@@ -28,6 +29,8 @@ __all__ = [
 ]
 
 _default_props = {}
+
+yaml_Loader.add_constructor('tag:yaml.org,2002:python/object/apply:fractions.Fraction', lambda self, node: Fraction(*self.construct_sequence(node)))
 
 
 class PackingTypeInfo:

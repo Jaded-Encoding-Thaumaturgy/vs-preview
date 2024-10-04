@@ -4,7 +4,12 @@ from abc import ABCMeta
 from typing import TYPE_CHECKING, Any, cast, no_type_check
 
 from PyQt6 import sip
-from yaml import YAMLObject, YAMLObjectMetaclass
+from yaml import AliasEvent, SafeLoader, ScalarNode, YAMLObject, YAMLObjectMetaclass
+
+try:
+    from yaml import CDumper as yaml_Dumper
+except ImportError:
+    from yaml import Dumper as yaml_Dumper  # type: ignore
 
 if TYPE_CHECKING:
     from vstools import T
@@ -15,8 +20,24 @@ __all__ = [
     'QABC',
     'QYAMLObject',
     'QYAMLObjectSingleton',
-    'QAbstractYAMLObjectSingleton'
+    'QAbstractYAMLObjectSingleton',
+    'SafeYAMLObject',
+    'yaml_Dumper',
+    'yaml_Loader',
 ]
+
+
+class SaferLoader(SafeLoader):     # type: ignore
+    def compose_node(self, parent, index):
+        if self.check_event(AliasEvent):
+            event = self.peek_event()
+            anchor = event.anchor
+            if anchor not in self.anchors:
+                self.get_event()
+                return ScalarNode("tag:yaml.org,2002:null", "null")
+        return super().compose_node(parent, index)
+
+yaml_Loader = SaferLoader
 
 
 class SingletonMeta(type):
@@ -54,7 +75,21 @@ class Singleton(metaclass=SingletonMeta):
         return cls.instance[0]
 
 
-class AbstractYAMLObjectMeta(YAMLObjectMetaclass, ABCMeta):
+class SafeYAMLObjectMetaclass(YAMLObjectMetaclass):
+    def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
+        super(SafeYAMLObjectMetaclass, cls).__init__(name, bases, dct)   # type: ignore
+        yaml_Loader.add_constructor(f'tag:yaml.org,2002:python/object:{cls.__module__}.{cls.__name__}', cls.from_yaml)
+
+# Fallback constructor for python/object tags that just returns None rather than raising an Error,
+# so that invalid or outdated config files can still be parsed.
+yaml_Loader.add_multi_constructor(f'tag:yaml.org,2002:python/object', lambda self, suffix, node: None)
+
+
+class SafeYAMLObject(YAMLObject, metaclass=SafeYAMLObjectMetaclass):
+    pass
+
+
+class AbstractYAMLObjectMeta(SafeYAMLObjectMetaclass, ABCMeta):
     pass
 
 
@@ -82,7 +117,7 @@ class QSingletonMeta(SingletonMeta, sip.wrappertype):
     pass
 
 
-class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):
+class QYAMLObjectMeta(SafeYAMLObjectMetaclass, sip.wrappertype):
     pass
 
 

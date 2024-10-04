@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
 
-from .bases import QABC, QYAMLObjectSingleton
+from .bases import QABC, QYAMLObjectSingleton, SafeYAMLObject
 
 if TYPE_CHECKING:
     from vstools import T
@@ -293,7 +293,7 @@ class AbstractQItem:
         }
 
 
-class AbstractYAMLObject(AbstractQItem):
+class AbstractYAMLObject(AbstractQItem, SafeYAMLObject):
     @abstractmethod
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError

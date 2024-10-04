@@ -4,6 +4,7 @@ from datetime import timedelta
 from typing import Any, SupportsFloat, SupportsInt, Union, cast
 
 from ..abstracts import main_window, try_load
+from ..bases import yaml_Loader
 from .yaml import YAMLObjectWrapper
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
 
 Number = Union[int, float, SupportsInt, SupportsFloat]
 
+yaml_Loader.add_constructor('tag:yaml.org,2002:python/object/apply:datetime.timedelta', lambda self, node: timedelta(*self.construct_sequence(node)))
 
 class Frame(YAMLObjectWrapper):
     __slots__ = ('value',)

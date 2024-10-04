@@ -6,6 +6,13 @@ from typing import TYPE_CHECKING, Any, cast, no_type_check
 from PyQt6 import sip
 from yaml import YAMLObject, YAMLObjectMetaclass
 
+try:
+    from yaml import CDumper as yaml_Dumper
+    from yaml import CSafeLoader as yaml_Loader
+except ImportError:
+    from yaml import Dumper as yaml_Dumper  # type: ignore
+    from yaml import SafeLoader as yaml_Loader  # type: ignore
+
 if TYPE_CHECKING:
     from vstools import T
 
@@ -15,7 +22,10 @@ __all__ = [
     'QABC',
     'QYAMLObject',
     'QYAMLObjectSingleton',
-    'QAbstractYAMLObjectSingleton'
+    'QAbstractYAMLObjectSingleton',
+    'SafeYAMLObject',
+    'yaml_Dumper',
+    'yaml_Loader',
 ]
 
 
@@ -54,7 +64,17 @@ class Singleton(metaclass=SingletonMeta):
         return cls.instance[0]
 
 
-class AbstractYAMLObjectMeta(YAMLObjectMetaclass, ABCMeta):
+class SafeYAMLObjectMetaclass(YAMLObjectMetaclass):
+    def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
+        super(SafeYAMLObjectMetaclass, cls).__init__(name, bases, dct)   # type: ignore
+        yaml_Loader.add_constructor(f'tag:yaml.org,2002:python/object:{cls.__module__}.{cls.__name__}', cls.from_yaml)
+
+
+class SafeYAMLObject(YAMLObject, metaclass=SafeYAMLObjectMetaclass):
+    pass
+
+
+class AbstractYAMLObjectMeta(SafeYAMLObjectMetaclass, ABCMeta):
     pass
 
 
@@ -82,7 +102,7 @@ class QSingletonMeta(SingletonMeta, sip.wrappertype):
     pass
 
 
-class QYAMLObjectMeta(YAMLObjectMetaclass, sip.wrappertype):
+class QYAMLObjectMeta(SafeYAMLObjectMetaclass, sip.wrappertype):
     pass
 
 

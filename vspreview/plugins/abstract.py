@@ -8,6 +8,8 @@ from PyQt6.QtWidgets import QSizePolicy, QWidget
 from vstools import SPath, T
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject
+from ..core.bases import yaml_Loader
+from yaml.constructor import FullConstructor
 
 if TYPE_CHECKING:
     from ..main import MainWindow
@@ -32,6 +34,9 @@ class SettingsNamespace(dict[str, Any]):
 
     def __setstate__(self, state: dict[str, dict[str, Any]]) -> None:
         self.update(state)
+
+yaml_Loader.add_constructor(f'tag:yaml.org,2002:python/object:{SettingsNamespace.__module__}.{SettingsNamespace.__name__}', lambda _self, node: SettingsNamespace())
+yaml_Loader.add_constructor(f'tag:yaml.org,2002:python/object/new:{SettingsNamespace.__module__}.{SettingsNamespace.__name__}', lambda self, node: SettingsNamespace(self.construct_mapping(node)["dictitems"]))
 
 
 class PluginSettings(QYAMLObject):

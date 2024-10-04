@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..bases import SafeYAMLObject
+
 import vapoursynth as vs
 
 __all__ = [
@@ -13,7 +15,7 @@ __all__ = [
 
 
 @dataclass
-class CroppingInfo:
+class CroppingInfo(SafeYAMLObject):
     top: int
     left: int
     width: int
@@ -26,7 +28,7 @@ _arinfo_active = False
 
 
 @dataclass
-class ArInfo:
+class ArInfo(SafeYAMLObject):
     sarnum: int
     sarden: int
 

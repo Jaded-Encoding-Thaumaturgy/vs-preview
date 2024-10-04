@@ -4,14 +4,12 @@ from abc import ABCMeta
 from typing import TYPE_CHECKING, Any, cast, no_type_check
 
 from PyQt6 import sip
-from yaml import YAMLObject, YAMLObjectMetaclass
+from yaml import AliasEvent, SafeLoader, ScalarNode, YAMLObject, YAMLObjectMetaclass
 
 try:
     from yaml import CDumper as yaml_Dumper
-    from yaml import CSafeLoader as yaml_Loader
 except ImportError:
     from yaml import Dumper as yaml_Dumper  # type: ignore
-    from yaml import SafeLoader as yaml_Loader  # type: ignore
 
 if TYPE_CHECKING:
     from vstools import T
@@ -27,6 +25,19 @@ __all__ = [
     'yaml_Dumper',
     'yaml_Loader',
 ]
+
+
+class SaferLoader(SafeLoader):     # type: ignore
+    def compose_node(self, parent, index):
+        if self.check_event(AliasEvent):
+            event = self.peek_event()
+            anchor = event.anchor
+            if anchor not in self.anchors:
+                self.get_event()
+                return ScalarNode("tag:yaml.org,2002:null", "null")
+        return super().compose_node(parent, index)
+
+yaml_Loader = SaferLoader
 
 
 class SingletonMeta(type):

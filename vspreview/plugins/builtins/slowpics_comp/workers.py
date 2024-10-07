@@ -92,6 +92,9 @@ class Worker(QObject):
                 path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
 
+                if not conf.frames[i]:
+                    raise StopIteration("Output missing a frame.")
+
                 curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
 
                 clip = output.prepare_vs_output(

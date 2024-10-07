@@ -512,6 +512,7 @@ class CompUploadWidget(ExtendedWidget):
             self.stop_upload_button.setVisible(False)
             self.upload_progressbar.setValue(int())
             self.upload_status_label.setText('Stopped!')
+            return
         else:
             self.upload_status_label.setText('Finished!')
 

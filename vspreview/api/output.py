@@ -172,7 +172,7 @@ def set_output(
     timecodes: TimecodesT = None, denominator: int = 1001, scenes: ScenesT = None,
     **kwargs: Any
 ) -> None:
-    if not is_preview():
+    if not is_preview() and not kwargs.get("force_preview", False):
         return None
 
     if isinstance(index_or_name, (str, bool)):

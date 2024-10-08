@@ -215,7 +215,10 @@ class MiscToolbar(AbstractToolbar):
         try:
             suggested_path_str = template.format(**substitutions)
         except KeyError:
-            self.main.show_message('Save name template is invalid')
+            invalid_keys = [key.split('}')[0] for key in template.split('{')[1:] if key.split('}')[0] not in substitutions]
+
+            self.main.show_message(f'Save name template is invalid.{f" Invalid key(s): <{', '.join(invalid_keys)}>" if invalid_keys else ""}')
+
             return
 
         save_path_str, file_type = QFileDialog.getSaveFileName(

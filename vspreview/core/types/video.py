@@ -277,8 +277,26 @@ class VideoOutput(AbstractYAMLObject):
         heuristics, assumed_props = video_heuristics(clip, True, assumed_return=True)
         dither_type = DitherType(self.main.toolbars.playback.settings.dither_type.lower())
 
+        assumed_values = {
+            '_Matrix': heuristics.get('matrix_in'),
+            '_Transfer': heuristics.get('transfer_in'),
+            '_Primaries': heuristics.get('primaries_in'),
+            '_ColorRange': heuristics.get('range_in'),
+            '_ChromaLocation': heuristics.get('chromaloc_in'),
+        }
+
         if self._stateset and assumed_props:
-            logging.warn(f'Video Node {self.index}: Had to assume these props which were unspecified or non-valid for preview <"{', '.join(assumed_props)}>')
+            assumed_info = [
+                f'{prop}={int(value)} ({value.pretty_string})'  # type: ignore
+                for prop, value in assumed_values.items()
+                if prop in assumed_props
+            ]
+
+            logging.warn(
+                f'Video Node {self.index}: The following frame properties had to be assumed for previewing: '
+                f'<{", ".join(assumed_info)}>\nYou may want to set explicit frame properties instead. '
+                'See https://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties for more information.'
+            )
 
         standard_gamut = {'transfer': Transfer.BT709, 'primaries': self.main.settings.output_primaries_zimg}
 

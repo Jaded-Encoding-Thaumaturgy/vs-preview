@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QLabel, QTabWidget, QWidget
 
@@ -30,7 +30,6 @@ class ScriptErrorDialog(ExtendedDialog):
         self.setModal(True)
 
         self.setup_ui()
-        self.setup_shortcuts()
 
         self.set_qobject_names()
 
@@ -47,12 +46,6 @@ class ScriptErrorDialog(ExtendedDialog):
         self.vlayout.addLayout(HBoxLayout(
             [self.reload_button, self.exit_button] if self.main.reload_enabled else [self.exit_button]
         ))
-
-    def setup_shortcuts(self) -> None:
-        if self.main.reload_enabled:
-            self.add_shortcut(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.reload_button.click)
-
-        self.add_shortcut(Qt.Key.Key_Escape, self.exit_button.click)
 
     def on_reload_clicked(self, clicked: bool | None = None) -> None:
         self.hide()

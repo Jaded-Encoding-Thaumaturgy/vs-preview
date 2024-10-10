@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QTabWidget
 
-from vspreview.plugins import AbstractPlugin, PluginConfig
 from vspreview.main import MainWindow
+from vspreview.plugins import AbstractPlugin, PluginConfig
 
-from .slowpics_comp.main import CompUploadWidget
-from .slowpics_comp.settings import CompSettings
+from .slowpics_comp import CompUploadWidget, CompSettings
 
 __all__ = [
     'CompPlugin'
@@ -30,6 +31,16 @@ class CompPlugin(AbstractPlugin, QTabWidget):
         self.addTab(self.settings_tab, 'Settings')
 
         self.settings.globals.settings = self.settings_tab
+
+    def add_shortcuts(self) -> None:
+        self.add_shortcut(
+            "add_current_frame_to_comp",
+            'self.main_tab',
+            'self.main_tab.add_current_frame_to_comp',
+            QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined()),
+            "Add current frame to \"Manual frames\""
+        )
+        super().add_shortcuts()
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         self.main_tab.on_current_output_changed(index, prev_index)

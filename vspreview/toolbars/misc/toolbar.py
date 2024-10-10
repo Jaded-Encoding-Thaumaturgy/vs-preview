@@ -5,7 +5,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QLabel, QSpacerItem
 from vstools import FramePropError, get_prop
 
@@ -50,8 +50,6 @@ class MiscToolbar(AbstractToolbar):
 
         self.main.settings.autosave_control.valueChanged.connect(self.on_autosave_interval_changed)
 
-        self.add_shortcuts()
-
         self.set_qobject_names()
 
     def setup_ui(self) -> None:
@@ -62,7 +60,7 @@ class MiscToolbar(AbstractToolbar):
         )
 
         self.save_storage_button = PushButton(
-            'Save Storage', self, clicked=partial(self.main.dump_storage_async, manually=True)
+            'Save Storage', self, clicked=partial(self.main.dump_storage_async)
         )
 
         self.autosave_checkbox = CheckBox('Autosave', self, checked=True)
@@ -159,17 +157,6 @@ class MiscToolbar(AbstractToolbar):
                 HBoxLayout([self.crop_copycommand_button])
             ])
         ])
-
-    def add_shortcuts(self) -> None:
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_S).toCombined(), self.save_storage_button.click
-        )
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_S).toCombined(), self.copy_frame_button.click
-        )
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined(), self.save_frame_as_button.click
-        )
 
     def copy_frame_to_clipboard(self) -> None:
         self.main.clipboard.setPixmap(self.main.current_scene.pixmap())

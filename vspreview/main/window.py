@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import logging
 import sys
+
 from fractions import Fraction
 from functools import partial
 from importlib import reload as reload_module
@@ -10,21 +11,24 @@ from time import time
 from typing import Any, Iterable, cast
 
 import vapoursynth as vs
+
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColorSpace, QKeySequence, QMoveEvent, QShortcut, QShowEvent
+from PyQt6.QtCore import QEvent, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
 from vstools import PackageStorage, SPath, get_prop
 
 from ..core import (
-    PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
-    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
-    VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
+    PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame,
+    GraphicsImageItem, GraphicsView, HBoxLayout, MainVideoOutputGraphicsView,
+    QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
+    _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
 from ..models import GeneralModel, SceningList, VideoOutputs
 from ..plugins import FileResolverPlugin, Plugins
+from ..shortcuts import ShortCutsSettings
 from ..toolbars import Toolbars
 from ..utils import fire_and_forget, set_status_label
 from .dialog import ScriptErrorDialog, SettingsDialog
@@ -86,7 +90,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
     EVENT_POLICY = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    storable_attrs = ('settings', 'toolbars', 'plugins')
+    storable_attrs = ('settings', 'toolbars', 'plugins', 'shortcuts')
 
     __slots__ = (
         *storable_attrs, 'app', 'clipboard',
@@ -109,6 +113,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     plugins: Plugins
     app_settings: SettingsDialog
     window_settings = WindowSettings()
+    shortcuts: ShortCutsSettings
 
     autosave_timer: Timer
 
@@ -189,8 +194,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.app_settings.tab_widget.setUsesScrollButtons(False)
         self.app_settings.setMinimumWidth(
-            int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
+            int((len(self.toolbars) + 1) * 1.2 * self.app_settings.tab_widget.geometry().width() / 2)
         )
+
+        self.shortcuts = ShortCutsSettings(self)
 
         self.set_qobject_names()
         self.setObjectName('MainWindow')
@@ -243,15 +250,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.autosave_timer = Timer(timeout=self.dump_storage_async)
         self.reload_signal.connect(self.autosave_timer.stop)
 
-        QShortcut(
-            QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_A).toCombined()),
-            self, activated=self.auto_fit_keyswitch
-        )
-
     def auto_fit_keyswitch(self) -> None:
         for view in self.graphics_views:
             if view.underMouse():
-                view.autofit = not view.autofit
+                view.auto_fit_button.click()
                 break
 
     def apply_stylesheet(self) -> None:
@@ -266,6 +268,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
             stylesheet = _load_stylesheet('pyqt6', palette)
             stylesheet += ' QGraphicsView { border: 0px; padding: 0px; }'
+            stylesheet += ' QLineEdit[conflictShortcut="true"] { border: 1px solid red; }'
 
             self.app.setStyleSheet(stylesheet)
 
@@ -406,6 +409,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         except Exception as e:
             load_error = e
 
+        if not reloading:
+            self.shortcuts.setup_shortcuts()
         self.apply_stylesheet()
         self.timeline.set_sizes()
 
@@ -572,12 +577,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.current_screen = self.app.primaryScreen()
             self.update_display_profile()
 
+    @set_status_label('Saving storage...', 'Storage saved successfully!')
     @fire_and_forget
-    @set_status_label('Saving...')
     def dump_storage_async(self) -> None:
         self.dump_storage()
 
-    def dump_storage(self, manually: bool = False) -> None:
+    def dump_storage(self) -> None:
         from itertools import count
 
         if self.script_exec_failed:
@@ -615,15 +620,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 ] + storage_dump[idx:])
             )
 
-        if manually:
-            self.show_message('Saved successfully')
-
     def _serialize_data(self) -> Any:
         # idk how to explain how this work,
         # but i'm referencing settings objects before in the dict
         # so the yaml serializer will reference the same objects after (in toolbars),
         # which really are the original objects, to those copied in _globals :poppo:
-        data = cast(dict[str, Any], self.__getstate__())
+        data = self.__getstate__()
 
         data['_globals'] = {
             'settings': data['settings'],
@@ -653,6 +655,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         for i, toolbar_name in enumerate(gtoolbars.keys()):
             data['_toolbars_settings'][i] = gtoolbars[toolbar_name]
         data['_toolbars_settings'][-1] = data['_globals']['window_settings']
+
+        data['_globals']['shortcuts'] = data['shortcuts']
 
         return data
 
@@ -893,6 +897,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self.switch_frame(self.current_output.last_showed_frame)
 
     def show_message(self, message: str) -> None:
+        self.statusbar.clearMessage()
         self.statusbar.showMessage(
             message, round(float(self.settings.statusbar_message_timeout) * 1000)
         )
@@ -901,6 +906,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         output = output or self.current_output
         fmt = output.source.clip.format
         assert fmt
+
+        self.statusbar.clearMessage()
 
         self.statusbar.total_frames_label.setText(f'{output.total_frames} frames ')
         self.statusbar.duration_label.setText(f'{output.total_time} ')

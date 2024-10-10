@@ -47,7 +47,6 @@ class SceningListDialog(ExtendedDialog):
         self.tableview.doubleClicked.connect(self.on_tableview_clicked)
         self.delete_button.clicked.connect(self.on_delete_clicked)
 
-        self.tableview.add_shortcut(Qt.Key.Key_Delete, self.delete_button.click)
         self.set_qobject_names()
 
     def setup_ui(self) -> None:
@@ -108,6 +107,8 @@ class SceningListDialog(ExtendedDialog):
         self.tableview.setModel(self.scening_list)
         self.tableview.resizeColumnsToContents()
         self.tableview.selectionModel().selectionChanged.connect(self.on_tableview_selection_changed)
+        self.label_lineedit.clear()
+        self.label_lineedit.clearFocus()
         self.delete_button.setEnabled(False)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:

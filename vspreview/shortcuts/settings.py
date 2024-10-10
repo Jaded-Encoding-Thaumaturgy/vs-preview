@@ -436,8 +436,8 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
         )
 
     @property
-    def seek_n_frames_b(self) -> tuple[str, str]:
-        return tuple[str, str](le.text() for le in self.seek_n_frames_b_lineedit)  # type: ignore[arg-type]
+    def seek_n_frames_b(self) -> list[str]:
+        return list(le.text() for le in self.seek_n_frames_b_lineedit)
 
     @seek_n_frames_b.setter
     def seek_n_frames_b(self, value: tuple[str, str]) -> None:
@@ -445,8 +445,8 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
             le.setText(v)
 
     @property
-    def seek_n_frames_f(self) -> tuple[str, str]:
-        return tuple[str, str](le.text() for le in self.seek_n_frames_f_lineedit)  # type: ignore[arg-type]
+    def seek_n_frames_f(self) -> list[str]:
+        return list(le.text() for le in self.seek_n_frames_f_lineedit)
 
     @seek_n_frames_f.setter
     def seek_n_frames_f(self, value: tuple[str, str]) -> None:
@@ -492,8 +492,8 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
             "play_pause": self.play_pause_lineedit.text(),
             "seek_to_prev": self.seek_to_prev_lineedit.text(),
             "seek_to_next": self.seek_to_next_lineedit.text(),
-            "seek_n_frames_b": tuple(le.text() for le in self.seek_n_frames_b_lineedit),
-            "seek_n_frames_f": tuple(le.text() for le in self.seek_n_frames_f_lineedit),
+            "seek_n_frames_b": list(le.text() for le in self.seek_n_frames_b_lineedit),
+            "seek_n_frames_f": list(le.text() for le in self.seek_n_frames_f_lineedit),
             "seek_to_start": self.seek_to_start_lineedit.text(),
             "seek_to_end": self.seek_to_end_lineedit.text(),
             "play_n_frames": self.play_n_frames_lineedit.text(),
@@ -509,8 +509,8 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
         try_load(state, "play_pause", str, self.play_pause_lineedit.setText)
         try_load(state, "seek_to_prev", str, self.seek_to_prev_lineedit.setText)
         try_load(state, "seek_to_next", str, self.seek_to_next_lineedit.setText)
-        try_load(state, "seek_n_frames_b", tuple, self)
-        try_load(state, "seek_n_frames_f", tuple, self)
+        try_load(state, "seek_n_frames_b", list, self)
+        try_load(state, "seek_n_frames_f", list, self)
         try_load(state, "seek_to_start", str, self.seek_to_start_lineedit.setText)
         try_load(state, "seek_to_end", str, self.seek_to_end_lineedit.setText)
         try_load(state, "play_n_frames", str, self.play_n_frames_lineedit.setText)

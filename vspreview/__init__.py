@@ -1,9 +1,11 @@
-import vapoursynth  # noqa: F401
+# ruff: noqa: F401, F403
 
-from . import qt_patch  # noqa: F401
+import vapoursynth
 
-from .api import *  # noqa: F401, F403
+from . import qt_patch
+
+from .api import *
 from .api import is_preview
 
 if is_preview():
-    from .init import main  # noqa: F401
+    from .init import main

@@ -1,25 +1,35 @@
 name: lint
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   windows:
     runs-on: windows-latest
     strategy:
       matrix:
-        versions:
+        vs-versions:
           - 68
         python-version:
           - '3.12'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip install vapoursynth-portable==${{ matrix.versions }}
+          pip install vapoursynth-portable==${{ matrix.vs-versions }}
           pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Running ruff
+        run: ruff check vspreview

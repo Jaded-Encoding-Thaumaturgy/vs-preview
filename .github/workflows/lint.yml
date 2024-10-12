@@ -1,4 +1,4 @@
-name: lint
+name: Lint Python code with Ruff
 
 on:
   push:

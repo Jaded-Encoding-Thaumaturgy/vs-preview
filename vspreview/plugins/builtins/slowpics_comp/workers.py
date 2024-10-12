@@ -306,7 +306,7 @@ class FindFramesWorker(QObject):
                 _rnum_checked.add(rnum)
 
                 if all(
-                    cast(bytes, f.props['_PictType']) in picture_types_b
+                    get_prop(f.props, '_PictType', str, None, '').encode() in picture_types_b
                     for f in vs.core.std.Splice(
                         [out.prepared.clip[rnum] for out in conf.outputs], True
                     ).frames(close=True)

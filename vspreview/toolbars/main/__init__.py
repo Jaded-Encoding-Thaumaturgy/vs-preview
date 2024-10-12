@@ -1,1 +1,3 @@
-from .toolbar import *  # noqa: F401, F403
+# ruff: noqa: F401, F403
+
+from .toolbar import *

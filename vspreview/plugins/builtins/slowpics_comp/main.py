@@ -664,7 +664,7 @@ class CompUploadWidget(ExtendedWidget):
             self.is_public_checkbox.isChecked(), self.is_nsfw_checkbox.isChecked(),
             True, delete_after, sample_frames_int, self.settings.compression, path,
             self.main, self.settings.delete_cache_enabled, self.settings.frame_type_enabled,
-            self.settings.browser_id, self.settings.session_id, tmdb_id, tags
+            self.settings.cookies_path, tmdb_id, tags
         )
 
     def find_samples(self, uuid: str) -> bool:

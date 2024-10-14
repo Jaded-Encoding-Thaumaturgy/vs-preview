@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 import unicodedata
@@ -7,6 +8,7 @@ from typing import Callable, Final
 from uuid import uuid4
 
 from requests import HTTPError, Session
+from requests.utils import dict_from_cookiejar
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from vstools import SPath
 
@@ -145,3 +147,31 @@ def get_frame_time(main: MainWindow, output: VideoOutput, frame: int, max_value:
         return time_str
 
     return f'{time_str} / {frame_str}'
+
+
+def do_login(username:str, password:str, path:SPath):
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with Session() as session:
+        session.headers.update(get_slowpic_headers(session))
+
+        home = session.get('https://slow.pics/login')
+        home.raise_for_status()
+
+        csrf = re.search(r'<input type="hidden" name="_csrf" value="([a-zA-Z0-9-_]+)"\/>', home.text)
+
+        if not csrf:
+            raise Exception('Couldn\'t find csrf')
+
+        login_params = {
+            "_csrf": csrf.group(1),
+            "username": username,
+            "password": password,
+            "remember-me": 'on'
+        }
+
+
+        login = session.post('https://slow.pics/login', data=login_params, allow_redirects=True)
+        login.raise_for_status()
+
+        path.write_text(json.dumps(dict_from_cookiejar(session.cookies)))

@@ -128,6 +128,9 @@ dmypy.json
 # Local test file
 *test*.py
 
+# Unignore tests dir
+!tests/
+
 # vscode folder
 .vscode
 

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 import unicodedata
 from typing import Callable, Final
 from uuid import uuid4
 
 from requests import HTTPError, Session
-from requests_toolbelt import MultipartEncoder  # type: ignore
+from requests_toolbelt import MultipartEncoder
 from vstools import SPath
 
 from vspreview.core import VideoOutput
@@ -25,7 +26,7 @@ __all__ = [
     'get_slowpic_headers',
     'do_single_slowpic_upload',
 
-    'clear_filename',
+    'sanitize_filename',
 
     'rand_num_frames',
 
@@ -34,6 +35,8 @@ __all__ = [
 
 
 def get_slowpic_upload_headers(content_length: int, content_type: str, sess: Session) -> dict[str, str]:
+    """Generate headers for uploading to Slowpics."""
+
     return {
         'Content-Length': str(content_length),
         'Content-Type': content_type,
@@ -41,6 +44,8 @@ def get_slowpic_upload_headers(content_length: int, content_type: str, sess: Ses
 
 
 def get_slowpic_headers(sess: Session) -> dict[str, str]:
+    """Generate general headers for Slowpics requests."""
+
     return {
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate',
@@ -57,6 +62,8 @@ def get_slowpic_headers(sess: Session) -> dict[str, str]:
 
 
 def do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: SPath, browser_id: str) -> None:
+    """Perform a single image upload to Slowpics."""
+
     upload_info = MultipartEncoder({
         'collectionUuid': collection,
         'imageUuid': imageUuid,
@@ -64,19 +71,34 @@ def do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, ima
         'browserId': browser_id,
     }, str(uuid4()))
 
-    while True:
+    max_retries = 3
+    retry_delay_seconds = 1
+
+    for attempt in range(max_retries):
         try:
             req = sess.post(
                 'https://slow.pics/upload/image', data=upload_info.to_string(),
                 headers=get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess)
             )
             req.raise_for_status()
-            break
+            return
         except HTTPError as e:
-            logging.debug(e)
+            logging.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay_seconds)
+                retry_delay_seconds *= 2
+            else:
+                logging.error(f"Failed to upload image after {max_retries} attempts")
+                raise
 
 
-def clear_filename(filename: str) -> str:
+def sanitize_filename(filename: str) -> str:
+    """Clean and sanitize a filename."""
+
+    if not filename:
+        return '__'
+
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']
     reserved = [
         'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
@@ -90,58 +112,61 @@ def clear_filename(filename: str) -> str:
     filename = ''.join(c for c in filename if 31 < ord(c))
     filename = unicodedata.normalize('NFKD', filename).rstrip('. ').strip()
 
-    if all([x == '.' for x in filename]):
-        filename = '__' + filename
+    if not filename or all(x == '.' for x in filename):
+        return '__' + filename
 
     if filename in reserved:
-        filename = '__' + filename
+        return '__' + filename
 
-    if len(filename) > 255:
-        parts = re.split(r'/|\\', filename)[-1].split('.')
+    if len(filename) <= 255:
+        return filename
 
-        if len(parts) > 1:
-            ext = '.' + parts.pop()
-            filename = filename[:-len(ext)]
-        else:
-            ext = ''
-        if filename == '':
-            filename = '__'
+    parts = re.split(r'/|\\', filename)[-1].split('.')
 
-        if len(ext) > 254:
-            ext = ext[254:]
+    if len(parts) > 1:
+        ext = '.' + parts.pop()
+        filename = filename[:-len(ext)]
+    else:
+        ext = ''
 
-        maxl = 255 - len(ext)
-        filename = filename[:maxl]
-        filename = filename + ext
+    if not filename:
+        filename = '__'
 
-        # Re-check last character (if there was no extension)
-        filename = filename.rstrip('. ')
+    if len(ext) > 254:
+        ext = ext[254:]
 
-    return filename
+    maxl = 255 - len(ext)
+    filename = filename[:maxl] + ext
+
+    # Re-check last character (if there was no extension)
+    return filename.rstrip('. ')
 
 
 def rand_num_frames(checked: set[int], rand_func: Callable[[], int]) -> int:
-    rnum = rand_func()
+    """Generate a random frame number that hasn't been checked yet."""
 
-    while rnum in checked:
+    if not checked:
+        return rand_func()
+
+    while True:
         rnum = rand_func()
 
-    return rnum
+        if rnum not in checked:
+            return rnum
 
 
 def get_frame_time(main: MainWindow, output: VideoOutput, frame: int, max_value: int) -> str:
-    frame_type: str = main.plugins['dev.setsugen.comp'].settings.globals.settings.frame_ntype
+    """Get the frame time string based on the current settings."""
 
+    frame_type: str = main.plugins['dev.setsugen.comp'].settings.globals.settings.frame_ntype
     frame_str = str(frame)
     time_str = output.to_time(frame).to_str_minimal(output.to_time(max_value))  # type: ignore
 
-    if frame_type == 'timeline':
-        return frame_str if main.timeline.mode == main.timeline.Mode.FRAME else time_str
+    frame_time_map = {
+        'timeline': lambda: frame_str if main.timeline.mode == main.timeline.Mode.FRAME else time_str,
+        'frame': lambda: frame_str,
+        'time': lambda: time_str,
+        'both': lambda: f'{time_str} / {frame_str}'
+    }
 
-    if frame_type == 'frame':
-        return frame_str
-
-    if frame_type == 'time':
-        return time_str
-
-    return f'{time_str} / {frame_str}'
+    return frame_time_map.get(frame_type, frame_time_map['both'])()

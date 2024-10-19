@@ -153,6 +153,7 @@ class PlaybackToolbar(AbstractToolbar):
             self, editable=True, insertPolicy=QComboBox.InsertPolicy.InsertAtCurrent,
             duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
+        self.audio_outputs_combobox.lineEdit().setReadOnly(True)  # type: ignore[union-attr]
 
         self.audio_volume_slider = QSlider(Qt.Orientation.Horizontal, valueChanged=self.setVolume)  # type: ignore
         self.audio_volume_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)

@@ -56,9 +56,10 @@ class MainToolbar(AbstractToolbar):
             duplicatesEnabled=True, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
         self.outputs_combobox.currentIndexChanged.connect(self.main.switch_output)
-        self.outputs_combobox.view().setMinimumWidth(
+        self.outputs_combobox.view().setMinimumWidth(  # type: ignore[union-attr]
             self.outputs_combobox.minimumSizeHint().width()
         )
+        self.outputs_combobox.lineEdit().setReadOnly(True)  # type: ignore[union-attr]
 
         self.frame_control = FrameEdit(self, valueChanged=self.main.switch_frame)
         if not self.settings.INSTANT_FRAME_UPDATE:

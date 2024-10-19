@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QBoxLayout, QLabel, QWidget
 
 from ..core import (
     AbstractSettingsScrollArea, HBoxLayout, LineEdit, PushButton, QAbstractYAMLObjectSingleton,
-    QYAMLObject, Shortcut
+    QYAMLObject, Shortcut, yaml_Loader
 )
 from ..models import GeneralModel
 
@@ -156,6 +156,11 @@ class Modifier(Flag):
     @property
     def modifier(self) -> Qt.Modifier:
         return Qt.Modifier(self.value)
+
+yaml_Loader.add_constructor(
+    'tag:yaml.org,2002:python/object/apply:vspreview.shortcuts.abstract.Modifier',
+    lambda self, node: Modifier(self.construct_sequence(node)[0])  # type: ignore
+)
 
 
 class ModifierModel(GeneralModel[Modifier]):

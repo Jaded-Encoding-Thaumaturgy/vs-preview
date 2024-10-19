@@ -1,4 +1,4 @@
-# from __future__ import annotations
+from __future__ import annotations
 
 import logging
 
@@ -18,8 +18,6 @@ from .abstract import (
 if TYPE_CHECKING:
     from ..main import MainWindow
     from ..plugins.abstract import AbstractPlugin, PluginShortcut
-else:
-    MainWindow, PluginShortcut, AbstractPlugin = Any, Any, Any
 
 
 __all__ = ["ShortCutsSettings"]

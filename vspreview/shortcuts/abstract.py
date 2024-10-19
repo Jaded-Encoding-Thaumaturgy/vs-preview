@@ -16,8 +16,7 @@ from ..models import GeneralModel
 
 if TYPE_CHECKING:
     from ..core import Stretch
-else:
-    Stretch = Any
+
 
 __all__ = [
     "AbtractShortcutSection",

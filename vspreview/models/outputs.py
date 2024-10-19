@@ -99,9 +99,11 @@ class Outputs(Generic[T], QAbstractListModel, QYAMLObject):
             return None
 
         if role == Qt.ItemDataRole.DisplayRole:
-            return self.items[index.row()].name
+            output = self.items[index.row()]
+            return f"{output.vs_index}: {output.name}"
         if role == Qt.ItemDataRole.EditRole:
-            return self.items[index.row()].name
+            output = self.items[index.row()]
+            return f"{output.vs_index}: {output.name}"
         if role == Qt.ItemDataRole.UserRole:
             return self.items[index.row()]
         return None

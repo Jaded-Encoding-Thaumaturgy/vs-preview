@@ -36,6 +36,7 @@ class AudioOutput(AbstractYAMLObject):
         with self.main.env:
             vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.AudioNode))
 
+        self.vs_index = index
         self.index = vs_outputs.index(vs_output)
         self.source_vs_output = vs_output
         self.vs_output = self.source_vs_output

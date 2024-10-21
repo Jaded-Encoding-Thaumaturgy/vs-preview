@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import random
 import shutil
@@ -12,6 +13,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from requests import Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
+from requests.utils import cookiejar_from_dict
 from stgpytools import SPath, ndigits
 from vstools import clip_data_gather, get_prop, remap_frames, vs
 
@@ -44,8 +46,7 @@ class WorkerConfiguration(NamedTuple):
     main: MainWindow
     delete_cache: bool
     frame_type: bool
-    browser_id: str
-    session_id: str
+    cookies: SPath
     tmdb: str
     tags: list[str]
 
@@ -73,10 +74,9 @@ class Worker(QObject):
         all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
-        if conf.browser_id and conf.session_id:
+        if conf.cookies.is_file():
             with Session() as sess:
-                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
-                browser_id = conf.browser_id
+                sess.cookies.update(cookiejar_from_dict(json.loads(conf.cookies.read_text())))
                 base_page = sess.get('https://slow.pics/comparison')
                 if base_page.text.find('id="logoutBtn"') == -1:
                     self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
@@ -91,9 +91,6 @@ class Worker(QObject):
                 folder_name = str(uuid4())
                 path_name = conf.path / folder_name
                 path_name.mkdir(parents=True)
-
-                if not conf.frames[i]:
-                    raise StopIteration("Output missing a frame.")
 
                 curr_filename = (path_name / folder_name).append_to_stem(f'%0{ndigits(max(conf.frames[i]))}d').with_suffix('.png')
 
@@ -164,13 +161,10 @@ class Worker(QObject):
         self.progress_status.emit(conf.uuid, 'upload', 0, 0)
 
         with Session() as sess:
-            if conf.browser_id and conf.session_id:
-                sess.cookies.set('SLP-SESSION', conf.session_id, domain='slow.pics')
-                browser_id = conf.browser_id
-                check_session = True
-            else:
-                browser_id = str(uuid4())
-                check_session = False
+            browser_id = str(uuid4())
+            check_session = conf.cookies.is_file()
+            if check_session:
+                sess.cookies.update(cookiejar_from_dict(json.loads(conf.cookies.read_text())))
 
             base_page = sess.get('https://slow.pics/comparison', headers=get_slowpic_headers(sess))
             if self.isFinished():

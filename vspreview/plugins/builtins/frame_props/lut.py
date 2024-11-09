@@ -157,13 +157,11 @@ vssource_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
 # Wobbly Parser properties
 wobbly_props_lut: dict[str, dict[str, list[str] | Callable[[Any], str]]] = {
     'wobbly_match': {
-        'Wobbly Match': [
-            'p',
-            'c',
-            'n',
-            'b',
-            'u'
-        ]
+        'Wobbly Match': lambda x: (
+            x if str(x) in ['p', 'c', 'n', 'b', 'u']
+            else ['p', 'c', 'n', 'b', 'u'][x] if isinstance(x, int) and 0 <= x < 5
+            else '?'
+        )
     },
     'wobbly_combed': {
         'Wobbly Combed': [

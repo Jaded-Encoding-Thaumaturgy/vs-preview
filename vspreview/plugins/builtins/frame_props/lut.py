@@ -156,46 +156,46 @@ vssource_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
 
 # Wobbly Parser properties
 wobbly_props_lut: dict[str, dict[str, list[str] | Callable[[Any], str]]] = {
-    'wobbly_match': {
-        'Wobbly Match': lambda x: (
+    'WobblyMatch': {
+        'Field Match': lambda x: (
             x if str(x) in ['p', 'c', 'n', 'b', 'u']
             else ['p', 'c', 'n', 'b', 'u'][x] if isinstance(x, int) and 0 <= x < 5
             else '?'
         )
     },
-    'wobbly_combed': {
-        'Wobbly Combed': [
-            'Yes',
-            'No'
+    'WobblyCombed': {
+        'Combed': [
+            'No',
+            'Yes'
         ]
     },
-    'wobbly_cycle_fps': {
-        'Wobbly Cycle Framerate': lambda fps: str(fps)
+    'WobblyCycleFps': {
+        'Current Cycle Framerate': lambda fps: str(fps)
     },
-    'wobbly_freeze_start': {
-        'Wobbly Freeze Range Start': lambda start: str(start)
+    'WobblyFreeze': {
+        'Freeze Ranges': lambda freeze: freeze
     },
-    'wobbly_freeze_end': {
-        'Wobbly Freeze Range End': lambda end: str(end)
-    },
-    'wobbly_freeze_replacement': {
-        'Wobbly Freeze Range Replacement': lambda replacement: str(replacement)
-    },
-    'wobbly_ftf': {
-        'Wobbly Fix Telecined Fades': [
-            'Yes',
-            'No'
+    'WobblyInterlacedFades': {
+        'Interlaced Fade': [
+            'No',
+            'Yes'
         ]
     },
-    'wobbly_fif': {
-        'Wobbly Fix Interlaced Fades': [
-            'Yes',
-            'No'
-        ]
+    'WobblyOrphanFrame': {
+        'Orphan Frame': lambda m: f"Yes ({m})" if not isinstance(m, int) or m >= 0 else "No"
     },
-    'wobbly_orphan_deinterlace': {
-        'Wobbly Orphan Field Deinterlaced': lambda m: f"Yes ({m})" if not isinstance(m, int) or m >= 0 else "No"
-    }
+    'WobblyOrphanDeinterlace': {
+        'Orphan Field Deinterlaced': lambda m: f"Yes ({m})" if not isinstance(m, int) or m >= 0 else "No"
+    },
+    'WobblyPreset': {
+        'Filtering Preset Applied': lambda preset: str(preset)
+    },
+    'WobblyPresetPosition': {
+        'Filtering Preset Position': lambda position: str(position).title()
+    },
+    'WobblyPresetFrames': {
+        'Filtering Preset Frame Range': lambda _range: f'({_range[0]}, {_range[-1]})'
+    },
 }
 
 # VMAF-related properties

@@ -30,6 +30,8 @@ field_props: list[str] = [
 ]
 """Properties specific to interlaced video and field-based processing."""
 
+wobbly_props: list[str] = []
+"""Properties related to wobbly processing."""
 
 other_props: list[str] = []
 """Props that don't fit into other categories or haven't been sorted"""
@@ -38,6 +40,7 @@ frame_props_categories: dict[str, list[str]] = {
     'Video': video_props,
     'Metrics': metrics_props,
     'Field': field_props,
+    'Wobbly': wobbly_props,
     'Other': other_props
 }
 
@@ -64,8 +67,10 @@ frame_props_category_prefix_lut: dict[str, str] = {
             'VFM', 'VDecimate',
             # TIVTC
             'TFM', 'TDecimate',
-            # Wobbly (via lvsfunc)
-            'wobbly_'
+        ),
+        'Wobbly': (
+            # Wobbly (via vswobbly)
+            'Wobbly'
         )
     }.items()
     for prefix in prefixes

@@ -19,7 +19,7 @@ from vstools import PackageStorage, SPath, get_prop
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame, GraphicsImageItem,
-    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
+    GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, PushButton, QAbstractYAMLObjectSingleton, StatusBar, Time, Timer,
     VBoxLayout, VideoOutput, _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
@@ -187,6 +187,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         Plugins(self)
 
+        self.toolbars.main.layout().addWidget(PushButton("Plugins", clicked=self.pop_out_plugins))
+
         self.app_settings.tab_widget.setUsesScrollButtons(False)
         self.app_settings.setMinimumWidth(
             int(len(self.toolbars) * 1.05 * self.app_settings.tab_widget.geometry().width() / 2)
@@ -248,11 +250,26 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             self, activated=self.auto_fit_keyswitch
         )
 
+        QShortcut(
+            QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_P).toCombined()),
+            self, activated=self.pop_out_plugins
+        )
+
     def auto_fit_keyswitch(self) -> None:
         for view in self.graphics_views:
             if view.underMouse():
                 view.autofit = not view.autofit
                 break
+
+    def pop_out_plugins(self):
+        left, right = self.main_split.sizes()
+        if right:
+            new_sizes = [left + right, 0]
+        else:
+            min_right = int((left + right) * 0.2)
+            new_sizes = [min(left, left + right - min_right), max(right, min_right)]
+        self.main_split.setSizes(new_sizes)
+        self.plugins.update()
 
     def apply_stylesheet(self) -> None:
         try:

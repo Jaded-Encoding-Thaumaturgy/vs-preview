@@ -8,12 +8,11 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from functools import partial
 from typing import Any, NamedTuple, cast
 from uuid import uuid4
-
 from PyQt6.QtCore import QObject, pyqtSignal
 from requests import Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
-from requests.utils import cookiejar_from_dict
+from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 from stgpytools import SPath, ndigits
 from vstools import clip_data_gather, get_prop, remap_frames, vs
 
@@ -80,7 +79,8 @@ class Worker(QObject):
                 base_page = sess.get('https://slow.pics/comparison')
                 if base_page.text.find('id="logoutBtn"') == -1:
                     self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
-                    return
+                    raise StopIteration
+                conf.cookies.write_text(json.dumps(dict_from_cookiejar(sess.cookies)))
 
         try:
             for i, output in enumerate(conf.outputs):
@@ -173,7 +173,8 @@ class Worker(QObject):
             if check_session:
                 if base_page.text.find('id="logoutBtn"') == -1:
                     self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
-                    return
+                    raise StopIteration
+                conf.cookies.write_text(json.dumps(dict_from_cookiejar(sess.cookies)))
 
             head_conf = {
                 'collectionName': conf.collection_name,
@@ -232,6 +233,9 @@ class Worker(QObject):
             self._progress_update_func(total_images, total_images, uuid=conf.uuid)
         if conf.delete_cache:
             shutil.rmtree(conf.path, True)
+
+        if check_session:
+            conf.cookies.write_text(json.dumps(dict_from_cookiejar(sess.cookies)))
 
         url = f'https://slow.pics/c/{key}'
 

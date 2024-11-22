@@ -26,7 +26,7 @@ class ComboBox(QComboBox, Generic[T]):
     content_type: type[T]
 
     if TYPE_CHECKING:
-        valueChanged = pyqtSignal(content_type, T | None)  # type: ignore
+        valueChanged = pyqtSignal(content_type, T | None)  # noqa
 
     def __init__(self, parent: QWidget | None = None, **kwargs: Any) -> None:
         super().__init__(parent)

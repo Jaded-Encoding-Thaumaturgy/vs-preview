@@ -6,7 +6,7 @@ import random
 import shutil
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from functools import partial
-from typing import Any, NamedTuple, cast
+from typing import Any, NamedTuple
 from uuid import uuid4
 from PyQt6.QtCore import QObject, pyqtSignal
 from requests import Session

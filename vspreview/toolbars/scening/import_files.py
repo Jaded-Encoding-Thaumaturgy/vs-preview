@@ -441,7 +441,7 @@ def import_vsedit(path: Path, scening_list: SceningList) -> int:
             out_of_range_count += 1
 
     ranges = list[list[int]]()
-    prev_x: int
+    prev_x: int = 0
     for x in frames:
         if not ranges:
             ranges.append([x])

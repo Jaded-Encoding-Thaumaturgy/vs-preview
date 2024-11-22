@@ -502,8 +502,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         try:
             legacy_global_storage.rename(self.global_storage_path)
-        except:
-            logging.error(f'Failed to move global storage file.')
+        except Exception as e:
+            logging.error(f'Failed to move global storage file:\n\n{e}')
 
     @set_status_label('Loading...')
     def load_storage(self) -> None:

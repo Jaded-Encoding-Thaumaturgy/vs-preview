@@ -394,37 +394,21 @@ class VideoOutput(AbstractYAMLObject):
 
                 ein_shift = np.array([b_shift, g_shift, r_shift], np.uint32)
 
-                try:
-                    import cupy as cp  # type: ignore
+                from numpy.core._multiarray_umath import c_einsum  # type: ignore
+                from numpy.core.numeric import tensordot
 
-                    self.__base_cupy_add = base_add = cp.asarray(blank.get_frame(0).copy()[0]).copy()
+                self.__base_numpy_add = base_add = np.asarray(blank.get_frame(0).copy()[0]).copy()
 
-                    ein_shift = cp.asarray(ein_shift)
+                def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
+                    bf = f[0].copy()
 
-                    def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
-                        bf = f[0].copy()
+                    np.add(
+                        c_einsum(
+                            'ji->ji', tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,)))
+                        ), base_add, np.asarray(bf[0])
+                    )
 
-                        cp.asnumpy(cp.add(cp.einsum(
-                            'kji,k->ji', cp.asarray(f[1], cp.uint32), ein_shift, optimize='greedy'
-                        ), base_add), out=np.asarray(bf[0]))
-
-                        return bf
-                except ModuleNotFoundError:
-                    from numpy.core._multiarray_umath import c_einsum  # type: ignore
-                    from numpy.core.numeric import tensordot
-
-                    self.__base_numpy_add = base_add = np.asarray(blank.get_frame(0).copy()[0]).copy()
-
-                    def _packrgb(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
-                        bf = f[0].copy()
-
-                        np.add(
-                            c_einsum(
-                                'ji->ji', tensordot(np.asarray(f[1], np.uint32), ein_shift, ((0,), (0,)))
-                            ), base_add, np.asarray(bf[0])
-                        )
-
-                        return bf
+                    return bf
 
             return blank.std.ModifyFrame([blank, clip], _packrgb)
 

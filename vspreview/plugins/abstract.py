@@ -9,7 +9,6 @@ from vstools import SPath, T
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject
 from ..core.bases import yaml_Loader
-from yaml.constructor import FullConstructor
 
 if TYPE_CHECKING:
     from ..main import MainWindow

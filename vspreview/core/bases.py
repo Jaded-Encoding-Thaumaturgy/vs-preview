@@ -82,7 +82,7 @@ class SafeYAMLObjectMetaclass(YAMLObjectMetaclass):
 
 # Fallback constructor for python/object tags that just returns None rather than raising an Error,
 # so that invalid or outdated config files can still be parsed.
-yaml_Loader.add_multi_constructor(f'tag:yaml.org,2002:python/object', lambda self, suffix, node: None)
+yaml_Loader.add_multi_constructor('tag:yaml.org,2002:python/object', lambda self, suffix, node: None)
 
 
 class SafeYAMLObject(YAMLObject, metaclass=SafeYAMLObjectMetaclass):

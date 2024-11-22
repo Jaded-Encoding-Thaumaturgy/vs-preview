@@ -83,14 +83,14 @@ class CompUploadWidget(ExtendedWidget):
         self.main = main_window()
         self.settings = settings
 
+        self.tag_data_cache = None
+        self.tag_data_error = False
+
         self.setup_ui()
 
         self.set_qobject_names()
 
         self.add_shortcuts()
-
-        self.tag_data_cache = None
-        self.tag_data_error = False
 
     def _force_clicked(self, self_s: str) -> Callable[[bool], None]:
         def _on_clicked(is_checked: bool) -> None:

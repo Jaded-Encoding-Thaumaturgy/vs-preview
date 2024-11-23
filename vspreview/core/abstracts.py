@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Sequence, Ty
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
-    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit, QProgressBar,
-    QPushButton, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
+    QApplication, QBoxLayout, QCheckBox, QDialog, QDoubleSpinBox, QFrame, QHBoxLayout, QLineEdit,
+    QProgressBar, QPushButton, QScrollArea, QSpacerItem, QSpinBox, QTableView, QVBoxLayout, QWidget
 )
 
 from .bases import QABC, QYAMLObjectSingleton, SafeYAMLObject
@@ -30,13 +30,15 @@ __all__ = [
 
     'SpinBox', 'PushButton', 'LineEdit', 'CheckBox', 'Timer', 'ProgressBar', 'DoubleSpinBox',
 
+    'Shortcut',
+
     'AbstractQItem', 'AbstractYAMLObject',
 
-    'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView',
+    'ExtendedWidgetBase', 'ExtendedWidget', 'ExtendedDialog', 'ExtendedTableView', 'ExtendedScrollArea',
 
     'NotchProvider',
 
-    'AbstractSettingsWidget',
+    'AbstractSettingsWidget', 'AbstractSettingsScrollArea',
 
     'AbstractToolbar', 'AbstractToolbarSettings',
 
@@ -261,12 +263,18 @@ class DoubleSpinBox(ExtendedItemInit, QDoubleSpinBox):
     ...
 
 
+class Shortcut(QShortcut):
+    def __init__(
+        self, key: QKeySequence | QKeySequence.StandardKey | str | int | None,
+        parent: QObject | None, handler: Callable[[], None]
+    ) -> None:
+        super().__init__(key, parent)
+        self.activated.connect(handler)
+
+
 class AbstractQItem:
     __slots__: tuple[str, ...]
     storable_attrs: ClassVar[tuple[str, ...]] = ()
-
-    def add_shortcut(self, key: int, handler: Callable[[], None]) -> None:
-        QShortcut(QKeySequence(key), self, activated=handler)  # type: ignore
 
     def set_qobject_names(self) -> None:
         if not hasattr(self, '__slots__'):
@@ -307,9 +315,6 @@ class ExtendedWidgetBase(AbstractQItem):
         self.vlayout = VBoxLayout(self)
         self.hlayout = HBoxLayout(self.vlayout)
 
-    def add_shortcuts(self) -> None:
-        pass
-
     def get_separator(self, horizontal: bool = False) -> QFrame:
         separator = QFrame(self)
         separator.setFrameShape(QFrame.Shape.HLine if horizontal else QFrame.Shape.VLine)
@@ -329,6 +334,21 @@ class ExtendedTableView(AbstractQItem, QTableView):
     ...
 
 
+class ExtendedScrollArea(ExtendedWidgetBase, QScrollArea):
+    frame: QFrame
+
+    def setup_ui(self) -> None:
+        self.setWidgetResizable(True)
+
+        self.frame = QFrame(self)
+
+        super().setup_ui()
+
+        self.frame.setLayout(self.vlayout)
+
+        self.setWidget(self.frame)
+
+
 class AbstractSettingsWidget(ExtendedWidget, QYAMLObjectSingleton):
     __slots__ = ()
 
@@ -338,6 +358,23 @@ class AbstractSettingsWidget(ExtendedWidget, QYAMLObjectSingleton):
         self.setup_ui()
 
         self.vlayout.addStretch(1)
+
+        self.set_defaults()
+
+        self.set_qobject_names()
+
+    def set_defaults(self) -> None:
+        pass
+
+    def __getstate__(self) -> dict[str, Any]:
+        return {}
+
+
+class AbstractSettingsScrollArea(ExtendedScrollArea, QYAMLObjectSingleton):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setup_ui()
 
         self.set_defaults()
 

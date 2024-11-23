@@ -9,7 +9,7 @@ from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, cast
 
 import vapoursynth as vs
-from PyQt6.QtCore import QKeyCombination, Qt
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox, QSlider
 
 from ...core import (
@@ -86,8 +86,6 @@ class PlaybackToolbar(AbstractToolbar):
         self.setMute(True)
 
         self.main.timeline.clicked.connect(self.on_timeline_clicked)
-
-        self.add_shortcuts()
 
         self.set_qobject_names()
 
@@ -173,21 +171,6 @@ class PlaybackToolbar(AbstractToolbar):
         ])
 
         self.hlayout.addStretch()
-
-    def add_shortcuts(self) -> None:
-        self.main.add_shortcut(Qt.Key.Key_Space, self.play_pause_button.click)
-        self.main.add_shortcut(Qt.Key.Key_Left, self.seek_to_prev_button.click)
-        self.main.add_shortcut(Qt.Key.Key_Right, self.seek_to_next_button.click)
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Left).toCombined(), self.seek_n_frames_b_button.click
-        )
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_Right).toCombined(), self.seek_n_frames_f_button.click
-        )
-        self.main.add_shortcut(Qt.Key.Key_PageUp, self.seek_n_frames_b_button.click)
-        self.main.add_shortcut(Qt.Key.Key_PageDown, self.seek_n_frames_f_button.click)
-        self.main.add_shortcut(Qt.Key.Key_Home, self.seek_to_start_button.click)
-        self.main.add_shortcut(Qt.Key.Key_End, self.seek_to_end_button.click)
 
     def on_current_output_changed(self, index: int, prev_index: int) -> None:
         qt_silent_call(self.seek_frame_control.setMaximum, self.main.current_output.total_frames)

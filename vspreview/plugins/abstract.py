@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterable, NamedTuple
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable, NamedTuple, cast, overload
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 from vstools import SPath, T
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'AbstractPlugin', 'PluginConfig', 'PluginSettings', 'SettingsNamespace',
+    'AbstractPlugin', 'PluginConfig', 'PluginSettings', 'PluginShortcut', 'SettingsNamespace',
 
     'FileResolverPlugin', 'FileResolvePluginConfig', 'ResolvedScript'
 ]
@@ -88,9 +89,18 @@ class ResolvedScript(NamedTuple):
     reload_enabled: bool = True
 
 
+class PluginShortcut(NamedTuple):
+    name: str
+    parent: QObject | str
+    handler: Callable[[], None] | str
+    key: QKeySequence | None = None
+    description: str | None = None
+
+
 class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     _config: ClassVar[PluginConfig]
     settings: PluginSettings
+    shortcuts: list[PluginShortcut]
 
     on_first_load = pyqtSignal()
 
@@ -113,11 +123,15 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
         self._first_load_done = False
 
+        self.shortcuts = []
+        self.__legacy_counter_shortcuts = 0
+        self.add_shortcuts()
+
     def first_load(self) -> bool:
         if not self._first_load_done:
             self.setup_ui()
 
-            self.add_shortcuts()
+            self.setup_shortcuts()
 
             self.set_qobject_names()
 
@@ -131,6 +145,50 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
 
     def init_outputs(self) -> None:
         ...
+
+    def setup_shortcuts(self) -> None:
+        self.main.shortcuts.sections_plugins[self._config.namespace].setup_shortcuts()
+
+    @overload
+    def add_shortcut(
+        self,
+        name: str,
+        parent: QObject | str,
+        /,
+        handler: Callable[[], None] | str,
+        key: QKeySequence | None = None,
+        description: str | None = None
+    ) -> None:
+        ...
+
+    @overload
+    def add_shortcut(
+        self,
+        key: Qt.Key | int,
+        handler: Callable[[], None],
+        /
+    ) -> None:
+        """Legacy"""
+        ...
+
+    def add_shortcut(
+        self,
+        name_or_key: Any,
+        parent_or_handler: Any,
+        /,
+        handler: Callable[[], None] | str = "",
+        key: QKeySequence | None = None,
+        description: str | None = None
+    ) -> None:
+        if isinstance(name_or_key, str) and isinstance(parent_or_handler, (QObject | str)):
+            name, parent, handler = name_or_key, parent_or_handler, handler
+        else:
+            name, parent, = f"shortcut_{self.__legacy_counter_shortcuts}", cast(QObject, self), 
+            handler, key = parent_or_handler, QKeySequence(name_or_key)
+            description = f"Shortcut {self.__legacy_counter_shortcuts}"
+            self.__legacy_counter_shortcuts += 1
+
+        self.shortcuts.append(PluginShortcut(name, parent, handler, key, description))
 
     def add_shortcuts(self) -> None:
         ...

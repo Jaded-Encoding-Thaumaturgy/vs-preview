@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QKeyCombination, Qt
 from PyQt6.QtWidgets import QComboBox
 
 from ...core import (
-    AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, PushButton, Time, TimeEdit, VideoOutput, try_load
+    AbstractToolbar, CheckBox, ComboBox, Frame, FrameEdit, PushButton, Time, TimeEdit, VideoOutput,
+    try_load
 )
 from ...models import VideoOutputs
 from ...utils import qt_silent_call
@@ -29,6 +28,7 @@ class MainToolbar(AbstractToolbar):
         *storable_attrs,
         'outputs_combobox', 'frame_control', 'copy_frame_button',
         'time_control', 'copy_timestamp_button',
+        'sync_outputs_checkbox',
         'switch_timeline_mode_button', 'settings_button'
     )
 
@@ -41,8 +41,6 @@ class MainToolbar(AbstractToolbar):
         self.setup_ui()
 
         self.outputs = None
-
-        self.add_shortcuts()
 
         self.set_qobject_names()
 
@@ -92,29 +90,6 @@ class MainToolbar(AbstractToolbar):
         ])
 
         self.hlayout.addStretch()
-
-    def add_shortcuts(self) -> None:
-        if self.main.reload_enabled:
-            self.main.add_shortcut(
-                QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_R).toCombined(), self.main.reload_script
-            )
-
-        for i, key in enumerate(self.num_keys):
-            self.add_shortcut(key, partial(self.main.switch_output, i))
-            self.add_shortcut(
-                QKeyCombination(Qt.Modifier.CTRL, key).toCombined(), partial(self.main.switch_output, -(i + 1))
-            )
-
-        self.add_shortcut(Qt.Key.Key_S, self.sync_outputs_checkbox.click)
-        self.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Tab).toCombined(),
-            lambda: self.main.switch_output(self.outputs_combobox.currentIndex() + 1)
-        )
-        self.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL | Qt.Modifier.SHIFT, Qt.Key.Key_Tab).toCombined(),
-            lambda: self.main.switch_output(self.outputs_combobox.currentIndex() - 1)
-        )
-        self.add_shortcut(Qt.Key.Key_V, self.on_copy_frame_button_clicked)
 
     def on_sync_outputs_clicked(self, checked: bool | None = None, force_frame: Frame | None = None) -> None:
         if not self.outputs:

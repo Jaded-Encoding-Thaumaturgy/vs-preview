@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import logging
 import re
-from functools import partial
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from PyQt6.QtCore import QKeyCombination, QModelIndex, Qt
+from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFileDialog, QLabel
 
 from ...core import (
-    AbstractToolbar, CheckBox, ComboBox, Frame, HBoxLayout, LineEdit, Notches, PushButton, Time, try_load
+    AbstractToolbar, CheckBox, ComboBox, Frame, HBoxLayout, LineEdit, Notches, PushButton, Time,
+    try_load
 )
 from ...models import SceningList, SceningLists
 from ...utils import fire_and_forget, set_status_label
@@ -47,6 +48,7 @@ class SceningToolbar(AbstractToolbar):
     )
 
     settings: SceningSettings
+    scening_list_dialog: SceningListDialog
 
     def __init__(self, main: MainWindow) -> None:
         super().__init__(main, SceningSettings(self))
@@ -79,8 +81,6 @@ class SceningToolbar(AbstractToolbar):
         self.remove_at_current_frame_button.clicked.connect(self.on_remove_at_current_frame_clicked)
         self.export_template_lineedit.textChanged.connect(self.check_remove_export_possibility)
         self.export_button.clicked.connect(self.export)
-
-        self.add_shortcuts()
 
         # FIXME: get rid of workaround
         self._on_list_items_changed = lambda *arg: self.on_list_items_changed(*arg)
@@ -164,36 +164,6 @@ class SceningToolbar(AbstractToolbar):
         self.status_label.setVisible(False)
         self.main.statusbar.addPermanentWidget(self.status_label)
 
-    def add_shortcuts(self) -> None:
-        for i, key in enumerate(self.num_keys[:-2]):
-            self.add_shortcut(QKeyCombination(Qt.Modifier.SHIFT, key), partial(self.switch_list, i))  # type: ignore
-
-        self.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.on_toggle_single_frame
-        )
-        self.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Left).toCombined(), self.seek_to_prev_button.click
-        )
-        self.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Right).toCombined(), self.seek_to_next_button.click
-        )
-        if self.main.settings.azerty_keybinds:
-            self.add_shortcut(Qt.Key.Key_A, self.toggle_first_frame_button.click)
-            self.add_shortcut(Qt.Key.Key_Z, self.toggle_second_frame_button.click)
-        else:
-            self.add_shortcut(Qt.Key.Key_Q, self.toggle_first_frame_button.click)
-            self.add_shortcut(Qt.Key.Key_W, self.toggle_second_frame_button.click)
-        self.add_shortcut(Qt.Key.Key_E, self.add_to_list_button.click)
-        self.add_shortcut(Qt.Key.Key_R, self.remove_last_from_list_button.click)
-        self.add_shortcut(
-            QKeyCombination(Qt.Modifier.SHIFT, Qt.Key.Key_R).toCombined(), self.remove_at_current_frame_button.click
-        )
-        self.add_shortcut(
-            Qt.Key.Key_B, lambda: self.scening_list_dialog.label_lineedit.setText(
-                str(self.main.current_output.last_showed_frame)
-            )
-        )
-
     def on_toggle(self, new_state: bool) -> None:
         if new_state is True:
             self.check_add_to_list_possibility()
@@ -254,6 +224,8 @@ class SceningToolbar(AbstractToolbar):
             self.remove_list_button.setEnabled(False)
             self.view_list_button.setEnabled(False)
 
+        self.scening_list_dialog.adjustSize()
+
         if old_value is not None:
             try:
                 old_value.rowsInserted.disconnect(self._on_list_items_changed)
@@ -277,6 +249,7 @@ class SceningToolbar(AbstractToolbar):
             self.view_list_button.setEnabled(False)
 
     def on_view_list_clicked(self, checked: bool | None = None) -> None:
+        self.scening_list_dialog.adjustSize()
         self.scening_list_dialog.show()
 
     def switch_list(self, index: int) -> None:

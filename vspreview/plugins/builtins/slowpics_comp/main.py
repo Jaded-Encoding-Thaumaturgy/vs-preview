@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import requests
 from PyQt6 import QtCore
-from PyQt6.QtCore import QKeyCombination, Qt, QThread
+from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import Session
 from stgpytools import SPath
@@ -89,8 +89,6 @@ class CompUploadWidget(ExtendedWidget):
         self.setup_ui()
 
         self.set_qobject_names()
-
-        self.add_shortcuts()
 
     def _force_clicked(self, self_s: str) -> Callable[[bool], None]:
         def _on_clicked(is_checked: bool) -> None:
@@ -421,11 +419,6 @@ class CompUploadWidget(ExtendedWidget):
                 collection_text = collection_text.replace(match, replace)
 
         return collection_text
-
-    def add_shortcuts(self) -> None:
-        self.main.add_shortcut(
-            QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_Space).toCombined(), self.add_current_frame_to_comp
-        )
 
     def update_tags(self) -> None:
         self.tag_list_combox.setModel(GeneralModel[str](sorted(self.tag_data.keys()), to_title=False))

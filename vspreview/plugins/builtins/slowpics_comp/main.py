@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import requests
 from PyQt6 import QtCore
-from PyQt6.QtCore import QKeyCombination, Qt, QThread
+from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import Session
 from stgpytools import SPath

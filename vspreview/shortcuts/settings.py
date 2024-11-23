@@ -395,13 +395,13 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
 
         self.create_shortcut(self.play_pause_lineedit, playback_toolbar, playback_toolbar.play_pause_button.click)
 
-        self.create_shortcut(self.seek_to_prev_lineedit, playback_toolbar, playback_toolbar.seek_to_prev_button.click)
-        self.create_shortcut(self.seek_to_next_lineedit, playback_toolbar, playback_toolbar.seek_to_next_button.click)
+        self.create_shortcut(self.seek_to_prev_lineedit, main, playback_toolbar.seek_to_prev_button.click)
+        self.create_shortcut(self.seek_to_next_lineedit, main, playback_toolbar.seek_to_next_button.click)
 
         for le in self.seek_n_frames_b_lineedit:
-            self.create_shortcut(le, playback_toolbar, playback_toolbar.seek_n_frames_b_button.click)
+            self.create_shortcut(le, main, playback_toolbar.seek_n_frames_b_button.click)
         for le in self.seek_n_frames_f_lineedit:
-            self.create_shortcut(le, playback_toolbar, playback_toolbar.seek_n_frames_f_button.click)
+            self.create_shortcut(le, main, playback_toolbar.seek_n_frames_f_button.click)
 
         self.create_shortcut(self.seek_to_start_lineedit, playback_toolbar, playback_toolbar.seek_to_start_button.click)
         self.create_shortcut(self.seek_to_end_lineedit, playback_toolbar, playback_toolbar.seek_to_end_button.click)

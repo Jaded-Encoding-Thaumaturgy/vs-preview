@@ -24,7 +24,6 @@ __all__ = [
     "AbtractShortcutSectionQYAMLObject",
     "ShortCutLineEdit",
     "ResetPushButton",
-    "HiddenResetPushButton",
     "TitleLabel",
     "Modifier",
     "ModifierModel",
@@ -126,10 +125,8 @@ class ResetPushButton(PushButton):
         super().__init__(name, *args, tooltip=tooltip, **kwargs)
         self.setMaximumWidth(55)
 
-
-class HiddenResetPushButton(ResetPushButton):
-    def __init__(self) -> None:
-        super().__init__("")
+    def make_hidden(self) -> None:
+        self.setText(None)
         self.setFlat(True)
         self.setEnabled(False)
 
@@ -175,21 +172,15 @@ class AbtractShortcutSection:
     def setup_ui_shortcut(
         self, label: str, widget: QWidget, default: QKeySequence | None = None, hide_reset: bool = False
     ) -> None:
-        childrens: list[QWidget] = [QLabel(label), widget]
+        button = ResetPushButton("Reset", self.parent)
 
-        button: QWidget
-
-        if hide_reset or default is None:
-            button = HiddenResetPushButton()
-        elif isinstance(widget, ShortCutLineEdit):
-            button = ResetPushButton("Reset", self.parent, clicked=lambda: widget.setText(default.toString()))
-            widget.setText(default.toString())
+        if not isinstance(widget, ShortCutLineEdit) or hide_reset or default is None:
+            button.make_hidden()
         else:
-            button = widget
-
-        childrens.append(button)
-
-        HBoxLayout(self.parent.vlayout, childrens)
+            widget.setText(default.toString())
+            button.clicked.connect(lambda: widget.setText(default.toString()))
+    
+        HBoxLayout(self.parent.vlayout, [QLabel(label), widget, button])
 
     def setup_shortcuts(self) -> None: ...
 

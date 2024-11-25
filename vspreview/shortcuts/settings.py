@@ -234,24 +234,24 @@ class ToolbarMainSection(AbtractShortcutSectionYAMLObjectSingleton):
                         self.switch_output_modifier_combobox.currentValue().modifier, QKeySequence(le.text())[0].key()
                     ).toCombined()
                 ),
-                main_toolbar,
+                main,
                 partial(main.switch_output, -(i + 1)),
             )
 
         self.create_shortcut(
             self.switch_output_next_lineedit,
-            main_toolbar,
+            main,
             lambda: main.switch_output(main_toolbar.outputs_combobox.currentIndex() + 1),
         )
         self.create_shortcut(
             self.switch_output_previous_lineedit,
-            main_toolbar,
+            main,
             lambda: main.switch_output(main_toolbar.outputs_combobox.currentIndex() - 1),
         )
-        self.create_shortcut(self.copy_frame_lineedit, main_toolbar, main_toolbar.on_copy_frame_button_clicked)
-        self.create_shortcut(self.copy_timestamp_lineedit, main_toolbar, main_toolbar.on_copy_timestamp_button_clicked)
+        self.create_shortcut(self.copy_frame_lineedit, main, main_toolbar.on_copy_frame_button_clicked)
+        self.create_shortcut(self.copy_timestamp_lineedit, main, main_toolbar.on_copy_timestamp_button_clicked)
 
-        self.create_shortcut(self.sync_ouputs_lineedit, main_toolbar, main_toolbar.sync_outputs_checkbox.click)
+        self.create_shortcut(self.sync_ouputs_lineedit, main, main_toolbar.sync_outputs_checkbox.click)
 
         self.create_shortcut(self.switch_timeline_mode_lineedit, main, main_toolbar.switch_timeline_mode_button.click)
         self.create_shortcut(self.settings_lineedit, main, main_toolbar.settings_button.click)
@@ -393,7 +393,7 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
         main = self.parent.main
         playback_toolbar = main.toolbars.playback
 
-        self.create_shortcut(self.play_pause_lineedit, playback_toolbar, playback_toolbar.play_pause_button.click)
+        self.create_shortcut(self.play_pause_lineedit, main, playback_toolbar.play_pause_button.click)
 
         self.create_shortcut(self.seek_to_prev_lineedit, main, playback_toolbar.seek_to_prev_button.click)
         self.create_shortcut(self.seek_to_next_lineedit, main, playback_toolbar.seek_to_next_button.click)
@@ -403,31 +403,31 @@ class ToolbarPlaybackSection(AbtractShortcutSectionYAMLObjectSingleton):
         for le in self.seek_n_frames_f_lineedit:
             self.create_shortcut(le, main, playback_toolbar.seek_n_frames_f_button.click)
 
-        self.create_shortcut(self.seek_to_start_lineedit, playback_toolbar, playback_toolbar.seek_to_start_button.click)
-        self.create_shortcut(self.seek_to_end_lineedit, playback_toolbar, playback_toolbar.seek_to_end_button.click)
+        self.create_shortcut(self.seek_to_start_lineedit, main, playback_toolbar.seek_to_start_button.click)
+        self.create_shortcut(self.seek_to_end_lineedit, main, playback_toolbar.seek_to_end_button.click)
 
-        self.create_shortcut(self.play_n_frames_lineedit, playback_toolbar, playback_toolbar.play_n_frames_button.click)
+        self.create_shortcut(self.play_n_frames_lineedit, main, playback_toolbar.play_n_frames_button.click)
 
-        self.create_shortcut(self.reset_fps_lineedit, playback_toolbar, playback_toolbar.fps_reset_button.click)
+        self.create_shortcut(self.reset_fps_lineedit, main, playback_toolbar.fps_reset_button.click)
         self.create_shortcut(
-            self.unlimited_fps_lineedit, playback_toolbar, playback_toolbar.fps_unlimited_checkbox.click
+            self.unlimited_fps_lineedit, main, playback_toolbar.fps_unlimited_checkbox.click
         )
-        self.create_shortcut(self.variable_fps_lineedit, playback_toolbar, playback_toolbar.fps_variable_checkbox.click)
-        self.create_shortcut(self.mute_lineedit, playback_toolbar, playback_toolbar.mute_button.click)
+        self.create_shortcut(self.variable_fps_lineedit, main, playback_toolbar.fps_variable_checkbox.click)
+        self.create_shortcut(self.mute_lineedit, main, playback_toolbar.mute_button.click)
 
         volume_steps = [x * 10 for x in range(11)]
         volume_slider = playback_toolbar.audio_volume_slider
 
         self.create_shortcut(
             self.decrease_volume_lineedit,
-            playback_toolbar,
+            main,
             lambda: playback_toolbar.setVolume(
                 volume_steps[bisect_left(volume_steps, volume_slider.value() - 10)], updateGui=True
             ),
         )
         self.create_shortcut(
             self.increase_volume_lineedit,
-            playback_toolbar,
+            main,
             lambda: playback_toolbar.setVolume(
                 volume_steps[bisect_right(volume_steps, volume_slider.value() + 10) - 1], updateGui=True
             ),
@@ -832,12 +832,13 @@ class ToolbarMiscSection(AbtractShortcutSectionYAMLObjectSingleton):
         if main.reload_enabled:
             self.create_shortcut(self.reload_script_lineedit, main, misc_toolbar.reload_script_button.click)
 
-        self.create_shortcut(self.save_storage_lineedit, misc_toolbar, misc_toolbar.save_storage_button.click)
-        self.create_shortcut(self.copy_frame_lineedit, misc_toolbar, misc_toolbar.copy_frame_button.click)
+        self.create_shortcut(self.save_storage_lineedit, main, misc_toolbar.save_storage_button.click)
+        self.create_shortcut(self.copy_frame_lineedit, main, misc_toolbar.copy_frame_button.click)
 
-        self.create_shortcut(self.save_frame_as_lineedit, misc_toolbar, misc_toolbar.save_frame_as_button.click)
+        self.create_shortcut(self.save_frame_as_lineedit, main, misc_toolbar.save_frame_as_button.click)
 
-        self.create_shortcut(self.toggle_sar_lineedit, misc_toolbar, misc_toolbar.ar_active_switch.click)
+        self.create_shortcut(self.toggle_sar_lineedit, main, misc_toolbar.ar_active_switch.click)
+
         self.create_shortcut(self.enable_crop_lineedit, misc_toolbar, misc_toolbar.crop_active_switch.click)
         self.create_shortcut(self.copy_crop_command_lineedit, misc_toolbar, misc_toolbar.crop_copycommand_button.click)
 

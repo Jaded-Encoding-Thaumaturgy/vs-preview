@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence
 from vstools import check_variable, depth, split, stack_clips, vs
 
 from vspreview.plugins import MappedNodesViewPlugin, PluginConfig
@@ -17,7 +19,7 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
 
         if node.format.color_family is vs.GRAY:
             return node
-        
+
         if node.format.sample_type is vs.FLOAT:
             node = depth(node, 32)
 
@@ -45,3 +47,8 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
             org = [org]
 
         return stack_clips(org)
+
+    def add_shortcuts(self) -> None:
+        self.add_shortcut(
+            "reset_zoom", self, lambda: self.setZoom(1.0), QKeySequence(Qt.Key.Key_Escape), "Reset zoom"
+        )

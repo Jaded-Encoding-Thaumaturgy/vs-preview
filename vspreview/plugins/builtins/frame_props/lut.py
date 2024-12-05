@@ -194,7 +194,7 @@ wobbly_props_lut: dict[str, dict[str, list[str] | Callable[[Any], str]]] = {
         'Filtering Preset Position': lambda position: str(position).title()
     },
     'WobblyPresetFrames': {
-        'Filtering Preset Frame Range': lambda _range: f'({_range[0]}, {_range[-1]})'
+        'Filtering Preset Frame Range': lambda r: str(r) if isinstance(r, int) else f'({r[0]}, {r[-1]})'
     },
 }
 

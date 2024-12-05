@@ -118,8 +118,11 @@ class SceningListDialog(ExtendedDialog):
         self.end_time_control.setMaximum(self.main.current_output.total_time)
 
     def on_delete_clicked(self, checked: bool | None = None) -> None:
-        for model_index in self.tableview.selectionModel().selectedRows():
+        if not (selectionModel := self.tableview.selectionModel()):
+            return
+        for model_index in selectionModel.selectedRows():
             self.scening_list.remove(model_index.row())
+        selectionModel.clearSelection()
 
     def on_end_frame_changed(self, value: Frame | int) -> None:
         if self.tableview.selectionModel() is None:

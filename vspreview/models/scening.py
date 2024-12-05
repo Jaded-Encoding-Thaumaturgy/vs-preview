@@ -151,7 +151,7 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         if proper_update is True:
             i = bisect_right(self.items, scene)
-            if i >= row:
+            if i > row:
                 i -= 1
             if i != row:
                 self.beginMoveRows(self.createIndex(row, 0), row, row, self.createIndex(i, 0), i)

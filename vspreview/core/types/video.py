@@ -321,10 +321,12 @@ class VideoOutput(AbstractYAMLObject):
         })
 
         if src.format.color_family == vs.RGB:
-            resizer_kwargs['transfer'] = resizer_kwargs['transfer_in']
             del resizer_kwargs['matrix_in']
         elif src.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
+
+        if resizer_kwargs['transfer_in'] == Transfer.SRGB:
+            resizer_kwargs['transfer'] = resizer_kwargs['transfer_in']
 
         if isinstance(resizer_kwargs['range_in'], ColorRange):
             resizer_kwargs['range_in'] = resizer_kwargs['range_in'].value_zimg

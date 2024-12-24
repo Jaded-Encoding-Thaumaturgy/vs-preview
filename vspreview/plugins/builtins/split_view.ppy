@@ -1,54 +1,225 @@
 from __future__ import annotations
 
+from typing import Any, Sequence, cast
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
-from vstools import check_variable, depth, split, stack_clips, vs
+from PyQt6.QtWidgets import QTabWidget
+from vstools import (
+    ConstantFormatVideoNode, core, depth, get_lowest_value, get_peak_value, scale_value, split,
+    stack_clips, vs
+)
 
-from vspreview.plugins import MappedNodesViewPlugin, PluginConfig
+from vspreview.core import AbstractSettingsWidget, CheckBox, DoubleSpinBox, Frame, HBoxLayout, VBoxLayout, try_load
+from vspreview.main import MainWindow
+from vspreview.plugins import AbstractPlugin, MappedNodesViewPlugin, PluginConfig
 
 __all__ = [
-    'SplitPlanesViewPlugin'
+    'SplitPlanesPlugin'
 ]
 
 
-class SplitPlanesViewPlugin(MappedNodesViewPlugin):
+class SplitPlanesPlugin(AbstractPlugin, QTabWidget):
     _config = PluginConfig('dev.setsugen.split_planes', 'Split Planes')
 
-    def get_node(self, node: vs.VideoNode) -> vs.VideoNode:
-        assert check_variable(node, self.get_node)
+    def __init__(self, main: MainWindow) -> None:
+        self.settings_tab = SplitPlanesSettings(self)
+        self.main_tab = SplitPlanesViewPlugin(main, self.settings_tab)
+        super().__init__(main)
 
-        if node.format.color_family is vs.GRAY:
-            return node
+    def setup_ui(self) -> None:
+        self.addTab(self.main_tab, "Planes")
+        self.addTab(self.settings_tab, "Settings")
+        self.currentChanged.connect(self.on_current_tab_changed)
+        self.settings.local.settings = self.settings_tab
 
-        if node.format.sample_type is vs.FLOAT:
-            node = depth(node, 32)
+    def on_current_tab_changed(self, index: int) -> None:
+        if index == 0:
+            self.main_tab.reset()
 
-            if node.format.color_family is vs.YUV:
-                node = node.std.Expr(['x', 'x 0.5 +'])
+    def on_current_frame_changed(self, frame: Frame) -> None:
+        self.main_tab.on_current_frame_changed(frame)
 
-        planes = [c.text.Text(text=k) for k, c in zip(node.format.name, split(node))]
+    def on_current_output_changed(self, index: int, prev_index: int) -> None:
+        self.main_tab.on_current_output_changed(index, prev_index)
 
-        subsampling = node.format.subsampling_w, node.format.subsampling_h
-
-        org: list[vs.VideoNode | list[vs.VideoNode | list[vs.VideoNode]]] = planes
-
-        if subsampling in ((2, 2), (2, 0)):
-            middle = [
-                planes[1].std.BlankClip(),
-                *planes[1:],
-                planes[1].std.BlankClip()
-            ]
-
-            org = [planes[0], middle]
-        elif subsampling != (0, 0):
-            org = [planes[0], planes[1:]]
-
-        if subsampling[1] == 0:
-            org = [org]
-
-        return stack_clips(org)
+        if self.current_output.format.sample_type is vs.FLOAT:
+            self.settings_tab.fixed_value_spinbox.setDecimals(3)
+            self.settings_tab.fixed_value_spinbox.setSingleStep(0.01)
+            if (pre_clip := self.previous_output(prev_index)).format.sample_type is not vs.FLOAT:
+                self.settings_tab.fixed_value_spinbox.setValue(
+                    scale_value(self.settings_tab.fixed_value_spinbox.value(), pre_clip, 32)
+                )
+        else:
+            if self.previous_output(prev_index).format.sample_type is vs.FLOAT:
+                self.settings_tab.fixed_value_spinbox.setValue(
+                    scale_value(self.settings_tab.fixed_value_spinbox.value(), 32, self.current_output)
+                )
+            self.settings_tab.fixed_value_spinbox.setDecimals(0)
+            self.settings_tab.fixed_value_spinbox.setSingleStep(1)
 
     def add_shortcuts(self) -> None:
         self.add_shortcut(
-            "reset_zoom", self, lambda: self.setZoom(1.0), QKeySequence(Qt.Key.Key_Escape), "Reset zoom"
+            "reset_zoom", self.main_tab, lambda: self.main_tab.setZoom(1.0),
+            QKeySequence(Qt.Key.Key_Escape), "Reset zoom"
         )
+
+    @property
+    def current_output(self) -> ConstantFormatVideoNode:
+        return cast(ConstantFormatVideoNode, self.main.current_output.source.clip)
+
+    def previous_output(self, prev_index: int) -> ConstantFormatVideoNode:
+        assert self.main.toolbars.main.outputs
+        return cast(ConstantFormatVideoNode, self.main.toolbars.main.outputs[prev_index].source.clip)
+
+
+class SplitPlanesSettings(AbstractSettingsWidget):
+    def __init__(self, plugin: SplitPlanesPlugin) -> None:
+        self.plugin = plugin
+        super().__init__()
+
+    def setup_ui(self) -> None:
+        super().setup_ui()
+
+        self.offset_uv_fix_checkbox = CheckBox(
+            "Offset UV planes by a fixed value", clicked=self.offset_uv_fix_checkbox_clicked
+        )
+        self.offset_uv_min_checkbox = CheckBox(
+            "Offset UV planes by the minimum value of each frame", clicked=self.offset_uv_min_checkbox_clicked
+        )
+        self.offset_uv_max_checkbox = CheckBox(
+            "Offset UV planes by the maximum value of each frame", clicked=self.offset_uv_max_checkbox_clicked
+        )
+
+        self.fixed_value_spinbox = DoubleSpinBox(self)
+
+        VBoxLayout(self.vlayout, [
+            HBoxLayout([self.offset_uv_fix_checkbox, self.fixed_value_spinbox]),
+            self.offset_uv_min_checkbox,
+            self.offset_uv_max_checkbox
+        ])
+
+    def set_defaults(self) -> None:
+        self.offset_uv_fix_checkbox.setChecked(False)
+        self.offset_uv_min_checkbox.setChecked(False)
+        self.offset_uv_max_checkbox.setChecked(False)
+        self.fixed_value_spinbox.setEnabled(False)
+
+        self.fixed_value_spinbox.setDecimals(0)
+        self.fixed_value_spinbox.setSingleStep(1)
+        self.fixed_value_spinbox.setMinimum(-65535)
+        self.fixed_value_spinbox.setMaximum(65535)
+        self.fixed_value_spinbox.setValue(0)
+
+    def offset_uv_fix_checkbox_clicked(self, checked: bool | None = None) -> None:
+        if checked:
+            if not self.offset_uv_fix_checkbox.isChecked():
+                self.offset_uv_fix_checkbox.setChecked(True)
+
+            self.offset_uv_min_checkbox.setChecked(False)
+            self.offset_uv_max_checkbox.setChecked(False)
+
+            self.fixed_value_spinbox.setEnabled(True)
+        else:
+            self.fixed_value_spinbox.setEnabled(False)
+
+    def offset_uv_min_checkbox_clicked(self, checked: bool | None = None) -> None:
+        if checked:
+            if not self.offset_uv_min_checkbox.isChecked():
+                self.offset_uv_min_checkbox.setChecked(True)
+
+            self.offset_uv_fix_checkbox.setChecked(False)
+            self.offset_uv_max_checkbox.setChecked(False)
+
+            self.fixed_value_spinbox.setEnabled(False)
+
+    def offset_uv_max_checkbox_clicked(self, checked: bool | None = None) -> None:
+        if checked:
+            if not self.offset_uv_max_checkbox.isChecked():
+                self.offset_uv_max_checkbox.setChecked(True)
+
+            self.offset_uv_fix_checkbox.setChecked(False)
+            self.offset_uv_min_checkbox.setChecked(False)
+
+            self.fixed_value_spinbox.setEnabled(False)
+
+    @property
+    def offset_uv_planes_fix(self) -> bool:
+        return self.offset_uv_fix_checkbox.isChecked()
+
+    @property
+    def offset_uv_planes_min(self) -> bool:
+        return self.offset_uv_min_checkbox.isChecked()
+
+    @property
+    def offset_uv_planes_max(self) -> bool:
+        return self.offset_uv_max_checkbox.isChecked()
+
+    @property
+    def offset_uv_planes_fix_value(self) -> float:
+        return self.fixed_value_spinbox.value()
+
+    def __getstate__(self) -> dict[str, Any]:
+        return {
+            'offset_uv_planes_fix': self.offset_uv_planes_fix,
+            'offset_uv_planes_min': self.offset_uv_planes_min,
+            'offset_uv_planes_max': self.offset_uv_planes_max,
+            'offset_uv_planes_fix_value': self.offset_uv_planes_fix_value,
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        try_load(state, 'offset_uv_planes_fix', bool, self.offset_uv_fix_checkbox_clicked)
+        try_load(state, 'offset_uv_planes_min', bool, self.offset_uv_min_checkbox_clicked)
+        try_load(state, 'offset_uv_planes_max', bool, self.offset_uv_max_checkbox_clicked)
+        try_load(state, 'offset_uv_planes_fix_value', float, self.fixed_value_spinbox.setValue)
+
+
+class SplitPlanesViewPlugin(MappedNodesViewPlugin):
+    def __init__(self, main: MainWindow, settings: SplitPlanesSettings) -> None:
+        super().__init__(main)
+        self.splitplanes_settings = settings
+
+    def get_node(self, node: ConstantFormatVideoNode) -> vs.VideoNode:  # type: ignore
+        if node.format.color_family is vs.GRAY:
+            return node
+
+        if node.format.color_family is vs.YUV:
+            if node.format.sample_type is vs.FLOAT:
+                node = depth(node, 32).std.Expr(['x', 'x 0.5 +'])  # type: ignore
+
+            def offset_uv_planes(value: float, plane_stats: str) -> list[vs.VideoNode]:
+                planes = split(node)
+
+                if node.format.sample_type is vs.FLOAT:
+                    value += 0.5
+
+                planes[1:] = [
+                    p.std.PlaneStats().akarin.Expr(f'x {value} x.PlaneStats{plane_stats} - +')
+                    for p in planes[1:]
+                ]
+                return planes
+
+            if self.splitplanes_settings.offset_uv_planes_fix:
+                planes = split(core.akarin.Expr(node, ['x', f'x {self.splitplanes_settings.offset_uv_planes_fix_value} +']))
+            elif self.splitplanes_settings.offset_uv_planes_min:
+                planes = offset_uv_planes(get_lowest_value(node, True), "Min")
+            elif self.splitplanes_settings.offset_uv_planes_max:
+                planes = offset_uv_planes(get_peak_value(node, True), "Max")
+            else:
+                planes = split(node)
+        else:
+            planes = split(node)
+
+        planes = [c.text.Text(text=k) for k, c in zip(node.format.name, planes)]
+
+        org: Sequence[vs.VideoNode | Sequence[vs.VideoNode]]
+
+        if node.format.subsampling_h == 2:
+            middle = [(blank := planes[1].std.BlankClip(keep=True)), *planes[1:], blank]
+            org = [planes[0], middle]
+        elif node.format.subsampling_h == 1:
+            org = [planes[0], planes[1:]]
+        else:
+            org = planes
+
+        return stack_clips(org)

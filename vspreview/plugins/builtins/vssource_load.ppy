@@ -3,15 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-if __name__ != '__vspreview__':
-    from vspreview.plugins import FileResolvePluginConfig, FileResolverPlugin, ResolvedScript
+if __name__ != "__vspreview__":
+    from vspreview.plugins import (
+        FileResolvePluginConfig,
+        FileResolverPlugin,
+        ResolvedScript,
+    )
 
-    __all__ = [
-        'FileResolveWithVSSource'
-    ]
+    __all__ = ["FileResolveWithVSSource"]
 
     class FileResolveWithVSSource(FileResolverPlugin):
-        _config = FileResolvePluginConfig('dev.setsugen.vssource_load', 'VSSource Loader')
+        _config = FileResolvePluginConfig(
+            "dev.setsugen.vssource_load", "VSSource Loader"
+        )
 
         def can_run_file(self, filepath: Path) -> bool:
             if filepath.is_dir():
@@ -30,17 +34,20 @@ if __name__ != '__vspreview__':
             return False
 
         def resolve_path(self, filepath: Path) -> ResolvedScript:
-            return ResolvedScript(Path(__file__), str(filepath), dict(filepath=filepath), False)
+            return ResolvedScript(
+                Path(__file__), str(filepath), dict(filepath=filepath), False
+            )
 else:
     from vssource import parse_video_filepath, source
     from vstools import set_output
 
     if TYPE_CHECKING:
         filepath: Path = Path()
-        pattern: str = ''
+        pattern: str = ""
+        additional_files: list[Path] | None = None
     else:
-        if 'pattern' not in locals():
-            pattern = '*'
+        if "pattern" not in locals():
+            pattern = "*"
 
     if filepath.is_dir():
         for file in filepath.glob(pattern):
@@ -51,3 +58,7 @@ else:
                 ...
     else:
         set_output(source(filepath), filepath.name)
+
+    if "additional_files" in locals():
+        for file in additional_files:
+            set_output(source(file), file.name)

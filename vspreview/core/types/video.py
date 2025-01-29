@@ -293,9 +293,10 @@ class VideoOutput(AbstractYAMLObject):
             ]
 
             logging.warn(
-                f'Video Node {self.index}: The following frame properties had to be assumed for previewing: '
-                f'<{", ".join(assumed_info)}>\nYou may want to set explicit frame properties instead. '
+                'Video Node {0}: The following frame properties had to be assumed for previewing: '
+                '<{1}>\nYou may want to set explicit frame properties instead. '
                 'See https://www.vapoursynth.com/doc/apireference.html#reserved-frame-properties for more information.'
+                .format(self.index, ", ".join(assumed_info))
             )
 
         standard_gamut = {'transfer': Transfer.BT709, 'primaries': self.main.settings.output_primaries_zimg}

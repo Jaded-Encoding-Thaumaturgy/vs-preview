@@ -13,6 +13,7 @@ from typing import Sequence
 from PyQt6.QtWidgets import QApplication
 
 from .core.logger import set_log_level, setup_logger
+from ._metadata import __version__
 
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.
@@ -60,7 +61,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         nargs="*",
         help=f'Plugins to {"/".join(plugins_commands[:-1])} or arguments to pass to the script environment.',
     )
-    parser.add_argument("--version", "-v", action="version", version="%(prog)s 0.2b")
+    parser.add_argument("--version", "-v", action="version", version="%(prog)s " + __version__)
     parser.add_argument(
         "--preserve-cwd",
         "-c",

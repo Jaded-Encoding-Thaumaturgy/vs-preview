@@ -69,14 +69,14 @@ def strfdelta(time: Time, output_format: str) -> str:
 
 
 def fire_and_forget(f: F) -> F:
-    from asyncio import get_event_loop_policy, get_running_loop
+    from asyncio import new_event_loop, get_running_loop
 
     @wraps(f)
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
             loop = get_running_loop()
         except RuntimeError:
-            loop = get_event_loop_policy().get_event_loop()
+            loop = new_event_loop()
         return loop.run_in_executor(None, partial(f, *args, **kwargs))
 
     return wrapped  # type: ignore

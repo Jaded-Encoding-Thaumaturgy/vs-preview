@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from stgpytools import SPath
+from jetpytools import SPath
 
 from PyQt6.QtWidgets import QLabel
 

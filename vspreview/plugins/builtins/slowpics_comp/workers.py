@@ -13,7 +13,7 @@ from requests import Session
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from requests_toolbelt import MultipartEncoderMonitor
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
-from stgpytools import SPath, ndigits
+from jetpytools import SPath, ndigits
 from vstools import clip_data_gather, get_prop, remap_frames, vs
 
 from vspreview.core import Frame, PackingType, VideoOutput

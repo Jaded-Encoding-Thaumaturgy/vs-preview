@@ -9,7 +9,7 @@ from types import ModuleType
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, TypeVar, overload
 
 from PyQt6.QtWidgets import QWidget
-from stgpytools import KwargsT
+from jetpytools import KwargsT
 
 from ..core import AbstractYAMLObjectSingleton, Frame
 from . import utils

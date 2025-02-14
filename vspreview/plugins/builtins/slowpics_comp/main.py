@@ -14,7 +14,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QComboBox, QFrame, QLabel
 from requests import Session
-from stgpytools import SPath
+from jetpytools import SPath
 
 from vspreview.core import (
     CheckBox, ComboBox, ExtendedWidget, Frame, FrameEdit, HBoxLayout, LineEdit, ProgressBar, PushButton, VBoxLayout,

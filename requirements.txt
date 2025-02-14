@@ -1,4 +1,5 @@
 VapourSynth>=68
+jetpytools>=1.2.3
 vsjetpack>=0.1.1
 vsengine>=0.2.0
 PyQt6>=6.6.1

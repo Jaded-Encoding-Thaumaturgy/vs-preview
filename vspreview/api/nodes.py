@@ -5,7 +5,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, cast
 
-from stgpytools import ndigits
+from jetpytools import ndigits
 from vapoursynth import AudioNode, RawNode, VideoNode
 from vstools import Keyframes
 

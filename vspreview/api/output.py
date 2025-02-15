@@ -8,9 +8,9 @@ from fractions import Fraction
 from os import PathLike
 from types import FrameType
 from typing import Any, Iterable, Sequence, overload
-from jetpytools import KwargsT, flatten, to_arr
+from jetpytools import KwargsT, to_arr
 
-from vstools import Keyframes, vs
+from vstools import Keyframes, flatten, vs
 
 from .info import is_preview
 from .nodes import set_scening, set_timecodes, update_node_info

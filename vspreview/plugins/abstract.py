@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable, Na
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QSizePolicy, QWidget
-from vstools import SPath, T
+from jetpytools import SPath, T
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject
 from ..core.bases import yaml_Loader

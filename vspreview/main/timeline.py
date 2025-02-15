@@ -8,7 +8,7 @@ from time import perf_counter_ns
 from PyQt6.QtCore import QEvent, QLineF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QMoveEvent, QPainter, QPaintEvent, QPalette, QPen, QResizeEvent
 from PyQt6.QtWidgets import QApplication, QToolTip, QWidget
-from vstools import to_arr
+from jetpytools import to_arr
 
 from ..core import AbstractYAMLObject, Frame, Notch, Notches, NotchProvider, Time, main_window
 from ..utils import strfdelta

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import math
 from typing import Any, Callable
-from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, SPath, Transfer
+from jetpytools import SPath
+from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, PropEnum, Transfer
 
 __all__ = [
     'frame_props_lut'

@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from .bases import QABC, QYAMLObjectSingleton, SafeYAMLObject
 
 if TYPE_CHECKING:
-    from vstools import T
+    from jetpytools import T
 
     from ..main import MainWindow
     from .custom import Notches
@@ -430,7 +430,7 @@ class AbstractToolbar(ExtendedWidget, NotchProvider):
         super().__init__(main.central_widget)
 
         if settings is None:
-            from vstools.exceptions import CustomValueError
+            from jetpytools import CustomValueError
 
             raise CustomValueError('Missing settings widget!')
 

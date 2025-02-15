@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from PyQt6.QtCore import QSignalBlocker, QTime
 
 if TYPE_CHECKING:
-    from vstools import F, P, R, T
+    from jetpytools import F, P, R, T
 
 from ..core.types import Time
 

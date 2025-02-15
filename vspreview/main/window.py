@@ -17,7 +17,8 @@ from PyQt6.QtCore import QEvent, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
 from vsengine import vpy  # type: ignore
-from vstools import PackageStorage, SPath, get_prop
+from vstools import PackageStorage, get_prop
+from jetpytools import SPath
 
 from ..core import (
     PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame,

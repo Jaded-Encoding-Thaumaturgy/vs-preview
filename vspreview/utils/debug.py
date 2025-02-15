@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject
 from PyQt6.QtWidgets import QApplication, QGraphicsScene
-from vstools import ColorRange, Matrix, Primaries, T, Transfer, vs
+from jetpytools import T
+from vstools import ColorRange, Matrix, Primaries, Transfer, vs
 
 if TYPE_CHECKING:
     from ..main import MainWindow

@@ -10,7 +10,7 @@ from uuid import uuid4
 from requests import HTTPError, Session
 from requests.utils import dict_from_cookiejar
 from requests_toolbelt import MultipartEncoder  # type: ignore
-from vstools import SPath
+from jetpytools import SPath
 
 from vspreview.core import VideoOutput
 from vspreview.main import MainWindow

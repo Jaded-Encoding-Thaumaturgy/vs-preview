@@ -70,7 +70,7 @@ class AudioOutput(AbstractYAMLObject):
         iodevice = cast(QIODevice | None, self.qaudiosink.start())
 
         if iodevice is None:
-            from vstools import CustomRuntimeError
+            from jetpytools import CustomRuntimeError
 
             raise CustomRuntimeError(
                 'The current QT version has a bug for dll loading, you need to go into '

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Iterable, Iterator, Sequence, TypeVar, cast
 
 from PyQt6.QtCore import QLineF, Qt, QRectF
 from PyQt6.QtGui import QColor
-from vstools import fallback
+from jetpytools import fallback
 
 from ..types import Frame, Scene, Time
 

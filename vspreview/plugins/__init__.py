@@ -369,7 +369,7 @@ class Plugins(AbstractYAMLObjectSingleton):
             self.last_output_change = curr_output
 
     def update(self, frame: Frame | None = None, index: int | None = None, prev_index: int | None = None) -> None:
-        from vstools import fallback
+        from jetpytools import fallback
 
         if not self.main.current_output:
             return

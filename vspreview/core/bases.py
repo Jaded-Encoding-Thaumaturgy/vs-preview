@@ -12,7 +12,7 @@ except ImportError:
     from yaml import Dumper as yaml_Dumper  # type: ignore
 
 if TYPE_CHECKING:
-    from vstools import T
+    from jetpytools import T
 
 
 __all__ = [

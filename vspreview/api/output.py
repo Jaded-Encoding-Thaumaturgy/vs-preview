@@ -204,7 +204,7 @@ def set_output(
 
     for i, n in zip(index[:len(nodes)], nodes):
         if i in ouputs:
-            logging.warn(f"Index n° {i} has been already used!")
+            logging.warning(f"Index n° {i} has been already used!")
         if isinstance(n, vs.VideoNode):
             n.set_output(i, alpha)
             title = 'Clip'

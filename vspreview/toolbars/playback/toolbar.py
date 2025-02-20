@@ -222,8 +222,9 @@ class PlaybackToolbar(AbstractToolbar):
 
         if not PackingType.CURRENT.can_playback:
             import logging
-            logging.warn(
-                f'The current backend ({PackingType.CURRENT.name}) can\'t playback! Install akarin or libp2p plugins.'
+            logging.warning(
+                f'The current backend ({PackingType.CURRENT.name}) can\'t playback! '
+                'Install akarin or libp2p plugins.'
             )
             return
 

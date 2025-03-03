@@ -150,12 +150,8 @@ def make_environment() -> None:
 def dispose_environment(env: ManagedEnvironment) -> None:
     import logging
 
-    from vstools.utils.vs_proxy import _finalize_core
-
     if current_log:
         env.core.remove_log_handler(current_log)
-
-    _finalize_core(env._environment.env_id, id(env.core), True)
 
     if logging.getLogger().level <= logging.DEBUG:
         from gc import get_referrers

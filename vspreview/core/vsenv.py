@@ -8,6 +8,7 @@ from threading import Lock
 from typing import Any, Callable, TypeVar
 
 from jetpytools import CustomImportError, DependencyNotFoundError
+from vstools import core
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 from vapoursynth import CoreCreationFlags, LogHandle
 from vsengine.loops import EventLoop, set_loop  # type: ignore[import-untyped]
@@ -48,39 +49,35 @@ def _monkey_runpy_func(*args: Any, **kwargs: Any) -> Any:
 
     try:
         glob_dict = orig_runpy_run_code(*args, **kwargs)
-    except (AttributeError, ModuleNotFoundError) as e:
-        is_attr = isinstance(e, AttributeError)
+    except ModuleNotFoundError as e:
+        raise DependencyNotFoundError(
+            'vspreview', e.name,
+            f'Could not find the Python package, \'{e.name}\'! '
+            f'Please install it and try again.\n'
+            f'See {guide_url} for installation instructions.'
+        )
 
-        if is_attr:
-            dep = str(e).partition('named ')[2].partition('.')[0].strip()
-        else:
-            dep = str(e).partition('\'')[2].rstrip('\'').strip()
+    except AttributeError as e:
+        # Only handle VapourSynth-related attribute errors
+        if not hasattr(e, 'obj') or not isinstance(e.obj, core):
+            raise
+
+        dep = e.name if hasattr(e, 'name') else str(e).partition('named ')[2].partition('.')[0].strip()
 
         raise DependencyNotFoundError(
             'vspreview', dep,
-            f'Could not find the {("plugin" if is_attr else "Python package")}, \'{dep}\'! '
+            f'Could not find the VapourSynth plugin, \'{dep}\'! '
             f'Please install it and try again.\n'
             f'See {guide_url} for installation instructions.'
         )
 
     except ImportError as e:
-        err_msg = str(e)
-        parts = err_msg.split('\'')
-
-        if len(parts) > 3:
-            dep, pkg = parts[1], parts[3]
-        else:
-            dep, pkg = parts[1], ''
-
-        pkg_path = err_msg[err_msg.rfind('(') + 1:err_msg.rfind(')')].strip()
-
         raise CustomImportError(
-            pkg, dep,
-            f'Failed to import \'{dep}\' from the installed package @ \'{pkg_path}\'! '
-            f'Please check that the package is installed correctly and up to date.\n'
+            e.path or '', e.name or '',
+            f'Failed to import \'{e.name}\' from the installed Python package @ \'{e.path}\'! '
+            f'Please check that the Python package is installed correctly and up to date.\n'
             f'See {guide_url} for installation instructions.'
         )
-
 
     if '_monkey_runpy' in glob_dict:
         _monkey_runpy_dicts[glob_dict['_monkey_runpy']] = glob_dict

@@ -8,7 +8,7 @@ from threading import Lock
 from typing import Any, Callable, TypeVar
 
 from jetpytools import CustomImportError, DependencyNotFoundError
-from vstools import core
+from vstools import vs
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 from vapoursynth import CoreCreationFlags, LogHandle
 from vsengine.loops import EventLoop, set_loop  # type: ignore[import-untyped]
@@ -59,7 +59,13 @@ def _monkey_runpy_func(*args: Any, **kwargs: Any) -> Any:
 
     except AttributeError as e:
         # Only handle VapourSynth-related attribute errors
-        if not hasattr(e, 'obj') or not isinstance(e.obj, core):
+        vs_types = (
+            type(vs), vs.VideoNode, vs.VideoFrame, vs.RawNode,
+            vs.VideoFormat, vs.Core, vs.Plugin, vs.Function,
+            vs.AudioNode, vs.AudioFrame
+        )
+
+        if not hasattr(e, 'obj') or not any(isinstance(e.obj, t) for t in vs_types):
             raise
 
         dep = e.name if hasattr(e, 'name') else str(e).partition('named ')[2].partition('.')[0].strip()

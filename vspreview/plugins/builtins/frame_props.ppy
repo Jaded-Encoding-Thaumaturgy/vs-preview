@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtWidgets import QApplication, QHeaderView, QLabel, QTableView, QWidget
 from vapoursynth import FrameProps
 from vspreview.core import Frame, HBoxLayout, Stretch, Switch, TableModel, VBoxLayout
@@ -88,7 +88,10 @@ class FramePropsPlugin(AbstractPlugin, QWidget):
     def setup_layout(self) -> None:
         """Set up the layout of the widget."""
 
-        layout_items = [HBoxLayout([QLabel('Raw data:'), self.raw_data, Stretch()])]
+        layout = HBoxLayout([QLabel('Raw data:'), self.raw_data, Stretch()])
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        layout_items = [layout]
 
         for category in frame_props_categories:
             layout_items.extend([

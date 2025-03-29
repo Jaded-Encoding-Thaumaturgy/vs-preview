@@ -87,7 +87,7 @@ class DragNavigator(QWidget):
         self.viewportX = min(viewportX, contentsW)
         self.viewportY = min(viewportY, contentsH)
 
-        self.repaint()
+        self.update()
 
     def repaint_timeout(self) -> None:
         self.hide()

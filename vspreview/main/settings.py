@@ -85,6 +85,20 @@ class MainSettings(AbstractToolbarSettings):
 
         self.plugins_save_position_combobox = ComboBox[str](model=GeneralModel[str](['no', 'global', 'local']))
 
+        from vstools.dependencies.enums import InstallModeEnum
+
+        self.install_mode_combobox = QComboBox()
+        self.install_mode_combobox.addItems([mode.name.capitalize() for mode in InstallModeEnum])
+        self.install_mode_combobox.currentIndexChanged.connect(self.apply_dependency_install_mode)
+
+        self.install_mode_combobox.setToolTip(
+            "Choose how to handle missing dependencies:\n\n"
+            "• Auto: Automatically install when possible\n"
+            "• Prompt: Ask before installing\n"
+            "• Manual: Never install automatically\n\n"
+            "Note: This feature is only supported by certain packages."
+        )
+
         HBoxLayout(self.vlayout, [QLabel('Autosave interval (0 - disable)'), self.autosave_control])
 
         HBoxLayout(self.vlayout, [QLabel('Base PPI'), self.base_ppi_spinbox])
@@ -124,6 +138,8 @@ class MainSettings(AbstractToolbarSettings):
 
         HBoxLayout(self.vlayout, [QLabel('Save Plugins Bar Position'), self.plugins_save_position_combobox])
 
+        HBoxLayout(self.vlayout, [QLabel('Dependency Install Mode'), self.install_mode_combobox])
+
         if sys.platform == 'win32':
             HBoxLayout(self.vlayout, [self.color_management_checkbox])
 
@@ -145,6 +161,7 @@ class MainSettings(AbstractToolbarSettings):
         self.zoom_level_default_combobox.setCurrentIndex(1)
         self.color_management_checkbox.setChecked(self.color_management_checkbox.isVisible())
         self.plugins_save_position_combobox.setCurrentIndex(2)
+        self.install_mode_combobox.setCurrentIndex(1)
 
     @property
     def autosave_interval(self) -> Time:
@@ -299,8 +316,18 @@ class MainSettings(AbstractToolbarSettings):
         return self.plugins_save_position_combobox.currentIndex()
 
     @property
+    def dependency_install_mode(self) -> int:
+        from vstools.dependencies.enums import InstallModeEnum
+        return InstallModeEnum[InstallModeEnum(self.install_mode_combobox.currentIndex()).name]
+
+    @property
     def color_management(self) -> bool:
         return self.color_management_checkbox.isChecked()
+
+    def apply_dependency_install_mode(self) -> None:
+        from vstools.dependencies.enums import InstallModeEnum
+        from vstools.dependencies.registry import dependency_registry
+        dependency_registry.install_mode = InstallModeEnum(self.install_mode_combobox.currentIndex())
 
     def __getstate__(self) -> dict[str, Any]:
         return {
@@ -319,6 +346,7 @@ class MainSettings(AbstractToolbarSettings):
             'dragnavigator_timeout': self.dragnavigator_timeout,
             'dragtimeline_timeout': self.dragtimeline_timeout,
             'plugins_bar_save_behaviour_index': self.plugins_bar_save_behaviour,
+            'dependency_install_mode': self.install_mode_combobox.currentIndex(),
             'color_management': self.color_management,
         }
 
@@ -338,7 +366,10 @@ class MainSettings(AbstractToolbarSettings):
         try_load(state, 'dragtimeline_timeout', int, self.dragtimeline_timeout_spinbox.setValue)
         try_load(state, 'output_primaries_index', int, self.primaries_combobox.setCurrentIndex)
         try_load(state, 'plugins_bar_save_behaviour_index', int, self.plugins_save_position_combobox.setCurrentIndex)
+        try_load(state, 'dependency_install_mode', int, self.install_mode_combobox.setCurrentIndex)
         try_load(state, 'color_management', bool, self.color_management_checkbox.setChecked)
+
+        self.apply_dependency_install_mode()
 
 
 class WindowSettings(QYAMLObjectSingleton):

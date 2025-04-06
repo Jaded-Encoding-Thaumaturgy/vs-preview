@@ -76,7 +76,7 @@ def do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, ima
             break
         except HTTPError as e:
             logging.debug(e)
-
+        upload_info.boundary = str(uuid4())
 
 def clear_filename(filename: str) -> str:
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']

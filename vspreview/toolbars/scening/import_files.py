@@ -540,9 +540,9 @@ supported_file_types = {
     'OGM Chapters (*.txt)': import_ogm_chapters,
     'TFM Log (*.txt)': import_tfm,
     'VSEdit Bookmarks (*.bookmarks)': import_vsedit,
+    'Wobbly Scenechanges (*.txt)': import_wobbly_scenechanges,
     'x264/x265 2 Pass Log (*.log)': import_x264_2pass_log,
     'x264/x265 QP File (*.qp *.txt)': import_qp,
     'XviD Log (*.txt)': import_xvid,
-    'Wobbly Scenechanges (*.txt)': import_wobbly_scenechanges,
     'Generic Mappings (*.txt)': import_generic,
 }

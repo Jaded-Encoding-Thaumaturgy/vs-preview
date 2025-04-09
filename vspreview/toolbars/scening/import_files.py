@@ -510,6 +510,22 @@ def import_generic(path: Path, scening_list: SceningList) -> int:
     return out_of_range_count
 
 
+def import_wobbly_scenechanges(path: Path, scening_list: SceningList) -> int:
+    """
+    Imports scene changes from a Wobbly scenechanges file as single-frame scenes.
+    """
+    out_of_range_count = 0
+
+    for line in path.read_text('utf8').splitlines():
+        try:
+            start = int(line)
+            scening_list.add(Frame(start))
+        except ValueError:
+            out_of_range_count += 1
+
+    return out_of_range_count
+
+
 supported_file_types = {
     'Aegisub Project (*.ass)': import_ass,
     'AvsP Session (*.ses)': import_ses,
@@ -527,5 +543,6 @@ supported_file_types = {
     'x264/x265 2 Pass Log (*.log)': import_x264_2pass_log,
     'x264/x265 QP File (*.qp *.txt)': import_qp,
     'XviD Log (*.txt)': import_xvid,
+    'Wobbly Scenechanges (*.txt)': import_wobbly_scenechanges,
     'Generic Mappings (*.txt)': import_generic,
 }

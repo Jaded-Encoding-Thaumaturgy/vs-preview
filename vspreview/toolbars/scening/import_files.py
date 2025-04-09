@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from bisect import bisect_left
 import logging
 import re
+from bisect import bisect_left
 from copy import deepcopy
 from pathlib import Path
 
@@ -562,8 +562,7 @@ def import_generic(path: Path, scening_list: SceningList) -> int:
 
 def import_wobbly(path: Path, scening_list: SceningList) -> int:
     """
-    Imports scene changes from a Wobbly file or scene changes file as single-frame scenes,
-    accounting for decimations.
+    Imports scene changes from a Wobbly file as single-frame scenes, accounting for decimations.
     """
 
     out_of_range_count = 0
@@ -604,9 +603,9 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
     return out_of_range_count
 
 
-def import_wobbly_scenechanges(path: Path, scening_list: SceningList) -> int:
+def import_wobbly_sections(path: Path, scening_list: SceningList) -> int:
     """
-    Imports scene changes from a Wobbly scenechanges file as single-frame scenes.
+    Imports scene changes from a Wobbly sections file as single-frame scenes.
     """
 
     out_of_range_count = 0
@@ -636,7 +635,7 @@ supported_file_types = {
     'TFM Log (*.txt)': import_tfm,
     'VSEdit Bookmarks (*.bookmarks)': import_vsedit,
     'Wobbly File (*.wob)': import_wobbly,
-    'Wobbly Scenechanges (*.txt)': import_wobbly_scenechanges,
+    'Wobbly Sections (*.txt)': import_wobbly_sections,
     'x264/x265 2 Pass Log (*.log)': import_x264_2pass_log,
     'x264/x265 QP File (*.qp *.txt)': import_qp,
     'XviD Log (*.txt)': import_xvid,

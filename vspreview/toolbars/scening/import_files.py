@@ -15,9 +15,10 @@ __all__ = [
 
 def import_ass(path: Path, scening_list: SceningList) -> int:
     """
-    Imports lines as scenes.
-    Text is ignored.
+    Imports events as scenes.
+    Event content is ignored.
     """
+
     out_of_range_count = 0
 
     try:
@@ -28,9 +29,11 @@ def import_ass(path: Path, scening_list: SceningList) -> int:
         )
 
     subs = pysubs2_load(str(path))
+
     for line in subs:
         t_start = Time(milliseconds=line.start)
         t_end = Time(milliseconds=line.end)
+
         try:
             scening_list.add(Frame(t_start), Frame(t_end))
         except ValueError:
@@ -41,8 +44,9 @@ def import_ass(path: Path, scening_list: SceningList) -> int:
 
 def import_celltimes(path: Path, scening_list: SceningList) -> int:
     """
-    Imports cell times as single-frame scenes
+    Imports cell times as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     for line in path.read_text('utf8').splitlines():
@@ -59,6 +63,7 @@ def import_cue(path: Path, scening_list: SceningList) -> int:
     Imports tracks as scenes.
     Uses TITLE for scene label.
     """
+
     out_of_range_count = 0
 
     try:
@@ -71,8 +76,10 @@ def import_cue(path: Path, scening_list: SceningList) -> int:
     def offset_to_time(offset: str) -> Time | None:
         pattern = re.compile(r'(\d{1,2}):(\d{1,2}):(\d{1,2})')
         match = pattern.match(offset)
+
         if match is None:
             return None
+
         return Time(minutes=int(match[1]), seconds=int(match[2]), milliseconds=int(match[3]) / 75 * 1000)
 
     cue_sheet = CueSheet()
@@ -83,17 +90,21 @@ def import_cue(path: Path, scening_list: SceningList) -> int:
     for track in cue_sheet.tracks:
         if track.offset is None:
             continue
+
         offset = offset_to_time(track.offset)
+
         if offset is None:
             logging.warning(f"Scening import: INDEX timestamp '{track.offset}' format isn't supported.")
             continue
-        start = Frame(offset)
 
+        start = Frame(offset)
         end = None
+
         if track.duration is not None:
             end = Frame(offset + Time(track.duration))
 
         label = ''
+
         if track.title is not None:
             label = track.title
 
@@ -109,6 +120,7 @@ def import_dgi(path: Path, scening_list: SceningList) -> int:
     """
     Imports IDR frames as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     pattern = re.compile(r'IDR\s\d+\n(\d+):FRM', re.RegexFlag.MULTILINE)
@@ -127,6 +139,7 @@ def import_lwi(path: Path, scening_list: SceningList) -> int:
     Imports Key=1 frames as single-frame scenes.
     Ignores everything besides Index=0 video stream.
     """
+
     out_of_range_count = 0
 
     AV_CODEC_ID_FIRST_AUDIO = 0x10000
@@ -138,6 +151,7 @@ def import_lwi(path: Path, scening_list: SceningList) -> int:
     ))
 
     frame = Frame(0)
+
     for match in pattern.finditer(path.read_text('utf8'), re.RegexFlag.MULTILINE):
         if int(match[1]) >= AV_CODEC_ID_FIRST_AUDIO:
             frame += Frame(1)
@@ -162,6 +176,7 @@ def import_matroska_xml_chapters(path: Path, scening_list: SceningList) -> int:
     Imports chapters as scenes.
     Preserve end time and text if they're present.
     """
+
     from xml.etree import ElementTree
     out_of_range_count = 0
 
@@ -172,26 +187,34 @@ def import_matroska_xml_chapters(path: Path, scening_list: SceningList) -> int:
     except ElementTree.ParseError as exc:
         logging.warning(f"Scening import: error occurred while parsing '{path.name}':")
         logging.warning(exc.msg)
+
         return out_of_range_count
 
     for chapter in root.iter('ChapterAtom'):
         start_element = chapter.find('ChapterTimeStart')
+
         if start_element is None or start_element.text is None:
             continue
+
         match = timestamp_pattern.match(start_element.text)
+
         if match is None:
             continue
+
         start = Frame(Time(hours=int(match[1]), minutes=int(match[2]), seconds=float(match[3])))
 
         end = None
         end_element = chapter.find('ChapterTimeEnd')
+
         if end_element is not None and end_element.text is not None:
             match = timestamp_pattern.match(end_element.text)
+
             if match is not None:
                 end = Frame(Time(hours=int(match[1]), minutes=int(match[2]), seconds=float(match[3])))
 
         label = ''
         label_element = chapter.find('ChapterDisplay/ChapterString')
+
         if label_element is not None and label_element.text is not None:
             label = label_element.text
 
@@ -208,14 +231,17 @@ def import_ogm_chapters(path: Path, scening_list: SceningList) -> int:
     Imports chapters as single-frame scenes.
     Uses NAME for scene label.
     """
+
     out_of_range_count = 0
 
     pattern = re.compile(
         r'(CHAPTER\d+)=(\d+):(\d+):(\d+(?:\.\d+)?)\n\1NAME=(.*)',
         re.RegexFlag.MULTILINE
     )
+
     for match in pattern.finditer(path.read_text('utf8')):
         time = Time(hours=int(match[2]), minutes=int(match[3]), seconds=float(match[4]))
+
         try:
             scening_list.add(Frame(time), label=match[5])
         except ValueError:
@@ -228,9 +254,11 @@ def import_qp(path: Path, scening_list: SceningList) -> int:
     """
     Imports I- and K-frames as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     pattern = re.compile(r'(\d+)\sI|K')
+
     for match in pattern.findall(path.read_text('utf8')):
         try:
             scening_list.add(Frame(int(match)))
@@ -242,8 +270,9 @@ def import_qp(path: Path, scening_list: SceningList) -> int:
 
 def import_ses(path: Path, scening_list: SceningList) -> int:
     """
-    Imports bookmarks as single-frame scenes
+    Imports bookmarks as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     import pickle
@@ -272,6 +301,7 @@ def import_matroska_timestamps_v1(path: Path, scening_list: SceningList) -> int:
     Imports listed scenes.
     Uses FPS for scene label.
     """
+
     out_of_range_count = 0
 
     pattern = re.compile(r'(\d+),(\d+),(\d+(?:\.\d+)?)')
@@ -292,9 +322,11 @@ def import_matroska_timestamps_v2(path: Path, scening_list: SceningList) -> int:
     Imports intervals of constant FPS as scenes.
     Uses FPS for scene label.
     """
+
     out_of_range_count = 0
 
     timestamps = list[Time]()
+
     for line in path.read_text('utf8').splitlines():
         try:
             timestamps.append(Time(milliseconds=float(line)))
@@ -311,18 +343,23 @@ def import_matroska_timestamps_v2(path: Path, scening_list: SceningList) -> int:
         timestamps[i] - timestamps[i - 1]
         for i in range(1, len(timestamps))
     ]
+
     scene_delta = deltas[0]
     scene_start = Frame(0)
     scene_end: Frame | None = None
+
     for i in range(1, len(deltas)):
         if abs(round(float(deltas[i] - scene_delta), 6)) <= 0.000_001:
             continue
+
         # TODO: investigate, why offset by -1 is necessary here
         scene_end = Frame(i - 1)
+
         try:
             scening_list.add(scene_start, scene_end, '{:.3f} fps'.format(1 / float(scene_delta)))
         except ValueError:
             out_of_range_count += 1
+
         scene_start = Frame(i)
         scene_end = None
         scene_delta = deltas[i]
@@ -344,6 +381,7 @@ def import_matroska_timestamps_v3(path: Path, scening_list: SceningList) -> int:
     Imports listed scenes, ignoring gaps.
     Uses FPS for scene label.
     """
+
     out_of_range_count = 0
 
     pattern = re.compile(
@@ -352,6 +390,7 @@ def import_matroska_timestamps_v3(path: Path, scening_list: SceningList) -> int:
     )
 
     assume_pattern = re.compile(r'assume (\d+(?:\.\d+))')
+
     if len(mmatch := assume_pattern.findall(path.read_text('utf8'))) > 0:
         default_fps = float(mmatch[0])
     else:
@@ -359,6 +398,7 @@ def import_matroska_timestamps_v3(path: Path, scening_list: SceningList) -> int:
         return out_of_range_count
 
     pos = Time()
+
     for match in pattern.finditer(path.read_text('utf8')):
         if match[1] == 'gap':
             pos += Time(seconds=float(match[2]))
@@ -388,6 +428,7 @@ def import_tfm(path: Path, scening_list: SceningList) -> int:
     Frame groups are put into regular scenes.
     Combed probability is used for label.
     """
+
     out_of_range_count = 0
 
     tfm_frame_pattern = re.compile(r'(\d+)\s\((\d+)\)')
@@ -396,6 +437,7 @@ def import_tfm(path: Path, scening_list: SceningList) -> int:
     log = path.read_text('utf8')
 
     start_pos = log.find('OVR HELP INFORMATION')
+
     if start_pos == -1:
         logging.warning("Scening import: TFM log doesn't contain OVR Help Information.")
         return out_of_range_count
@@ -403,6 +445,7 @@ def import_tfm(path: Path, scening_list: SceningList) -> int:
     log = log[start_pos:]
 
     tfm_frames = set[TFMFrame]()
+
     for match in tfm_frame_pattern.finditer(log):
         tfm_frame = TFMFrame(int(match[1]))
         tfm_frame.mic = int(match[2])
@@ -428,8 +471,9 @@ def import_tfm(path: Path, scening_list: SceningList) -> int:
 
 def import_vsedit(path: Path, scening_list: SceningList) -> int:
     """
-    Imports bookmarks as single-frame scenes
+    Imports bookmarks as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     frames = []
@@ -442,6 +486,7 @@ def import_vsedit(path: Path, scening_list: SceningList) -> int:
 
     ranges = list[list[int]]()
     prev_x: int = 0
+
     for x in frames:
         if not ranges:
             ranges.append([x])
@@ -449,6 +494,7 @@ def import_vsedit(path: Path, scening_list: SceningList) -> int:
             ranges[-1].append(x)
         else:
             ranges.append([x])
+
         prev_x = int(x)
 
     for rang in ranges:
@@ -464,9 +510,11 @@ def import_x264_2pass_log(path: Path, scening_list: SceningList) -> int:
     """
     Imports I- and K-frames as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     pattern = re.compile(r'in:(\d+).*type:I|K')
+
     for match in pattern.findall(path.read_text('utf8')):
         try:
             scening_list.add(Frame(int(match)))
@@ -480,6 +528,7 @@ def import_xvid(path: Path, scening_list: SceningList) -> int:
     """
     Imports I-frames as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     for i, line in enumerate(path.read_text('utf8').splitlines()):
@@ -495,9 +544,9 @@ def import_xvid(path: Path, scening_list: SceningList) -> int:
 
 def import_generic(path: Path, scening_list: SceningList) -> int:
     """
-    Import generic (rfs style) frame mappings: {start end}
-
+    Import generic (rfs style) frame mappings: {start end}.
     """
+
     out_of_range_count = 0
 
     for line in path.read_text('utf8').splitlines():
@@ -514,6 +563,7 @@ def import_wobbly_scenechanges(path: Path, scening_list: SceningList) -> int:
     """
     Imports scene changes from a Wobbly scenechanges file as single-frame scenes.
     """
+
     out_of_range_count = 0
 
     for line in path.read_text('utf8').splitlines():

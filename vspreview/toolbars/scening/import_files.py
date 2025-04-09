@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bisect import bisect_left
 import logging
 import re
 from copy import deepcopy
@@ -559,6 +560,50 @@ def import_generic(path: Path, scening_list: SceningList) -> int:
     return out_of_range_count
 
 
+def import_wobbly(path: Path, scening_list: SceningList) -> int:
+    """
+    Imports scene changes from a Wobbly file or scene changes file as single-frame scenes,
+    accounting for decimations.
+    """
+
+    out_of_range_count = 0
+
+    import json
+
+    try:
+        wobbly_data = json.loads(path.read_text('utf8'))
+
+        sections = wobbly_data.get('sections', [])
+        decimations = set(wobbly_data.get('decimated frames', []))
+    except json.JSONDecodeError as e:
+        err_msg = f'vspreview: Failed to decode the wobbly file, \'{path.name}\''
+
+        logging.warning(f'{err_msg}:\n{str(e)}')
+        raise RuntimeError(err_msg)
+
+    if not sections:
+        return out_of_range_count
+
+    if not decimations:
+        for section in sections:
+            try:
+                scening_list.add(Frame(section.get('start', 0)))
+            except ValueError:
+                out_of_range_count += 1
+
+        return out_of_range_count
+
+    sorted_decimations = sorted(decimations)
+
+    for start in [section.get('start', 0) for section in sections]:
+        try:
+            scening_list.add(Frame(start - bisect_left(sorted_decimations, start)))
+        except ValueError:
+            out_of_range_count += 1
+
+    return out_of_range_count
+
+
 def import_wobbly_scenechanges(path: Path, scening_list: SceningList) -> int:
     """
     Imports scene changes from a Wobbly scenechanges file as single-frame scenes.
@@ -590,6 +635,7 @@ supported_file_types = {
     'OGM Chapters (*.txt)': import_ogm_chapters,
     'TFM Log (*.txt)': import_tfm,
     'VSEdit Bookmarks (*.bookmarks)': import_vsedit,
+    'Wobbly File (*.wob)': import_wobbly,
     'Wobbly Scenechanges (*.txt)': import_wobbly_scenechanges,
     'x264/x265 2 Pass Log (*.log)': import_x264_2pass_log,
     'x264/x265 QP File (*.qp *.txt)': import_qp,

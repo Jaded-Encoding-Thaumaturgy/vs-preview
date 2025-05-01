@@ -254,8 +254,8 @@ class VideoOutput(AbstractYAMLObject):
         if self.got_timecodes:
             acc = 0.0
             self._timecodes_frame_to_time = [0.0]
-            for fps in self.timecodes:
-                acc += round(1 / float(fps), 7)
+            for frame_dur in self.timecodes:
+                acc += round(float(frame_dur), 7)
                 self._timecodes_frame_to_time.append(round(acc, 3))
             self.total_time = Time(seconds=acc)
         else:

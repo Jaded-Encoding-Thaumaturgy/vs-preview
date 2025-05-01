@@ -1,6 +1,6 @@
 VapourSynth>=68
-jetpytools>=1.2.3
-vsjetpack>=0.1.1
+jetpytools>=1.3.0
+vsjetpack>=0.4.0
 vsengine>=0.2.0
 PyQt6>=6.6.1
 PyQt6-sip>=13.4.0

@@ -931,11 +931,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.statusbar.pixel_format_label.setText(f'{fmt.name} ')
 
         if output.got_timecodes:
-            times = sorted(set(output.timecodes), reverse=True)
+            times = sorted(set(output.timecodes))
 
             if len(times) >= 2:
                 return self.statusbar.fps_label.setText(
-                    f'VFR {",".join(f"{float(fps):.3f}" for fps in times)} fps '
+                    f'VFR {",".join(f"{float(1 / time):.3f}" for time in times)} fps '
                 )
 
         if output.fps_den != 0:

@@ -73,16 +73,17 @@ class Worker(QObject):
         all_image_types = list[list[str]]()
         conf.path.mkdir(parents=True, exist_ok=False)
 
-        if conf.cookies.is_file():
-            with Session() as sess:
-                sess.cookies.update(cookiejar_from_dict(json.loads(conf.cookies.read_text())))
-                base_page = sess.get('https://slow.pics/comparison')
-                if base_page.text.find('id="logoutBtn"') == -1:
-                    self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
-                    raise StopIteration
-                conf.cookies.write_text(json.dumps(dict_from_cookiejar(sess.cookies)))
-
         try:
+            if conf.cookies.is_file():
+                with Session() as sess:
+                    sess.cookies.update(cookiejar_from_dict(json.loads(conf.cookies.read_text())))
+                    base_page = sess.get('https://slow.pics/comparison')
+                    if base_page.text.find('id="logoutBtn"') == -1:
+                        self.progress_status.emit(conf.uuid, 'Session Expired', 0, 0)
+                        logging.warning(f'slow.pics session expired, either login again or delete `{conf.cookies}`.')
+                        raise StopIteration
+                    conf.cookies.write_text(json.dumps(dict_from_cookiejar(sess.cookies)))
+
             for i, output in enumerate(conf.outputs):
                 if self.isFinished():
                     raise StopIteration

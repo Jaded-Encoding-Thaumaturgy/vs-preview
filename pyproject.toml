@@ -9,7 +9,8 @@ authors = [
     {name = "Endilll"}
 ]
 maintainers = [
-    {name = "Setsugen no ao", email = "setsugen@setsugen.dev"}
+    {name = "Setsugen no ao", email = "setsugen@setsugen.dev"},
+    {name = "Jaded Encoding Thaumaturgy", email = "jaded.encoding.thaumaturgy@gmail.com"}
 ]
 classifiers = [
     "Topic :: Multimedia :: Graphics",

@@ -11,8 +11,8 @@ on:
       - '**.py'
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  lint:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         vs-versions:
@@ -28,12 +28,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up VapourSynth
+        uses: ./.github/actions/setup-vapoursynth
+        with:
+          vapoursynth-version: ${{ matrix.vs-versions }}
+
       - name: Install dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install vapoursynth-portable==${{ matrix.vs-versions }}
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+        run: uv sync --locked
 
       - name: Running ruff
-        run: ruff check vspreview
+        run: uv run ruff check vspreview

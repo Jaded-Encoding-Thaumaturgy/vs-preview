@@ -1,0 +1,71 @@
+[project]
+name = "vspreview"
+dynamic = ["version"]
+description = "VapourSynth Preview Tool"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [
+    {name = "Endilll"}
+]
+maintainers = [
+    {name = "Setsugen no ao", email = "setsugen@setsugen.dev"}
+]
+classifiers = [
+    "Topic :: Multimedia :: Graphics",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "VapourSynth>=68",
+    "jetpytools>=1.3.0",
+    "vsjetpack>=0.3.5",
+    "vsengine>=0.2.0",
+    "PyQt6>=6.9.0",
+    "PyQt6-sip>=13.10.0",
+    "QDarkStyle>=3.2.3",
+    "PyYAML>=6.0",
+    "matplotlib>=3.7.1",
+    "requests>=2.31.0",
+    "requests-toolbelt>=1.0.0",
+    "numpy>=1.24.3",
+    "pywin32>=306; platform_system == 'Windows'",
+    "Pillow>=9.4.0; platform_system == 'Windows'"
+]
+
+[project.urls]
+"Source Code" = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview"
+"Contact" = "https://discord.gg/XTpc6Fa9eB"
+
+[project.scripts]
+vspreview = "vspreview.init:main"
+
+[dependency-groups]
+dev = [
+    "mypy==1.15.0",
+    "numpy==2.2.5",
+    "ruff==0.11.8",
+    "twine==6.1.0",
+    "types-pillow==10.2.0.20240822",
+    "types-psutil==7.0.0.20250401",
+    "types-pyyaml==6.0.12.20250402",
+]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vspreview"]
+include = ["vspreview/py.typed"]
+exclude = ["docs", "stubs"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["docs", "stubs"]
+
+[tool.hatch.version]
+path = "vspreview/_metadata.py"

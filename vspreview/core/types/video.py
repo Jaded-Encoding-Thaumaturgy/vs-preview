@@ -64,7 +64,7 @@ class PackingTypeInfo:
         return int(self.id)
 
 
-class PackingType(cachedproperty.baseclass, metaclass=classproperty.metaclass):
+class PackingType():
     none_8bit = PackingTypeInfo('none-8bit', vs.RGB24, QImage.Format.Format_BGR30, False, False)
     none_10bit = PackingTypeInfo('none-10bit', vs.RGB30, QImage.Format.Format_BGR30, False, False)
     numpy_8bit = PackingTypeInfo('numpy-8bit', vs.RGB24, QImage.Format.Format_BGR30, True)
@@ -76,8 +76,9 @@ class PackingType(cachedproperty.baseclass, metaclass=classproperty.metaclass):
 
     @cachedproperty
     @classproperty
+    @classmethod
     def CURRENT(cls) -> PackingTypeInfo:
-        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30  # type: ignore
+        _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
 
         # From fastest to slowest
         if hasattr(vs.core, 'akarin'):

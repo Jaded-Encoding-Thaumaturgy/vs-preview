@@ -51,3 +51,33 @@ If there's an error with your script,
 it will print it in the terminal.
 If your script is fine,
 it will open ``vs-preview`` with the current script.
+
+
+.. note::
+
+    In the simple configuration above, vs-preview will not run asynchronously, meaning that vim/neovim will be frozen until vs-preview is quit. In Vim 8 (or later) and Neovim, it's possible to start vs-preview asynchronously by having the following lines in your ``_vimrc`` file.
+
+.. code-block:: vimscript
+    :linenos:
+
+    nnoremap r :w<enter>:call AsynchronousVsPreview(expand("%:p"))<enter>
+
+    function! AsynchronousVsPreview(file_path)
+        let l:vsPreview_cmd = 'vspreview '.a:file_path 
+        if exists('g:job_vs')
+            if has('nvim')
+                call jobstop(g:job_vs)
+            else
+                call job_stop(g:job_vs)
+            endif
+            unlet g:job_vs
+            echom 'Stopping vs-preview...'
+        else
+            if has('nvim')
+                let g:job_vs = jobstart(l:vsPreview_cmd, {})
+            else
+                let g:job_vs = job_start(l:vsPreview_cmd, {})
+            endif
+            echom 'Starting vs-preview asynchronously...'
+        endif
+    endfunction

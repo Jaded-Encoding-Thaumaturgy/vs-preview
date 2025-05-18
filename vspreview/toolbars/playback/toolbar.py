@@ -224,7 +224,7 @@ class PlaybackToolbar(AbstractToolbar):
             import logging
             logging.warning(
                 f'The current backend ({PackingType.CURRENT.name}) can\'t playback! '
-                'Install akarin or libp2p plugins.'
+                'Install the vapoursynth-zip plugin.'
             )
             return
 

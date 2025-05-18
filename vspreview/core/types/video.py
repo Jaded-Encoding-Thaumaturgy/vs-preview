@@ -69,10 +69,8 @@ class PackingType():
     none_10bit = PackingTypeInfo('none-10bit', vs.RGB30, QImage.Format.Format_BGR30, False, False)
     numpy_8bit = PackingTypeInfo('numpy-8bit', vs.RGB24, QImage.Format.Format_BGR30, True)
     numpy_10bit = PackingTypeInfo('numpy-10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
-    libp2p_8bit = PackingTypeInfo('libp2p-8bit', vs.RGB24, QImage.Format.Format_RGB32, False)
-    libp2p_10bit = PackingTypeInfo('libp2p-10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
-    akarin_8bit = PackingTypeInfo('akarin-8bit', vs.RGB24, QImage.Format.Format_BGR30, False)
-    akarin_10bit = PackingTypeInfo('akarin-10bit', vs.RGB30, QImage.Format.Format_BGR30, False)
+    vszip_8bit = PackingTypeInfo('vszip_8bit', vs.RGB24, QImage.Format.Format_RGB32, False)
+    vszip_10bit = PackingTypeInfo('vszip_10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
 
     @cachedproperty
     @classproperty
@@ -80,12 +78,8 @@ class PackingType():
     def CURRENT(cls) -> PackingTypeInfo:
         _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
 
-        # From fastest to slowest
-        if hasattr(vs.core, 'akarin'):
-            return PackingType.akarin_10bit if _default_10bits else PackingType.akarin_8bit
-
-        if hasattr(vs.core, 'libp2p'):
-            return PackingType.libp2p_10bit if _default_10bits else PackingType.libp2p_8bit
+        if hasattr(vs.core, 'vszip'):
+            return PackingType.vszip_10bit if _default_10bits else PackingType.vszip_8bit
         else:
             try:
                 import numpy  # noqa: F401
@@ -418,18 +412,8 @@ class VideoOutput(AbstractYAMLObject):
 
             return blank.std.ModifyFrame([blank, clip], _packrgb)
 
-        if PackingType.CURRENT in {PackingType.libp2p_8bit, PackingType.libp2p_10bit}:
-            return vs.core.libp2p.Pack(clip)
-
-        if PackingType.CURRENT in {PackingType.akarin_8bit, PackingType.akarin_10bit}:
-            # x, y, z => b, g, r
-            # we want a contiguous array, so we put in 0, 10 bits the R, 11 to 20 the G and 21 to 30 the B
-            # R stays like it is * shift if it's 8 bits (gets applied to all planes), then G gets shifted
-            # by 10 bits, (we multiply by 2 ** 10) and same for B but by 20 bits and it all gets summed
-            return vs.core.akarin.Expr(
-                clip.std.SplitPlanes(),
-                f'z {b_shift} * y {g_shift} * x {r_shift} * + + {high_bits_mask} +', vs.GRAY32, True
-            )
+        if PackingType.CURRENT in {PackingType.vszip_8bit, PackingType.vszip_10bit}:
+            return vs.core.vszip.PackRGB(clip)
 
         return clip
 

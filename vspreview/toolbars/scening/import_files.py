@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from bisect import bisect_left
@@ -562,31 +563,41 @@ def import_generic(path: Path, scening_list: SceningList) -> int:
 
 def import_wobbly(path: Path, scening_list: SceningList) -> int:
     """
-    Imports scene changes from a Wobbly file as single-frame scenes, accounting for decimations.
+    Imports sections from a Wobbly file as scenes.
+
+    End frames of each scene are obtained from the next section's start frame.
+    The final scene's end frame is the trim end.
     """
 
     out_of_range_count = 0
 
-    import json
-
     try:
-        wobbly_data = json.loads(path.read_text('utf8'))
-
-        sections = wobbly_data.get('sections', [])
-        decimations = set(wobbly_data.get('decimated frames', []))
+        wobbly_data = dict(json.loads(path.read_text('utf8')))
     except json.JSONDecodeError as e:
-        err_msg = f'vspreview: Failed to decode the wobbly file, \'{path.name}\''
-
+        err_msg = f'Scening import: Failed to decode the wobbly file, \'{path.name}\''
         logging.warning(f'{err_msg}:\n{str(e)}')
+
         raise RuntimeError(err_msg)
 
-    if not sections:
-        return out_of_range_count
+    if not (sections := wobbly_data.get('sections', [])):
+        logging.warning('Scening import: No sections found in wobbly file')
 
-    if not decimations:
-        for section in sections:
+        return 0
+
+    if (missing_starts := [i for i, s in enumerate(sections) if not isinstance(s, int) and 'start' not in s]):
+        logging.warning(f'Scening import: Sections missing start frames at indices: {missing_starts}')
+
+        raise RuntimeError(f'Scening import: Sections missing start frames at indices: {missing_starts}')
+
+    start_frames = [dict(s).get('start', 0) for s in sections]
+
+    trim = wobbly_data.get('trim', [0, start_frames[-1]])
+    end_frames = start_frames[1:] + [trim[1]]
+
+    if not (decimations := wobbly_data.get('decimated frames', {})):
+        for start, end in zip(start_frames, end_frames):
             try:
-                scening_list.add(Frame(section.get('start', 0)))
+                scening_list.add(Frame(start), Frame(end))
             except ValueError:
                 out_of_range_count += 1
 
@@ -594,9 +605,12 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
 
     sorted_decimations = sorted(decimations)
 
-    for start in [section.get('start', 0) for section in sections]:
+    for start, end in zip(start_frames, end_frames):
         try:
-            scening_list.add(Frame(start - bisect_left(sorted_decimations, start)))
+            scening_list.add(
+                Frame(start - bisect_left(sorted_decimations, start)),
+                Frame(end - bisect_left(sorted_decimations, end))
+            )
         except ValueError:
             out_of_range_count += 1
 
@@ -605,15 +619,27 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
 
 def import_wobbly_sections(path: Path, scening_list: SceningList) -> int:
     """
-    Imports scene changes from a Wobbly sections file as single-frame scenes.
+    Imports section start frames from a Wobbly sections file as single-frame scenes.
     """
+
+    try:
+        sections = [int(line) for line in path.read_text('utf8').splitlines() if line.strip()]
+    except ValueError as e:
+        err_msg = f'Scening import: Failed to parse the wobbly sections file, \'{path.name}\''
+        logging.warning(f'{err_msg}:\n{str(e)}')
+
+        raise RuntimeError(err_msg)
+
+    if not sections:
+        logging.warning('Scening import: No sections found in wobbly sections file')
+
+        return 0
 
     out_of_range_count = 0
 
-    for line in path.read_text('utf8').splitlines():
+    for frame in sections:
         try:
-            start = int(line)
-            scening_list.add(Frame(start))
+            scening_list.add(Frame(frame))
         except ValueError:
             out_of_range_count += 1
 

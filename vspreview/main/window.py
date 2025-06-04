@@ -264,6 +264,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
     def reset_zoom(self) -> None:
         for view in self.graphics_views:
             if view.underMouse():
+
+                if view.autofit:
+                    view.auto_fit_button.click()
+                    
                 view.setZoom(self.settings.zoom_levels[self.settings.zoom_default_index])
                 view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
                 break

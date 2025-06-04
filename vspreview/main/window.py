@@ -261,6 +261,13 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                 view.auto_fit_button.click()
                 break
 
+    def reset_zoom(self) -> None:
+        for view in self.graphics_views:
+            if view.underMouse():
+                view.setZoom(self.settings.zoom_levels[self.settings.zoom_default_index])
+                view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
+                break
+
     def pop_out_plugins(self) -> None:
         left, right = self.main_split.sizes()
         if right:

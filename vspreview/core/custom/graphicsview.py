@@ -3,13 +3,14 @@ from __future__ import annotations
 from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, pyqtSignal, QRectF
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPalette, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
 from PyQt6.QtWidgets import (
     QApplication, QFrame, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QSizePolicy, QWidget
 )
+from jetpytools import clamp
 
 if TYPE_CHECKING:
     from ...main import MainWindow
@@ -245,14 +246,9 @@ class GraphicsView(QGraphicsView):
             self.main.bound_graphics_views[self].add(other_view)
 
     def on_wheel_scrolled(self, steps: int) -> None:
-        new_index = self.zoom_combobox.currentIndex() + steps
-
-        if new_index < 0:
-            new_index = 0
-        elif new_index >= len(self.main.settings.zoom_levels):
-            new_index = len(self.main.settings.zoom_levels) - 1
-
-        self.zoom_combobox.setCurrentIndex(new_index)
+        self.zoom_combobox.setCurrentIndex(
+            clamp(self.zoom_combobox.currentIndex() + steps, 0, len(self.zoom_combobox) - 1)
+        )
 
     def setZoom(self, value: float | None) -> None:
         for view in self.main.bound_graphics_views[self]:

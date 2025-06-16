@@ -4,11 +4,11 @@ import csv
 import logging
 from collections import deque
 from datetime import datetime
-from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING
 
 import vapoursynth as vs
+from jetpytools import SPath
 from PyQt6.QtCore import QMetaObject, Qt
 from PyQt6.QtWidgets import QLabel
 
@@ -307,7 +307,7 @@ class BenchmarkToolbar(AbstractToolbar):
             'Total Time (s)': float(run_time)
         })
 
-        log_dir = Path(self.main.current_config_dir)
+        log_dir = SPath(self.main.current_config_dir)
         log_dir.mkdir(parents=True, exist_ok=True)
 
         csv_file = log_dir / f'{self.main.script_path.stem}_benchmark.csv'

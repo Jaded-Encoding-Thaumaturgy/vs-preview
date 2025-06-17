@@ -244,9 +244,16 @@ class SceningToolbar(AbstractToolbar):
     def on_remove_list_clicked(self, checked: bool | None = None) -> None:
         self.lists.remove(self.current_list_index)
 
-        if len(self.lists) == 0:
-            self.remove_list_button.setEnabled(False)
-            self.view_list_button.setEnabled(False)
+        enabled = len(self.lists) > 0
+
+        self.remove_list_button.setEnabled(enabled)
+        self.view_list_button.setEnabled(enabled)
+
+        if not enabled:
+            return
+
+        self.check_remove_export_possibility()
+        self.notches_changed.emit(self)
 
     def on_view_list_clicked(self, checked: bool | None = None) -> None:
         self.scening_list_dialog.adjustSize()

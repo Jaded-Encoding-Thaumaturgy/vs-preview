@@ -48,13 +48,13 @@ class SceningList(QAbstractTableModel, QYAMLObject):
 
         if orientation == Qt.Orientation.Horizontal:
             if section == self.START_FRAME_COLUMN:
-                return 'Start'
+                return 'Start (Frame)'
             if section == self.END_FRAME_COLUMN:
-                return 'End'
+                return 'End (Frame)'
             if section == self.START_TIME_COLUMN:
-                return 'Start'
+                return 'Start (Time)'
             if section == self.END_TIME_COLUMN:
-                return 'End'
+                return 'End (Time)'
             if section == self.LABEL_COLUMN:
                 return 'Label'
         if orientation == Qt.Orientation.Vertical:

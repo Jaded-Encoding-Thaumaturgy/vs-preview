@@ -569,6 +569,9 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
     The final scene's end frame is the trim end.
     """
 
+    # TODO: Make sure to use scenes (start/end frames) instead of single frames.
+    # TODO: The final scene's end frame can be obtained from the trim end.
+
     out_of_range_count = 0
 
     try:

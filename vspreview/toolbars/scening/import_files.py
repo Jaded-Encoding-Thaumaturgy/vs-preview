@@ -573,6 +573,7 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
 
     try:
         wobbly_data = dict(json.loads(path.read_text('utf8')))
+        logging.debug(f'Successfully loaded wobbly file: {path.name}')
     except json.JSONDecodeError as e:
         err_msg = f'Scening import: Failed to decode the wobbly file, \'{path.name}\''
         logging.warning(f'{err_msg}:\n{str(e)}')
@@ -590,29 +591,36 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
         raise RuntimeError(f'Scening import: Sections missing start frames at indices: {missing_starts}')
 
     start_frames = [dict(s).get('start', 0) for s in sections]
+    logging.debug(f'Found {len(start_frames)} section start frames')
 
     trim = wobbly_data.get('trim', [0, start_frames[-1]])
     end_frames = start_frames[1:] + [trim[1]]
+    logging.debug(f'Generated {len(end_frames)} section end frames')
 
     if not (decimations := wobbly_data.get('decimated frames', {})):
+        logging.debug('No decimation data found, using raw frame numbers')
         for start, end in zip(start_frames, end_frames):
             try:
                 scening_list.add(Frame(start), Frame(end))
+                logging.debug(f'Added scene: {start} -> {end}')
             except ValueError:
                 out_of_range_count += 1
+                logging.debug(f'Frame out of range: {start} -> {end}')
 
         return out_of_range_count
 
     sorted_decimations = sorted(decimations)
+    logging.debug(f'Found {len(sorted_decimations)} decimated frames')
 
     for start, end in zip(start_frames, end_frames):
         try:
-            scening_list.add(
-                Frame(start - bisect_left(sorted_decimations, start)),
-                Frame(end - bisect_left(sorted_decimations, end))
-            )
+            adjusted_start = start - bisect_left(sorted_decimations, start)
+            adjusted_end = end - bisect_left(sorted_decimations, end)
+            scening_list.add(Frame(adjusted_start), Frame(adjusted_end))
+            logging.debug(f'Added decimation-adjusted scene: {adjusted_start} -> {adjusted_end}')
         except ValueError:
             out_of_range_count += 1
+            logging.debug(f'Frame out of range: {start} -> {end}')
 
     return out_of_range_count
 
@@ -624,6 +632,7 @@ def import_wobbly_sections(path: Path, scening_list: SceningList) -> int:
 
     try:
         sections = [int(line) for line in path.read_text('utf8').splitlines() if line.strip()]
+        logging.debug(f'Successfully loaded wobbly sections file: {path.name}')
     except ValueError as e:
         err_msg = f'Scening import: Failed to parse the wobbly sections file, \'{path.name}\''
         logging.warning(f'{err_msg}:\n{str(e)}')
@@ -640,8 +649,10 @@ def import_wobbly_sections(path: Path, scening_list: SceningList) -> int:
     for frame in sections:
         try:
             scening_list.add(Frame(frame))
+            logging.debug(f'Added section frame: {frame}')
         except ValueError:
             out_of_range_count += 1
+            logging.debug(f'Frame out of range: {frame}')
 
     return out_of_range_count
 

@@ -596,7 +596,9 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
     start_frames = [dict(s).get('start', 0) for s in sections]
     logging.debug(f'Found {len(start_frames)} section start frames')
 
-    trim = wobbly_data.get('trim', [0, start_frames[-1]])
+    trim = wobbly_data.get('trim', [[0, 0]])[0]
+    logging.debug(f'Trim value: {trim}')
+
     end_frames = start_frames[1:] + [trim[1]]
     logging.debug(f'Generated {len(end_frames)} section end frames')
 

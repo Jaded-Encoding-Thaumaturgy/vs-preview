@@ -567,10 +567,8 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
 
     End frames of each scene are obtained from the next section's start frame.
     The final scene's end frame is the trim end.
+    Section preset is used as scene label.
     """
-
-    # TODO: Make sure to use scenes (start/end frames) instead of single frames.
-    # TODO: The final scene's end frame can be obtained from the trim end.
 
     out_of_range_count = 0
 
@@ -596,6 +594,9 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
     start_frames = [dict(s).get('start', 0) for s in sections]
     logging.debug(f'Found {len(start_frames)} section start frames')
 
+    presets = [dict(s).get('preset', []) for s in sections]
+    logging.debug(f'Found {len(presets)} section presets')
+
     trim = wobbly_data.get('trim', [[0, 0]])[0]
     logging.debug(f'Trim value: {trim}')
 
@@ -604,10 +605,12 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
 
     if not (decimations := wobbly_data.get('decimated frames', {})):
         logging.debug('No decimation data found, using raw frame numbers')
-        for start, end in zip(start_frames, end_frames):
+
+        for start, end, preset in zip(start_frames, end_frames, presets):
             try:
-                scening_list.add(Frame(start), Frame(end))
-                logging.debug(f'Added scene: {start} -> {end}')
+                label = str(preset) if preset else ''
+                scening_list.add(Frame(start), Frame(end), label)
+                logging.debug(f'Added scene: {start} -> {end} {"with label: " + label if label else ""}')
             except ValueError:
                 out_of_range_count += 1
                 logging.debug(f'Frame out of range: {start} -> {end}')
@@ -617,12 +620,16 @@ def import_wobbly(path: Path, scening_list: SceningList) -> int:
     sorted_decimations = sorted(decimations)
     logging.debug(f'Found {len(sorted_decimations)} decimated frames')
 
-    for start, end in zip(start_frames, end_frames):
+    for start, end, preset in zip(start_frames, end_frames, presets):
         try:
             adjusted_start = start - bisect_left(sorted_decimations, start)
             adjusted_end = end - bisect_left(sorted_decimations, end)
-            scening_list.add(Frame(adjusted_start), Frame(adjusted_end))
-            logging.debug(f'Added decimation-adjusted scene: {adjusted_start} -> {adjusted_end}')
+            label = str(preset) if preset else ''
+            scening_list.add(Frame(adjusted_start), Frame(adjusted_end), label)
+            logging.debug(
+                f'Added decimation-adjusted scene: {adjusted_start} -> {adjusted_end} '
+                f'{"with label: " + label if label else ""}'
+            )
         except ValueError:
             out_of_range_count += 1
             logging.debug(f'Frame out of range: {start} -> {end}')

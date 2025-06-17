@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
-from PyQt6.QtWidgets import QTableView
+from PyQt6.QtWidgets import QTableView, QHeaderView
 
 from ...core import (
     ExtendedDialog, ExtendedTableView, Frame, FrameEdit, HBoxLayout, LineEdit, PushButton, Time, TimeEdit, VBoxLayout
@@ -57,6 +57,13 @@ class SceningListDialog(ExtendedDialog):
         self.tableview.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.tableview.setSizeAdjustPolicy(QTableView.SizeAdjustPolicy.AdjustToContents)
 
+        if (header := self.tableview.horizontalHeader()) is not None:
+            for col in range(SceningList.COLUMN_COUNT):
+                if col == SceningList.LABEL_COLUMN:
+                    header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+                else:
+                    header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+
         self.start_frame_control = FrameEdit()
         self.end_frame_control = FrameEdit()
 
@@ -84,14 +91,20 @@ class SceningListDialog(ExtendedDialog):
     def on_current_frame_changed(self, frame: Frame, time: Time) -> None:
         if not self.isVisible():
             return
-        if self.tableview.selectionModel() is None:
+
+        selection_model = self.tableview.selectionModel()
+
+        if selection_model is None:
             return
+
         selection = QItemSelection()
+
         for i, scene in enumerate(self.scening_list):
             if frame in scene:
                 index = self.scening_list.index(i, 0)
                 selection.select(index, index)
-        self.tableview.selectionModel().select(
+
+        selection_model.select(
             selection,
             QItemSelectionModel.SelectionFlag.Rows
             | QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -105,8 +118,21 @@ class SceningListDialog(ExtendedDialog):
         self.name_lineedit.setText(self.scening_list.name)
 
         self.tableview.setModel(self.scening_list)
+        header = self.tableview.horizontalHeader()
+
+        if header is not None:
+            for col in range(SceningList.COLUMN_COUNT):
+                if col == SceningList.LABEL_COLUMN:
+                    header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
+                else:
+                    header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+
         self.tableview.resizeColumnsToContents()
-        self.tableview.selectionModel().selectionChanged.connect(self.on_tableview_selection_changed)
+        selection_model = self.tableview.selectionModel()
+
+        if selection_model is not None:
+            selection_model.selectionChanged.connect(self.on_tableview_selection_changed)
+
         self.label_lineedit.clear()
         self.label_lineedit.clearFocus()
         self.delete_button.setEnabled(False)
@@ -118,20 +144,22 @@ class SceningListDialog(ExtendedDialog):
         self.end_time_control.setMaximum(self.main.current_output.total_time)
 
     def on_delete_clicked(self, checked: bool | None = None) -> None:
-        if not (selectionModel := self.tableview.selectionModel()):
+        selection_model = self.tableview.selectionModel()
+        if selection_model is None:
             return
-        for model_index in selectionModel.selectedRows():
+        for model_index in selection_model.selectedRows():
             self.scening_list.remove(model_index.row())
-        selectionModel.clearSelection()
+        selection_model.clearSelection()
 
     def on_end_frame_changed(self, value: Frame | int) -> None:
-        if self.tableview.selectionModel() is None:
+        selection_model = self.tableview.selectionModel()
+        if selection_model is None:
             return
 
         frame = Frame(value)
 
         try:
-            index = self.tableview.selectionModel().selectedRows()[0]
+            index = selection_model.selectedRows()[0]
         except IndexError:
             return
         if not index.isValid():
@@ -142,10 +170,11 @@ class SceningListDialog(ExtendedDialog):
         self.scening_list.setData(index, frame, Qt.ItemDataRole.UserRole)
 
     def on_end_time_changed(self, time: Time) -> None:
-        if self.tableview.selectionModel() is None:
+        selection_model = self.tableview.selectionModel()
+        if selection_model is None:
             return
         try:
-            index = self.tableview.selectionModel().selectedRows()[0]
+            index = selection_model.selectedRows()[0]
         except IndexError:
             return
         if not index.isValid():
@@ -156,10 +185,11 @@ class SceningListDialog(ExtendedDialog):
         self.scening_list.setData(index, time, Qt.ItemDataRole.UserRole)
 
     def on_label_changed(self, text: str) -> None:
-        if self.tableview.selectionModel() is None:
+        selection_model = self.tableview.selectionModel()
+        if selection_model is None:
             return
         try:
-            index = self.tableview.selectionModel().selectedRows()[0]
+            index = selection_model.selectedRows()[0]
         except IndexError:
             return
         if not index.isValid():
@@ -178,8 +208,11 @@ class SceningListDialog(ExtendedDialog):
 
     def on_start_frame_changed(self, value: Frame | int) -> None:
         frame = Frame(value)
+        selection_model = self.tableview.selectionModel()
+        if selection_model is None:
+            return
         try:
-            index = self.tableview.selectionModel().selectedRows()[0]
+            index = selection_model.selectedRows()[0]
         except IndexError:
             return
         if not index.isValid():
@@ -190,8 +223,11 @@ class SceningListDialog(ExtendedDialog):
         self.scening_list.setData(index, frame, Qt.ItemDataRole.UserRole)
 
     def on_start_time_changed(self, time: Time) -> None:
+        selection_model = self.tableview.selectionModel()
+        if selection_model is None:
+            return
         try:
-            index = self.tableview.selectionModel().selectedRows()[0]
+            index = selection_model.selectedRows()[0]
         except IndexError:
             return
         if not index.isValid():

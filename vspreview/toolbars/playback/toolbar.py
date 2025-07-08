@@ -191,7 +191,7 @@ class PlaybackToolbar(AbstractToolbar):
 
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(
-                'Playback: DurationDen and DurationNum frame props are needed for VFR clips!'
+                'Playback: `_DurationDen` and `_DurationNum` frame props are needed for VFR clips!'
             )
         return Fraction(frameprops['_DurationDen'], frameprops['_DurationNum'])  # type: ignore
 

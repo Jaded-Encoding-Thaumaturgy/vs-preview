@@ -38,7 +38,7 @@ runs:
 
     - name: Install Python dependencies
       shell: bash
-      run: uv pip install --system -U cython setuptools wheel
+      run: uv pip install --system -U cython==3.1.2 setuptools==80.9.0 wheel==0.45.1
 
     - name: Checkout VapourSynth
       uses: actions/checkout@v4

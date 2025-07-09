@@ -24,7 +24,7 @@ jobs:
         - name: Set up VapourSynth
           uses: ./.github/actions/setup-vapoursynth
           with:
-            vapoursynth-version: 71
+            vapoursynth-version: 70
 
         - name: Install dependencies
           run: uv sync --locked

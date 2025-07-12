@@ -310,11 +310,15 @@ class FindFramesWorker(QObject):
                 )
                 _rnum_checked.add(rnum)
 
+                if conf.main.timeline.mode == conf.main.timeline.Mode.FRAME:
+                    frames = [out.prepared.clip[rnum] for out in conf.outputs]
+                else:
+                    time = conf.outputs[0].to_time(rnum)
+                    frames = [out.prepared.clip[int(out.to_frame(time))] for out in conf.outputs]
+
                 if all(
                     get_prop(f.props, '_PictType', str, None, '').encode() in picture_types_b
-                    for f in vs.core.std.Splice(
-                        [out.prepared.clip[rnum] for out in conf.outputs], True
-                    ).frames(close=True)
+                    for f in vs.core.std.Splice(frames, True).frames(close=True)
                 ):
                     break
 

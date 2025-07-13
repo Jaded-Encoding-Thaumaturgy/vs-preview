@@ -70,7 +70,7 @@ frame_props_category_prefix_lut: dict[str, str] = {
         ),
         'Wobbly': (
             # Wobbly (via vswobbly)
-            'Wobbly'
+            'Wobbly',
         )
     }.items()
     for prefix in prefixes

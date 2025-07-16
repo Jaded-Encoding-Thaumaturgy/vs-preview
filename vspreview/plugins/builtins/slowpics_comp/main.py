@@ -401,10 +401,9 @@ class CompUploadWidget(ExtendedWidget):
 
         self.tmdb_data[tmdb_id] = data
 
-    def _do_tmdb_request(self, url) -> None:
+    def _do_tmdb_request(self, url: str) -> dict[str, Any]:
         if not (self.settings.tmdb_apikey and self.tmdb_id_lineedit.text()):
             return
-
 
         api_key = self.settings.tmdb_apikey
         headers = {
@@ -484,7 +483,7 @@ class CompUploadWidget(ExtendedWidget):
 
         self.update_tags()
 
-    def _get_current_frame_number(self):
+    def _get_current_frame_number(self) -> Frame:
         if self.main.timeline.mode == self.main.timeline.Mode.FRAME:
             return self.main.current_output.last_showed_frame
 

@@ -7,13 +7,14 @@ import unicodedata
 from typing import Callable, Final
 from uuid import uuid4
 
-from requests import HTTPError, Session
+from requests import HTTPError, Session, Timeout
 from requests.utils import dict_from_cookiejar
 from requests_toolbelt import MultipartEncoder  # type: ignore
 from jetpytools import SPath
 
 from vspreview.core import VideoOutput
 from vspreview.main import MainWindow
+from vspreview._metadata import __version__
 
 KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50
@@ -51,32 +52,30 @@ def get_slowpic_headers(sess: Session) -> dict[str, str]:
         'Origin': 'https://slow.pics/',
         'Referer': 'https://slow.pics/comparison',
         'User-Agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-            '(KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
+            f'vs-preview (https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview {__version__})' # SlowBro asked for this
         ),
         'X-XSRF-TOKEN': sess.cookies.get('XSRF-TOKEN', None),
     }
 
 
 def do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, image: SPath, browser_id: str) -> None:
-    upload_info = MultipartEncoder({
-        'collectionUuid': collection,
-        'imageUuid': imageUuid,
-        'file': (image.name, image.read_bytes(), 'image/png'),
-        'browserId': browser_id,
-    }, str(uuid4()))
-
     while True:
+        upload_info = MultipartEncoder({
+            'collectionUuid': collection,
+            'imageUuid': imageUuid,
+            'file': (image.name, image.read_bytes(), 'image/png'),
+            'browserId': browser_id,
+        }, str(uuid4()))
         try:
             req = sess.post(
-                'https://slow.pics/upload/image', data=upload_info.to_string(),
-                headers=get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess)
+                f'https://slow.pics/upload/image/{imageUuid}', data=upload_info.to_string(),
+                headers=get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess),
+                timeout=(60, 20) # read, connect timeout
             )
             req.raise_for_status()
             break
-        except HTTPError as e:
-            logging.debug(e)
-
+        except (HTTPError, Timeout) as e:
+            logging.error(e)
 
 def clear_filename(filename: str) -> str:
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']

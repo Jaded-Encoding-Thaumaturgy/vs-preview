@@ -40,6 +40,11 @@ class CompSettings(AbstractSettingsWidget):
 
         self.default_public_checkbox = CheckBox('Default Public Flag')
         self.default_nsfw_checkbox = CheckBox('Default NSFW Flag')
+        self.default_current_frame_checkbox = CheckBox('Default Current Frame Flag')
+
+        self.default_pict_type_i_checkbox = CheckBox('I')
+        self.default_pict_type_p_checkbox = CheckBox('P')
+        self.default_pict_type_b_checkbox = CheckBox('B')
 
         self.login_username_edit = LineEdit('Username')
         self.login_password_edit = LineEdit('Password')
@@ -92,9 +97,20 @@ class CompSettings(AbstractSettingsWidget):
             self.default_nsfw_checkbox
         ])
 
+        HBoxLayout(self.vlayout, [
+            self.default_current_frame_checkbox,
+            HBoxLayout([QLabel('Default PictType'),self.default_pict_type_i_checkbox, self.default_pict_type_p_checkbox, self.default_pict_type_b_checkbox], spacing=0)
+        ])
+
+
+
     def set_defaults(self) -> None:
         self.delete_cache_checkbox.setChecked(True)
         self.frame_type_checkbox.setChecked(True)
+        self.default_current_frame_checkbox.setChecked(True)
+        self.default_pict_type_i_checkbox.setChecked(True)
+        self.default_pict_type_p_checkbox.setChecked(True)
+        self.default_pict_type_b_checkbox.setChecked(True)
         # https://github.com/Radarr/Radarr/blob/29ba6fe5563e737f0f87919e48f556e39284e6bb/src/NzbDrone.Common/Cloud/RadarrCloudRequestBuilder.cs#L31
         self.tmdb_apikey_edit.setText('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxYTczNzMzMDE5NjFkMDNmOTdmODUzYTg3NmRkMTIxMiIsInN1YiI6IjU4NjRmNTkyYzNhMzY4MGFiNjAxNzUzNCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.gh1BwogCCKOda6xj9FRMgAAj_RYKMMPC3oNlcBtlmwk')  # noqa
 
@@ -143,6 +159,22 @@ class CompSettings(AbstractSettingsWidget):
         return self.default_nsfw_checkbox.isChecked()
 
     @property
+    def default_current_frame(self) -> bool:
+        return self.default_current_frame_checkbox.isChecked()
+
+    @property
+    def default_i_pictframe(self) -> bool:
+        return self.default_pict_type_i_checkbox.isChecked()
+
+    @property
+    def default_p_pictframe(self) -> bool:
+        return self.default_pict_type_p_checkbox.isChecked()
+
+    @property
+    def default_b_pictframe(self) -> bool:
+        return self.default_pict_type_b_checkbox.isChecked()
+
+    @property
     def collection_name_template(self) -> str:
         return self.collection_name_template_edit.text()
 
@@ -154,6 +186,10 @@ class CompSettings(AbstractSettingsWidget):
             'compression': self.compression,
             'default_public': self.default_public,
             'default_nsfw': self.default_nsfw,
+            'default_current_frame': self.default_current_frame,
+            'default_i_pictframe': self.default_i_pictframe,
+            'default_p_pictframe': self.default_p_pictframe,
+            'default_b_pictframe': self.default_b_pictframe,
             'collection_name_template': self.collection_name_template,
             'frame_ntype': self.frame_ntype
         }
@@ -163,6 +199,10 @@ class CompSettings(AbstractSettingsWidget):
         try_load(state, 'frame_type_enabled', bool, self.frame_type_checkbox.setChecked)
         try_load(state, 'default_public', bool, self.default_public_checkbox.setChecked)
         try_load(state, 'default_nsfw', bool, self.default_nsfw_checkbox.setChecked)
+        try_load(state, 'default_current_frame', bool, self.default_current_frame_checkbox.setChecked)
+        try_load(state, 'default_i_pictframe', bool, self.default_pict_type_i_checkbox.setChecked)
+        try_load(state, 'default_p_pictframe', bool, self.default_pict_type_p_checkbox.setChecked)
+        try_load(state, 'default_b_pictframe', bool, self.default_pict_type_b_checkbox.setChecked)
         try_load(state, 'collection_name_template', str, self.collection_name_template_edit.setText)
         try_load(state, 'tmdb_apikey', str, self.tmdb_apikey_edit.setText)
         try_load(state, 'compression', int, self.compression_combobox.setCurrentIndex)

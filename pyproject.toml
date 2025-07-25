@@ -67,7 +67,7 @@ include = ["vspreview/py.typed"]
 exclude = ["docs", "stubs"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["docs", "stubs"]
+include = ["/vspreview"]
 
 [tool.hatch.version]
 path = "vspreview/_metadata.py"

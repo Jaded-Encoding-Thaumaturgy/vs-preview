@@ -143,6 +143,9 @@ vssource_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
     'IdxFilePath': {
         'Path to File': lambda filepath: SPath(filepath).as_posix()
     },
+    'Idx': {
+        'File Indexer': lambda idx: str(idx)
+    },
     # DGIndex(NV)
     'DgiFieldOp': {
         'DGIndex Field Operation': lambda dgi: str(dgi)

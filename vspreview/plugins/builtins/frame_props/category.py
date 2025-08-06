@@ -12,8 +12,10 @@ video_props: list[str] = [
     '_DurationNum', '_DurationDen', '_AbsoluteTime',
     '_SARNum', '_SARDen',
     '_FieldBased',
+    # File Indexing (via vssource)
+    'IdxFilePath', 'Idx',
     # Other
-    '_FrameNumber', '_Alpha', 'Name', 'IdxFilePath',
+    '_FrameNumber', '_Alpha', 'Name',
 ]
 """Properties related to video colorimetry, frame characteristics, and other video-specific information."""
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, overload
+from typing import TYPE_CHECKING, Callable
 
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 from vstools import vs, vs_object
@@ -63,18 +63,6 @@ class MappedNodesPlugin(AbstractPlugin):
         super().__init__(main)
 
         self.outputs = LazyMapPluginVideoOutputs(main, self.get_node)
-
-    @overload
-    def get_node(self, node: vs.VideoNode) -> vs.VideoNode:
-        ...
-
-    @overload
-    def get_node(self, node: vs.VideoNode) -> VideoOutputNode:
-        ...
-
-    @overload
-    def get_node(self, node: vs.VideoNode) -> vs.VideoNode | VideoOutputNode:
-        ...
 
     def get_node(self, node: vs.VideoNode) -> vs.VideoNode | VideoOutputNode:
         raise NotImplementedError

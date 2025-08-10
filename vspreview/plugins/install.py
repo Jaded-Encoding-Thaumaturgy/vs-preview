@@ -143,7 +143,7 @@ def print_available_plugins() -> None:
     preinstalled_packages = set[Path]()
     installed_packages = set[str](module for module, *_ in installed_plugins)
 
-    plugins_path = Path(__file__).parent
+    plugins_path = Path(__file__).parent / "builtins"
 
     print(_header('Installed plugins:'))
     print(PLUGIN_STRING.format('Package', 'Type', 'Name', 'Namespace', install_from=''))
@@ -174,7 +174,7 @@ def print_available_plugins() -> None:
 
         print(' ' + PLUGIN_STRING.format(*values, install_from=install_from))
 
-    print('\n * => Pre-installed, + => Installed, ? => Custom\n')
+    print('\n * => Pre-installed\n + => Installed\n ? => Custom\n')
 
     external_packages = existing_packages - installed_packages
 

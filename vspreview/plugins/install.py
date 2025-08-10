@@ -46,7 +46,7 @@ def get_repo_plugins() -> dict[str, Iterable[str]]:
             if ('type' not in d or d['type'] != 'tree') and d['path'].startswith(f'{path}/')
         )
 
-    return {path: _get_generator(path) for path in base_paths}
+    return {path: _get_generator(path) for path in base_paths if not path.startswith(".")}
 
 
 def install_plugins(plugins: list[str], force: bool = False, no_deps: bool = False) -> None:

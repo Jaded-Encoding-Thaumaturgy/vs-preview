@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections import namedtuple
 from pathlib import Path
 from typing import Iterable
 
@@ -131,17 +132,25 @@ def print_available_plugins() -> None:
     def _header(value: str) -> str:
         return f'{value}\n{"-" * len(value)}'
 
-    installed_plugins = [
-        (
-            plugin_cls.__module__, kind, plugin_cls._config.display_name,
-            plugin_cls._config.namespace, sys.modules[plugin_cls.__module__].__file__
-        )
-        for kind, plugin_parent in (('Generic', AbstractPlugin), ('Source', FileResolverPlugin))
-        for plugin_cls in [v for _, v in sorted(get_installed_plugins(plugin_parent, True).items(), key=lambda v: v[0])]
-    ]
+    Plugin = namedtuple("installed_plugin", ["module", "kind", "display_name", "namespace", "module_path"])
+    installed_plugins = list[Plugin]()
+
+    for kind, plugin_parent in (('Generic', AbstractPlugin), ('Source', FileResolverPlugin)):
+        plugins_dict = get_installed_plugins(plugin_parent, True)
+
+        for plugin_cls in sorted(plugins_dict.values(), key=lambda k: k.__module__):
+            installed_plugins.append(
+                Plugin(
+                    plugin_cls.__module__,
+                    kind,
+                    plugin_cls._config.display_name,
+                    plugin_cls._config.namespace,
+                    sys.modules[plugin_cls.__module__].__file__,
+                )
+            )
 
     preinstalled_packages = set[Path]()
-    installed_packages = set[str](module for module, *_ in installed_plugins)
+    installed_packages = set(module for module, *_ in installed_plugins)
 
     plugins_path = Path(__file__).parent / "builtins"
 

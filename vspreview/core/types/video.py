@@ -78,7 +78,7 @@ class PackingType():
     def CURRENT(cls) -> PackingTypeInfo:
         _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
 
-        if hasattr(vs.core, 'vszip'):
+        if hasattr(vs.core, 'vszip') and hasattr(vs.core.vszip, "PackRGB"):
             return PackingType.vszip_10bit if _default_10bits else PackingType.vszip_8bit
         else:
             try:

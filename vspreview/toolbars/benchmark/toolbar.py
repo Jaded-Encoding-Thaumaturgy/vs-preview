@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import csv
+import logging
 from collections import deque
+from datetime import datetime
 from time import perf_counter
 from typing import TYPE_CHECKING
 
 import vapoursynth as vs
+from jetpytools import SPath
 from PyQt6.QtCore import QMetaObject, Qt
 from PyQt6.QtWidgets import QLabel
 
@@ -34,7 +38,8 @@ class BenchmarkToolbar(AbstractToolbar):
         'run_abort_button', 'info_label', 'running',
         'unsequenced', 'run_start_time', 'start_frame',
         'end_frame', 'total_frames', 'buffer',
-        'update_info_timer', 'sequenced_timer'
+        'update_info_timer', 'sequenced_timer',
+        'benchmark_data'
     )
 
     settings: BenchmarkSettings
@@ -51,6 +56,7 @@ class BenchmarkToolbar(AbstractToolbar):
         self.start_frame = Frame(0)
         self.end_frame = Frame(0)
         self.total_frames = Frame(0)
+        self.benchmark_data = None
 
         self.sequenced_timer = Timer(
             timeout=self._request_next_frame_sequenced, timerType=Qt.TimerType.PreciseTimer, interval=0
@@ -102,6 +108,7 @@ class BenchmarkToolbar(AbstractToolbar):
             QLabel('Usable CPUs Count:'), self.usable_cpus_spinbox,
             self.prefetch_checkbox,
             self.unsequenced_checkbox,
+            self.settings.log_results_checkbox,
             self.run_abort_button,
             self.info_label
         ])
@@ -143,6 +150,25 @@ class BenchmarkToolbar(AbstractToolbar):
 
         self.running = True
         self.run_start_time = perf_counter()
+
+        # Initialize benchmark data if logging is enabled
+        if self.settings.log_results_enabled:
+            self.benchmark_data = {
+                'Date & Time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'Node': self.main.current_output.name,
+                'Index': self.main.current_output.index,
+                'Start': int(self.start_frame),
+                'End': int(self.end_frame),
+                'Frames Processed': 0,
+                'Average FPS': 0.0,
+                'Total Time (s)': 0.0,
+                'Thread Count': concurrent_requests_count,
+                'Prefetch': self.prefetch_checkbox.isChecked(),
+                'Unsequenced': self.unsequenced_checkbox.isChecked(),
+            }
+
+            logging.debug(f"Initial benchmark data: {self.benchmark_data}")
+
         self.update_info()
 
         for offset in range(min(int(self.end_frame - self.frames_done), concurrent_requests_count)):
@@ -159,6 +185,7 @@ class BenchmarkToolbar(AbstractToolbar):
     def abort(self) -> None:
         if self.running:
             self.update_info()
+            self._save_benchmark_results()
 
         self.running = False
         QMetaObject.invokeMethod(self.update_info_timer, 'stop', Qt.ConnectionType.QueuedConnection)
@@ -266,3 +293,47 @@ class BenchmarkToolbar(AbstractToolbar):
         self.info_label.setText(
             f"{self.frames_done}/{self.total_frames} frames in {strfdelta(run_time, '%M:%S.%Z')}, {fps:.4f} fps"
         )
+
+    def _save_benchmark_results(self) -> None:
+        if not self.settings.log_results_enabled or self.benchmark_data is None:
+            return
+
+        run_time = Time(seconds=(perf_counter() - self.run_start_time))
+        fps = int(self.frames_done) / float(run_time)
+
+        self.benchmark_data.update({
+            'Frames Processed': self.frames_done,
+            'Average FPS': fps,
+            'Total Time (s)': float(run_time)
+        })
+
+        log_dir = SPath(self.main.current_config_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        csv_file = log_dir / f'{self.main.script_path.stem}_benchmark.csv'
+        logging.debug(f'CSV file path: {csv_file}')
+
+        file_exists = csv_file.exists()
+
+        try:
+            with open(csv_file, 'a', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=list(self.benchmark_data.keys()))
+
+                if not file_exists:
+                    logging.debug('Writing CSV header')
+                    writer.writeheader()
+
+                logging.debug('Writing benchmark data row')
+                writer.writerow(self.benchmark_data)
+
+                if not csv_file.exists():
+                    raise FileNotFoundError(f'CSV file {csv_file} not found')
+
+            self.main.show_message(f'Saved benchmark results to {csv_file}')
+
+        except Exception as e:
+            error_msg = f'Failed to save benchmark data: {e}'
+            logging.error(error_msg)
+            self.main.show_message(error_msg)
+
+        self.benchmark_data = None

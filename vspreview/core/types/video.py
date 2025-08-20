@@ -78,7 +78,7 @@ class PackingType():
     def CURRENT(cls) -> PackingTypeInfo:
         _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30
 
-        if hasattr(vs.core, 'vszip'):
+        if hasattr(vs.core, 'vszip') and hasattr(vs.core.vszip, "PackRGB"):
             return PackingType.vszip_10bit if _default_10bits else PackingType.vszip_8bit
         else:
             try:
@@ -394,8 +394,8 @@ class VideoOutput(AbstractYAMLObject):
 
                 ein_shift = np.array([b_shift, g_shift, r_shift], np.uint32)
 
-                from numpy.core._multiarray_umath import c_einsum  # type: ignore
-                from numpy.core.numeric import tensordot
+                from numpy import einsum as c_einsum
+                from numpy import tensordot
 
                 self.__base_numpy_add = base_add = np.asarray(blank.get_frame(0).copy()[0]).copy()
 

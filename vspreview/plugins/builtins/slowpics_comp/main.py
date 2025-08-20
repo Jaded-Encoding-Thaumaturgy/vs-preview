@@ -70,6 +70,8 @@ class CompUploadWidget(ExtendedWidget):
     tag_data_cache: dict[str, str] | None
     tag_data_error: bool
 
+    was_stopped: bool
+
     collection_name_cache: str | None
 
     curr_uuid = ''
@@ -184,7 +186,7 @@ class CompUploadWidget(ExtendedWidget):
 
         self.manual_frames_lineedit = LineEdit('Manual frames: frame,frame,frame', self, )
 
-        self.current_frame_checkbox = CheckBox('Current frame', self, checked=True)
+        self.current_frame_checkbox = CheckBox('Current frame', self, checked=self.settings.default_current_frame)
 
         self.collection_name_cache = None
 
@@ -192,9 +194,9 @@ class CompUploadWidget(ExtendedWidget):
             '🛈', self, pressed=self._handle_collection_name_down, released=self._handle_collection_name_up
         )
 
-        self.pic_type_button_I = CheckBox('I', self, checked=True, clicked=self._force_clicked('I'))
-        self.pic_type_button_P = CheckBox('P', self, checked=True, clicked=self._force_clicked('P'))
-        self.pic_type_button_B = CheckBox('B', self, checked=True, clicked=self._force_clicked('B'))
+        self.pic_type_button_I = CheckBox('I', self, checked=self.settings.default_i_pictframe, clicked=self._force_clicked('I'))
+        self.pic_type_button_P = CheckBox('P', self, checked=self.settings.default_p_pictframe, clicked=self._force_clicked('P'))
+        self.pic_type_button_B = CheckBox('B', self, checked=self.settings.default_b_pictframe, clicked=self._force_clicked('B'))
 
         self.random_dark_frame_edit = FrameEdit(self)
         self.random_light_frame_edit = FrameEdit(self)
@@ -378,15 +380,32 @@ class CompUploadWidget(ExtendedWidget):
 
         return None
 
-    def _do_tmdb_request(self) -> None:
-        if not (self.settings.tmdb_apikey and self.tmdb_id_lineedit.text()):
-            return
+    def _do_tmdb_id_request(self) -> None:
 
         tmdb_type = self.tmdb_type_combox.currentText().lower()
         tmdb_id = self.tmdb_id_lineedit.text()
 
+        url = f'https://api.themoviedb.org/3/{tmdb_type}/{tmdb_id}?language=en-US'
+        data = self._do_tmdb_request(url)
+
+        self.tmdb_data[tmdb_id] = data
+
+    # TODO: Add support for search so you don't need to use browser.
+    def _do_tmdb_search_request(self) -> None:
+
+        tmdb_type = self.tmdb_type_combox.currentText().lower()
+        tmdb_id = self.tmdb_id_lineedit.text()
+
+        url = f'https://api.themoviedb.org/3/{tmdb_type}/{tmdb_id}?language=en-US'
+        data = self._do_tmdb_request(url)
+
+        self.tmdb_data[tmdb_id] = data
+
+    def _do_tmdb_request(self, url: str) -> dict[str, Any]:
+        if not (self.settings.tmdb_apikey and self.tmdb_id_lineedit.text()):
+            return
+
         api_key = self.settings.tmdb_apikey
-        url = f'https://api.themoviedb.org/3/{tmdb_type}/{self.tmdb_id_lineedit.text()}?language=en-US'
         headers = {
             'accept': 'application/json'
         }
@@ -404,10 +423,10 @@ class CompUploadWidget(ExtendedWidget):
 
         data: dict[str, Any] = resp.json()
 
-        self.tmdb_data[tmdb_id] = data
+        return data
 
     def _handle_collection_generate(self) -> str:
-        self._do_tmdb_request()
+        self._do_tmdb_id_request()
 
         collection_text = self.collection_name_lineedit.text()
 
@@ -464,8 +483,19 @@ class CompUploadWidget(ExtendedWidget):
 
         self.update_tags()
 
+    def _get_current_frame_number(self) -> Frame:
+        if self.main.timeline.mode == self.main.timeline.Mode.FRAME:
+            return self.main.current_output.last_showed_frame
+
+        first = self.main.outputs[0]
+        out = self.main.current_output
+        current_frame = out.last_showed_frame
+
+        return first.to_frame(out.to_time(current_frame))
+
+
     def add_current_frame_to_comp(self) -> None:
-        frame = str(self.main.current_output.last_showed_frame).strip()
+        frame = str(self._get_current_frame_number()).strip()
         current_frames = self.manual_frames_lineedit.text()
 
         if not current_frames:
@@ -487,6 +517,8 @@ class CompUploadWidget(ExtendedWidget):
     def on_start_upload(self) -> None:
         if self._thread_running:
             return
+        
+        self.was_stopped = False
 
         if not self.find_samples(str(uuid4())):
             return
@@ -508,6 +540,9 @@ class CompUploadWidget(ExtendedWidget):
             return
         else:
             self.upload_status_label.setText('Finished!')
+
+        if self.was_stopped:
+            return
 
         self.upload_to_slowpics(uuid, conf.samples)
 
@@ -535,6 +570,8 @@ class CompUploadWidget(ExtendedWidget):
 
         if hasattr(self, 'upload_worker'):
             self.upload_worker.is_finished = True
+
+        self.was_stopped = True
 
         self.on_end_upload(self.curr_uuid, forced=True)
 

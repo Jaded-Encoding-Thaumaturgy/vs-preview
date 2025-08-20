@@ -22,20 +22,21 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "VapourSynth>=68",
+    "VapourSynth>=70; platform_system != 'Windows'",
+    "VapourSynth>=68; platform_system == 'Windows'",
     "jetpytools>=1.3.0",
     "vsjetpack>=0.3.5",
     "vsengine>=0.2.0",
     "PyQt6>=6.9.0",
     "PyQt6-sip>=13.10.0",
     "QDarkStyle>=3.2.3",
-    "PyYAML>=6.0",
-    "matplotlib>=3.7.1",
+    "PyYAML>=6.0.2",
+    "matplotlib>=3.10.3",
     "requests>=2.31.0",
     "requests-toolbelt>=1.0.0",
-    "numpy>=1.24.3",
+    "numpy>=2.3.1",
     "pywin32>=306; platform_system == 'Windows'",
-    "Pillow>=9.4.0; platform_system == 'Windows'"
+    "Pillow>=11.3.0; platform_system == 'Windows'"
 ]
 
 [project.urls]
@@ -48,12 +49,12 @@ vspreview = "vspreview.init:main"
 [dependency-groups]
 dev = [
     "mypy==1.15.0",
-    "numpy==2.2.5",
+    "numpy==2.3.1",
     "ruff==0.11.8",
     "twine==6.1.0",
     "types-pillow==10.2.0.20240822",
     "types-psutil==7.0.0.20250401",
-    "types-pyyaml==6.0.12.20250402",
+    "types-pyyaml==6.0.12.20250516",
 ]
 
 [build-system]
@@ -66,7 +67,7 @@ include = ["vspreview/py.typed"]
 exclude = ["docs", "stubs"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["docs", "stubs"]
+include = ["/vspreview"]
 
 [tool.hatch.version]
 path = "vspreview/_metadata.py"
@@ -103,3 +104,6 @@ show_error_codes = true
 color_output = true
 error_summary = true
 pretty = true
+
+[tool.uv]
+resolution = "lowest-direct"

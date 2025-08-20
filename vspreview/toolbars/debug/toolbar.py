@@ -17,7 +17,13 @@ __all__ = [
 
 
 class DebugToolbar(AbstractToolbar):
-    __slots__ = ('exec_lineedit', 'debug_logging_enabled', 'debug_logging_switch')
+    storable_attrs = (
+        'debug_logging_enabled',
+    )
+
+    __slots__ = (
+        *storable_attrs, 'exec_lineedit', 'debug_logging_switch'
+    )
 
     _no_visibility_choice = True
 
@@ -90,6 +96,10 @@ class DebugToolbar(AbstractToolbar):
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        try_load(state, 'debug_logging_enabled', bool, self.debug_logging_switch.setChecked)
-
         super().__setstate__(state)
+
+        try_load(state, 'debug_logging_enabled', bool, lambda checked: (
+            setattr(self, 'debug_logging_enabled', bool(checked)),
+            self.debug_logging_switch.setChecked(bool(checked)),
+            self.toggle_debug_logging(bool(checked))
+        ))

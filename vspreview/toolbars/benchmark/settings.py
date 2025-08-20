@@ -13,7 +13,7 @@ __all__ = [
 
 class BenchmarkSettings(AbstractToolbarSettings):
     __slots__ = (
-        'clear_cache_checkbox',
+        'clear_cache_checkbox', 'log_results_checkbox',
         'refresh_interval_control', 'frame_data_sharing_fix_checkbox',
     )
 
@@ -23,6 +23,7 @@ class BenchmarkSettings(AbstractToolbarSettings):
         super().setup_ui()
 
         self.clear_cache_checkbox = CheckBox('Clear VS frame caches before each run', self)
+        self.log_results_checkbox = CheckBox('Log results', self)
 
         self.frame_data_sharing_fix_checkbox = CheckBox('(Debug) Enable frame data sharing fix', self)
 
@@ -32,6 +33,7 @@ class BenchmarkSettings(AbstractToolbarSettings):
 
         self.vlayout.addWidgets([
             self.clear_cache_checkbox,
+            self.log_results_checkbox,
             self.frame_data_sharing_fix_checkbox
         ])
         self.vlayout.addLayout(
@@ -51,6 +53,7 @@ class BenchmarkSettings(AbstractToolbarSettings):
         from ...main import MainSettings
 
         self.clear_cache_checkbox.setChecked(False)
+        self.log_results_checkbox.setChecked(True)
         self.refresh_interval_control.setValue(Time(milliseconds=150))
         self.frame_data_sharing_fix_checkbox.setChecked(True)
         self.default_usable_cpus_spinbox.setValue(max(1, MainSettings.get_usable_cpus_count() // 2))
@@ -58,6 +61,10 @@ class BenchmarkSettings(AbstractToolbarSettings):
     @property
     def clear_cache_enabled(self) -> bool:
         return self.clear_cache_checkbox.isChecked()
+
+    @property
+    def log_results_enabled(self) -> bool:
+        return self.log_results_checkbox.isChecked()
 
     @property
     def refresh_interval(self) -> Time:
@@ -74,11 +81,13 @@ class BenchmarkSettings(AbstractToolbarSettings):
     def __getstate__(self) -> dict[str, Any]:
         return {
             'clear_cache_enabled': self.clear_cache_enabled,
+            'log_results_enabled': self.log_results_enabled,
             'refresh_interval': self.refresh_interval,
             'frame_data_sharing_fix_enabled': self.frame_data_sharing_fix_enabled,
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
         try_load(state, 'clear_cache_enabled', bool, self.clear_cache_checkbox.setChecked)
+        try_load(state, 'log_results_enabled', bool, self.log_results_checkbox.setChecked)
         try_load(state, 'refresh_interval', Time, self.refresh_interval_control.setValue)
         try_load(state, 'frame_data_sharing_fix_enabled', bool, self.frame_data_sharing_fix_checkbox.setChecked)

@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         vs-versions:
-          - 68
+          - 70
         python-version:
           - '3.12'
 

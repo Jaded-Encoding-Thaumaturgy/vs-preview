@@ -138,10 +138,23 @@ packet_size_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
     },
 }
 
+def _idxfilepath_str(filepath: Any) -> str:
+    if isinstance(filepath, str):
+        return SPath(filepath).as_posix()
+
+    fpaths_str = [SPath(f).as_posix() for f in filepath]
+    if len(fpaths_str) == 1:
+        return fpaths_str[0]
+    return str(fpaths_str)
+
+
 # vssource properties
 vssource_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
     'IdxFilePath': {
-        'Path to File': lambda filepath: SPath(filepath).as_posix()
+        'Path to File': _idxfilepath_str
+    },
+    'Idx': {
+        'File Indexer': lambda idx: str(idx)
     },
     # DGIndex(NV)
     'DgiFieldOp': {

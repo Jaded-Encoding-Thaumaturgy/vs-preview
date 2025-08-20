@@ -60,7 +60,7 @@ class SplitPlanesPlugin(AbstractPlugin, QTabWidget):
 
     def add_shortcuts(self) -> None:
         self.add_shortcut(
-            "reset_zoom", self.main_tab, lambda: self.main_tab.setZoom(1.0),
+            "reset_zoom", self.main_tab, lambda: self.main_tab.zoom_combobox.setCurrentValue(1.0),
             QKeySequence(Qt.Key.Key_Escape), "Reset zoom"
         )
 

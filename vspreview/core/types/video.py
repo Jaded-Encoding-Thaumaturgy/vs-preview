@@ -72,8 +72,7 @@ class PackingType():
     vszip_8bit = PackingTypeInfo('vszip_8bit', vs.RGB24, QImage.Format.Format_RGB32, False)
     vszip_10bit = PackingTypeInfo('vszip_10bit', vs.RGB30, QImage.Format.Format_BGR30, True)
 
-    @cachedproperty
-    @classproperty
+    @classproperty.cached
     @classmethod
     def CURRENT(cls) -> PackingTypeInfo:
         _default_10bits = os.name != 'nt' and QPixmap.defaultDepth() == 30

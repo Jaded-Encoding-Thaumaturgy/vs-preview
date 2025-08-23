@@ -750,8 +750,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         try:
             self.load_script(self.script_path, self.external_args, True, None, self.display_name)
-        finally:
+        except BaseException:
             self.clear_monkey_runpy()
+        finally:
+            pass
 
         self.reload_after_signal.emit()
 

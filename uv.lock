@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -671,12 +671,15 @@ wheels = [
 
 [[package]]
 name = "pywin32"
-version = "306"
+version = "307"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/91/17e016d5923e178346aabda3dfec6629d1a26efe587d19667542105cf0a6/pywin32-306-cp312-cp312-win32.whl", hash = "sha256:383229d515657f4e3ed1343da8be101000562bf514591ff383ae940cad65458b", size = 8507705, upload-time = "2023-03-25T23:50:40.279Z" },
-    { url = "https://files.pythonhosted.org/packages/83/1c/25b79fc3ec99b19b0a0730cc47356f7e2959863bf9f3cd314332bddb4f68/pywin32-306-cp312-cp312-win_amd64.whl", hash = "sha256:37257794c1ad39ee9be652da0462dc2e394c8159dfd913a8a4e8eb6fd346da0e", size = 9227429, upload-time = "2023-03-25T23:50:50.222Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/43/e3444dc9a12f8365d9603c2145d16bf0a2f8180f343cf87be47f5579e547/pywin32-306-cp312-cp312-win_arm64.whl", hash = "sha256:5821ec52f6d321aa59e2db7e0a35b997de60c201943557d108af9d4ae1ec7040", size = 10388145, upload-time = "2023-03-25T23:51:01.401Z" },
+    { url = "https://files.pythonhosted.org/packages/90/4e/9c660fa6c34db3c9542c9682b0ccd9edd63a6a4cb6ac4d22014b2c3355c9/pywin32-307-cp312-cp312-win32.whl", hash = "sha256:07649ec6b01712f36debf39fc94f3d696a46579e852f60157a729ac039df0815", size = 5916997, upload-time = "2024-10-04T19:58:32.086Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/11/c56e771d2cdbd2dac8e656edb2c814e4b2239da2c9028aa7265cdfff8aed/pywin32-307-cp312-cp312-win_amd64.whl", hash = "sha256:00d047992bb5dcf79f8b9b7c81f72e0130f9fe4b22df613f755ab1cc021d8347", size = 6519708, upload-time = "2024-10-04T19:58:34.597Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/64/53b1112cb05f85a6c87339a9f90a3b82d67ecb46f16b45abaac3bf4dee2b/pywin32-307-cp312-cp312-win_arm64.whl", hash = "sha256:b53658acbfc6a8241d72cc09e9d1d666be4e6c99376bc59e26cdb6223c4554d2", size = 7952978, upload-time = "2024-10-04T19:58:36.518Z" },
+    { url = "https://files.pythonhosted.org/packages/61/c2/bdff07ee75b9c0a0f87cd52bfb45152e40d4c6f99e7256336e243cf4da2d/pywin32-307-cp313-cp313-win32.whl", hash = "sha256:ea4d56e48dc1ab2aa0a5e3c0741ad6e926529510516db7a3b6981a1ae74405e5", size = 5915947, upload-time = "2024-10-04T19:58:38.637Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/59/b891cf47d5893ee87e09686e736a84b80a8c5112a1a80e37363ab8801f54/pywin32-307-cp313-cp313-win_amd64.whl", hash = "sha256:576d09813eaf4c8168d0bfd66fb7cb3b15a61041cf41598c2db4a4583bf832d2", size = 6518782, upload-time = "2024-10-04T19:58:41.313Z" },
+    { url = "https://files.pythonhosted.org/packages/08/9b/3c797468a96f68ce86f84917c198f60fc4189ab2ddc5841bcd71ead7680f/pywin32-307-cp313-cp313-win_arm64.whl", hash = "sha256:b30c9bdbffda6a260beb2919f918daced23d32c79109412c2085cbc513338a0a", size = 7952027, upload-time = "2024-10-04T19:58:43.823Z" },
 ]
 
 [[package]]
@@ -953,35 +956,19 @@ wheels = [
 
 [[package]]
 name = "vapoursynth"
-version = "68"
+version = "72"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "sys_platform == 'win32'",
-]
+sdist = { url = "https://files.pythonhosted.org/packages/79/a3/97c5c2e31d3177621d9276394d139a027453747e0d3559f289d0adf8273e/vapoursynth-72.zip", hash = "sha256:a4eeaf6464f9bb1b6e58b2f026757c8f1ca7c70697981c89f4dc82d8a62bfb54", size = 664309, upload-time = "2025-06-02T14:59:54.785Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/ba/413ab13ee81dfd67068152bcd916914427c612743a3c49c770dc577d7600/VapourSynth-68-cp312-cp312-win_amd64.whl", hash = "sha256:2ff2c0403c516b0c601dd1341423528b8a58ba2be0beed6353bcd3de3cae29e1", size = 1186048, upload-time = "2024-05-14T20:19:14.663Z" },
+    { url = "https://files.pythonhosted.org/packages/21/d0/c4e186a9de6bad57c68dc668de6b6949ec44f893e9271077778651c3dfc5/vapoursynth-72-cp312-abi3-win_amd64.whl", hash = "sha256:40fce5ffb48752af50658233787056ca04cd4de4b875ae65d2ea7d83b5d902a6", size = 1058613, upload-time = "2025-06-02T14:59:50.599Z" },
 ]
-
-[[package]]
-name = "vapoursynth"
-version = "70"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "sys_platform != 'win32'",
-]
-sdist = { url = "https://files.pythonhosted.org/packages/38/e5/f740b1f951c1b40a1f1d7bf4e5e0954218df41577f59837b4a64c5356774/vapoursynth-70.zip", hash = "sha256:d08a7e8b706b9aa7cdb559f86ba09da56bb46a90dffb2d3de71e100aba5b7d67", size = 684821, upload-time = "2024-09-20T11:37:26.487Z" }
 
 [[package]]
 name = "vsengine"
-version = "0.2.0"
-source = { registry = "https://pypi.org/simple" }
+version = "0.2.0+jet"
+source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-engine.git#c2bde81fbb1f7082b50db620c4ae6811dd40b9be" }
 dependencies = [
-    { name = "vapoursynth", version = "68", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
-    { name = "vapoursynth", version = "70", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/87/22280f23be3237dd545f6a2343ce5009ecfdab477df4f82b6b3553e1def4/vsengine-0.2.0.tar.gz", hash = "sha256:e0cdf49bc5e3e332a7bfdbc9ce8add31513cbdfe6d2a2305d80567dab9854823", size = 25760, upload-time = "2022-09-03T11:05:38.031Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/69/d763081716935bb13012d069f97f7d33916ab439c9b3a045290d3dc1ae28/vsengine-0.2.0-py3-none-any.whl", hash = "sha256:ed14293ce77f79e994832cb91050e7653b5d02812d3e9db3c562f4536e69bdbb", size = 33726, upload-time = "2022-09-03T11:05:36.457Z" },
+    { name = "vapoursynth" },
 ]
 
 [[package]]
@@ -994,8 +981,7 @@ dependencies = [
     { name = "rich" },
     { name = "scipy" },
     { name = "typing-extensions" },
-    { name = "vapoursynth", version = "68", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
-    { name = "vapoursynth", version = "70", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
+    { name = "vapoursynth" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/11/24/ab2ae4af14a57eae059df2baaa4af0f7f23061d2077dea21a947281eb0b3/vsjetpack-0.3.5.tar.gz", hash = "sha256:dd46d7bcbeb5274c290b53800d8fcc54ae6dc94a296e8fca52114e469011ac33", size = 314708, upload-time = "2025-05-03T02:25:46.624Z" }
 wheels = [
@@ -1017,8 +1003,7 @@ dependencies = [
     { name = "qdarkstyle" },
     { name = "requests" },
     { name = "requests-toolbelt" },
-    { name = "vapoursynth", version = "68", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
-    { name = "vapoursynth", version = "70", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
+    { name = "vapoursynth" },
     { name = "vsengine" },
     { name = "vsjetpack" },
 ]
@@ -1042,14 +1027,13 @@ requires-dist = [
     { name = "pillow", marker = "sys_platform == 'win32'", specifier = ">=11.3.0" },
     { name = "pyqt6", specifier = ">=6.9.0" },
     { name = "pyqt6-sip", specifier = ">=13.10.0" },
-    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=306" },
+    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=307" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "qdarkstyle", specifier = ">=3.2.3" },
     { name = "requests", specifier = ">=2.31.0" },
     { name = "requests-toolbelt", specifier = ">=1.0.0" },
-    { name = "vapoursynth", marker = "sys_platform != 'win32'", specifier = ">=70" },
-    { name = "vapoursynth", marker = "sys_platform == 'win32'", specifier = ">=68" },
-    { name = "vsengine", specifier = ">=0.2.0" },
+    { name = "vapoursynth", specifier = ">=72" },
+    { name = "vsengine", git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-engine.git" },
     { name = "vsjetpack", specifier = ">=0.3.5" },
 ]
 

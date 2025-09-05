@@ -11,7 +11,7 @@ import vapoursynth as vs
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColorSpace, QImage, QPainter, QPixmap
-from jetpytools import cachedproperty, classproperty, fallback
+from jetpytools import classproperty, fallback
 
 from ..abstracts import AbstractYAMLObject, main_window, try_load
 from ..bases import yaml_Loader

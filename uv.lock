@@ -304,14 +304,14 @@ wheels = [
 
 [[package]]
 name = "jetpytools"
-version = "1.3.0"
+version = "1.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/7c/41772f29104dd1b285d544933e33dd06b0f60b75df26687c8ce282967c81/jetpytools-1.3.0.tar.gz", hash = "sha256:b021c9e2da83d95db30f51540ce4a75c7c34f669266144d36fd71591b16baab5", size = 25108, upload-time = "2025-04-04T20:49:28.891Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/f2/d95845d64725c5c43650d73cf00c78de42063946b6bd8e33de2bea612230/jetpytools-1.7.2.tar.gz", hash = "sha256:a4c4313ea70ec54cdc084da91b941367c9ee1bb5776856334933e35309c04a8a", size = 24668, upload-time = "2025-08-22T20:41:54.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/25/b6118315f6c0e9bd3327d8eee8c5f2642e122b42ef8316a65f0d77bd6a6a/jetpytools-1.3.0-py3-none-any.whl", hash = "sha256:68fb0efcaa23cf72514201fe5f348a485d3e89a6bb63873d9605ee2e0ca4f6b5", size = 31634, upload-time = "2025-04-04T20:49:27.467Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/36/02e7cc0e8986d3fdf157d903ea148318c3d72ef033dab5a1832fd2eba49b/jetpytools-1.7.2-py3-none-any.whl", hash = "sha256:1b8a698618acd4c1a92adcdbcf766a7596fdc627204f03c417e4ac0ded148a06", size = 33073, upload-time = "2025-08-22T20:41:53.458Z" },
 ]
 
 [[package]]
@@ -1078,7 +1078,7 @@ wheels = [
 
 [[package]]
 name = "vsjetpack"
-version = "0.3.5"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jetpytools" },
@@ -1089,9 +1089,9 @@ dependencies = [
     { name = "vapoursynth", version = "68", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
     { name = "vapoursynth", version = "70", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/11/24/ab2ae4af14a57eae059df2baaa4af0f7f23061d2077dea21a947281eb0b3/vsjetpack-0.3.5.tar.gz", hash = "sha256:dd46d7bcbeb5274c290b53800d8fcc54ae6dc94a296e8fca52114e469011ac33", size = 314708, upload-time = "2025-05-03T02:25:46.624Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/5f/c414ae8e1c47c2825cd4ab49f8689f9d69f6164a02d85fbfd0e4b53c9d99/vsjetpack-0.7.0.tar.gz", hash = "sha256:9c5bd97beb41101fd70ae0fe8ef8335c16355e12b15b9c27dde4704cfdeecd31", size = 334640, upload-time = "2025-09-05T14:56:06.312Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/6f/606c1e7461001d24fd70b39a7fd2ddd620ee25143722f5dacbf9c8097041/vsjetpack-0.3.5-py3-none-any.whl", hash = "sha256:0e0747a37a63d6327b6b3445a80ff3fa909b00a57d8891b463cbb9f186a910dd", size = 384277, upload-time = "2025-05-03T02:25:44.613Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/df/f42336ef6360b3920ddb823db0700bc98011f04e20195abd5691cafc2dfd/vsjetpack-0.7.0-py3-none-any.whl", hash = "sha256:b68c709ad40a81ec3ccce27e814c2494166fda421d58f53a33f10b9a1e9ad90a", size = 420398, upload-time = "2025-09-05T14:56:04.63Z" },
 ]
 
 [[package]]
@@ -1128,7 +1128,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "jetpytools", specifier = ">=1.3.0" },
+    { name = "jetpytools", specifier = "~=1.7.0" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "numpy", specifier = ">=2.3.1" },
     { name = "pillow", marker = "sys_platform == 'win32'", specifier = ">=11.3.0" },
@@ -1142,7 +1142,7 @@ requires-dist = [
     { name = "vapoursynth", marker = "sys_platform != 'win32'", specifier = ">=70" },
     { name = "vapoursynth", marker = "sys_platform == 'win32'", specifier = ">=68" },
     { name = "vsengine", specifier = ">=0.2.0" },
-    { name = "vsjetpack", specifier = ">=0.3.5" },
+    { name = "vsjetpack", specifier = ">=0.7.0" },
 ]
 
 [package.metadata.requires-dev]

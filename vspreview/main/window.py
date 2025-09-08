@@ -808,7 +808,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.plugins.on_current_frame_changed(frame)
 
         self.statusbar.frame_props_label.setText(
-            f"Type: {get_prop(self.current_output.props, '_PictType', str, None, '?')}"
+            f"Type: {get_prop(self.current_output.props, '_PictType', str, default="?", func="__vspreview__")}"
         )
 
     def switch_output(self, value: int | VideoOutput) -> None:

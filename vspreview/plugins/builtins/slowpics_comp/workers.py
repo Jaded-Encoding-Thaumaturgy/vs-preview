@@ -106,7 +106,7 @@ class Worker(QObject):
                     if self.isFinished():
                         raise StopIteration
 
-                    return get_prop(f.props, '_PictType', str, None, '?')
+                    return get_prop(f.props, '_PictType', str, default='?', func="__vspreview__")
 
                 if hasattr(vs.core, "fpng"):
                     clip = vs.core.fpng.Write(clip, filename=curr_filename, compression=conf.compression)
@@ -317,7 +317,7 @@ class FindFramesWorker(QObject):
                     frames = [out.prepared.clip[int(out.to_frame(time))] for out in conf.outputs]
 
                 if all(
-                    get_prop(f.props, '_PictType', str, None, '').encode() in picture_types_b
+                    get_prop(f.props, '_PictType', str, default="", func="__vspreview__").encode() in picture_types_b
                     for f in vs.core.std.Splice(frames, True).frames(close=True)
                 ):
                     break
@@ -371,7 +371,9 @@ class FindFramesWorker(QObject):
                 )
                 _rnum_checked.add(rnum)
 
-                avg = get_prop(stats.get_frame(rnum), "PlaneStatsAverage", float, None, 0)
+                with stats.get_frame(rnum) as f:
+                    avg = get_prop(f, "PlaneStatsAverage", float, default=0, func="__vspreview__")
+
                 if 0.062746 <= avg <= 0.380000:
                     if len(dark) < conf.dark_frames:
                         dark.add(rnum)

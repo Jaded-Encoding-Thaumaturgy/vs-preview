@@ -268,8 +268,8 @@ class MiscToolbar(AbstractToolbar):
 
         try:
             sar = (
-                max(get_prop(output.props, '_SARNum', int), 1),
-                max(get_prop(output.props, '_SARDen', int), 1)
+                max(get_prop(output.props, '_SARNum', int, func="__vspreview__"), 1),
+                max(get_prop(output.props, '_SARDen', int, func="__vspreview__"), 1)
             )
         except FramePropError:
             logging.error('Failed to get SAR properties')

@@ -750,6 +750,21 @@ class CompUploadWidget(ExtendedWidget):
                     int(self.end_rando_frames_control.value())
                 )
 
+                if invalid_frames := [
+                    int(frame) for frame in samples if int(frame) >= end_frame
+                ]:
+                    msg = (
+                        "One or more selected sample frames are after the minimum end frame "
+                        f"of the shortest output clip ({end_frame}): {invalid_frames}. "
+                        "Please check your frame selection and try again."
+                    )
+
+                    logging.error(msg)
+                    self.upload_status_label.setText("Error!")
+                    self.main.show_message(msg)
+
+                    return False
+
                 config = FindFramesWorkerConfiguration(
                     uuid, self.main.current_output, self.outputs, self.main,
                     start_frame, end_frame,

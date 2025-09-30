@@ -862,8 +862,6 @@ class CompUploadWidget(ExtendedWidget):
         min_end_frame = min(end_frame, min_total_frames)
 
         if end_frame > min_total_frames:
-            min_end_frame -= 1
-
             logging.warning(
                 f'End frame "{end_frame}" exceeds the total frames of the shortest output clip ({min_total_frames})! '
                 f'Using "{min_end_frame}" instead.'

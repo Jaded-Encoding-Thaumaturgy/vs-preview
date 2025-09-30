@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QTabWidget
 from vspreview.main import MainWindow
 from vspreview.plugins import AbstractPlugin, PluginConfig
 
-from .slowpics_comp import CompUploadWidget, CompSettings
+from .slowpics_comp import CompUploadWidget, CompSettings, CompHistoryWidget
 
 __all__ = [
     'CompPlugin'
@@ -24,11 +24,13 @@ class CompPlugin(AbstractPlugin, QTabWidget):
 
     def setup_ui(self) -> None:
         self.main_tab = CompUploadWidget(self.settings_tab)
+        self.history_tab = CompHistoryWidget()
 
         self.setUsesScrollButtons(False)
 
         self.addTab(self.main_tab, 'Upload')
         self.addTab(self.settings_tab, 'Settings')
+        self.addTab(self.history_tab, 'History')
 
         self.settings.globals.settings = self.settings_tab
 

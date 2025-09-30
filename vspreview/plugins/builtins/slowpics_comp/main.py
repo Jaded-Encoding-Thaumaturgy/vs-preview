@@ -517,7 +517,7 @@ class CompUploadWidget(ExtendedWidget):
     def on_start_upload(self) -> None:
         if self._thread_running:
             return
-        
+
         self.was_stopped = False
 
         if not self.find_samples(str(uuid4())):
@@ -772,8 +772,13 @@ class CompUploadWidget(ExtendedWidget):
                     num, picture_types, samples
                 )
             except RuntimeError as e:
-                print(e)
-                self.on_end_upload('', True)
+                self.upload_status_label.setText("Error!")
+
+                logging.error(str(e))
+                self.main.show_message(str(e))
+
+                self.on_end_upload("", True)
+
                 return False
 
             self.curr_uuid = config.uuid
@@ -819,9 +824,14 @@ class CompUploadWidget(ExtendedWidget):
 
             try:
                 config = self.get_slowpics_conf(uuid, samples)
-            except RuntimeError as e:
-                print(e)
+            except (RuntimeError, ValueError) as e:
+                self.upload_status_label.setText("Error!")
+
+                logging.error(str(e))
+                self.main.show_message(str(e))
+
                 self.on_end_upload('', True)
+
                 return False
 
             self.curr_uuid = config.uuid

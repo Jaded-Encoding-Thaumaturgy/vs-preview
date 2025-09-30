@@ -746,7 +746,9 @@ class CompUploadWidget(ExtendedWidget):
                     samples.append(self.main.current_output.last_showed_frame)
 
                 start_frame = int(self.start_rando_frames_control.value())
-                end_frame = int(self.end_rando_frames_control.value())
+                end_frame = self._check_end_frame_valid(
+                    int(self.end_rando_frames_control.value())
+                )
 
                 config = FindFramesWorkerConfiguration(
                     uuid, self.main.current_output, self.outputs, self.main,
@@ -826,6 +828,23 @@ class CompUploadWidget(ExtendedWidget):
             self.main.show_message(str(e))
 
         return False
+
+    def _check_end_frame_valid(self, end_frame: int) -> int:
+        if self.main.outputs is None:
+            return end_frame
+
+        min_total_frames = int(min(output.total_frames for output in self.main.outputs))
+        min_end_frame = min(end_frame, min_total_frames)
+
+        if end_frame > min_total_frames:
+            min_end_frame -= 1
+
+            logging.warning(
+                f'End frame "{end_frame}" exceeds the total frames of the shortest output clip ({min_total_frames})! '
+                f'Using "{min_end_frame}" instead.'
+            )
+
+        return int(min_end_frame)
 
     def __getstate__(self) -> dict[str, Any]:
         return super().__getstate__() | {

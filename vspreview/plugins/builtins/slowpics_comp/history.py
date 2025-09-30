@@ -24,7 +24,6 @@ class CompHistoryWidget(ExtendedWidget):
     __slots__ = (
         "history_table",
         "clear_history_button",
-        "refresh_button",
         "trash_dir",
         "url_data",
         "file_watcher",
@@ -68,7 +67,6 @@ class CompHistoryWidget(ExtendedWidget):
 
         self.history_table.itemDoubleClicked.connect(self.open_url)
 
-        self.refresh_button = PushButton("Refresh", self, clicked=self.load_history)
         self.clear_history_button = PushButton(
             "Clear History", self, clicked=self.clear_history
         )
@@ -77,7 +75,7 @@ class CompHistoryWidget(ExtendedWidget):
             self.vlayout,
             [
                 self.history_table,
-                HBoxLayout([self.refresh_button, self.clear_history_button, Stretch()]),
+                HBoxLayout([self.clear_history_button, Stretch()]),
             ],
         )
 

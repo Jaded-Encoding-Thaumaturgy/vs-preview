@@ -212,12 +212,12 @@ class CompHistoryWidget(ExtendedWidget):
         return ""
 
     def _parse_filename(self, filename: str) -> tuple[str, str]:
-        if " - " in filename:
-            parts = filename.split(" - ", 1)
+        parts = filename.rsplit(" - ")
 
-            return parts[0].strip(), parts[1].strip()
+        if len(parts) == 1:
+            return "", filename.strip()
 
-        return "", filename.strip()
+        return " - ".join(parts[:-1]).strip(), parts[-1].strip()
 
     def _set_error_row(self, row: int, error_message: str) -> None:
         self.url_data[row] = ""

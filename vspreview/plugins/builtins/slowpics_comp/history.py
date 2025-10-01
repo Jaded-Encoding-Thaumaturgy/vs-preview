@@ -88,6 +88,9 @@ class CompHistoryWidget(ExtendedWidget):
         self.update_timer.setSingleShot(True)
         self.update_timer.timeout.connect(self.load_history)
 
+        if (parent_dir := self.get_history_directory().parent).exists():
+            self.file_watcher.addPath(str(parent_dir))
+
         if (history_dir := self.get_history_directory()).exists():
             self.file_watcher.addPath(str(history_dir))
 
@@ -130,12 +133,14 @@ class CompHistoryWidget(ExtendedWidget):
                 self.history_table.setRowCount(0)
                 self.url_data.clear()
                 self.update_clear_button_text()
+                self._update_file_watcher()
                 return
 
             if not (url_files := list(history_dir.glob("*.url"))):
                 self.history_table.setRowCount(0)
                 self.url_data.clear()
                 self.update_clear_button_text()
+                self._update_file_watcher()
                 return
 
             self.history_table.setRowCount(len(url_files))
@@ -191,8 +196,12 @@ class CompHistoryWidget(ExtendedWidget):
             return
 
         history_dir = self.get_history_directory()
+        parent_dir = history_dir.parent
 
-        if SPath(path) == history_dir:
+        if SPath(path) == history_dir or SPath(path) == parent_dir:
+            if SPath(path) == parent_dir and history_dir.exists():
+                self._update_file_watcher()
+
             self.update_timer.start(500)
 
     def _update_file_watcher(self) -> None:

@@ -220,13 +220,26 @@ class CompHistoryWidget(ExtendedWidget):
 
         return ""
 
-    def _parse_filename(self, filename: str) -> tuple[str, str]:
-        parts = filename.rsplit(" - ")
+    def _extract_slowpics_id_from_url(self, url: str) -> str:
+        if not url:
+            return "Unknown"
 
-        if len(parts) == 1:
-            return "", filename.strip()
+        if not (parts := url.rsplit("/", 1)):
+            return "Unknown"
 
-        return " - ".join(parts[:-1]).strip(), parts[-1].strip()
+        if "slow.pics" not in parts[0]:
+            return "Unknown"
+
+        return parts[-1]
+
+    def _clean_title_from_filename(self, filename: str, slowpics_id: str) -> str:
+        if not filename or filename == "Unknown":
+            return "Unknown"
+
+        if filename.endswith(f" - {slowpics_id}"):
+            return filename[: -len(f" - {slowpics_id}")].strip()
+
+        return filename.strip() or "Unknown"
 
     def _set_error_row(self, row: int, error_message: str) -> None:
         self.url_data[row] = ""
@@ -238,8 +251,8 @@ class CompHistoryWidget(ExtendedWidget):
         url_content = url_file.read_text()
         url = self._extract_url_from_content(url_content)
 
-        filename = url_file.stem
-        title, slowpics_id = self._parse_filename(filename)
+        slowpics_id = self._extract_slowpics_id_from_url(url)
+        title = self._clean_title_from_filename(url_file.stem, slowpics_id)
 
         created_time = datetime.fromtimestamp(url_file.stat().st_mtime)
         created_str = created_time.strftime("%Y-%m-%d %H:%M:%S")

@@ -424,8 +424,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         except Exception as e:
             load_error = e
 
-        if not reloading:
-            self.shortcuts.setup_shortcuts()
+        self.shortcuts.setup_shortcuts()
         self.apply_stylesheet()
         self.timeline.set_sizes()
 

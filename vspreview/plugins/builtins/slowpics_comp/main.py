@@ -186,7 +186,7 @@ class CompUploadWidget(ExtendedWidget):
 
         self.manual_frames_lineedit = LineEdit('Manual frames: frame,frame,frame', self, )
 
-        self.current_frame_checkbox = CheckBox('Current frame', self, checked=self.settings.default_current_frame)
+        self.current_frame_checkbox = CheckBox('Include current frame', self, checked=self.settings.default_current_frame)
 
         self.collection_name_cache = None
 
@@ -258,6 +258,8 @@ class CompUploadWidget(ExtendedWidget):
                 self.collection_name_button
             ]),
 
+            QLabel('Available replaces: {tmdb_title}, {video_nodes}, {tmdb_year}'),
+
             HBoxLayout([
                 self.manual_frames_lineedit,
                 self.current_frame_checkbox
@@ -288,17 +290,17 @@ class CompUploadWidget(ExtendedWidget):
             self.get_separator(False),
             VBoxLayout([
                 HBoxLayout([
-                    QLabel('Dark Frames:'),
+                    QLabel('Dark frames:'),
                     self.random_dark_frame_edit
                 ]),
                 HBoxLayout([
-                    QLabel('Light Frames:'),
+                    QLabel('Light frames:'),
                     self.random_light_frame_edit
                 ]),
             ]),
             self.get_separator(False),
             VBoxLayout([
-                QLabel('Options:'),
+                QLabel('Collection options:'),
                 HBoxLayout([
                     self.is_public_checkbox,
                     self.is_nsfw_checkbox,
@@ -349,7 +351,7 @@ class CompUploadWidget(ExtendedWidget):
         VBoxLayout(self.vlayout, [
             HBoxLayout([
                 self.output_url_lineedit, self.output_url_copy_button,
-                QLabel('Delete After:'), self.delete_after_lineedit,
+                QLabel('Delete after:'), self.delete_after_lineedit,
                 self.start_upload_button, self.stop_upload_button
             ]),
             HBoxLayout([*self.upload_status_elements])

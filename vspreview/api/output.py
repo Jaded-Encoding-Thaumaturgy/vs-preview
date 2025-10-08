@@ -10,7 +10,7 @@ from types import FrameType
 from typing import Any, Iterable, Sequence, overload
 from jetpytools import KwargsT, to_arr
 
-from vstools import Keyframes, flatten, vs
+from vstools import CustomRuntimeError, Keyframes, flatten, vs
 
 from .info import is_preview
 from .nodes import set_scening, set_timecodes, update_node_info
@@ -174,7 +174,11 @@ def set_output(
     **kwargs: Any
 ) -> None:
     if not is_preview() and not kwargs.get("force_preview", False):
-        return None
+        raise CustomRuntimeError(
+            "`set_output` cannot be used outside of vspreview! "
+            "Did you mean to use `vstools.set_output`?",
+            set_output
+        )
 
     if isinstance(index_or_name, (str, bool)):
         index = None

@@ -27,6 +27,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
     main: MainWindow
     sections: dict[str, AbtractShortcutSection]
     sections_plugins: dict[str, "PluginSection"]
+    shortcuts_setup_already: bool
 
     def __init__(self, main_window: MainWindow) -> None:
         self.main = main_window
@@ -41,6 +42,7 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
             "script_error": ScriptErrorDialogSection(self),
         }
         self.sections_plugins = {ns: PluginSection(self, plugin) for ns, plugin in self.main.plugins.plugins.items()}
+        self.shortcuts_setup_already = False
         super().__init__()
 
     def setup_ui(self) -> None:
@@ -82,8 +84,10 @@ class ShortCutsSettings(AbstractSettingsScrollArea):
         pass
 
     def setup_shortcuts(self) -> None:
-        for section in self.sections.values():
-            section.setup_shortcuts()
+        if not self.shortcuts_setup_already:
+            for section in self.sections.values():
+                section.setup_shortcuts()
+            self.shortcuts_setup_already = True
 
     def __getstate__(self) -> dict[str, Any]:
         state = super().__getstate__()

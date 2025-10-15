@@ -198,7 +198,7 @@ def main(_args: Sequence[str] | None = None, no_exit: bool = False) -> int:
         return k.strip("--"), v
 
     if args.plugins:
-        if file_resolve_plugin._config.namespace == "dev.setsugen.vssource_load":
+        if file_resolve_plugin and file_resolve_plugin._config.namespace == "dev.setsugen.vssource_load":
             additional_files = list[Path](
                 Path(filepath).resolve() for filepath in args.plugins
             )

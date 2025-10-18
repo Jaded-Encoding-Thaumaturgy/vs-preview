@@ -22,10 +22,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "VapourSynth>=70; platform_system != 'Windows'",
-    "VapourSynth>=68; platform_system == 'Windows'",
-    "jetpytools~=1.7.0",
-    "vsjetpack>=0.7.0",
+    "VapourSynth>=71",
+    "jetpytools~=2.0.1",
+    # TODO: Bump to 1.0.0 when it's released
+    "vsjetpack @ git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git",
     "vsengine>=0.2.0",
     "PyQt6>=6.9.0",
     "PyQt6-sip>=13.10.0",
@@ -71,6 +71,10 @@ include = ["/vspreview"]
 
 [tool.hatch.version]
 path = "vspreview/_metadata.py"
+
+# TODO: Remove when vs-jetpack 1.0.0 is released
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.mypy]
 ignore_missing_imports = false

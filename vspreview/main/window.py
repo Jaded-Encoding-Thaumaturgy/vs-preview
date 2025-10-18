@@ -703,7 +703,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             graphics_view.graphics_scene.init_scenes()
 
     def clean_core_references(self) -> None:
-        from vstools.utils.vs_proxy import clear_cache
+        from vstools import vs as vs_proxy
 
         for graphics_view in self.graphics_views:
             graphics_view.graphics_scene.clear()
@@ -722,7 +722,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         try:
             with self.env:
-                clear_cache()
+                vs_proxy.core.clear_cache()
         except Exception:
             ...
 

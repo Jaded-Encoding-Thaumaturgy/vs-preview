@@ -123,8 +123,8 @@ class BenchmarkToolbar(AbstractToolbar):
 
     def run(self) -> None:
         if self.settings.clear_cache_enabled:
-            from vstools.utils.vs_proxy import clear_cache
-            clear_cache()
+            from vstools import vs as vs_proxy
+            vs_proxy.core.clear_cache()
 
         if self.settings.frame_data_sharing_fix_enabled:
             self.main.current_output.update_graphic_item(

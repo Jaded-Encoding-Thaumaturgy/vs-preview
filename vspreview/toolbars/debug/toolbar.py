@@ -71,8 +71,8 @@ class DebugToolbar(AbstractToolbar):
         self.hlayout.addWidget(self.debug_logging_switch)
 
     def test_button_clicked(self, checked: bool | None = None) -> None:
-        from vstools.utils.vs_proxy import clear_cache
-        clear_cache()
+        from vstools import vs as vs_proxy
+        vs_proxy.core.clear_cache()
 
     def exec_button_clicked(self, checked: bool | None = None) -> None:
         try:

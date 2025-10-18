@@ -77,8 +77,8 @@ class Singleton(metaclass=SingletonMeta):
 
 
 class SafeYAMLObjectMetaclass(YAMLObjectMetaclass):
-    def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
-        super(SafeYAMLObjectMetaclass, cls).__init__(name, bases, dct)   # type: ignore
+    def __init__(cls, name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
+        super(SafeYAMLObjectMetaclass, cls).__init__(name, bases, dct)
         yaml_Loader.add_constructor(f'tag:yaml.org,2002:python/object:{cls.__module__}.{cls.__name__}', cls.from_yaml)
 
 # Fallback constructor for python/object tags that just returns None rather than raising an Error,

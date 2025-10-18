@@ -3,12 +3,10 @@ from __future__ import annotations
 import sys
 from functools import partial, wraps
 from string import Template
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 
 from PyQt6.QtCore import QSignalBlocker, QTime
 
-if TYPE_CHECKING:
-    from jetpytools import F, P, R, T
 
 from ..core.types import Time
 
@@ -35,7 +33,7 @@ def exit_func(ret_code: int, no_exit: bool) -> int:
 
 
 # it is a BuiltinMethodType at the same time
-def qt_silent_call(qt_method: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
+def qt_silent_call[**P, R](qt_method: Callable[P, R], *args: P.args, **kwargs: P.kwargs) -> R:
     block = QSignalBlocker(qt_method.__self__)  # type: ignore
     ret = qt_method(*args, **kwargs)
     del block
@@ -68,7 +66,7 @@ def strfdelta(time: Time, output_format: str) -> str:
     )
 
 
-def fire_and_forget(f: F) -> F:
+def fire_and_forget[F: Callable[..., Any]](f: F) -> F:
     from asyncio import new_event_loop, get_running_loop
 
     @wraps(f)
@@ -82,10 +80,10 @@ def fire_and_forget(f: F) -> F:
     return wrapped  # type: ignore
 
 
-def set_status_label(label_before: str, label_after: str = 'Ready') -> Callable[[F], F]:
+def set_status_label[F: Callable[..., Any]](label_before: str, label_after: str = 'Ready') -> Callable[[F], F]:
     from ..core import main_window
 
-    def _decorator(func: Callable[..., T]) -> Any:
+    def _decorator[T](func: Callable[..., T]) -> Any:
         @wraps(func)
         def _wrapped(*args: Any, **kwargs: Any) -> T:
             main = main_window()

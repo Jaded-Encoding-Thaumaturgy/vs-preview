@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta
-from typing import TYPE_CHECKING, Any, cast, no_type_check
+from typing import Any, Self
 
 from PyQt6 import sip
 from yaml import AliasEvent, SafeLoader, ScalarNode, YAMLObject, YAMLObjectMetaclass
@@ -10,9 +10,6 @@ try:
     from yaml import CDumper as yaml_Dumper
 except ImportError:
     from yaml import Dumper as yaml_Dumper  # type: ignore
-
-if TYPE_CHECKING:
-    from jetpytools import T
 
 
 __all__ = [
@@ -41,32 +38,36 @@ yaml_Loader = SaferLoader
 
 
 class SingletonMeta(type):
-    def __init__(cls: type[T], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> None:
-        super().__init__(name, bases, dct)  # type: ignore
+    def __new__[MetaSelf: SingletonMeta](
+        mcls: type[MetaSelf], name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kwargs: Any
+    ) -> MetaSelf:
+        cls = super().__new__(mcls, name, bases, namespace, **kwargs)
+        singleton_new = None
+
+        for entry in cls.__mro__:
+            if entry.__class__ is SingletonMeta:
+                singleton_new = entry.__new__
+
+        if cls.__new__ is not singleton_new:
+            cls.__default_new__ = cls.__new__
+            cls.__new__ = singleton_new
+
+        return cls
+
+    def __init__(cls, name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kwargs: Any) -> None:
+        super().__init__(name, bases, namespace)
         # store the instance in a list rather than directly as a member because otherwise this crashes
         # with PyQt6 on Python 3.12 for reasons I do not pretend to understand
-        cls.instance: list[T] = []  # type: ignore
+        cls.instance = list[Any]()
 
-    def __call__(cls, *args: Any, **kwargs: Any) -> T:  # type: ignore
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         if not cls.instance:
             cls.instance.append(super().__call__(*args, **kwargs))
         return cls.instance[0]
 
-    def __new__(cls: type[type], name: str, bases: tuple[type, ...], dct: dict[str, Any]) -> type:
-        subcls = super(SingletonMeta, cls).__new__(cls, name, bases, dct)  # type: ignore
-        singleton_new = None
-        for entry in subcls.__mro__:
-            if entry.__class__ is SingletonMeta:
-                singleton_new = entry.__new__
-        if subcls.__new__ is not singleton_new:
-            subcls.__default_new__ = subcls.__new__
-            subcls.__new__ = singleton_new
-        return cast(type, subcls)
-
 
 class Singleton(metaclass=SingletonMeta):
-    @no_type_check
-    def __new__(cls: type[T], *args: Any, **kwargs: Any) -> T:
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         if not cls.instance:
             if hasattr(cls, '__default_new__'):
                 cls.instance.append(cls.__default_new__(cls, *args, **kwargs))

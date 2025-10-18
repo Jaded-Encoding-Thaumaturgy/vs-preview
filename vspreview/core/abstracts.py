@@ -14,8 +14,6 @@ from PyQt6.QtWidgets import (
 from .bases import QABC, QYAMLObjectSingleton, SafeYAMLObject
 
 if TYPE_CHECKING:
-    from jetpytools import T
-
     from ..main import MainWindow
     from .custom import Notches
     from .types import Frame, Stretch
@@ -521,13 +519,13 @@ def main_window() -> MainWindow:
     raise RuntimeError
 
 
-class _OneArgumentFunction():
-    def __call__(self, _arg0: T) -> Any:
+class _OneArgumentFunction:
+    def __call__(self, _arg0: Any) -> Any:
         ...
 
 
-class _SetterFunction():
-    def __call__(self, _arg0: str, _arg1: T) -> Any:
+class _SetterFunction:
+    def __call__(self, _arg0: str, _arg1: Any) -> Any:
         ...
 
 
@@ -543,16 +541,16 @@ def storage_err_msg(name: str, level: int = 0) -> str:
 
 
 @overload
-def try_load(
+def try_load[T](
     state: dict[str, Any], name: str, expected_type: type[T],
-    receiver: Literal[None] = ...,
+    receiver: Literal[None] = None,
     error_msg: str | None = None, nullable: bool = False
 ) -> T:
     ...
 
 
 @overload
-def try_load(
+def try_load[T](
     state: dict[str, Any], name: str, expected_type: type[T],
     receiver: T | _OneArgumentFunction | _SetterFunction = ...,
     error_msg: str | None = None, nullable: bool = False
@@ -560,11 +558,11 @@ def try_load(
     ...
 
 
-def try_load(
+def try_load[T](
     state: dict[str, Any], name: str, expected_type: type[T],
-    receiver: T | _OneArgumentFunction | _SetterFunction | None = None,
+    receiver: None | T | _OneArgumentFunction | _SetterFunction = None,
     error_msg: str | None = None, nullable: bool = False
-) -> None:
+) -> T | None:
     import logging
 
     if error_msg is None:
@@ -577,7 +575,7 @@ def try_load(
     except (KeyError, TypeError) as e:
         logging.error(e)
         logging.warning(error_msg)
-        return
+        return None
     finally:
         if nullable:
             value = None
@@ -633,3 +631,5 @@ def try_load(
         except AttributeError as e:
             logging.error(e)
             logging.warning(error_msg)
+
+    return None

@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject
 from PyQt6.QtWidgets import QApplication, QGraphicsScene
-from jetpytools import T
 from vstools import ColorRange, Matrix, Primaries, Transfer, vs
 
 if TYPE_CHECKING:
@@ -113,7 +112,7 @@ class EventFilter(QObject):
         logging.debug(f'Sync average:  {total_sync  / N - 1} ns, {1_000_000_000 / (total_sync  / N - 1)} fps')
 
 
-def measure_exec_time_ms(
+def measure_exec_time_ms[T](
     func: Callable[..., T], return_exec_time: bool = False, print_exec_time: bool = True
 ) -> Callable[..., T | tuple[T, float]]:
     @wraps(func)
@@ -137,7 +136,7 @@ def print_perf_timepoints(*args: int) -> None:
         logging.debug(f'{i}: {args[i] - args[i-1]} ns')
 
 
-def profile_cpu(func: Callable[..., T]) -> Callable[..., T]:
+def profile_cpu[T](func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
     def decorator(*args: Any, **kwargs: Any) -> T:
         from cProfile import Profile

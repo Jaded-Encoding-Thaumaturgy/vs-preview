@@ -367,17 +367,16 @@ class VideoOutput(AbstractYAMLObject):
 
             if PackingType.CURRENT in {PackingType.none_8bit, PackingType.none_10bit}:
                 from functools import partial
+                from itertools import product
                 from multiprocessing.pool import ThreadPool
 
-                from jetpytools import ranges_product
-
-                indices = list(ranges_product(blank.height, blank.width))
+                indices = list(product(range(blank.height), range(blank.width)))
 
                 pool = ThreadPool(self.main.settings.usable_cpus_count * 8)
 
                 def _packing_edarray(
-                    bfp: vs.video_view, src_r: vs.video_view,
-                    src_g: vs.video_view, src_b: vs.video_view,
+                    bfp: vs._video_view, src_r: vs._video_view,
+                    src_g: vs._video_view, src_b: vs._video_view,
                     idx: tuple[int, int]
                 ) -> None:
                     bfp[idx] += (src_r[idx] * r_shift) + (src_g[idx] * g_shift) + (src_b[idx] * b_shift)

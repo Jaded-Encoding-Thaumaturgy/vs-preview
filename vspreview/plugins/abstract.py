@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Iterable, NamedTuple, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, NamedTuple, cast, overload
 
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QSizePolicy, QWidget
-from jetpytools import SPath, T
+from jetpytools import SPath
 
 from ..core import ExtendedWidgetBase, Frame, NotchProvider, QYAMLObject
 from ..core.bases import yaml_Loader
@@ -56,27 +56,14 @@ class PluginSettings(QYAMLObject):
             self.plugin.__setstate__()
 
 
-if TYPE_CHECKING:
-    class _BasePluginConfig(NamedTuple):
-        namespace: str
-        display_name: str
-        settings_type: type[PluginSettings] = PluginSettings
-
-    class _BasePlugin:
-        _config: ClassVar[_BasePluginConfig]
-        settings: PluginSettings
-else:
-    _BasePlugin, _BasePluginConfig = object, Generic[T]
-
-
-class PluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
+class PluginConfig(NamedTuple):
     namespace: str
     display_name: str
     visible_in_tab: bool = True
     settings_type: type[PluginSettings] = PluginSettings
 
 
-class FileResolvePluginConfig(_BasePluginConfig, NamedTuple):  # type: ignore
+class FileResolvePluginConfig(NamedTuple):
     namespace: str
     display_name: str
     settings_type: type[PluginSettings] = PluginSettings
@@ -203,7 +190,7 @@ class AbstractPlugin(ExtendedWidgetBase, NotchProvider):
     def is_notches_visible(self) -> bool:
         return (
             not self._config.visible_in_tab
-        ) or self.index == self.main.plugins.plugins_tab.currentIndex()  # type: ignore
+        ) or self.index == self.main.plugins.plugins_tab.currentIndex()
 
     def __setstate__(self) -> None:
         ...
@@ -252,4 +239,4 @@ class FileResolverPlugin:
         return temp_path
 
 
-_BasePluginT = _BasePlugin | AbstractPlugin | FileResolverPlugin
+_BasePluginT = AbstractPlugin | FileResolverPlugin

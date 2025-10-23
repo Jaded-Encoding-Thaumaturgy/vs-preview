@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 import unicodedata
 from typing import Callable, Final
 from uuid import uuid4
@@ -70,12 +71,13 @@ def do_single_slowpic_upload(sess: Session, collection: str, imageUuid: str, ima
             req = sess.post(
                 f'https://slow.pics/upload/image/{imageUuid}', data=upload_info.to_string(),
                 headers=get_slowpic_upload_headers(upload_info.len, upload_info.content_type, sess),
-                timeout=(60, 20) # read, connect timeout
+                timeout=60
             )
             req.raise_for_status()
             break
         except (HTTPError, Timeout) as e:
             logging.error(e)
+            time.sleep(60) # Any sort of error from slow.pics wait 60 seconds      
 
 def clear_filename(filename: str) -> str:
     blacklist = ['\\', '/', ':', '*', '?', '\'', '<', '>', '|', '\0']

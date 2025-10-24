@@ -178,6 +178,7 @@ class CompUploadWidget(ExtendedWidget):
 
         self.random_frames_control = FrameEdit(self)
         self.random_frames_control.setMaximumWidth(150)
+        self.random_frames_control.setMaximum(75) # Limit it to 75 random images
         self.random_seed_control = LineEdit("Seed", self)
         self.random_seed_control.setMaximumWidth(75)
 

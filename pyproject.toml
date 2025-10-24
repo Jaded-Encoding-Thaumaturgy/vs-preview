@@ -22,7 +22,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "VapourSynth>=71",
+    "VapourSynth>=69",
     "jetpytools~=2.0.1",
     # TODO: Bump to 1.0.0 when it's released
     "vsjetpack @ git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git",

@@ -8,7 +8,7 @@ This program is meant to be paired with a code editor with integrated terminal l
 
 1. [Python](https://www.Python.org/downloads) (3.12+ required)
    - Make sure to install Python to your `PATH`.
-1. [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases) (R68+ required)
+1. [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases) (R71+ required)
 
 # Installation
 
@@ -16,12 +16,6 @@ Install latest stable via pypi:
 
 ```bash
 pip install vspreview
-```
-
-Install latest git:
-
-```bash
-pip install -U git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-preview.git
 ```
 
 # Usage

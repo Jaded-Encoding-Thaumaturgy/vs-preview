@@ -111,6 +111,7 @@ class CompSettings(AbstractSettingsWidget):
         self.default_pict_type_i_checkbox.setChecked(True)
         self.default_pict_type_p_checkbox.setChecked(True)
         self.default_pict_type_b_checkbox.setChecked(True)
+        self.compression_combobox.setCurrentValue("slow")
         # https://github.com/Radarr/Radarr/blob/29ba6fe5563e737f0f87919e48f556e39284e6bb/src/NzbDrone.Common/Cloud/RadarrCloudRequestBuilder.cs#L31
         self.tmdb_apikey_edit.setText('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxYTczNzMzMDE5NjFkMDNmOTdmODUzYTg3NmRkMTIxMiIsInN1YiI6IjU4NjRmNTkyYzNhMzY4MGFiNjAxNzUzNCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.gh1BwogCCKOda6xj9FRMgAAj_RYKMMPC3oNlcBtlmwk')  # noqa
 

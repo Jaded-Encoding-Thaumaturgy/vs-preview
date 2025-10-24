@@ -224,4 +224,4 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
         else:
             org = planes
 
-        return stack_clips(org)
+        return stack_clips(org).std.RemoveFrameProps()

@@ -208,6 +208,8 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
             else:
                 planes = split(node)
         else:
+            if node.format.sample_type is vs.FLOAT:
+                node = depth(node, 32)
             planes = split(node)
 
         planes = [c.text.Text(text=k) for k, c in zip(node.format.name, planes)]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QKeyCombination
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QTabWidget
 from vstools import core, depth, get_lowest_value, get_peak_value, scale_value, split, stack_clips, vs
@@ -61,6 +61,18 @@ class SplitPlanesPlugin(AbstractPlugin, QTabWidget):
             QKeySequence(Qt.Key.Key_Escape),
             "Reset zoom",
         )
+        self.add_shortcut(
+            "copy_frame",
+            self.main_tab,
+            self.copy_frame_to_clipboard,
+            QKeySequence(QKeyCombination(Qt.Modifier.CTRL | Qt.Modifier.SHIFT, Qt.Key.Key_S).toCombined()),
+            "Copy current splitted planes to clipboard"
+        )
+
+    def copy_frame_to_clipboard(self) -> None:
+        assert self.main.clipboard
+        self.main.clipboard.setPixmap(self.main_tab.graphics_scene.current_scene.pixmap())
+        self.main.show_message('Current splitted planes successfully copied to clipboard')
 
     @property
     def current_output(self) -> vs.VideoNode:

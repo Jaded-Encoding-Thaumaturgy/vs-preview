@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, Sequence, cast
+from typing import Any, Sequence
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QTabWidget
-from vstools import (
-    ConstantFormatVideoNode, core, depth, get_lowest_value, get_peak_value, scale_value, split,
-    stack_clips, vs
-)
+from vstools import core, depth, get_lowest_value, get_peak_value, scale_value, split, stack_clips, vs
 
 from vspreview.core import AbstractSettingsWidget, CheckBox, DoubleSpinBox, Frame, HBoxLayout, VBoxLayout, try_load
 from vspreview.main import MainWindow
 from vspreview.plugins import AbstractPlugin, MappedNodesViewPlugin, PluginConfig
 
-__all__ = [
-    'SplitPlanesPlugin'
-]
+__all__ = ["SplitPlanesPlugin"]
 
 
 class SplitPlanesPlugin(AbstractPlugin, QTabWidget):
-    _config = PluginConfig('dev.setsugen.split_planes', 'Split Planes')
+    _config = PluginConfig("dev.setsugen.split_planes", "Split Planes")
 
     def __init__(self, main: MainWindow) -> None:
         self.settings_tab = SplitPlanesSettings(self)
@@ -60,17 +55,20 @@ class SplitPlanesPlugin(AbstractPlugin, QTabWidget):
 
     def add_shortcuts(self) -> None:
         self.add_shortcut(
-            "reset_zoom", self.main_tab, lambda: self.main_tab.zoom_combobox.setCurrentValue(1.0),
-            QKeySequence(Qt.Key.Key_Escape), "Reset zoom"
+            "reset_zoom",
+            self.main_tab,
+            lambda: self.main_tab.zoom_combobox.setCurrentValue(1.0),
+            QKeySequence(Qt.Key.Key_Escape),
+            "Reset zoom",
         )
 
     @property
-    def current_output(self) -> ConstantFormatVideoNode:
-        return cast(ConstantFormatVideoNode, self.main.current_output.source.clip)
+    def current_output(self) -> vs.VideoNode:
+        return self.main.current_output.source.clip
 
-    def previous_output(self, prev_index: int) -> ConstantFormatVideoNode:
+    def previous_output(self, prev_index: int) -> vs.VideoNode:
         assert self.main.toolbars.main.outputs
-        return cast(ConstantFormatVideoNode, self.main.toolbars.main.outputs[prev_index].source.clip)
+        return self.main.toolbars.main.outputs[prev_index].source.clip
 
 
 class SplitPlanesSettings(AbstractSettingsWidget):
@@ -93,11 +91,14 @@ class SplitPlanesSettings(AbstractSettingsWidget):
 
         self.fixed_value_spinbox = DoubleSpinBox(self)
 
-        VBoxLayout(self.vlayout, [
-            HBoxLayout([self.offset_uv_fix_checkbox, self.fixed_value_spinbox]),
-            self.offset_uv_min_checkbox,
-            self.offset_uv_max_checkbox
-        ])
+        VBoxLayout(
+            self.vlayout,
+            [
+                HBoxLayout([self.offset_uv_fix_checkbox, self.fixed_value_spinbox]),
+                self.offset_uv_min_checkbox,
+                self.offset_uv_max_checkbox,
+            ],
+        )
 
     def set_defaults(self) -> None:
         self.offset_uv_fix_checkbox.setChecked(False)
@@ -161,17 +162,17 @@ class SplitPlanesSettings(AbstractSettingsWidget):
 
     def __getstate__(self) -> dict[str, Any]:
         return {
-            'offset_uv_planes_fix': self.offset_uv_planes_fix,
-            'offset_uv_planes_min': self.offset_uv_planes_min,
-            'offset_uv_planes_max': self.offset_uv_planes_max,
-            'offset_uv_planes_fix_value': self.offset_uv_planes_fix_value,
+            "offset_uv_planes_fix": self.offset_uv_planes_fix,
+            "offset_uv_planes_min": self.offset_uv_planes_min,
+            "offset_uv_planes_max": self.offset_uv_planes_max,
+            "offset_uv_planes_fix_value": self.offset_uv_planes_fix_value,
         }
 
     def __setstate__(self, state: dict[str, Any]) -> None:
-        try_load(state, 'offset_uv_planes_fix', bool, self.offset_uv_fix_checkbox_clicked)
-        try_load(state, 'offset_uv_planes_min', bool, self.offset_uv_min_checkbox_clicked)
-        try_load(state, 'offset_uv_planes_max', bool, self.offset_uv_max_checkbox_clicked)
-        try_load(state, 'offset_uv_planes_fix_value', float, self.fixed_value_spinbox.setValue)
+        try_load(state, "offset_uv_planes_fix", bool, self.offset_uv_fix_checkbox_clicked)
+        try_load(state, "offset_uv_planes_min", bool, self.offset_uv_min_checkbox_clicked)
+        try_load(state, "offset_uv_planes_max", bool, self.offset_uv_max_checkbox_clicked)
+        try_load(state, "offset_uv_planes_fix_value", float, self.fixed_value_spinbox.setValue)
 
 
 class SplitPlanesViewPlugin(MappedNodesViewPlugin):
@@ -179,13 +180,13 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
         super().__init__(main)
         self.splitplanes_settings = settings
 
-    def get_node(self, node: ConstantFormatVideoNode) -> vs.VideoNode:  # type: ignore
+    def get_node(self, node: vs.VideoNode) -> vs.VideoNode:
         if node.format.color_family is vs.GRAY:
             return node
 
         if node.format.color_family is vs.YUV:
             if node.format.sample_type is vs.FLOAT:
-                node = depth(node, 32).std.Expr(['x', 'x 0.5 +'])  # type: ignore
+                node = core.std.Expr(node, ["", "x 0.5 +"], node.format.replace(bits_per_sample=32).id)
 
             def offset_uv_planes(value: float, plane_stats: str) -> list[vs.VideoNode]:
                 planes = split(node)
@@ -194,13 +195,14 @@ class SplitPlanesViewPlugin(MappedNodesViewPlugin):
                     value += 0.5
 
                 planes[1:] = [
-                    p.std.PlaneStats().akarin.Expr(f'x {value} x.PlaneStats{plane_stats} - +')
-                    for p in planes[1:]
+                    p.std.PlaneStats().akarin.Expr(f"x {value} x.PlaneStats{plane_stats} - +") for p in planes[1:]
                 ]
                 return planes
 
             if self.splitplanes_settings.offset_uv_planes_fix:
-                planes = split(core.akarin.Expr(node, ['x', f'x {self.splitplanes_settings.offset_uv_planes_fix_value} +']))
+                planes = split(
+                    core.akarin.Expr(node, ["", f"x {self.splitplanes_settings.offset_uv_planes_fix_value} +"])
+                )
             elif self.splitplanes_settings.offset_uv_planes_min:
                 planes = offset_uv_planes(get_lowest_value(node, True), "Min")
             elif self.splitplanes_settings.offset_uv_planes_max:

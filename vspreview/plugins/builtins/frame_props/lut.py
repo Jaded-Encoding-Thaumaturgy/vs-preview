@@ -8,13 +8,14 @@ from vstools import ChromaLocation, ColorRange, FieldBased, Matrix, Primaries, P
 __all__ = ["frame_props_lut"]
 
 
-def _create_enum_props_lut(enum: type[PropEnum], pretty_name: str) -> tuple[str, dict[str, dict[int, str]]]:
-    return enum.prop_key, {
-        pretty_name: {
-            idx: enum.from_param(idx).pretty_string if enum.is_valid(idx) else "Invalid"
-            for idx in range(min(enum.__members__.values()) - 1, max(enum.__members__.values()) + 1)
-        }
-    }
+def _create_enum_props_lut(enum_props: dict[type[PropEnum], str]) -> dict[str, dict[str, dict[PropEnum, str]]]:
+    enum_props_lut = dict[str, dict[str, dict[PropEnum, str]]]()
+
+    for enum, description in enum_props.items():
+        # Iterating through the enum guarantees no aliases
+        enum_props_lut[enum.prop_key] = {description: {e: e.pretty_string for e in enum}}
+
+    return enum_props_lut
 
 
 # Utils
@@ -131,20 +132,15 @@ vmaf_props_lut: dict[str, dict[str, Callable[[Any], str]]] = {
     "psnr_hvs_cr": {"PSNR (HVS) Chroma Red (Cr)": lambda psnr_hvs_cr: _handle_nan(psnr_hvs_cr)},
 }
 
-enum_props_lut = dict(
-    [
-        _create_enum_props_lut(enum, name)
-        for enum, name in list[tuple[type[PropEnum], str]](
-            [
-                (FieldBased, "Field Type"),
-                (Matrix, "Matrix"),
-                (Transfer, "Transfer"),
-                (Primaries, "Primaries"),
-                (ChromaLocation, "Chroma Location"),
-                (ColorRange, "Color Range"),
-            ]
-        )
-    ]
+enum_props_lut = _create_enum_props_lut(
+    {
+        FieldBased: "Field Type",
+        Matrix: "Matrix",
+        Transfer: "Transfer",
+        Primaries: "Primaries",
+        ChromaLocation: "Chroma Location",
+        ColorRange: "Color Range",
+    }
 )
 
 # Combine all the LUTs

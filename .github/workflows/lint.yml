@@ -3,7 +3,7 @@ name: Lint Python code with Ruff
 on:
   push:
     branches:
-      - master
+      - v0.17.X
     paths:
       - '**.py'
   pull_request:

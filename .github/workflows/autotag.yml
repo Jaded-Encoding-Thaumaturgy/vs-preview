@@ -2,7 +2,7 @@ name: Check and create tag
 on:
   push:
     branches:
-      - master
+      - v0.17.X
     paths:
       - vspreview/_metadata.py
 

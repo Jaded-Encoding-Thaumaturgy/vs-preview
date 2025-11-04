@@ -321,7 +321,7 @@ class VideoOutput(AbstractYAMLObject):
         elif src.format.color_family == vs.GRAY:
             clip = clip.std.RemoveFrameProps('_Matrix')
 
-        if resizer_kwargs['transfer_in'] == Transfer.SRGB:
+        if resizer_kwargs['transfer_in'] == Transfer.IEC_61966_2_1:
             resizer_kwargs['transfer'] = resizer_kwargs['transfer_in']
 
         if isinstance(resizer_kwargs['range_in'], ColorRange):

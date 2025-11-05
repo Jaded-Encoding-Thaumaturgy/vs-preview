@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
       - name: Get version number
         run: |
@@ -19,13 +19,13 @@ jobs:
       - name: Check if version exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: mukunku/tag-exists-action@v1.1.0
+        uses: mukunku/tag-exists-action@v1.6.0
         id: tagcheck
         with:
           tag: ${{ env.CURR_VER }}
 
       - name: Make tag
-        uses: actions/github-script@v3
+        uses: actions/github-script@v8
         if: steps.tagcheck.outputs.exists == 'false'
         with:
           github-token: ${{ secrets.WORKFLOW_TOKEN }}

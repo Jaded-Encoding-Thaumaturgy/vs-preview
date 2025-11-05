@@ -26,12 +26,12 @@ dependencies = [
     # TODO: Bump to 1.0.0 when it's released
     "vsjetpack @ git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git",
     "vsengine>=0.2.0",
-    "PyQt6>=6.9.0",
-    "PyQt6-sip>=13.10.0",
+    "PyQt6~=6.9.0",
+    "PyQt6-sip~=13.10.0",
     "QDarkStyle>=3.2.3",
-    "PyYAML>=6.0.2",
+    "PyYAML~=6.0.2",
     "matplotlib>=3.10.3",
-    "requests>=2.31.0",
+    "requests>=2.32.0",
     "requests-toolbelt>=1.0.0",
     "numpy>=2.3.1",
     "pywin32>=307; platform_system == 'Windows'",
@@ -47,17 +47,16 @@ vspreview = "vspreview.init:main"
 
 [dependency-groups]
 dev = [
-    "mypy==1.15.0",
-    "numpy==2.3.1",
-    "ruff==0.11.8",
-    "twine==6.1.0",
-    "types-pillow==10.2.0.20240822",
-    "types-psutil==7.0.0.20250401",
-    "types-pyyaml==6.0.12.20250516",
+    "mypy>=1.18.0",
+    "ruff>=0.14.0",
+    "twine>=6.1.0",
+    "types-pillow>=10.2.0.20240822",
+    "types-psutil>=7.0.0.20250401",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 
 [build-system]
-requires = ["hatchling==1.27.0"]
+requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -107,6 +106,3 @@ show_error_codes = true
 color_output = true
 error_summary = true
 pretty = true
-
-[tool.uv]
-resolution = "lowest-direct"

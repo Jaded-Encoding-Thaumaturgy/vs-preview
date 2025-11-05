@@ -23,7 +23,8 @@ updates:
 
   - package-ecosystem: "github-actions"
     directories:
-      - ".github/*"
+      - "/.github/workflows"
+      - "/.github/actions"
     patterns: ["*"]
     multi-ecosystem-group: "infrastructure"
 

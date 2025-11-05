@@ -15,15 +15,15 @@ multi-ecosystem-groups:
 
 updates:
   - package-ecosystem: "pip"
-    directories:
-      - ".github/*"
+    directory: /
     patterns: ["*"]
     multi-ecosystem-group: "infrastructure"
 
     versioning-strategy: increase-if-necessary
 
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - ".github/*"
     patterns: ["*"]
     multi-ecosystem-group: "infrastructure"
 

@@ -22,9 +22,7 @@ updates:
     versioning-strategy: increase-if-necessary
 
   - package-ecosystem: "github-actions"
-    directories:
-      - "/.github/workflows"
-      - "/.github/actions"
+    directory: /
     patterns: ["*"]
     multi-ecosystem-group: "infrastructure"
 

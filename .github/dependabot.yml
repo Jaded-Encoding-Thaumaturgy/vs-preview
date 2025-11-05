@@ -15,7 +15,8 @@ multi-ecosystem-groups:
 
 updates:
   - package-ecosystem: "pip"
-    directory: "/"
+    directories:
+      - ".github/*"
     patterns: ["*"]
     multi-ecosystem-group: "infrastructure"
 

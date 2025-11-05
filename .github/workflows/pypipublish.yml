@@ -1,42 +1,42 @@
 name: Publish releases to PyPI
 on:
   push:
-   tags:
+    tags:
       - v[0-9]+**
 
 jobs:
-    package_build:
-        name: Build and push to PyPI
-        runs-on: ubuntu-latest
-        steps:
-        - uses: actions/checkout@v5
+  package_build:
+    name: Build and push to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
 
-        - name: Prep Python
-          uses: actions/setup-python@v6
-          with:
-            python-version: '3.12'
+      - name: Prep Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
-        - name: Install uv
-          uses: astral-sh/setup-uv@v7
-          with:
-            enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
 
-        - name: Set up VapourSynth
-          uses: ./.github/actions/setup-vapoursynth
-          with:
-            vapoursynth-version: 70
+      - name: Set up VapourSynth
+        uses: ./.github/actions/setup-vapoursynth
+        with:
+          vapoursynth-version: 70
 
-        - name: Install dependencies
-          run: uv sync --locked
+      - name: Install dependencies
+        run: uv sync --locked
 
-        - name: Build
-          run: uv build
+      - name: Build
+        run: uv build
 
-        - name: Check the output
-          run: uv run twine check --strict dist/*
+      - name: Check the output
+        run: uv run twine check --strict dist/*
 
-        - name: Publish to PyPI
-          uses: pypa/gh-action-pypi-publish@release/v1
-          with:
-            user: __token__
-            password: ${{ secrets.PYPI_TOKEN }}
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}

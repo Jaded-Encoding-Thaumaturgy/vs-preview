@@ -13,7 +13,7 @@ from .abstract import AbstractPlugin, FileResolverPlugin
 BASE_URL = 'https://api.github.com/repos'
 REPO_NAME = 'vs-preview-plugins'
 PLUGINS_PATH = f'Jaded-Encoding-Thaumaturgy/{REPO_NAME}'
-BRANCH = 'master'
+BRANCH = 'stable'
 
 CONTENT_URL = f'https://raw.githubusercontent.com/{PLUGINS_PATH}/{BRANCH}/{{path}}'
 

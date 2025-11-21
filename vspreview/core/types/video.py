@@ -19,7 +19,7 @@ from .misc import ArInfo, CroppingInfo, VideoOutputNode
 from .units import Frame, Time
 
 if TYPE_CHECKING:
-    from vstools import VideoFormatT
+    from vstools import VideoFormatLike
 
     from ..custom.graphicsview import GraphicsImageItem
 
@@ -37,7 +37,7 @@ class PackingTypeInfo:
     _getid = iter_count()
 
     def __init__(
-        self, name: str, vs_format: VideoFormatT, qt_format: QImage.Format, shuffle: bool, can_playback: bool = True
+        self, name: str, vs_format: VideoFormatLike, qt_format: QImage.Format, shuffle: bool, can_playback: bool = True
     ):
         from ctypes import c_char
 
@@ -262,7 +262,6 @@ class VideoOutput(AbstractYAMLObject):
             self.ar_values = ArInfo(1, 1)
 
     def prepare_vs_output(self, clip: vs.VideoNode, pack_rgb: bool = True, fmt: vs.VideoFormat | None = None) -> vs.VideoNode:
-        from jetpytools import KwargsT
         from vstools import (
             ChromaLocation, ColorRange, DitherType, Matrix, Primaries, Transfer, depth, video_heuristics
         )
@@ -304,7 +303,7 @@ class VideoOutput(AbstractYAMLObject):
         ):
             standard_gamut = {}
 
-        resizer_kwargs = KwargsT({
+        resizer_kwargs = {
             'format': fallback(fmt, PackingType.CURRENT.vs_format if pack_rgb else PackingType.CURRENT.vs_alpha_format),
             'matrix_in': Matrix.BT709,
             'transfer_in': Transfer.BT709,
@@ -314,7 +313,7 @@ class VideoOutput(AbstractYAMLObject):
         } | heuristics | standard_gamut | {
             'filter_param_a': self.main.toolbars.playback.settings.kernel['b'],
             'filter_param_b': self.main.toolbars.playback.settings.kernel['c']
-        })
+        }
 
         if src.format.color_family == vs.RGB:
             del resizer_kwargs['matrix_in']
@@ -337,7 +336,7 @@ class VideoOutput(AbstractYAMLObject):
         if src.format.id == to_fmt:
             return clip
 
-        if dither_type.is_fmtc:
+        if dither_type.is_fmtc():
             temp_fmt = to_fmt.replace(sample_type=src.format.sample_type, bits_per_sample=src.format.bits_per_sample)
             clip = clip.resize.Bicubic(**resizer_kwargs, format=temp_fmt.id)
             clip = depth(clip, to_fmt, dither_type=dither_type)

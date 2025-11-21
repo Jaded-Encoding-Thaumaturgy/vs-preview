@@ -23,8 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "VapourSynth>=69",
-    # TODO: Bump to 1.0.0 when it's released
-    "vsjetpack @ git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git",
+    "vsjetpack>=0.8.0",
     "vsengine>=0.2.0",
     "PyQt6~=6.10.0",
     "PyQt6-sip~=13.10.0",
@@ -76,6 +75,5 @@ include = ["vspreview", "docs"]
 [tool.hatch.build.targets.wheel]
 packages = ["vspreview"]
 
-# TODO: Remove when vs-jetpack 1.0.0 is released
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.uv.sources]
+vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }

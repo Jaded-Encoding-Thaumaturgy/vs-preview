@@ -13,7 +13,7 @@ from typing import Sequence
 from PyQt6.QtWidgets import QApplication
 
 from .core.logger import set_log_level, setup_logger
-from ._metadata import __version__
+from . import __version__
 
 # import vsenv as early as possible:
 # This is so other modules cannot accidentally use and lock us into a different policy.

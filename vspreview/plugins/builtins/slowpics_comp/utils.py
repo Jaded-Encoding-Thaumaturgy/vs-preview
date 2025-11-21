@@ -15,7 +15,7 @@ from jetpytools import SPath
 
 from vspreview.core import VideoOutput
 from vspreview.main import MainWindow
-from vspreview._metadata import __version__
+from vspreview import __version__
 
 KEYWORD_RE = re.compile(r'\{[a-z0-9_-]+\}', flags=re.IGNORECASE)
 MAX_ATTEMPTS_PER_PICTURE_TYPE: Final[int] = 50

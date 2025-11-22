@@ -1,30 +1,32 @@
 name: Publish releases to PyPI
 on:
-  push:
-    tags:
-      - v[0-9]+**
+  release:
+    types: published
+  workflow_dispatch:
+
+env:
+  VAPOURSYNTH_VERSION: 72
+  PYTHON_VERSION: 3.14
 
 jobs:
   package_build:
     name: Build and push to PyPI
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-      - name: Prep Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
+      - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
+          python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
 
-      - name: Set up VapourSynth
-        uses: ./.github/actions/setup-vapoursynth
+      - name: Set up VapourSynth ${{ env.VAPOURSYNTH_VERSION }}
+        uses: Jaded-Encoding-Thaumaturgy/setup-vapoursynth@v1
         with:
-          vapoursynth-version: 70
+          vapoursynth-version: ${{ env.VAPOURSYNTH_VERSION }}
 
       - name: Install dependencies
         run: uv sync --locked
@@ -40,3 +42,9 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Post webhook for failure
+        if: failure()
+        uses: Jaded-Encoding-Thaumaturgy/discord-failure-notifier@v1
+        with:
+          webhook-url: ${{ secrets.WEBHOOK_URL }}

@@ -23,8 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "VapourSynth>=69",
-    # TODO: Bump to 1.0.0 when it's released
-    "vsjetpack @ git+https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git",
+    "vsjetpack>=0.8.0",
     "vsengine>=0.2.0",
     "PyQt6~=6.10.0",
     "PyQt6-sip~=13.10.0",
@@ -56,53 +55,25 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.27.0"]
+requires = ["hatchling>=1.27.0", "versioningit"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "versioningit"
+default-version = "0.0.0+unknown"
+next-version = "minor-release"
+write = { file = "vspreview/_version.py", template = "__version__ = \"{normalized_version}\"\n__version_tuple__ = {version_tuple}" }
+
+[tool.hatch.version.format]
+distance = "{next_version}.dev{distance}+{vcs}{rev}"
+dirty = "{next_version}+dirty"
+distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.dirty"
+
+[tool.hatch.build.targets.sdist]
+include = ["vspreview", "docs"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["vspreview"]
-include = ["vspreview/py.typed"]
-exclude = ["docs", "stubs"]
 
-[tool.hatch.build.targets.sdist]
-include = ["/vspreview"]
-
-[tool.hatch.version]
-path = "vspreview/_metadata.py"
-
-# TODO: Remove when vs-jetpack 1.0.0 is released
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.mypy]
-ignore_missing_imports = false
-
-disallow_any_generics = true
-
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-
-no_implicit_optional = true
-strict_optional = true
-
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_return_any = true
-warn_unreachable = true
-
-ignore_errors = false
-
-allow_untyped_globals = false
-allow_redefinition = false
-implicit_reexport = false
-strict_equality = true
-
-show_error_context = false
-show_column_numbers = true
-show_error_codes = true
-color_output = true
-error_summary = true
-pretty = true
+[tool.uv.sources]
+vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }

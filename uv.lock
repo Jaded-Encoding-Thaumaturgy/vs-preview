@@ -1134,7 +1134,7 @@ wheels = [
 [[package]]
 name = "vsjetpack"
 version = "0.9.0.dev200+g4e8cc4a4"
-source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git#4e8cc4a4fba75a32410528376c6b2d85f53cfa59" }
+source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack?branch=main#4e8cc4a4fba75a32410528376c6b2d85f53cfa59" }
 dependencies = [
     { name = "jetpytools" },
     { name = "numpy" },
@@ -1185,7 +1185,7 @@ requires-dist = [
     { name = "requests-toolbelt", specifier = ">=1.0.0" },
     { name = "vapoursynth", specifier = ">=69" },
     { name = "vsengine", specifier = ">=0.2.0" },
-    { name = "vsjetpack", git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack.git" },
+    { name = "vsjetpack", git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack?branch=main" },
 ]
 
 [package.metadata.requires-dev]

@@ -74,6 +74,3 @@ include = ["vspreview", "docs"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["vspreview"]
-
-[tool.uv.sources]
-vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }

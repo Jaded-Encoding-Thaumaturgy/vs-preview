@@ -69,6 +69,9 @@ distance = "{next_version}.dev{distance}+{vcs}{rev}"
 dirty = "{next_version}+dirty"
 distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.dirty"
 
+[tool.hatch.build]
+artifacts = ["vspreview/_version.py"]
+
 [tool.hatch.build.targets.sdist]
 include = ["vspreview", "docs"]
 

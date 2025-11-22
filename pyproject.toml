@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "VapourSynth>=69",
-    "vsjetpack>=0.8.0",
+    "vsjetpack>=1.0.0rc1",
     "vsengine>=0.2.0",
     "PyQt6~=6.10.0",
     "PyQt6-sip~=13.10.0",

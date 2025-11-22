@@ -1133,13 +1133,17 @@ wheels = [
 
 [[package]]
 name = "vsjetpack"
-version = "0.9.0.dev200+g4e8cc4a4"
-source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack?branch=main#4e8cc4a4fba75a32410528376c6b2d85f53cfa59" }
+version = "1.0.0rc1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jetpytools" },
     { name = "numpy" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
     { name = "vapoursynth" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/d8/61cbd1003e703ae1415edd751f41e0677a0ac1a0bfd092c90a8c0164dc15/vsjetpack-1.0.0rc1.tar.gz", hash = "sha256:73630ad71cda6d52dd4b2430cd95d024f76a50184f285607d6635eafdb97f7ff", size = 372298, upload-time = "2025-11-21T23:12:44.033Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/5d/3d75b81fe13de60e54daac754edf5aff903118df54d5c516d50f62760bac/vsjetpack-1.0.0rc1-py3-none-any.whl", hash = "sha256:4d0ca39b84ddd613d60e70f4b0cd0bae7c0fc7b8cbbf7cf4ebdc407d58bb4bf3", size = 409610, upload-time = "2025-11-21T23:12:42.165Z" },
 ]
 
 [[package]]
@@ -1185,7 +1189,7 @@ requires-dist = [
     { name = "requests-toolbelt", specifier = ">=1.0.0" },
     { name = "vapoursynth", specifier = ">=69" },
     { name = "vsengine", specifier = ">=0.2.0" },
-    { name = "vsjetpack", git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack?branch=main" },
+    { name = "vsjetpack", specifier = ">=1.0.0rc1" },
 ]
 
 [package.metadata.requires-dev]

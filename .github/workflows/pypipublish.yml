@@ -9,7 +9,7 @@ jobs:
     name: Build and push to PyPI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Prep Python
         uses: actions/setup-python@v6

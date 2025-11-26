@@ -23,7 +23,7 @@ jobs:
         run: uv build
 
       - name: Check the output
-        run: uv run twine check --strict dist/*
+        run: uv run --only-dev twine check --strict dist/*
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

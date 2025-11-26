@@ -468,15 +468,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         te = TracebackException.from_exception(e.parent_error)
         logging.error(''.join(te.format()))
 
-        if isinstance(e.parent_error, SyntaxError) and (
-            'source code string cannot contain null bytes' in str(
-                e.parent_error).lower()
-        ):
-            logging.error(
-                'If you\'re trying to open a video you first have to install '
-                'the vssource package and have it working with a source plugin!'
-            )
-
         self.script_exec_failed = True
         self.handle_script_error(
             '\n'.join([

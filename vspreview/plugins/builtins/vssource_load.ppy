@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
+from vssource import BestSource
+from vstools import set_output
 
 if __name__ != "__vspreview__":
     from vspreview.plugins import (
@@ -22,10 +24,8 @@ if __name__ != "__vspreview__":
                 return True
 
             try:
-                from vssource import parse_video_filepath, source
 
-                parse_video_filepath(filepath)
-                source(filepath).get_frame(0).close()
+                BestSource.source(filepath, bits=0).get_frame(0).close()
 
                 return True
             except Exception:
@@ -38,8 +38,7 @@ if __name__ != "__vspreview__":
                 Path(__file__), str(filepath), dict(filepath=filepath), False
             )
 else:
-    from vssource import parse_video_filepath, source
-    from vstools import set_output
+
 
     if TYPE_CHECKING:
         filepath: Path = Path()
@@ -52,13 +51,12 @@ else:
     if filepath.is_dir():
         for file in filepath.glob(pattern):
             try:
-                parse_video_filepath(file)
-                set_output(source(file), file.name)
+                set_output(BestSource.source(file, bits=0), file.name)
             except Exception:
                 ...
     else:
-        set_output(source(filepath), filepath.name)
+        set_output(BestSource.source(filepath, bits=0), filepath.name)
 
     if "additional_files" in locals():
         for file in additional_files:
-            set_output(source(file), file.name)
+            set_output(BestSource.source(file, bits=0), file.name)

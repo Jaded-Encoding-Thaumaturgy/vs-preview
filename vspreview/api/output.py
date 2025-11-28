@@ -7,7 +7,7 @@ from fractions import Fraction
 from os import PathLike
 from types import FrameType
 from typing import Any, Sequence, overload
-from jetpytools import normalize_seq, to_arr, KwargsNotNone
+from jetpytools import to_arr, KwargsNotNone
 
 from vstools import Keyframes, flatten, vs, VideoNodeIterable, AudioNodeIterable, RawNodeIterable
 
@@ -113,11 +113,13 @@ def set_output(
     nodes = list(flatten(node))
 
     indices = to_arr(index) if index is not None else [max(outputs, default=-1) + 1]
-    indices = normalize_seq(indices, len(nodes))
+
+    while len(indices) < len(nodes):
+        indices.append(indices[-1] + 1)
 
     frame_depth = kwargs.pop("frame_depth", 1) + 1
 
-    for i, n in zip(indices, nodes):
+    for i, n in zip(indices[: len(nodes)], nodes):
         if i in outputs:
             logging.warning(f"Output index {i} already in use; overwriting.")
 

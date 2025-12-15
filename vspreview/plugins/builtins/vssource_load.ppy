@@ -23,6 +23,9 @@ if __name__ != "__vspreview__":
             if filepath.is_dir():
                 return True
 
+            if filepath.suffix in (".py", ".vpy"):
+                return False
+
             try:
 
                 BestSource.source(filepath, bits=0).get_frame(0).close()

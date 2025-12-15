@@ -462,9 +462,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         if not isinstance(e, vpy.ExecutionFailed):
             e = vpy.ExecutionFailed(e)
 
-        self.hide()
-        self.apply_stylesheet()
-
         te = TracebackException.from_exception(e.parent_error)
         logging.error(''.join(te.format()))
 
@@ -872,6 +869,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             view.setZoom(bound_view.zoom_combobox.currentData())
 
     def handle_script_error(self, message: str, script: bool = False) -> None:
+        self.hide()
+        self.apply_stylesheet()
+
         self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.setWindowTitle('Script Loading Error' if script else 'Program Error')

@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QColor, QMouseEvent, QNativeGestureEvent, QPainter, QPalette, QPixmap, QResizeEvent, QTransform, QWheelEvent
 )
@@ -178,6 +178,8 @@ class GraphicsView(QGraphicsView):
         self.angleRemainder = 0
         self.zoomValue = 0.0
         self.currentZoom = 0.0
+        self._lastDevicePixelRatio = 0.0
+        self._zoomNeedsRefresh = False
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.drag_mode = self.dragMode()
 
@@ -265,15 +267,47 @@ class GraphicsView(QGraphicsView):
             viewport = self.viewport()
             value = min(viewport.width() / self.content_width, viewport.height() / self.content_height)
 
-        self.currentZoom = value / self.devicePixelRatio()
+        current_dpr = self.devicePixelRatio()
+        self._lastDevicePixelRatio = current_dpr
+        self.currentZoom = value / current_dpr
 
         self.setTransform(QTransform().scale(self.currentZoom, self.currentZoom))
         self.dragEvent.emit(DragEventType.repaint)
+
+    def _refreshZoomForDPR(self) -> None:
+        """Refresh zoom if devicePixelRatio has changed."""
+        current_dpr = self.devicePixelRatio()
+
+        # Check if DPR has changed (> 0.01 tolerance for floating point)
+        if abs(current_dpr - self._lastDevicePixelRatio) > 0.01:
+            self._lastDevicePixelRatio = current_dpr
+
+            # Re-apply current zoom with new DPR
+            if not self.autofit:
+                current_zoom_value = self.zoom_combobox.currentData()
+                if current_zoom_value and current_zoom_value > 0:
+                    self._setZoom(current_zoom_value)
+            else:
+                self._setZoom(None)  # Re-calculate autofit
+
+    def showEvent(self, event: Any) -> None:
+        """Handle show event to refresh zoom with correct DPR."""
+        super().showEvent(event)
+
+        # On first show, refresh zoom with now-accurate devicePixelRatio
+        if self._zoomNeedsRefresh:
+            self._zoomNeedsRefresh = False
+            self._refreshZoomForDPR()
 
     def event(self, event: QEvent) -> bool:
         if self.underReload:
             event.ignore()
             return False
+
+        # Handle screen changes that might affect DPR (if supported by Qt version)
+        if hasattr(QEvent, 'ScreenChangeEvent') and event.type() == QEvent.ScreenChangeEvent:  # type: ignore
+            # Defer DPR check slightly to let Qt update screen info
+            QTimer.singleShot(50, self._refreshZoomForDPR)
 
         if isinstance(event, QNativeGestureEvent):
             typ = event.gestureType()
@@ -372,7 +406,13 @@ class GraphicsView(QGraphicsView):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self.setZoom(None)
+
+        # Check if DPR changed (can happen on some platforms)
+        self._refreshZoomForDPR()
+
+        # Apply autofit zoom if enabled
+        if self.autofit:
+            self.setZoom(None)
 
     def propagate_move_event(self, _: Any = None) -> None:
         scrollbarW, scrollbarH = self.horizontalScrollBar(), self.verticalScrollBar()

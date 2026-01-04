@@ -336,7 +336,7 @@ class VideoOutput(AbstractYAMLObject):
         if src.format.id == to_fmt:
             return clip
 
-        if dither_type.is_fmtc():
+        if dither_type.is_fmtc:
             temp_fmt = to_fmt.replace(sample_type=src.format.sample_type, bits_per_sample=src.format.bits_per_sample)
             clip = clip.resize.Bicubic(**resizer_kwargs, format=temp_fmt.id)
             clip = depth(clip, to_fmt, dither_type=dither_type)

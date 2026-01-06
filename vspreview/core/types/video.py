@@ -187,7 +187,7 @@ class VideoOutput(AbstractYAMLObject):
                     play_fps = self.main.toolbars.playback.get_true_fps(0, self.props, True)
                 except Exception:
                     if isinstance(timecodes, list):
-                        play_fps = timecodes[self.last_showed_frame]
+                        play_fps = timecodes[self.last_showed_frame].to_fraction()
                     else:
                         play_fps = Fraction(24000, 1001)
             else:
@@ -221,7 +221,7 @@ class VideoOutput(AbstractYAMLObject):
                     )
 
                 self.main.norm_timecodes[index] = norm_timecodes  # type: ignore
-                self.play_fps = Fraction(norm_timecodes[self.last_showed_frame])
+                self.play_fps = norm_timecodes[self.last_showed_frame].to_fraction()
         elif not hasattr(self, 'play_fps'):
             if self.fps_num == 0 and self._stateset:
                 self.play_fps = self.main.toolbars.playback.get_true_fps(
@@ -236,7 +236,7 @@ class VideoOutput(AbstractYAMLObject):
         if index in self.main.norm_timecodes:
             norm_timecodes = self.main.norm_timecodes[index]  # type: ignore
 
-            if (vfr := len(set(norm_timecodes)) > 1) or self.fps_num == 0:
+            if (vfr := len(set(d.to_fraction() for d in norm_timecodes)) > 1) or self.fps_num == 0:
                 if not self.main.toolbars.playback.fps_variable_checkbox.isChecked():
                     self.main.toolbars.playback.fps_variable_checkbox.setChecked(True)
 

@@ -187,7 +187,7 @@ class PlaybackToolbar(AbstractToolbar):
         if (
             hasattr(self.main.current_output, 'got_timecodes') and self.main.current_output.got_timecodes and not force
         ):
-            return Fraction(1 / self.main.current_output.timecodes[int(n)])
+            return Fraction(1 / self.main.current_output.timecodes[int(n)].to_fraction())
 
         if any({x not in frameprops for x in {'_DurationDen', '_DurationNum'}}):
             raise RuntimeError(

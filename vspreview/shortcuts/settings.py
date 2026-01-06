@@ -114,6 +114,7 @@ class GraphicsViewSection(AbtractShortcutSectionYAMLObjectSingleton):
     __slots__ = (
         "zoom_levels_lineedit",
         "auto_fit_lineedit",
+        "reset_zoom_lineedit",
         "pop_out_plugins_lineedit"
     )
 
@@ -129,21 +130,28 @@ class GraphicsViewSection(AbtractShortcutSectionYAMLObjectSingleton):
         self.zoom_levels_lineedit.setDisabled(True)
 
         self.auto_fit_lineedit = ShortCutLineEdit()
+        self.reset_zoom_lineedit = ShortCutLineEdit()
         self.pop_out_plugins_lineedit = ShortCutLineEdit()
 
         self.setup_ui_shortcut("Cycle through zoom levels", self.zoom_levels_lineedit, hide_reset=True)
         self.setup_ui_shortcut("Auto-fit", self.auto_fit_lineedit, self.auto_fit_default)
+        self.setup_ui_shortcut("Reset zoom", self.reset_zoom_lineedit, self.reset_zoom_default)
         self.setup_ui_shortcut("Pop-out plugins :", self.pop_out_plugins_lineedit, self.pop_out_plugins_default)
 
     def setup_shortcuts(self) -> None:
         main = self.parent.main
 
         self.create_shortcut(self.auto_fit_lineedit, main, main.auto_fit_keyswitch)
+        self.create_shortcut(self.reset_zoom_lineedit, main, main.reset_zoom)
         self.create_shortcut(self.pop_out_plugins_lineedit, main, main.pop_out_plugins)
 
     @property
     def auto_fit_default(self) -> QKeySequence:
         return QKeySequence(QKeyCombination(Qt.Modifier.CTRL, Qt.Key.Key_A).toCombined())
+    
+    @property
+    def reset_zoom_default(self) -> QKeySequence:
+        return QKeySequence(QKeyCombination(Qt.Modifier.ALT, Qt.Key.Key_R).toCombined())
 
     @property
     def pop_out_plugins_default(self) -> QKeySequence:

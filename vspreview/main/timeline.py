@@ -103,6 +103,8 @@ class Timeline(QWidget):
         self.drawWidget(QPainter(self))
 
     def drawWidget(self, painter: QPainter) -> None:
+        if not self.main.current_output:
+            return
         setup_key = (self.rect_f, self.main.current_output.index)
 
         curr_key, (scroll_rect, labels_notches, rects_to_draw) = self.notches_cache[self.mode]

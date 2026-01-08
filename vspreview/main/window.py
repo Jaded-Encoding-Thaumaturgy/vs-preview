@@ -862,7 +862,19 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         view.zoom_combobox.currentTextChanged.connect(partial(self.on_zoom_changed, bound_view=view))
 
         view.zoom_combobox.setModel(GeneralModel[float](self.settings.zoom_levels))
-        view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
+
+        # On Wayland, defer zoom application until showEvent
+        # This ensures devicePixelRatio() returns accurate values
+        platform_name = self.app.platformName() if self.app else ""
+        if platform_name == "wayland":
+            # Set index but mark that zoom needs refresh on show
+            view.zoom_combobox.blockSignals(True)
+            view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
+            view.zoom_combobox.blockSignals(False)
+            view._zoomNeedsRefresh = True
+        else:
+            # On X11/Windows/macOS, apply zoom immediately as before
+            view.zoom_combobox.setCurrentIndex(self.settings.zoom_default_index)
 
     def on_zoom_changed(self, text: str | None = None, bound_view: GraphicsView | None = None) -> None:
         if not bound_view:
@@ -985,6 +997,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             if self.current_screen != screen_number:
                 self.current_screen = screen_number
                 self.update_display_profile()
+
+        # Refresh graphics view zoom when moving between screens
+        # This handles multi-monitor setups with different DPI
+        for view in self.graphics_views:
+            view._refreshZoomForDPR()
 
     def refresh_video_outputs(self) -> None:
         if not self.outputs:

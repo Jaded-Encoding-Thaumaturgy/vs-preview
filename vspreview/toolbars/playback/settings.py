@@ -38,7 +38,7 @@ class PlaybackSettings(AbstractToolbarSettings):
 
         self.buffer_size_spinbox = SpinBox(self, 1, MainSettings.get_usable_cpus_count())
         self.dither_type_combobox = ComboBox[str](
-            self, model=GeneralModel[str]([x.value for x in DitherType][1:]),
+            self, model=GeneralModel[str]([x.value for x in DitherType]),
             currentIndex=3, sizeAdjustPolicy=QComboBox.SizeAdjustPolicy.AdjustToContents
         )
 

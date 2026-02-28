@@ -205,7 +205,7 @@ class Worker(QObject):
             key = comp_response['key']
             image_ids = comp_response['images']
             self._progress_update_func(0, total_images, uuid=conf.uuid)
-            with ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor(max_workers=5) as executor:
                 futures = list[Future[None]]()
 
                 for i, (output, images) in enumerate(zip(conf.outputs, all_images)):

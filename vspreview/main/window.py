@@ -701,9 +701,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.timecodes.clear()
         self.norm_timecodes.clear()
 
-        self.toolbars.pipette._curr_frame_cache.clear()
-        self.toolbars.pipette._curr_alphaframe_cache.clear()
-        self.toolbars.pipette.outputs.clear()
+        if hasattr(self.toolbars, 'pipette'):
+            self.toolbars.pipette._curr_frame_cache.clear()
+            self.toolbars.pipette._curr_alphaframe_cache.clear()
+            self.toolbars.pipette.outputs.clear()
 
         for v in self.user_output_info.values():
             for k in v.values():
@@ -721,6 +722,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         if self.outputs:
             self.outputs.clear()
+
+        if hasattr(self.toolbars, 'playback') and self.toolbars.playback.audio_outputs:
+            self.toolbars.playback.audio_outputs.clear()
+
+        self.env = None
 
         self.gc_collect()
 

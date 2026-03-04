@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import atexit
-import runpy
+from logging import getLogger
 import sys
 from concurrent.futures import Future
 from threading import Lock
@@ -9,16 +9,13 @@ from typing import Any, Callable, TypeVar
 
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
 from vapoursynth import CoreCreationFlags, LogHandle
-from vsengine.loops import EventLoop, set_loop  # type: ignore[import-untyped]
-from vsengine.policy import GlobalStore, ManagedEnvironment, Policy, logger  # type: ignore[import-untyped]
+from vsengine.loops import EventLoop, set_loop
+from vsengine.policy import GlobalStore, ManagedEnvironment, Policy
 
 from .logger import get_vs_logger
 
 __all__ = [
     'PRELOADED_MODULES',
-
-    '_monkey_runpy_dicts',
-
     'set_vsengine_loop',
     'get_current_environment',
     'make_environment', 'dispose_environment'
@@ -27,10 +24,8 @@ __all__ = [
 
 PRELOADED_MODULES = set(sys.modules.values())
 
-_monkey_runpy_dicts = {}
 
-orig_runpy_run_code = runpy._run_code  # type: ignore
-
+logger = getLogger(__name__)
 
 class FlagsPolicy(Policy):
     def new_environment(self) -> ManagedEnvironment:
@@ -39,17 +34,6 @@ class FlagsPolicy(Policy):
         logger.debug("Created new environment")
         return ManagedEnvironment(env, data, self)
 
-
-def _monkey_runpy_func(*args: Any, **kwargs: Any) -> Any:
-    glob_dict = orig_runpy_run_code(*args, **kwargs)
-
-    if '_monkey_runpy' in glob_dict:
-        _monkey_runpy_dicts[glob_dict['_monkey_runpy']] = glob_dict
-
-    return glob_dict
-
-
-runpy._run_code = _monkey_runpy_func  # type: ignore
 
 T = TypeVar("T")
 

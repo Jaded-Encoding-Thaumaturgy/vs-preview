@@ -733,35 +733,18 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         old_environment = get_current_environment()
 
-        self.clear_monkey_runpy()
         make_environment()
         dispose_environment(old_environment)
         self.gc_collect()
 
         try:
-            self.load_script(self.script_path, self.external_args, True, None, self.display_name)
-        except BaseException:
-            self.clear_monkey_runpy()
+            self.load_script(self.script_path, self.external_args, True, None, self.display_name)# type:ignore
         finally:
             pass
 
         self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
-
-    def clear_monkey_runpy(self) -> None:
-        if self.env and '_monkey_runpy' in self.env.module.__dict__:
-            key = self.env.module.__dict__['_monkey_runpy']
-
-            if key in _monkey_runpy_dicts:
-                _monkey_runpy_dicts[key].clear()
-                _monkey_runpy_dicts.pop(key, None)
-            elif _monkey_runpy_dicts:
-                for env in _monkey_runpy_dicts.values():
-                    env.clear()
-                _monkey_runpy_dicts.clear()
-
-        self.gc_collect()
 
     def gc_collect(self) -> None:
         import gc
@@ -872,7 +855,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             view.setZoom(bound_view.zoom_combobox.currentData())
 
     def handle_script_error(self, message: str, script: bool = False) -> None:
-        self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.setWindowTitle('Script Loading Error' if script else 'Program Error')
         self.script_error_dialog.open()

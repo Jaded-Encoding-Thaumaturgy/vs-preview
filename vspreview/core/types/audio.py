@@ -33,7 +33,8 @@ class AudioOutput(AbstractYAMLObject):
     def setValue(self, vs_output: vs.AudioNode, index: int, new_storage: bool = False) -> None:
         self.main = main_window()
 
-        with self.main.env:
+        assert self.main.env
+        with self.main.env.environment.use():
             vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.AudioNode))
 
         self.index = vs_outputs.index(vs_output)

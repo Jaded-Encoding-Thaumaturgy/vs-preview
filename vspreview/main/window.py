@@ -456,8 +456,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         from traceback import TracebackException
 
-        from vsengine import vpy
-
         if not isinstance(e, vpy.ExecutionError):
             e = vpy.ExecutionError(e)
 

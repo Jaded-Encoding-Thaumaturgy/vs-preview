@@ -135,7 +135,7 @@ class VideoOutput(AbstractYAMLObject):
 
         assert self.main.env
 
-        with self.main.env:
+        with self.main.env.environment.use():
             vs_outputs = list(x for x in vs.get_outputs().values() if isinstance(x, vs.VideoOutputTuple))
 
         self.vs_index = index

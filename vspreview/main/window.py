@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import io
 import logging
+import textwrap
 import sys
 
 from fractions import Fraction
 from functools import partial
 from importlib import reload as reload_module
 from time import time
+from types import ModuleType
 from typing import Any, Iterable, cast
 
 import vapoursynth as vs
@@ -16,7 +18,8 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QEvent, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QColorSpace, QMoveEvent, QShowEvent
 from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QSizePolicy, QSplitter, QTabWidget
-from vsengine import vpy  # type: ignore
+from vsengine import vpy
+from vsengine.policy import ManagedEnvironment
 from vstools import PackageStorage, get_prop
 from jetpytools import SPath
 
@@ -24,7 +27,7 @@ from ..core import (
     PRELOADED_MODULES, AbstractQItem, ArInfo, CroppingInfo, DragNavigator, ExtendedWidget, Frame,
     GraphicsImageItem, GraphicsView, HBoxLayout, MainVideoOutputGraphicsView, PushButton,
     QAbstractYAMLObjectSingleton, StatusBar, Time, Timer, VBoxLayout, VideoOutput,
-    _monkey_runpy_dicts, apply_plotting_style, dispose_environment, get_current_environment,
+    apply_plotting_style, dispose_environment, get_current_environment,
     make_environment
 )
 from ..models import GeneralModel, SceningList, VideoOutputs
@@ -207,7 +210,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.set_qobject_names()
         self.setObjectName('MainWindow')
 
-        self.env: vpy.Script | None = None
+        self.env: vpy.Script[ManagedEnvironment] | None = None
 
     @property
     def display_scale(self) -> float:
@@ -299,8 +302,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         start_frame: int | None = None, display_name: str | None = None,
         resolve_plugin: FileResolverPlugin | None = None
     ) -> None:
-        from random import random
-
         self.display_name = display_name or script_path
         self.external_args = external_args or []
         self.start_frame = Frame(start_frame or 0)
@@ -380,13 +381,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
                     except Exception as e:
                         logging.error(e)
 
-            self.env = vpy.variables(
-                dict(self.external_args),
-                environment=vs.get_current_environment(),
-                module_name="__vspreview__"
-            ).result()
-            self.env.module.__dict__['_monkey_runpy'] = random()
-            self.env = vpy.script(self.script_path, environment=self.env).result()
+            module = ModuleType("__vspreview__")
+            module.__dict__.update(self.external_args)
+            self.env = vpy.load_script(self.script_path, get_current_environment(), module=module)
+            self.env.result()
         except Exception as e:
             return self.handle_error(e)
         finally:
@@ -428,7 +426,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.apply_stylesheet()
         self.timeline.set_sizes()
 
-        with self.env:
+        assert self.env
+        with self.env.environment.use():
             vs.register_on_destroy(self.gc_collect)
 
         if load_error is None:
@@ -441,12 +440,12 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         else:
             error_string = "There was an error while loading the script!\n"
 
-            logging.error(error_string + vpy.textwrap.indent(vpy.ExecutionFailed.extract_traceback(load_error), '| '))
+            logging.error(error_string + textwrap.indent(vpy.ExecutionError.extract_traceback(load_error), '| '))
 
             self.script_exec_failed = True
 
             return self.handle_script_error(
-                f'{error_string}{vpy.textwrap.indent(str(load_error), " | ")}\nSee console output for details.', False
+                f'{error_string}{textwrap.indent(str(load_error), " | ")}\nSee console output for details.', False
             )
 
         self.show()
@@ -457,10 +456,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         from traceback import TracebackException
 
-        from vsengine import vpy
-
-        if not isinstance(e, vpy.ExecutionFailed):
-            e = vpy.ExecutionFailed(e)
+        if not isinstance(e, vpy.ExecutionError):
+            e = vpy.ExecutionError(e)
 
         self.hide()
         self.apply_stylesheet()
@@ -702,9 +699,10 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.timecodes.clear()
         self.norm_timecodes.clear()
 
-        self.toolbars.pipette._curr_frame_cache.clear()
-        self.toolbars.pipette._curr_alphaframe_cache.clear()
-        self.toolbars.pipette.outputs.clear()
+        if hasattr(self.toolbars, 'pipette'):
+            self.toolbars.pipette._curr_frame_cache.clear()
+            self.toolbars.pipette._curr_alphaframe_cache.clear()
+            self.toolbars.pipette.outputs.clear()
 
         for v in self.user_output_info.values():
             for k in v.values():
@@ -712,8 +710,9 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             v.clear()
 
         try:
-            with self.env:
-                vs_proxy.core.clear_cache()
+            if self.env:
+                with self.env.environment.use():
+                    vs_proxy.core.clear_cache()
         except Exception:
             ...
 
@@ -721,6 +720,11 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         if self.outputs:
             self.outputs.clear()
+
+        if hasattr(self.toolbars, 'playback') and self.toolbars.playback.audio_outputs:
+            self.toolbars.playback.audio_outputs.clear()
+
+        self.env = None
 
         self.gc_collect()
 
@@ -733,35 +737,18 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         old_environment = get_current_environment()
 
-        self.clear_monkey_runpy()
         make_environment()
         dispose_environment(old_environment)
         self.gc_collect()
 
         try:
-            self.load_script(self.script_path, self.external_args, True, None, self.display_name)
-        except BaseException:
-            self.clear_monkey_runpy()
+            self.load_script(self.script_path, self.external_args, True, None, self.display_name)# type:ignore
         finally:
             pass
 
         self.reload_after_signal.emit()
 
         self.show_message('Reloaded successfully')
-
-    def clear_monkey_runpy(self) -> None:
-        if self.env and '_monkey_runpy' in self.env.module.__dict__:
-            key = self.env.module.__dict__['_monkey_runpy']
-
-            if key in _monkey_runpy_dicts:
-                _monkey_runpy_dicts[key].clear()
-                _monkey_runpy_dicts.pop(key, None)
-            elif _monkey_runpy_dicts:
-                for env in _monkey_runpy_dicts.values():
-                    env.clear()
-                _monkey_runpy_dicts.clear()
-
-        self.gc_collect()
 
     def gc_collect(self) -> None:
         import gc
@@ -872,7 +859,6 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             view.setZoom(bound_view.zoom_combobox.currentData())
 
     def handle_script_error(self, message: str, script: bool = False) -> None:
-        self.clear_monkey_runpy()
         self.script_error_dialog.label.setText(message)
         self.script_error_dialog.setWindowTitle('Script Loading Error' if script else 'Program Error')
         self.script_error_dialog.open()

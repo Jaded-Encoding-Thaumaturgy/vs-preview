@@ -142,7 +142,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
 
         self.settings = MainSettings(MainToolbar)
 
-        self.current_config_dir = PackageStorage(config_dir).folder
+        self.current_config_dir = PackageStorage(config_dir, package_name="vspreview").folder
         self.global_plugins_dir.mkdir(parents=True, exist_ok=True)
 
         self.app = cast(QApplication, QApplication.instance())

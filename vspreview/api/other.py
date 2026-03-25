@@ -14,34 +14,21 @@ def install_vscode_launch(mode: Literal['override', 'append', 'ignore'], path: s
     vscode_settings_path = Path(path or Path.cwd()) / '.vscode'
     vscode_settings_path.mkdir(0o777, True, True)
 
-    common_args = {
-        "type": "debugpy",
-        "request": "launch",
-        "console": "internalConsole",
-        "gevent": False,
-        "justMyCode": True,
-        "logToFile": False,
-        "subProcess": False,
-        "redirectOutput": True,
-        "showReturnValue": False,
-        "suppressMultipleSessionWarning": False
-    }
+    common_args = {"type": "debugpy", "request": "launch"}
 
     settings = {
         "version": "0.2.0",
         "configurations": [
             {
+                **common_args,
                 "name": "VS Preview Current File",
                 "module": "vspreview",
-                "args": [
-                    "${file}"
-                ],
-                **common_args  # type: ignore
+                "args": ["${file}"],
             },
             {
+                **common_args,
                 "name": "Run Current File",
                 "program": "${file}",
-                **common_args  # type: ignore
             }
         ]
     }

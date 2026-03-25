@@ -51,34 +51,18 @@ Alternatively, you can manually create the file:
         "configurations": [
             {
                 "name": "VS Preview Current File",
-                "module": "vspreview",
-                "args": [
-                    "${file}"
-                ],
                 "type": "debugpy",
                 "request": "launch",
-                "console": "internalConsole",
-                "gevent": false,
-                "justMyCode": true,
-                "logToFile": false,
-                "subProcess": false,
-                "redirectOutput": true,
-                "showReturnValue": false,
-                "suppressMultipleSessionWarning": false
+                "module": "vspreview",
+                "args": ["${file}"],
+                "console": "internalConsole"
             },
             {
                 "name": "Run Current File",
-                "program": "${file}",
                 "type": "debugpy",
                 "request": "launch",
-                "console": "internalConsole",
-                "gevent": false,
-                "justMyCode": true,
-                "logToFile": false,
-                "subProcess": false,
-                "redirectOutput": true,
-                "showReturnValue": false,
-                "suppressMultipleSessionWarning": false
+                "program": "${file}",
+                "console": "internalConsole"
             }
         ]
     }

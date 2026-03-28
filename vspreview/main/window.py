@@ -141,6 +141,7 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         self.resolve_plugins = set[FileResolverPlugin]()
 
         self.settings = MainSettings(MainToolbar)
+        self.settings.apply_dependency_install_mode()
 
         self.current_config_dir = PackageStorage(config_dir, package_name="vspreview").folder
         self.global_plugins_dir.mkdir(parents=True, exist_ok=True)
@@ -329,6 +330,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
             sys.argv = [script_path.name]
         except AttributeError:
             pass
+
+        self.settings.apply_dependency_install_mode()
 
         try:
             if reloading:
@@ -740,6 +743,8 @@ class MainWindow(AbstractQItem, QMainWindow, QAbstractYAMLObjectSingleton):
         make_environment()
         dispose_environment(old_environment)
         self.gc_collect()
+
+        self.settings.apply_dependency_install_mode()
 
         try:
             self.load_script(self.script_path, self.external_args, True, None, self.display_name)# type:ignore
